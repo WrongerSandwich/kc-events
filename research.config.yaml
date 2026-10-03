@@ -76,6 +76,7 @@ discovery:
     - seatgeek.com
     - upcomingevents.com
     - artskcgo.com
+    - concertfix.com
   ignoredHosts: # never followed: social media and the like, which carry no primary page
     - facebook.com
     - instagram.com

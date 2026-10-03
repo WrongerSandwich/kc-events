@@ -30,6 +30,7 @@ Every field you fill must come from the text of the page body you were given. No
 - A time of midnight ("12:00 am", "00:00") is a ticketing system's placeholder for a time not yet announced, not a start time: leave `startTime` null, unless the page says in words that the event starts at midnight.
 - A run or exhibition already underway whose page gives only its closing date ("On view through Feb 28") gets that `endDate` and a null `startDate`. Do not use today or any other date as its start.
 - If the page gives only a month or a season ("coming this fall"), leave `startDate` null.
+- A relative day ("Today", "Tomorrow", "This weekend", a bare weekday such as "Wednesday at 5:00 PM") is not a date: a listing page renders it against its own clock, not yours. Leave `startDate` null unless the page also gives the calendar date.
 - Never derive a date from the URL, a slug, a query string, or an image filename.
 
 ## Venue
@@ -69,6 +70,7 @@ Every field you fill must come from the text of the page body you were given. No
 - `dateEvidence` is the exact text from the page body that the dates and times (or the schedule) were read from, copied verbatim including any weekday, month name, and time. Not a paraphrase. Up to one or two short lines.
 - `venueEvidence` is the exact text the venue was read from, verbatim. Including the street address when it is beside the name is helpful.
 - An event with no quotable text for a value gets null for that value **and** null for its evidence. Never write evidence for a value you did not fill, and never fill a value you cannot quote.
+- Evidence is never your own sentence. If you are about to write "the listed dates conflict" or "the page does not say", stop: that belongs nowhere, and the value it describes is null.
 
 ## Title
 
