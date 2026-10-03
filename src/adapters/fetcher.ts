@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 import type { FetchPort, FetchResult } from "../ports.js";
 
 const PRODUCT = "kc-events-research";
-const REPO_URL = "https://github.com/WrongerSandwich/kc-events";
+export const REPO_URL = "https://github.com/WrongerSandwich/kc-events";
 /** Named user agent carrying the repo URL, so a source owner can reach the maintainer or opt out. */
 export const USER_AGENT = `${PRODUCT}/0.1 (+${REPO_URL})`;
 

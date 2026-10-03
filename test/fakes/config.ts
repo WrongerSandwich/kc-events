@@ -14,3 +14,7 @@ export function testConfig(overrides: Partial<RunConfig> = {}): RunConfig {
     ...overrides,
   };
 }
+
+export function testPrompts() {
+  return { extractionRules: "TEST EXTRACTION RULES" };
+}

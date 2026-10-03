@@ -1,16 +1,27 @@
-import type { FetchResult, Ports } from "../../src/ports.js";
+import type { CompletionRequest, CompletionResult, FetchResult, Ports } from "../../src/ports.js";
 
 /** A canned response: a page with a status, a robots.txt block, or a network failure. */
 export type CannedPage = { status: number; body: string } | "robots-blocked" | Error;
 
+export interface FakePortOptions {
+  pages?: Record<string, CannedPage>;
+  /** Scripted model replies, consumed in call order. */
+  completions?: CompletionResult[];
+}
+
 /** Fake ports that record every call; none of them reach the network. */
-export function fakePorts(now: Date, { pages = {} }: { pages?: Record<string, CannedPage> } = {}) {
+export function fakePorts(now: Date, { pages = {}, completions = [] }: FakePortOptions = {}) {
   const calls: string[] = [];
+  const requests: CompletionRequest[] = [];
+  const replies = [...completions];
   const ports: Ports = {
     model: {
       async complete(request) {
         calls.push(`model:${request.model}`);
-        throw new Error("fake model has no scripted response");
+        requests.push(request);
+        const reply = replies.shift();
+        if (!reply) throw new Error("fake model has no scripted response left");
+        return reply;
       },
     },
     search: {
@@ -34,5 +45,5 @@ export function fakePorts(now: Date, { pages = {} }: { pages?: Record<string, Ca
     },
     clock: { now: () => now },
   };
-  return { ports, calls };
+  return { ports, calls, requests };
 }

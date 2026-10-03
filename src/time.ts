@@ -33,3 +33,33 @@ export function toLocalIso(instant: Date, timeZone: string): string {
 export function toLocalDate(instant: Date, timeZone: string): string {
   return toLocalIso(instant, timeZone).slice(0, 10);
 }
+
+/**
+ * An ISO 8601 instant for a local wall-clock date and optional time in the given timezone,
+ * e.g. ("2026-10-10", "20:00", "America/Chicago") → 2026-10-10T20:00:00-05:00. Without a
+ * time the result is the bare date.
+ */
+export function fromLocal(date: string, time: string | undefined, timeZone: string): string {
+  if (!time) return date;
+  const [h, m] = time.split(":").map(Number);
+  // Guess the wall time is UTC, see what offset the zone has at that instant, and correct once;
+  // a second pass settles the rare guess that straddles a DST change.
+  let instant = Date.UTC(...splitDate(date), h!, m!, 0);
+  for (let pass = 0; pass < 2; pass++) {
+    const offsetMinutes = offsetAt(new Date(instant), timeZone);
+    instant = Date.UTC(...splitDate(date), h!, m!, 0) - offsetMinutes * 60_000;
+  }
+  return toLocalIso(new Date(instant), timeZone);
+}
+
+function splitDate(date: string): [number, number, number] {
+  const [y, mo, d] = date.split("-").map(Number);
+  return [y!, mo! - 1, d!];
+}
+
+/** The zone's UTC offset in minutes at an instant, read off the formatted ISO string. */
+function offsetAt(instant: Date, timeZone: string): number {
+  const offset = toLocalIso(instant, timeZone).slice(-6);
+  const sign = offset.startsWith("-") ? -1 : 1;
+  return sign * (Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6)));
+}

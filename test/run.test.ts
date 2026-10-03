@@ -2,10 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { run } from "../src/run.js";
 import { emptyDataset, parseDataset, DATASET_SCHEMA_VERSION } from "../src/dataset.js";
 import { fakePorts } from "./fakes/ports.js";
-import { testConfig } from "./fakes/config.js";
+import { testConfig, testPrompts } from "./fakes/config.js";
 
 // 2026-10-03T03:15:00Z is 22:15 on 2026-10-02 in Kansas City (CDT, UTC-5).
 const NOW = new Date("2026-10-03T03:15:00Z");
+/** The extraction model finding nothing on a page; these tests are about fetching. */
+const NO_EVENTS = { value: { events: [] }, costUsd: 0 };
 
 describe("run", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -18,6 +20,7 @@ describe("run", () => {
 
     const { dataset, report } = await run({
       config: testConfig(),
+      prompts: testPrompts(),
       dataset: emptyDataset(),
       registry: { sources: [] },
       ports,
@@ -64,10 +67,12 @@ describe("registry lane fetching", () => {
         "https://open.test/calendar": { status: 200, body: "<html>calendar</html>" },
         "https://blocked.test/events": "robots-blocked",
       },
+      completions: [NO_EVENTS],
     });
 
     const { report } = await run({
       config: testConfig(),
+      prompts: testPrompts(),
       dataset: emptyDataset(),
       registry: {
         sources: [source("Open Venue", ["https://open.test/calendar"]), source("Blocked Venue", ["https://blocked.test/events"])],
@@ -89,10 +94,12 @@ describe("registry lane fetching", () => {
         "https://gone.test/": { status: 404, body: "not found" },
         "https://back.test/": { status: 200, body: "<html>calendar</html>" },
       },
+      completions: [NO_EVENTS],
     });
 
     const { dataset, report } = await run({
       config: testConfig(),
+      prompts: testPrompts(),
       dataset: {
         ...emptyDataset(),
         sourceState: { "Down Venue": { consecutiveFailures: 1 }, "Back Venue": { consecutiveFailures: 2 } },
@@ -130,6 +137,7 @@ describe("registry lane fetching", () => {
 
     const { dataset, report } = await run({
       config: testConfig(),
+      prompts: testPrompts(),
       dataset: {
         ...emptyDataset(),
         sourceState: { "Third Strike": { consecutiveFailures: 2 }, "Second Strike": { consecutiveFailures: 1 } },
@@ -147,6 +155,7 @@ describe("registry lane fetching", () => {
 
     const { dataset, report } = await run({
       config: testConfig(),
+      prompts: testPrompts(),
       dataset: { ...emptyDataset(), sourceState: { "Old Venue": { consecutiveFailures: 4 } } },
       registry: {
         sources: [{ ...source("Old Venue", ["https://old.test/"]), status: "excluded", reason: "closed in 2026" }],
@@ -167,6 +176,7 @@ describe("registry lane fetching", () => {
 
     const { dataset, report } = await run({
       config: testConfig(),
+      prompts: testPrompts(),
       dataset: emptyDataset(),
       registry: { sources: [source("Mixed Venue", ["https://mixed.test/blocked", "https://mixed.test/feed"])] },
       ports,

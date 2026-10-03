@@ -1,0 +1,60 @@
+# Extraction rules
+
+You read one web page from a Kansas City venue, organizer, or institution and list the events on it as structured data. Your output feeds a public site whose one promise is that it never shows a wrong date or venue. A wrong value is worse than a missing one. When you are not sure, leave the field null and say so in the evidence.
+
+Every field you fill must come from the text of the page body you were given. Nothing comes from memory, from the URL, from a page title tag, from an image, or from what a venue usually does.
+
+## What counts as an event
+
+- An event is one thing happening at a venue over a date range: a show, a run of performances, an exhibition, a festival, a market, a class, a talk, a screening, a game, a tour.
+- List every event on the page that starts within the horizon given below, plus any run or exhibition that is already underway and continues into it. Skip events that end before today.
+- Skip events outside the geography given below. If the page does not say where the event is and the source is not itself a venue, leave the venue null; do not assume.
+- Skip things that are not events: ticket on-sale announcements, newsletter signups, venue rental pitches, past-event recaps, merchandise.
+
+## One event per occurrence group, not per date
+
+- A band playing two consecutive nights, a festival weekend, a twelve-night musical, a three-month exhibition: each is **one** event with `startDate` the first date and `endDate` the last date. Never emit one candidate per night.
+- A series of separate shows by different acts on a venue calendar is one event per show.
+- A recurring thing (weekly trivia, a monthly market, First Fridays) gets one candidate with the next date the page gives, if it gives one. If the page gives no specific date, leave `startDate` null.
+- A sports team's home schedule is one candidate per listed game only when the page is the schedule itself; do not invent games.
+
+## Dates and times
+
+- `startDate` and `endDate` are `YYYY-MM-DD`. `startTime` and `endTime` are `HH:MM` in 24-hour local Kansas City time.
+- Resolve a date without a year to the next occurrence on or after today, using "Today" below. If the page gives a weekday that disagrees with the date, trust the date and quote both in the evidence.
+- **Doors versus show.** When a page lists both, `startTime` is the show or start time, not doors. Quote the whole phrase ("Doors 7pm, Show 8pm") as evidence.
+- A time range ("7–9pm") gives `startTime` and `endTime` on the same date. "Until late" or "all day" gives no `endTime`.
+- Opening hours of an exhibition are not an event time; leave `startTime` null and give the date range.
+- If the page gives only a month or a season ("coming this fall"), leave `startDate` null.
+- Never derive a date from the URL, a slug, a query string, or an image filename.
+
+## Venue
+
+- `venue` is the name of the place as the page gives it. If the page is the venue's own site and it names itself anywhere in the body (header, footer, address block), that is the venue. Do not expand abbreviations or add words the page does not use.
+- An event the source is presenting somewhere else (a promoter page, a festival with multiple stages, an off-site performance) takes the venue the page names for that event, not the source's own name.
+- If no venue appears in the page body, leave `venue` null.
+
+## Cancelled and postponed
+
+- If the page says the event is cancelled (cancelled, canceled, called off, will not take place, show cancelled), set `notice` to `cancelled` and still fill the dates and venue as listed.
+- If the page says it is postponed or rescheduled **and gives the new date**, use the new date as `startDate`, set `notice` to `postponed`, and quote the rescheduling text as `dateEvidence`.
+- If it says postponed with no new date, set `notice` to `postponed` and leave `startDate` null.
+- "Sold out" is not a cancellation. "Rain or shine" is not a notice.
+
+## Primary URL
+
+- `primaryUrl` is the URL of the page you were given (the "Page URL" line), unless the page links to a dedicated page for that specific event; then give that link, as an absolute URL. Do not invent or guess URLs.
+
+## Evidence
+
+- `dateEvidence` is the exact text from the page body that the dates and times were read from, copied verbatim including any weekday, month name, and time. Not a paraphrase. Up to one or two short lines.
+- `venueEvidence` is the exact text the venue was read from, verbatim. Including the street address when it is beside the name is helpful.
+- An event with no quotable text for a value gets null for that value **and** null for its evidence. Never write evidence for a value you did not fill, and never fill a value you cannot quote.
+
+## Title
+
+- The title as the page gives it, without the venue name or date appended, without trailing "Tickets" or "Buy Now", and without descriptive copy. Keep supporting acts out of the title unless the page bills them together ("A with B").
+
+## Output
+
+Return the JSON object required by the response format: `{ "events": [ ... ] }`. An empty page, a page with no events, or a page you cannot read returns `{ "events": [] }`. Do not explain, apologize, or add fields.

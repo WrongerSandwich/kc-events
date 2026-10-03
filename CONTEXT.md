@@ -79,6 +79,18 @@ _Avoid_: whitelist, seed list
 **Registry lane**:
 The part of a run that checks every registry source directly.
 
+**Candidate**:
+One event as the extraction model reports it from a single page, before cite-or-drop decides whether it becomes an active or unverified event. A candidate is not yet in the dataset.
+_Avoid_: result, hit, extraction
+
+**Extraction rules**:
+The editable document (`prompts/extraction-rules.md`) sent to the extraction model with every page. The first of the two editorial surfaces; a wrong date in the dataset is a bug here first.
+_Avoid_: prompt (when meaning this document specifically), system prompt
+
+**Evidence snippet**:
+The exact text, quoted verbatim from the primary page, that a date or venue was read from. Stored beside the value so it can be audited without re-fetching.
+_Avoid_: citation, quote, proof
+
 **Discovery lane**:
 The part of a run that uses web search to find events outside the registry.
 
