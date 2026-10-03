@@ -112,17 +112,27 @@ export function pageText(body: string): string {
         .replace(/<!--[\s\S]*?-->/g, " ")
         .replace(/<br\s*\/?>|<\/(p|div|li|h[1-6]|tr|section|article|header|footer)>/gi, "\n")
         .replace(/<[^>]+>/g, " ")
-        .replace(/&nbsp;/g, " ")
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;|&apos;/g, "'")
-        .replace(/[ \t]+/g, " ")
+        .replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, decodeCharacterReference)
+        .replace(/[ \t\u00a0]+/g, " ")
         .replace(/\s*\n\s*/g, "\n")
         .trim()
     : body;
   return text.length > MAX_PAGE_CHARS ? `${text.slice(0, MAX_PAGE_CHARS)}\n[page truncated]` : text;
+}
+
+/** The named references that show up in event listings; a name not listed here is left as it was. */
+const NAMED_REFERENCES: Record<string, string> = {
+  nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', apos: "'",
+  ndash: "–", mdash: "—", hellip: "…", lsquo: "‘", rsquo: "’", ldquo: "“", rdquo: "”", bull: "•", middot: "·", copy: "©", reg: "®", trade: "™", deg: "°",
+};
+
+/** One HTML character reference (`&#x27;`, `&#8211;`, `&ndash;`) as the character a browser would show. */
+function decodeCharacterReference(reference: string, body: string): string {
+  if (body.startsWith("#")) {
+    const codePoint = body[1]?.toLowerCase() === "x" ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+    return Number.isInteger(codePoint) && codePoint > 0 && codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : reference;
+  }
+  return NAMED_REFERENCES[body.toLowerCase()] ?? reference;
 }
 
 /**

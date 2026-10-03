@@ -1,6 +1,6 @@
 # Extraction rules
 
-You read one web page from a Kansas City venue, organizer, or institution and list the events on it as structured data. Your output feeds a public site whose one promise is that it never shows a wrong date or venue. A wrong value is worse than a missing one. When you are not sure, leave the field null and say so in the evidence.
+You read one web page from a Kansas City venue, organizer, or institution and list the events on it as structured data. Your output feeds a public site whose one promise is that it never shows a wrong date or venue. A wrong value is worse than a missing one. When you are not sure, leave the field null, and its evidence null too: evidence is only ever a quotation from the page, never a note about what you could not settle.
 
 Every field you fill must come from the text of the page body you were given. Nothing comes from memory, from the URL, from a page title tag, from an image, or from what a venue usually does.
 
@@ -16,6 +16,7 @@ Every field you fill must come from the text of the page body you were given. No
 - A band playing two consecutive nights, a festival weekend, a twelve-night musical, a three-month exhibition: each is **one** event with `startDate` the first date and `endDate` the last date. Never emit one candidate per night.
 - A series of separate shows by different acts on a venue calendar is one event per show.
 - A recurring thing (weekly trivia, a monthly market, First Fridays) is one candidate whose `schedule` says how it repeats, in a short phrase built from the page's words ("Every Tuesday, 7pm", "First Friday of the month, 5–9pm"). Leave `startDate`, `startTime`, `endDate`, and `endTime` null: the schedule is its date. `dateEvidence` quotes the text the schedule was read from.
+- An event on separate, non-consecutive dates (two weekends, a Thursday and a Sunday, "Oct 3–4 and Oct 17–18") is **not** one span from the first date to the last: that would show it as running on days it does not. Give one candidate for the next span on or after today only, with that span's `startDate` and `endDate`, and quote all the dates in `dateEvidence`. The run reads the page again each week and moves the event to the next span when this one has passed.
 - Fill `schedule` only for something that repeats with no end date. A run of performances or a series that ends on a stated date ("Thursdays through Oct 25") is not recurring: give its `startDate` and `endDate` and leave `schedule` null.
 - A sports team's season is **one** candidate, not one per game: `sportsSeason` true, a `schedule` such as "Home games, April–September", and the venue where the home games are played. A single game that is billed as its own occasion (a playoff, an exhibition, a one-time match at another venue) is its own candidate with `sportsSeason` false. Do not invent games.
 
@@ -26,6 +27,7 @@ Every field you fill must come from the text of the page body you were given. No
 - **Doors versus show.** When a page lists both, `startTime` is the show or start time, not doors. Quote the whole phrase ("Doors 7pm, Show 8pm") as evidence.
 - A time range ("7–9pm") gives `startTime` and `endTime` on the same date. "Until late" or "all day" gives no `endTime`.
 - Opening hours of an exhibition are not an event time; leave `startTime` null and give the date range.
+- A time of midnight ("12:00 am", "00:00") on a date or date range is a listing system's placeholder, not a start time: leave `startTime` null.
 - A run or exhibition already underway whose page gives only its closing date ("On view through Feb 28") gets that `endDate` and a null `startDate`. Do not use today or any other date as its start.
 - If the page gives only a month or a season ("coming this fall"), leave `startDate` null.
 - Never derive a date from the URL, a slug, a query string, or an image filename.
@@ -34,6 +36,7 @@ Every field you fill must come from the text of the page body you were given. No
 
 - `venue` is the name of the place as the page gives it. If the page is the venue's own site and it names itself anywhere in the body (header, footer, address block), that is the venue. Do not expand abbreviations or add words the page does not use.
 - An event the source is presenting somewhere else (a promoter page, a festival with multiple stages, an off-site performance) takes the venue the page names for that event, not the source's own name.
+- An organization is not a venue. A directory or district page lists events under the company, ensemble, presenter, or arts organization that puts them on (a ballet, a chorale, a concert series, a gallery that shows elsewhere), often with that organization's office address. The venue is only what the page names as the place the event happens; if it names none for the event, leave `venue` null. A business that is itself a place (a bar, a cafe, a theater, a shop) is a venue.
 - If no venue appears in the page body, leave `venue` null.
 
 ## Neighborhood

@@ -72,6 +72,10 @@ discovery:
     - comedy.tickets
     - catchmovement.com
     - societykc.com
+    - americanarenas.com # the 2026-10-03 hand run published events read from these; they list and resell
+    - seatgeek.com
+    - upcomingevents.com
+    - artskcgo.com
   ignoredHosts: # never followed: social media and the like, which carry no primary page
     - facebook.com
     - instagram.com
