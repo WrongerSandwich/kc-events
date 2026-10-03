@@ -41,15 +41,25 @@ export type Candidate = z.infer<typeof candidateSchema>;
 /** The strict JSON schema sent as the response format on every extraction call. */
 export const extractionResponseFormat: CompletionRequest["responseFormat"] = {
   name: "extracted_events",
-  schema: (({ $schema: _, ...schema }) => schema)(z.toJSONSchema(extractionReplySchema)),
+  schema: withoutSchemaKeyword(z.toJSONSchema(extractionReplySchema)),
 };
 
+/** Zod emits a `$schema` declaration that strict-mode response formats do not accept. */
+function withoutSchemaKeyword({ $schema: _, ...schema }: Record<string, unknown>): Record<string, unknown> {
+  return schema;
+}
+
+/** What every extraction call and every candidate in one run shares. */
 export interface ExtractionContext {
   config: RunConfig;
   /** The extraction rules document, the first editorial surface. */
   rules: string;
   /** The run's local date, so relative dates on the page resolve. */
   today: string;
+  /** The run's start, stamped as first-seen and last-verified. */
+  nowIso: string;
+  /** Every URL fetched this run, normalized; a candidate's primary page must be among them to verify. */
+  fetchedUrls: Set<string>;
 }
 
 export function buildExtractionRequest(page: FetchResult, source: Source, context: ExtractionContext): CompletionRequest {
@@ -97,58 +107,57 @@ export function pageText(body: string): string {
   return text.length > MAX_PAGE_CHARS ? `${text.slice(0, MAX_PAGE_CHARS)}\n[page truncated]` : text;
 }
 
-/** An event's id, fixed at first-seen: its primary page plus its title (ADR 0007). */
-export function eventId(primaryUrl: string, title: string): string {
-  const digest = createHash("sha256").update(`${primaryUrl}\n${title.trim().toLowerCase()}`).digest("hex");
+/**
+ * A fresh id for an event first seen now. Opaque: it only has to be unique and never change, so
+ * it is hashed from what makes this sighting distinct rather than from anything matching uses.
+ */
+export function newEventId(primaryUrl: string, title: string, nowIso: string): string {
+  const digest = createHash("sha256").update(`${primaryUrl}\n${title}\n${nowIso}`).digest("hex");
   return `evt_${digest.slice(0, 12)}`;
 }
 
-export interface CandidateContext {
+/** Where a candidate came from: the source whose page it was read on. */
+export interface CandidateOrigin {
   source: Source;
-  /** The page this candidate was read from; the fallback primary URL. */
+  /** The page this candidate was read from, normalized; the fallback primary URL. */
   pageUrl: string;
-  /** Every URL fetched this run, normalized; a candidate's primary page must be among them to verify. */
-  fetchedUrls: Set<string>;
-  nowIso: string;
-  timezone: string;
 }
 
 /**
  * Cite-or-drop: the candidate becomes active only when its primary page was fetched this run
  * and the model quoted evidence for both a usable date and a venue; anything less is held
- * unverified. A page that says cancelled expires the event with that reason, however well
- * cited. Recurrence class is derived in a later ticket (#6); every event is a one-off for now.
+ * unverified. A venue the page did not name stays absent rather than borrowing the source's.
+ * Recurrence class is derived in a later ticket (#6); every event is a one-off for now.
  */
-export function candidateToEvent(candidate: Candidate, context: CandidateContext): Event {
-  const primaryUrl = normalizeUrl(candidate.primaryUrl) ?? context.pageUrl;
-  const start = localIso(candidate.startDate, candidate.startTime, context.timezone);
-  const end = localIso(candidate.endDate, candidate.endTime, context.timezone);
+export function candidateToEvent(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Event {
+  const { timezone } = context.config;
+  const primaryUrl = normalizeUrl(candidate.primaryUrl, origin.pageUrl);
+  const title = candidate.title.trim();
+  const start = localIso(candidate.startDate, candidate.startTime, timezone);
+  const end = localIso(candidate.endDate, candidate.endTime, timezone);
   const dateEvidence = nonEmpty(candidate.dateEvidence);
   const venueEvidence = nonEmpty(candidate.venueEvidence);
   const venue = nonEmpty(candidate.venue);
 
-  const cited =
+  const verified =
     context.fetchedUrls.has(primaryUrl) && start !== undefined && dateEvidence !== undefined && venue !== undefined && venueEvidence !== undefined;
-  const cancelled = candidate.notice === "cancelled";
-  const verified = cited && !cancelled;
 
   return {
-    id: eventId(primaryUrl, candidate.title),
-    title: candidate.title.trim(),
+    id: newEventId(primaryUrl, title, context.nowIso),
+    title,
     ...(start !== undefined ? { start } : {}),
     ...(end !== undefined ? { end } : {}),
-    venue: venue ?? context.source.name,
-    neighborhood: context.source.neighborhood,
+    ...(venue !== undefined ? { venue } : {}),
+    neighborhood: origin.source.neighborhood,
     primaryUrl,
-    kind: context.source.kind,
+    kind: origin.source.kind,
     recurrence: "one-off",
     dontMiss: false,
     firstSeen: context.nowIso,
     ...(verified ? { lastVerified: context.nowIso } : {}),
-    status: cancelled ? "expired" : verified ? "active" : "unverified",
-    ...(cancelled ? { expiryReason: "cancelled" as const } : {}),
+    status: verified ? "active" : "unverified",
     verificationFailures: 0,
-    lead: { lane: "registry", source: context.source.name },
+    lead: { lane: "registry", source: origin.source.name },
     evidence: {
       ...(dateEvidence !== undefined ? { date: dateEvidence } : {}),
       ...(venueEvidence !== undefined ? { venue: venueEvidence } : {}),
@@ -156,11 +165,12 @@ export function candidateToEvent(candidate: Candidate, context: CandidateContext
   };
 }
 
-export function normalizeUrl(url: string): string | undefined {
+/** The URL in canonical form, or the fallback when it does not parse. */
+export function normalizeUrl(url: string, fallback: string): string {
   try {
     return new URL(url).href;
   } catch {
-    return undefined;
+    return fallback;
   }
 }
 

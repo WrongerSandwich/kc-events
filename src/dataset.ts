@@ -18,7 +18,7 @@ export const leadSchema = z.discriminatedUnion("lane", [
   z.strictObject({ lane: z.literal("discovery"), query: z.string().min(1) }),
 ]);
 
-export const eventSchema = z.strictObject({
+const eventFields = z.strictObject({
   id: z.string().min(1),
   title: z.string().min(1),
   /** Absent for recurring events. */
@@ -27,7 +27,8 @@ export const eventSchema = z.strictObject({
   end: isoDateOrDateTime.optional(),
   /** Recurring events only, e.g. "every Tuesday at 7pm". */
   schedule: z.string().min(1).optional(),
-  venue: z.string().min(1),
+  /** Absent only while unverified: the page named no venue that could be cited. */
+  venue: z.string().min(1).optional(),
   neighborhood: z.string().min(1),
   primaryUrl: z.url(),
   kind: z.string().min(1),
@@ -45,6 +46,14 @@ export const eventSchema = z.strictObject({
     venue: z.string().min(1).optional(),
   }),
 });
+
+/** Cite-or-drop as a schema invariant: an active event has a cited date and venue and a last-verified stamp. */
+export const eventSchema = eventFields.refine(
+  (e) =>
+    e.status !== "active" ||
+    (e.start !== undefined && e.venue !== undefined && e.lastVerified !== undefined && e.evidence.date !== undefined && e.evidence.venue !== undefined),
+  { message: "an active event needs start, venue, lastVerified, and evidence for both date and venue" },
+);
 
 export const sourceStateSchema = z.strictObject({
   consecutiveFailures: z.number().int().nonnegative(),

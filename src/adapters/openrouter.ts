@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import type { CompletionRequest, CompletionResult, ModelPort } from "../ports.js";
-import { REPO_URL } from "./fetcher.js";
+import { REPO_URL } from "./identity.js";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 

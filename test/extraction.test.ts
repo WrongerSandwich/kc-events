@@ -160,7 +160,7 @@ describe("extraction over the registry lane", () => {
     expect(report.counts).toMatchObject({ found: 1, new: 1, heldUnverified: 0 });
   });
 
-  it("a page saying cancelled records the candidate as expired with reason cancelled, never as active", async () => {
+  it("a page saying cancelled yields nothing to publish: the candidate is counted as extracted but no event is recorded", async () => {
     const { ports } = fakePorts(NOW, {
       pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show - CANCELLED</body></html>" } },
       completions: [{ value: { events: [candidate({ notice: "cancelled" })] }, costUsd: 0.01 }],
@@ -168,10 +168,22 @@ describe("extraction over the registry lane", () => {
 
     const { dataset, report } = await runOver(ports);
 
-    expect(dataset.events[0]).toMatchObject({ title: "Big Show", status: "expired", expiryReason: "cancelled" });
-    expect(dataset.events[0]).not.toHaveProperty("lastVerified");
+    expect(dataset.events).toEqual([]);
+    expect(report.sources).toEqual([{ name: "Knuckleheads", result: "fetched", extracted: 1 }]);
+    expect(report.counts).toMatchObject({ found: 0, new: 0, heldUnverified: 0 });
+  });
+
+  it("a page naming no venue yields an unverified event with no venue rather than borrowing the source's name", async () => {
+    const { ports } = fakePorts(NOW, {
+      pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show, Oct 10</body></html>" } },
+      completions: [{ value: { events: [candidate({ venue: null, venueEvidence: null })] }, costUsd: 0.01 }],
+    });
+
+    const { dataset } = await runOver(ports);
+
+    expect(dataset.events[0]).toMatchObject({ status: "unverified", evidence: { date: "Sat, Oct 10 · Doors 7:00 PM · Show 8:00 PM" } });
+    expect(dataset.events[0]).not.toHaveProperty("venue");
     expect(parseDataset(dataset)).toEqual(dataset);
-    expect(report.counts).toMatchObject({ found: 1, new: 1, heldUnverified: 0, expired: { past: 0, "two-strike": 0, cancelled: 1 } });
   });
 
   it("the same page and title seen on a later run refreshes the event under its original id instead of duplicating it", async () => {
@@ -197,6 +209,38 @@ describe("extraction over the registry lane", () => {
       evidence: { date: "Sat, Oct 10 · Show 9:00 PM" },
     });
     expect(report.counts).toMatchObject({ found: 1, new: 0, updated: 1 });
+  });
+
+  it("a sighting that cannot be verified leaves a known active event untouched, and a repeat on a second page of the same source counts once", async () => {
+    const first = fakePorts(NOW, {
+      pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show</body></html>" } },
+      completions: [{ value: { events: [candidate()] }, costUsd: 0.01 }],
+    });
+    const { dataset: after1 } = await runOver(first.ports);
+
+    const FEED_URL = "https://knuckleheads.test/feed.ics";
+    const second = fakePorts(new Date("2026-10-10T03:15:00Z"), {
+      pages: {
+        [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show, date TBA</body></html>" },
+        [FEED_URL]: { status: 200, body: "BEGIN:VCALENDAR" },
+      },
+      completions: [
+        { value: { events: [candidate({ title: "BIG  SHOW!", startDate: null, startTime: null, dateEvidence: null })] }, costUsd: 0.01 },
+        { value: { events: [candidate({ title: "Big Show" })] }, costUsd: 0.01 },
+      ],
+    });
+    const { dataset: after2, report } = await run({
+      config: testConfig(),
+      prompts: testPrompts(),
+      dataset: after1,
+      registry: { sources: [{ ...knuckleheads, urls: [CALENDAR_URL, FEED_URL] }] },
+      ports: second.ports,
+    });
+
+    expect(after2.events).toHaveLength(1);
+    expect(after2.events[0]).toMatchObject({ id: after1.events[0]!.id, status: "active", start: "2026-10-10T20:00:00-05:00" });
+    expect(report.counts).toMatchObject({ found: 1, new: 0, updated: 1, heldUnverified: 0 });
+    expect(report.sources).toEqual([{ name: "Knuckleheads", result: "fetched", extracted: 2 }]);
   });
 
   it("a model reply that is not in the expected shape yields no events from that page and is noted on the source", async () => {

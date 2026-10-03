@@ -94,6 +94,14 @@ describe("dataset", () => {
     expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, description: "copied blurb" }] })).toThrow();
   });
 
+  it("rejects an active event missing a cited date or venue, and accepts the same event held unverified", () => {
+    const { venue, ...noVenue } = event;
+    expect(() => parseDataset({ ...emptyDataset(), events: [noVenue] })).toThrow(/active event/);
+    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, evidence: { venue: event.evidence.venue } }] })).toThrow(/active event/);
+    const { lastVerified, ...held } = { ...noVenue, status: "unverified" };
+    expect(parseDataset({ ...emptyDataset(), events: [held] }).events[0]).toEqual(held);
+  });
+
   it("rejects dates without a timezone offset", () => {
     expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, start: "2026-10-10T20:00:00" }] })).toThrow();
   });
