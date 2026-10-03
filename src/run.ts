@@ -10,7 +10,7 @@ import {
   type PageOrigin,
   type Sighting,
 } from "./extraction.js";
-import { discoveryQueries, hostOf, onHost, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
+import { discoveryQueries, hostOf, isLead, onHost, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { findMatch, normalizeName, sameName } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
@@ -53,7 +53,13 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   // Every model call goes through the cap, whatever stage makes it.
   const model = capSpend(ports.model, config.spendCapUsd);
   const registryLane = await checkRegistry(registry, dataset.sourceState, ports.fetcher);
-  const fetchedUrls = new Set(registryLane.pages.flatMap(({ page }) => [page.url, page.finalUrl]).map((u) => normalizeUrl(u, u)));
+  // An aggregator page is never a primary page, so nothing can be cited to one even if the registry fetched it.
+  const fetchedUrls = new Set(
+    registryLane.pages
+      .flatMap(({ page }) => [page.url, page.finalUrl])
+      .map((u) => normalizeUrl(u, u))
+      .filter((u) => !onHost(u, config.discovery.aggregatorHosts)),
+  );
   const extractionContext: ExtractionContext = {
     config,
     rules: prompts.extractionRules,
@@ -77,7 +83,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
   const events = markChanged(dataset.events, reverified.events, startedIso);
-  const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, registry, startedIso);
+  const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso);
   const shortfall = {
     pagesNotExtracted: extraction.pagesNotExtracted + discovery.pagesNotExtracted,
     eventsNotReverified: reverified.notReverified,
@@ -351,8 +357,9 @@ function refresh(known: Event, sighting: Event): Event {
 }
 
 /**
- * Re-verification: every active event the registry lane did not sight is checked against its
- * primary page. A page the registry lane already tried this run is not fetched again: if it was
+ * Re-verification: every active event neither lane sighted is checked against its primary page.
+ * A primary page on an aggregator is never fetched or read; that is a strike. A page either lane
+ * already tried this run is not fetched again: if it was
  * read, the event is missing from it; if it failed, it failed. Either way that is a strike, as
  * is a re-fetch that fails or a page that no longer lists the event. A page that does list it
  * applies the sighting as in the registry lane. When the model's reply about a page could not be
@@ -362,7 +369,7 @@ function refresh(known: Event, sighting: Event): Event {
  */
 async function reverify(
   events: Event[],
-  lane: RegistryLaneOutcome,
+  lane: LaneOutcome,
   registry: Registry,
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
@@ -374,7 +381,8 @@ async function reverify(
   let notReverified = 0;
 
   for (const url of new Set(pending.map((e) => e.primaryUrl))) {
-    if (lane.triedUrls.has(url)) {
+    // An aggregator page is never read, so it can never again show the event: a strike.
+    if (lane.triedUrls.has(url) || onHost(url, context.config.discovery.aggregatorHosts)) {
       sightingsAt.set(url, []);
       continue;
     }
@@ -406,10 +414,10 @@ async function reverify(
   return { events: checked, reverified: refreshed.size, notReverified, outsideGeography, sightings: [...sightingsAt.values()].flat() };
 }
 
-/** What the registry lane leaves for re-verification: which events it sighted and which pages it tried. */
-interface RegistryLaneOutcome {
+/** What the two lanes leave for re-verification: which events they sighted and which pages they tried. */
+interface LaneOutcome {
   touched: Set<string>;
-  /** Every URL the lane requested or was redirected to, normalized, whether or not it came back. */
+  /** Every URL either lane requested or was redirected to, normalized, whether or not it came back. */
   triedUrls: Set<string>;
   /** Pages that came back but whose extraction reply could not be read. */
   unreadUrls: Set<string>;
@@ -417,19 +425,35 @@ interface RegistryLaneOutcome {
 
 /** A page that came back readable, or nothing: a network error, a non-2xx status, or a robots.txt block. */
 async function fetchPage(url: string, fetcher: FetchPort): Promise<FetchResult | undefined> {
-  const fetched = await fetchOrWhyNot(url, fetcher);
-  return typeof fetched === "string" ? undefined : fetched;
+  const fetched = await fetchReadable(url, fetcher);
+  return "page" in fetched ? fetched.page : undefined;
 }
 
-/** A page that came back readable, or why it did not. */
-async function fetchOrWhyNot(url: string, fetcher: FetchPort): Promise<FetchResult | string> {
+/** A page that came back readable, or the problem with it. */
+async function fetchReadable(url: string, fetcher: FetchPort): Promise<{ page: FetchResult } | { problem: string }> {
   try {
     const page = await fetcher.fetch(url);
-    if (!page.robotsAllowed) return `robots.txt disallows ${url}`;
-    return page.status >= 200 && page.status < 300 ? page : `${url}: HTTP ${page.status}`;
+    if (!page.robotsAllowed) return { problem: `robots.txt disallows ${url}` };
+    return page.status >= 200 && page.status < 300 ? { page } : { problem: `${url}: HTTP ${page.status}` };
   } catch (error) {
-    return `${url}: ${error instanceof Error ? error.message : String(error)}`;
+    return { problem: `${url}: ${error instanceof Error ? error.message : String(error)}` };
   }
+}
+
+/** What the discovery lane found, and what it leaves for merging, re-verification, and the report. */
+interface DiscoveryLaneOutcome {
+  sightings: Sighting[];
+  /** Every primary page the lane requested or was redirected to, normalized; never an aggregator page read as an index. */
+  triedUrls: Set<string>;
+  /** Pages that came back but were not read: an unreadable reply, or the spend cap. */
+  unreadUrls: Set<string>;
+  /** Host to an example page, for every host whose page yielded an active event this run. */
+  hosts: Map<string, string>;
+  report: RunReport["discovery"];
+  outsideGeography: number;
+  pagesNotExtracted: number;
+  queriesNotSearched: number;
+  leadsNotFollowed: number;
 }
 
 /**
@@ -441,65 +465,77 @@ async function fetchOrWhyNot(url: string, fetcher: FetchPort): Promise<FetchResu
  * not at all when the registry lane already tried it. Once the spend cap is reached, searches and
  * leads still to go are skipped and counted, so nothing is fetched that could not be read.
  */
-async function discover(ports: Ports & { model: CappedModel }, context: ExtractionContext, registryTried: Set<string>) {
+async function discover(ports: Ports & { model: CappedModel }, context: ExtractionContext, registryTried: Set<string>): Promise<DiscoveryLaneOutcome> {
   const { config } = context;
-  const { aggregatorHosts, ignoredHosts, resultsPerQuery } = config.discovery;
-  const sightings: Sighting[] = [];
-  const triedUrls = new Set<string>();
-  const unreadUrls = new Set<string>();
-  /** Host to an example page, for every host whose page yielded an active event this run. */
-  const hosts = new Map<string, string>();
-  const report: RunReport["discovery"] = { enabled: config.discovery.enabled, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [] };
-  let outsideGeography = 0;
-  let pagesNotExtracted = 0;
-  let queriesNotSearched = 0;
-  let leadsNotFollowed = 0;
+  const outcome: DiscoveryLaneOutcome = {
+    sightings: [],
+    triedUrls: new Set(),
+    unreadUrls: new Set(),
+    hosts: new Map(),
+    report: { enabled: config.discovery.enabled, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [] },
+    outsideGeography: 0,
+    pagesNotExtracted: 0,
+    queriesNotSearched: 0,
+    leadsNotFollowed: 0,
+  };
+  const { report } = outcome;
   const followed = new Set<string>();
-  const firstFollow = (url: string) => {
-    if (followed.has(url) || registryTried.has(url)) return false;
+
+  /** The page behind a lead not yet followed this run, or nothing: already followed, the cap, or a problem fetching it. */
+  const follow = async (url: string): Promise<FetchResult | undefined> => {
+    if (followed.has(url) || registryTried.has(url)) return undefined;
     followed.add(url);
-    return true;
+    if (ports.model.exhausted()) {
+      outcome.leadsNotFollowed++;
+      return undefined;
+    }
+    const fetched = await fetchReadable(url, ports.fetcher);
+    if ("page" in fetched) return fetched.page;
+    report.problems.push(fetched.problem);
+    return undefined;
   };
 
   const readPrimaryPage = async (url: string, query: string) => {
-    if (!firstFollow(url)) return;
-    if (ports.model.exhausted()) return void leadsNotFollowed++;
-    triedUrls.add(url);
-    const page = await fetchOrWhyNot(url, ports.fetcher);
-    if (typeof page === "string") return void report.problems.push(page);
+    if (!followed.has(url) && !registryTried.has(url)) outcome.triedUrls.add(url);
+    const page = await follow(url);
+    if (!page) return;
     const pageUrls = [url, normalizeUrl(page.finalUrl, url)];
-    if (onHost(page.finalUrl, aggregatorHosts)) return void report.problems.push(`${url} led to an aggregator page and was not extracted`);
-    for (const u of pageUrls) triedUrls.add(u);
+    if (onHost(page.finalUrl, config.discovery.aggregatorHosts)) {
+      report.problems.push(`${url} led to an aggregator page and was not extracted`);
+      return;
+    }
+    for (const u of pageUrls) outcome.triedUrls.add(u);
     let read: Awaited<ReturnType<typeof extractPage>>;
     try {
       read = await extractPage(page, { lane: "discovery", query }, ports.model, { ...context, fetchedUrls: new Set([...context.fetchedUrls, ...pageUrls]) });
     } catch (error) {
       if (!(error instanceof SpendCapReached)) throw error;
-      pagesNotExtracted++;
-      for (const u of pageUrls) unreadUrls.add(u);
+      outcome.pagesNotExtracted++;
+      for (const u of pageUrls) outcome.unreadUrls.add(u);
       return;
     }
     report.pagesExtracted++;
-    outsideGeography += read.outsideGeography;
+    outcome.outsideGeography += read.outsideGeography;
     report.problems.push(...read.problems);
-    if (!read.sightings) return void pageUrls.forEach((u) => unreadUrls.add(u));
-    sightings.push(...read.sightings);
+    if (!read.sightings) {
+      for (const u of pageUrls) outcome.unreadUrls.add(u);
+      return;
+    }
+    outcome.sightings.push(...read.sightings);
     const host = hostOf(page.finalUrl);
-    if (host && !hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) hosts.set(host, pageUrls[1]!);
+    if (host && !outcome.hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) outcome.hosts.set(host, pageUrls[1]!);
   };
 
   const readIndex = async (url: string, query: string) => {
-    if (!firstFollow(url)) return;
-    if (ports.model.exhausted()) return void leadsNotFollowed++;
-    const page = await fetchOrWhyNot(url, ports.fetcher);
-    if (typeof page === "string") return void report.problems.push(page);
+    const page = await follow(url);
+    if (!page) return;
     report.aggregatorPages++;
     for (const link of outboundLinks(page, config)) await readPrimaryPage(link, query);
   };
 
   for (const query of config.discovery.enabled ? discoveryQueries(config, context.today) : []) {
     if (ports.model.exhausted()) {
-      queriesNotSearched++;
+      outcome.queriesNotSearched++;
       continue;
     }
     let results: Awaited<ReturnType<Ports["search"]["search"]>>;
@@ -510,14 +546,13 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
       continue;
     }
     report.queries++;
-    for (const result of results.slice(0, resultsPerQuery)) {
+    for (const result of results.slice(0, config.discovery.resultsPerQuery)) {
       const url = normalizeUrl(result.url, "");
-      if (!/^https?:/i.test(url) || onHost(url, ignoredHosts)) continue;
-      await (onHost(url, aggregatorHosts) ? readIndex(url, query) : readPrimaryPage(url, query));
+      if (!isLead(url, config)) continue;
+      await (onHost(url, config.discovery.aggregatorHosts) ? readIndex(url, query) : readPrimaryPage(url, query));
     }
   }
-
-  return { sightings, triedUrls, unreadUrls, hosts, report, outsideGeography, pagesNotExtracted, queriesNotSearched, leadsNotFollowed };
+  return outcome;
 }
 
 /**

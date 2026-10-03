@@ -191,6 +191,47 @@ describe("discovery lane", () => {
     expect(report.promotionSuggestions).toEqual([]);
   });
 
+  it("a ticketing platform is followed as a primary page but never suggested for promotion", async () => {
+    const ticketPage = (n: number) => `https://www.tickets.test/e/show-${n}`;
+    const first = await discoverAt(WEEK_1, emptyDataset(), {
+      searches: { [QUERY]: [lead(ticketPage(1))] },
+      pages: { [ticketPage(1)]: PAGE },
+      completions: [costing(0.01, candidateAt(PROMOTER, { title: "Show 1", primaryUrl: ticketPage(1) }))],
+      discovery: { platformHosts: ["tickets.test"] },
+    });
+    const second = await discoverAt(WEEK_2, first.dataset, {
+      searches: { [LATER_QUERY]: [lead(ticketPage(2))] },
+      pages: { [ticketPage(1)]: PAGE, [ticketPage(2)]: PAGE },
+      completions: [
+        costing(0.01, candidateAt(PROMOTER, { title: "Show 2", primaryUrl: ticketPage(2) })),
+        costing(0.01, candidateAt(PROMOTER, { title: "Show 1", primaryUrl: ticketPage(1) })),
+      ],
+      discovery: { platformHosts: ["tickets.test"] },
+    });
+
+    expect(second.dataset.events.map((e) => [e.title, e.status])).toEqual([
+      ["Show 1", "active"],
+      ["Show 2", "active"],
+    ]);
+    expect(second.report.promotionSuggestions).toEqual([]);
+  });
+
+  it("an active event whose primary page is on an aggregator is struck on re-verification, never extracted", async () => {
+    const listingPage = "https://listings.test/kc/event/123";
+    const known = (await discoverAt(WEEK_1, emptyDataset(), {
+      searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
+      pages: { [PROMOTER_PAGE]: PAGE },
+      completions: [costing(0.01, candidateAt(PROMOTER))],
+    })).dataset;
+    // An event made active by some earlier rule, now pointing at an aggregator page.
+    const dataset = { ...known, events: known.events.map((e) => ({ ...e, primaryUrl: listingPage })) };
+
+    const { calls, dataset: after } = await discoverAt(WEEK_2, dataset, { pages: { [listingPage]: PAGE } });
+
+    expect(calls.filter((c) => c.startsWith("model:") || c.startsWith("fetch:"))).toEqual([]);
+    expect(after.events[0]).toMatchObject({ status: "active", verificationFailures: 1 });
+  });
+
   it("a lead robots.txt disallows is not extracted, and the report says why", async () => {
     const { calls, dataset, report } = await discoverAt(WEEK_1, emptyDataset(), {
       searches: { [QUERY]: [lead(PROMOTER_PAGE)] },

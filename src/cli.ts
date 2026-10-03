@@ -2,7 +2,7 @@
  * The research command. Does all file I/O: loads config, prompts, registry, and dataset, builds
  * the adapters, calls the run, and writes the dataset and the run report (Markdown plus JSON twin).
  *
- *   pnpm research [--horizon-weeks N] [--discovery]
+ *   pnpm research [--horizon-weeks N] [--no-discovery]
  */
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -28,7 +28,7 @@ const RUNS_DIR = join(DATA_DIR, "runs");
 const EXTRACTION_RULES_PATH = join(ROOT, "prompts", "extraction-rules.md");
 
 async function main() {
-  const { values } = parseArgs({ options: { "horizon-weeks": { type: "string" }, discovery: { type: "boolean" } } });
+  const { values } = parseArgs({ options: { "horizon-weeks": { type: "string" }, "no-discovery": { type: "boolean" } } });
 
   if (existsSync(join(ROOT, ".env"))) process.loadEnvFile(join(ROOT, ".env"));
 
@@ -40,7 +40,7 @@ async function main() {
   const config = {
     ...fileConfig,
     ...(horizon !== undefined ? { horizonWeeks: Number(horizon) } : {}),
-    ...(values.discovery ? { discovery: { ...fileConfig.discovery, enabled: true } } : {}),
+    ...(values["no-discovery"] ? { discovery: { ...fileConfig.discovery, enabled: false } } : {}),
   };
 
   // Checked up front: without it every search would fail one by one.

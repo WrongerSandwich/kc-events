@@ -15,7 +15,7 @@ interface TavilyResponse {
 export function createTavilySearch({ apiKey, maxResults }: { apiKey: string | undefined; maxResults: number }): SearchPort {
   return {
     async search(query: string): Promise<SearchResult[]> {
-      if (!apiKey) throw new Error("TAVILY_API_KEY is not set; put it in the environment or a gitignored .env");
+      if (!apiKey) throw new Error("TAVILY_API_KEY is not set");
       const response = await fetch(TAVILY_SEARCH_URL, {
         method: "POST",
         headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },

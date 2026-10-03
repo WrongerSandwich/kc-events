@@ -38,25 +38,26 @@ function monthSpan(start: Date, end: Date): string {
 /** The URL's host without a leading "www.", lowercased; undefined when it does not parse. */
 export function hostOf(url: string): string | undefined {
   try {
-    return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+    return bareHost(new URL(url).hostname);
   } catch {
     return undefined;
   }
+}
+
+function bareHost(host: string): string {
+  return host.toLowerCase().replace(/^www\./, "");
 }
 
 /** Whether the URL is on one of the hosts or a subdomain of one. */
 export function onHost(url: string, hosts: readonly string[]): boolean {
   const host = hostOf(url);
   if (host === undefined) return false;
-  return hosts.some((h) => {
-    const listed = h.toLowerCase().replace(/^www\./, "");
-    return host === listed || host.endsWith(`.${listed}`);
-  });
+  return hosts.map(bareHost).some((listed) => host === listed || host.endsWith(`.${listed}`));
 }
 
-/** A URL worth following as a lead: http(s), and on neither an aggregator nor an ignored host. */
-export function followable(url: string, config: RunConfig): boolean {
-  return /^https?:/i.test(url) && !onHost(url, config.discovery.aggregatorHosts) && !onHost(url, config.discovery.ignoredHosts);
+/** A search result worth following: http(s) and not on an ignored host. It may still be an aggregator. */
+export function isLead(url: string, config: RunConfig): boolean {
+  return /^https?:/i.test(url) && !onHost(url, config.discovery.ignoredHosts);
 }
 
 /**
@@ -72,7 +73,7 @@ export function outboundLinks(page: FetchResult, config: RunConfig): string[] {
     } catch {
       continue;
     }
-    if (!followable(url, config) || links.includes(url)) continue;
+    if (!isLead(url, config) || onHost(url, config.discovery.aggregatorHosts) || links.includes(url)) continue;
     links.push(url);
     if (links.length >= config.discovery.linksPerAggregatorPage) break;
   }
@@ -82,20 +83,22 @@ export function outboundLinks(page: FetchResult, config: RunConfig): string[] {
 /**
  * Folds this run's discovery hosts (those whose pages yielded an active event) into the state
  * carried between runs, and lists as promotion suggestions every host seen this run that has now
- * been seen in at least two runs. A host the registry already checks is neither counted nor
- * suggested. Suggestions are only ever suggestions: nothing here touches the registry.
+ * been seen in at least two runs. A host the registry already checks, or a ticketing platform that
+ * is no one source, is neither counted nor suggested. Suggestions are only ever suggestions:
+ * nothing here touches the registry.
  */
 export function trackDiscoveryHosts(
   previous: Dataset["discoveryState"],
   seenThisRun: Map<string, string>,
-  registry: Registry,
+  { registry, config }: { registry: Registry; config: RunConfig },
   runIso: string,
 ): { discoveryState: Dataset["discoveryState"]; promotionSuggestions: RunReport["promotionSuggestions"] } {
   const registryHosts = registry.sources.flatMap((s) => s.urls.map(hostOf)).filter((h): h is string => h !== undefined);
+  const neverSuggested = [...registryHosts, ...config.discovery.platformHosts];
   const discoveryState = { ...previous };
   const promotionSuggestions: RunReport["promotionSuggestions"] = [];
   for (const [host, exampleUrl] of seenThisRun) {
-    if (registryHosts.includes(host)) continue;
+    if (onHost(exampleUrl, neverSuggested)) continue;
     const was = discoveryState[host];
     const runsSeen = was?.lastSeen === runIso ? was.runsSeen : (was?.runsSeen ?? 0) + 1;
     discoveryState[host] = { runsSeen, lastSeen: runIso };

@@ -72,7 +72,7 @@ One execution of the research job: check sources, discover, extract, verify, cur
 The committed record of one run: counts, spend against the cap, per-source results, sources failing repeatedly, unmappable neighborhoods, and promotion suggestions.
 
 **Promotion**:
-Moving a source that the discovery lane has found twice into the registry. Always a suggestion in the run report, acted on by hand; never automatic.
+Moving a source that the discovery lane has found events on in two runs into the registry. The run tracks discovery sources by host (a ticketing platform is no one source and is never suggested). Always a suggestion in the run report, acted on by hand; never automatic.
 
 **Source**:
 A venue, institution, or organizer whose page or feed the research job checks. A source produces leads; it is not an event.

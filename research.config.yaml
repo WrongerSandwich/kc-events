@@ -42,9 +42,9 @@ neighborhoods:
 # registry page, with the query recorded as the event's lead. An aggregator page is read only as an
 # index: its outbound links are followed, its own text never reaches extraction. A host discovery
 # finds events on in two runs is suggested for promotion in the run report, never added here.
-# `pnpm research --discovery` turns it on for one run.
+# `pnpm research --no-discovery` turns it off for one run.
 discovery:
-  enabled: false
+  enabled: true
   place: Kansas City # the geography in the few words a search engine wants
   resultsPerQuery: 5
   linksPerAggregatorPage: 10
@@ -71,3 +71,14 @@ discovery:
     - reddit.com
     - google.com
     - apple.com
+  platformHosts: # ticketing platforms: followed as primary pages, never suggested for promotion
+    - eventbrite.com
+    - ticketmaster.com
+    - livenation.com
+    - axs.com
+    - dice.fm
+    - etix.com
+    - seetickets.us
+    - tixr.com
+    - universe.com
+    - simpletix.com

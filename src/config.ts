@@ -53,6 +53,23 @@ export const DEFAULT_IGNORED_HOSTS = [
   "apple.com",
 ] as const;
 
+/**
+ * Ticketing and event platforms many organizers sell through: their event pages are primary pages,
+ * but the host is no one source, so it is never suggested for promotion.
+ */
+export const DEFAULT_PLATFORM_HOSTS = [
+  "eventbrite.com",
+  "ticketmaster.com",
+  "livenation.com",
+  "axs.com",
+  "dice.fm",
+  "etix.com",
+  "seetickets.us",
+  "tixr.com",
+  "universe.com",
+  "simpletix.com",
+] as const;
+
 const discoverySchema = z.strictObject({
   enabled: z.boolean().default(false),
   /** The geography in the few words a search engine wants; queries are built from it. */
@@ -61,6 +78,7 @@ const discoverySchema = z.strictObject({
   linksPerAggregatorPage: z.number().int().positive().default(10),
   aggregatorHosts: z.array(z.string().min(1)).default([...DEFAULT_AGGREGATOR_HOSTS]),
   ignoredHosts: z.array(z.string().min(1)).default([...DEFAULT_IGNORED_HOSTS]),
+  platformHosts: z.array(z.string().min(1)).default([...DEFAULT_PLATFORM_HOSTS]),
 });
 
 /**
