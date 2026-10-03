@@ -30,6 +30,9 @@ An event that happens over a bounded span with a known end date, such as an exhi
 **Recurring**:
 An event that repeats indefinitely on a schedule, such as weekly trivia, a monthly market, or First Fridays.
 
+**Schedule phrase**:
+How a recurring event repeats, in a few words from its page ("Every Tuesday, 7pm"). A recurring event carries it instead of a start and end date. A sports team's season is one recurring event with a schedule phrase, not a one-off per game.
+
 **Don't-miss flag**:
 The editorial call that a one-off or limited run is worth going out of your way for. Never applied to recurring events.
 _Avoid_: featured, top pick, interest score, rating
@@ -58,7 +61,7 @@ How an event was first found: which registry source or which discovery search.
 The place an event happens. A venue is not the same as a source, even when the venue's website is a source.
 
 **Neighborhood**:
-The part of the metro a venue is in, from a controlled list, shown on the site in place of a street address. "Lawrence" and "elsewhere in the metro" are the catch-alls.
+The part of the metro a venue is in, from a controlled list, shown on the site in place of a street address. The list is the config's plus every registry source's neighborhood. "Lawrence" and "elsewhere in the metro" are the catch-alls; an address that maps to nothing lands in elsewhere in the metro and is flagged as unmappable in the run report.
 
 ### Research
 

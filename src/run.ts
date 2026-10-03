@@ -1,11 +1,19 @@
 import type { RunConfig } from "./config.js";
 import type { Dataset, Event, ExpiryReason, SourceState } from "./dataset.js";
 import { expire, expirePast, isPast, strike } from "./expiry.js";
-import { buildExtractionRequest, candidateToEvent, extractionReplySchema, normalizeUrl, type ExtractionContext } from "./extraction.js";
-import { findMatch, sameName } from "./identity.js";
+import {
+  buildExtractionRequest,
+  candidateToSighting,
+  extractionReplySchema,
+  normalizeUrl,
+  type ExtractionContext,
+  type Sighting,
+} from "./extraction.js";
+import { findMatch, normalizeName, sameName } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
 import type { RunReport, SourceReport } from "./report.js";
+import { neighborhoodList } from "./taxonomy.js";
 import { toLocalDate, toLocalIso } from "./time.js";
 
 /** Consecutive failed runs after which a source is flagged in the report. */
@@ -41,7 +49,14 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const today = toLocalDate(startedAt, config.timezone);
   const registryLane = await checkRegistry(registry, dataset.sourceState, ports.fetcher);
   const fetchedUrls = new Set(registryLane.pages.flatMap(({ page }) => [page.url, page.finalUrl]).map((u) => normalizeUrl(u, u)));
-  const extractionContext: ExtractionContext = { config, rules: prompts.extractionRules, today, nowIso: startedIso, fetchedUrls };
+  const extractionContext: ExtractionContext = {
+    config,
+    rules: prompts.extractionRules,
+    today,
+    nowIso: startedIso,
+    fetchedUrls,
+    neighborhoods: neighborhoodList(config, registry),
+  };
   const extraction = await extractFromPages(registryLane.pages, ports.model, extractionContext);
   const sourceReports = registryLane.sourceReports.map((report) => withExtraction(report, extraction.bySource.get(report.name)));
   const merged = mergeSightings(dataset.events, extraction.sightings, today);
@@ -64,13 +79,14 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       updated: merged.counts.updated,
       reverified: reverified.reverified,
       heldUnverified: merged.counts.heldUnverified,
+      outsideGeography: extraction.outsideGeography + reverified.outsideGeography,
       expired: countExpired(dataset.events, events),
     },
     // Spend is summed from every call; stopping at the cap arrives with #7.
     spend: { totalUsd: extraction.spendUsd + reverified.spendUsd, capUsd: config.spendCapUsd, capHit: false },
     sources: sourceReports,
     failingSources: registryLane.failingSources,
-    unmappableNeighborhoods: [],
+    unmappableNeighborhoods: unmappable([...extraction.sightings, ...reverified.sightings]),
     promotionSuggestions: [],
   };
 
@@ -160,60 +176,69 @@ interface SourceExtraction {
   problems: string[];
 }
 
-/** One candidate after cite-or-drop: the event as read off a page this run, and whether the page says it is cancelled. */
-interface Sighting {
-  event: Event;
-  cancelled: boolean;
-}
-
 /**
  * Hands every fetched page to the extraction model with the rules document and turns the
  * candidates into sightings under cite-or-drop. A reply that fails validation yields nothing
- * from that page; a candidate with no title cannot be an event.
+ * from that page.
  */
 async function extractFromPages(pages: SourcePage[], model: ModelPort, context: ExtractionContext) {
   const sightings: Sighting[] = [];
   const bySource = new Map<string, SourceExtraction>();
   const unreadUrls = new Set<string>();
   let spendUsd = 0;
+  let outsideGeography = 0;
 
   for (const { source, page } of pages) {
     const outcome = bySource.get(source.name) ?? { extracted: 0, problems: [] };
     bySource.set(source.name, outcome);
     const read = await extractPage(page, source, model, context);
     spendUsd += read.costUsd;
+    outsideGeography += read.outsideGeography;
     if (read.sightings) sightings.push(...read.sightings);
     else for (const url of [page.url, page.finalUrl]) unreadUrls.add(normalizeUrl(url, url));
     outcome.extracted += read.extracted;
     outcome.problems.push(...read.problems);
   }
 
-  return { sightings, spendUsd, bySource, unreadUrls };
+  return { sightings, spendUsd, outsideGeography, bySource, unreadUrls };
 }
 
-/** One extraction call over one page. Sightings are absent when the reply could not be read. */
+/**
+ * One extraction call over one page. Sightings are absent when the reply could not be read. A
+ * candidate with no title cannot be an event; one outside the geography is dropped and counted.
+ */
 async function extractPage(
   page: FetchResult,
   source: Source,
   model: ModelPort,
   context: ExtractionContext,
-): Promise<{ sightings?: Sighting[]; extracted: number; costUsd: number; problems: string[] }> {
+): Promise<{ sightings?: Sighting[]; extracted: number; outsideGeography: number; costUsd: number; problems: string[] }> {
   const reply = await model.complete(buildExtractionRequest(page, source, context));
   const parsed = extractionReplySchema.safeParse(reply.value);
   if (!parsed.success) {
-    return { extracted: 0, costUsd: reply.costUsd, problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`] };
+    return {
+      extracted: 0,
+      outsideGeography: 0,
+      costUsd: reply.costUsd,
+      problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`],
+    };
   }
   const origin = { source, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl) };
   const sightings: Sighting[] = [];
   const problems: string[] = [];
+  let outsideGeography = 0;
   for (const candidate of parsed.data.events) {
     if (candidate.title.trim() === "") {
       problems.push(`a candidate on ${page.finalUrl} had no title and was skipped`);
       continue;
     }
-    sightings.push({ event: candidateToEvent(candidate, origin, context), cancelled: candidate.notice === "cancelled" });
+    if (candidate.outsideGeography) {
+      outsideGeography++;
+      continue;
+    }
+    sightings.push(candidateToSighting(candidate, origin, context));
   }
-  return { sightings, extracted: parsed.data.events.length, costUsd: reply.costUsd, problems };
+  return { sightings, extracted: parsed.data.events.length, outsideGeography, costUsd: reply.costUsd, problems };
 }
 
 function withExtraction(report: SourceReport, extraction: SourceExtraction | undefined): SourceReport {
@@ -291,6 +316,7 @@ async function reverify(events: Event[], lane: RegistryLaneOutcome, registry: Re
   const sightingsAt = new Map<string, Sighting[]>();
   const refreshed = new Set<string>();
   let spendUsd = 0;
+  let outsideGeography = 0;
 
   for (const url of new Set(pending.map((e) => e.primaryUrl))) {
     if (lane.triedUrls.has(url)) {
@@ -306,8 +332,10 @@ async function reverify(events: Event[], lane: RegistryLaneOutcome, registry: Re
     const pageUrls = new Set([url, normalizeUrl(page.finalUrl, url)]);
     const read = await extractPage(page, sourceFor(event, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
     spendUsd += read.costUsd;
+    outsideGeography += read.outsideGeography;
     if (read.sightings) sightingsAt.set(url, read.sightings);
   }
+
 
   const checked = events.map((event) => {
     const sightings = sightingsAt.get(event.primaryUrl);
@@ -318,7 +346,7 @@ async function reverify(events: Event[], lane: RegistryLaneOutcome, registry: Re
     if (applied.refreshed) refreshed.add(event.id);
     return applied.event;
   });
-  return { events: checked, reverified: refreshed.size, spendUsd };
+  return { events: checked, reverified: refreshed.size, spendUsd, outsideGeography, sightings: [...sightingsAt.values()].flat() };
 }
 
 /** What the registry lane leaves for re-verification: which events it sighted and which pages it tried. */
@@ -359,8 +387,8 @@ function sourceFor(event: Event, url: string, registry: Registry): Source {
 }
 
 /**
- * Stamps last-changed on every event that is new this run or whose date, venue, or status
- * differs from the dataset it started from, so curation knows what to re-judge. A venue
+ * Stamps last-changed on every event that is new this run or whose date (a recurring event's
+ * schedule), venue, or status differs from the dataset it started from, so curation knows what to re-judge. A venue
  * spelled with different case or punctuation is the same venue.
  */
 function markChanged(previous: Event[], events: Event[], nowIso: string): Event[] {
@@ -368,7 +396,12 @@ function markChanged(previous: Event[], events: Event[], nowIso: string): Event[
   return events.map((event) => {
     const was = before.get(event.id);
     const changed =
-      !was || was.start !== event.start || was.end !== event.end || !sameName(was.venue, event.venue) || was.status !== event.status;
+      !was ||
+      was.start !== event.start ||
+      was.end !== event.end ||
+      was.schedule !== event.schedule ||
+      !sameName(was.venue, event.venue) ||
+      was.status !== event.status;
     return changed ? { ...event, lastChanged: nowIso } : event;
   });
 }
@@ -379,4 +412,20 @@ function countExpired(previous: Event[], events: Event[]): Record<ExpiryReason, 
   const counts: Record<ExpiryReason, number> = { past: 0, "two-strike": 0, cancelled: 0 };
   for (const e of events) if (e.status === "expired" && e.expiryReason && !wasExpired.has(e.id)) counts[e.expiryReason]++;
   return counts;
+}
+
+/**
+ * The run report's unmappable neighborhoods: every sighting this run whose address landed in the
+ * catch-all, once per title and venue. A cancelled sighting has nothing to place.
+ */
+function unmappable(sightings: Sighting[]): RunReport["unmappableNeighborhoods"] {
+  const seen = new Set<string>();
+  const flagged: RunReport["unmappableNeighborhoods"] = [];
+  for (const { event, cancelled, unmappable } of sightings) {
+    const key = `${normalizeName(event.title)}\n${normalizeName(event.venue ?? "")}`;
+    if (!unmappable || cancelled || seen.has(key)) continue;
+    seen.add(key);
+    flagged.push({ eventTitle: event.title, ...(event.venue !== undefined ? { venue: event.venue } : {}), ...unmappable });
+  }
+  return flagged;
 }

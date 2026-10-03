@@ -1,0 +1,160 @@
+import { describe, expect, it } from "vitest";
+import { run } from "../src/run.js";
+import { emptyDataset, parseDataset } from "../src/dataset.js";
+import type { RunConfig } from "../src/config.js";
+import { renderReportMarkdown } from "../src/report.js";
+import { fakePorts } from "./fakes/ports.js";
+import { testConfig, testPrompts } from "./fakes/config.js";
+
+// 22:15 on 2026-10-02 in Kansas City (CDT, UTC-5).
+const NOW = new Date("2026-10-03T03:15:00Z");
+
+const CALENDAR_URL = "https://recordbar.test/calendar";
+const recordBar = {
+  name: "recordBar",
+  urls: [CALENDAR_URL],
+  kind: "music",
+  neighborhood: "Crossroads",
+  status: "active" as const,
+};
+
+/** A fully cited single-night show at the source's own venue. */
+function candidate(overrides: Record<string, unknown> = {}) {
+  return {
+    title: "Big Show",
+    startDate: "2026-10-10",
+    startTime: "20:00",
+    endDate: null,
+    endTime: null,
+    schedule: null,
+    sportsSeason: false,
+    venue: "recordBar",
+    neighborhood: "Crossroads",
+    outsideGeography: false,
+    kind: "music",
+    primaryUrl: CALENDAR_URL,
+    dateEvidence: "Sat, Oct 10 · Show 8:00 PM",
+    venueEvidence: "recordBar, 1520 Grand Blvd",
+    notice: "none",
+    ...overrides,
+  };
+}
+
+async function runOver(candidates: unknown[], config: RunConfig = testConfig()) {
+  const fakes = fakePorts(NOW, {
+    pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>calendar</body></html>" } },
+    completions: [{ value: { events: candidates }, costUsd: 0.01 }],
+  });
+  const result = await run({ config, prompts: testPrompts(), dataset: emptyDataset(), registry: { sources: [recordBar] }, ports: fakes.ports });
+  expect(parseDataset(result.dataset)).toEqual(result.dataset);
+  return { ...result, requests: fakes.requests };
+}
+
+describe("recurrence, kind, geography, and neighborhood", () => {
+  it("weekly trivia is an active recurring event with a schedule phrase and no start date", async () => {
+    const { dataset } = await runOver([
+      candidate({
+        title: "Tuesday Trivia",
+        startDate: null,
+        startTime: null,
+        schedule: "Every Tuesday, 7pm",
+        kind: "other",
+        dateEvidence: "Trivia every Tuesday at 7pm",
+      }),
+    ]);
+
+    expect(dataset.events).toHaveLength(1);
+    expect(dataset.events[0]).toMatchObject({
+      title: "Tuesday Trivia",
+      schedule: "Every Tuesday, 7pm",
+      recurrence: "recurring",
+      status: "active",
+      evidence: { date: "Trivia every Tuesday at 7pm" },
+    });
+    expect(dataset.events[0]).not.toHaveProperty("start");
+    expect(dataset.events[0]).not.toHaveProperty("end");
+  });
+
+  it("a team's home season is one recurring event carrying its schedule, not a one-off per game", async () => {
+    const { dataset } = await runOver([
+      candidate({
+        title: "Sporting KC home matches",
+        startDate: "2026-03-01",
+        endDate: "2026-10-18",
+        schedule: "Home matches, March through October",
+        sportsSeason: true,
+        kind: "sports",
+        venue: "Children's Mercy Park",
+        dateEvidence: "2026 home schedule: Mar 1 – Oct 18",
+        venueEvidence: "Children's Mercy Park",
+      }),
+    ]);
+
+    expect(dataset.events).toHaveLength(1);
+    expect(dataset.events[0]).toMatchObject({ recurrence: "recurring", schedule: "Home matches, March through October", status: "active" });
+    expect(dataset.events[0]).not.toHaveProperty("start");
+  });
+
+  it("a kind from the taxonomy is kept, and the model's kind wins over the source's", async () => {
+    const { dataset } = await runOver([candidate({ kind: "comedy" })], testConfig({ kinds: ["music", "comedy", "other"] }));
+
+    expect(dataset.events[0]).toMatchObject({ kind: "comedy" });
+  });
+
+  it("a kind outside the taxonomy becomes other", async () => {
+    const { dataset } = await runOver([candidate({ title: "A", kind: "polka" }), candidate({ title: "B", kind: "MUSIC" })]);
+
+    expect(dataset.events.map((e) => e.kind)).toEqual(["other", "music"]);
+  });
+
+  it("the extraction request lists the taxonomy so the model can choose from it", async () => {
+    const { requests } = await runOver([candidate()]);
+
+    expect(requests[0]!.messages[0]!.content).toContain("- Kinds: music, other");
+  });
+
+  it("a neighborhood on the list keeps the list's spelling, and the list is seeded from the registry's sources", async () => {
+    // Westport is in the config list; Crossroads only in the registry.
+    const { dataset, report } = await runOver([
+      candidate({ title: "A", neighborhood: "westport" }),
+      candidate({ title: "B", neighborhood: "Crossroads" }),
+      candidate({ title: "C", neighborhood: "Lawrence" }),
+    ]);
+
+    expect(dataset.events.map((e) => e.neighborhood)).toEqual(["Westport", "Crossroads", "Lawrence"]);
+    expect(report.unmappableNeighborhoods).toEqual([]);
+  });
+
+  it("an address that maps to nothing on the list lands in the catch-all and appears in the report", async () => {
+    const { dataset, report } = await runOver([
+      candidate({ title: "Suburban Show", venue: "Some Hall", venueEvidence: "Some Hall, 123 Main St, Olathe", neighborhood: "Olathe" }),
+      candidate({ title: "Nowhere Show", neighborhood: null }),
+    ]);
+
+    expect(dataset.events.map((e) => e.neighborhood)).toEqual(["Elsewhere in the metro", "Elsewhere in the metro"]);
+    expect(report.unmappableNeighborhoods).toEqual([
+      { eventTitle: "Suburban Show", venue: "Some Hall", proposed: "Olathe" },
+      { eventTitle: "Nowhere Show", venue: "recordBar" },
+    ]);
+    expect(renderReportMarkdown(report)).toContain('- Suburban Show at Some Hall: the extractor proposed "Olathe"');
+  });
+
+  it("the extraction request lists the neighborhoods, catch-alls included", async () => {
+    const { requests } = await runOver([candidate()]);
+
+    expect(requests[0]!.messages[0]!.content).toContain("- Neighborhoods: Westport, Lawrence, Elsewhere in the metro, Crossroads");
+  });
+
+  it("an event outside the geography is dropped and counted, never recorded", async () => {
+    const { dataset, report } = await runOver([
+      candidate({ title: "Tour Stop In St. Louis", venue: "The Pageant", venueEvidence: "The Pageant, St. Louis, MO", outsideGeography: true }),
+      candidate(),
+    ]);
+
+    expect(dataset.events.map((e) => e.title)).toEqual(["Big Show"]);
+    expect(report.counts).toMatchObject({ found: 1, new: 1, outsideGeography: 1 });
+    expect(report.sources).toEqual([{ name: "recordBar", result: "fetched", extracted: 2 }]);
+    expect(report.unmappableNeighborhoods).toEqual([]);
+    expect(renderReportMarkdown(report)).toContain("| Dropped: outside geography | 1 |");
+  });
+});

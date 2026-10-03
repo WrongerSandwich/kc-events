@@ -102,6 +102,16 @@ describe("dataset", () => {
     expect(parseDataset({ ...emptyDataset(), events: [held] }).events[0]).toEqual(held);
   });
 
+  it("a recurring event carries a schedule instead of a start; nothing else carries a schedule", () => {
+    const { start, ...undated } = event;
+    const recurring = { ...undated, recurrence: "recurring", schedule: "Every Tuesday, 7pm" };
+    expect(parseDataset({ ...emptyDataset(), events: [recurring] }).events[0]).toEqual(recurring);
+    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...recurring, start }] })).toThrow(/schedule/);
+    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, schedule: "Every Tuesday, 7pm" }] })).toThrow(/schedule/);
+    const { schedule, ...unscheduled } = recurring;
+    expect(() => parseDataset({ ...emptyDataset(), events: [unscheduled] })).toThrow(/active event/);
+  });
+
   it("rejects dates without a timezone offset", () => {
     expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, start: "2026-10-10T20:00:00" }] })).toThrow();
   });

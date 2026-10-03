@@ -11,6 +11,7 @@ export const RECURRENCE_CLASSES = ["one-off", "limited-run", "recurring"] as con
 export const EVENT_STATUSES = ["active", "unverified", "expired"] as const;
 export const EXPIRY_REASONS = ["past", "two-strike", "cancelled"] as const;
 
+export type RecurrenceClass = (typeof RECURRENCE_CLASSES)[number];
 export type ExpiryReason = (typeof EXPIRY_REASONS)[number];
 
 export const leadSchema = z.discriminatedUnion("lane", [
@@ -49,13 +50,25 @@ const eventFields = z.strictObject({
   }),
 });
 
-/** Cite-or-drop as a schema invariant: an active event has a cited date and venue and a last-verified stamp. */
-export const eventSchema = eventFields.refine(
-  (e) =>
-    e.status !== "active" ||
-    (e.start !== undefined && e.venue !== undefined && e.lastVerified !== undefined && e.evidence.date !== undefined && e.evidence.venue !== undefined),
-  { message: "an active event needs start, venue, lastVerified, and evidence for both date and venue" },
-);
+/**
+ * Cite-or-drop as a schema invariant: an active event has a cited date (a start, or a schedule
+ * phrase when recurring) and venue and a last-verified stamp. A recurring event carries its
+ * schedule instead of a start and end; nothing else carries a schedule.
+ */
+export const eventSchema = eventFields
+  .refine((e) => (e.recurrence === "recurring" ? e.start === undefined && e.end === undefined : e.schedule === undefined), {
+    message: "a recurring event has a schedule instead of a start and end; other events have no schedule",
+  })
+  .refine(
+    (e) =>
+      e.status !== "active" ||
+      ((e.recurrence === "recurring" ? e.schedule : e.start) !== undefined &&
+        e.venue !== undefined &&
+        e.lastVerified !== undefined &&
+        e.evidence.date !== undefined &&
+        e.evidence.venue !== undefined),
+    { message: "an active event needs a start (a schedule when recurring), venue, lastVerified, and evidence for both date and venue" },
+  );
 
 export const sourceStateSchema = z.strictObject({
   consecutiveFailures: z.number().int().nonnegative(),

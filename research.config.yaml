@@ -24,7 +24,9 @@ kinds:
   - outdoors/community
   - other
 
-# Controlled list; seeded from the registry when it is filled in. The two catch-alls are required.
+# Controlled list. Every registry source's neighborhood is added to it at run time, so list here
+# only the ones no source names yet. The two catch-alls are required. An address that maps to
+# nothing lands in "Elsewhere in the metro" and is flagged in the run report.
 neighborhoods:
   - Lawrence
   - Elsewhere in the metro

@@ -11,6 +11,7 @@ const WEEK_2 = new Date("2026-10-10T03:15:00Z");
 const WEEK_3 = new Date("2026-10-17T03:15:00Z");
 const WEEK_1_ISO = "2026-10-02T22:15:00-05:00";
 const WEEK_2_ISO = "2026-10-09T22:15:00-05:00";
+const WEEK_3_ISO = "2026-10-16T22:15:00-05:00";
 
 const CALENDAR_URL = "https://knuckleheads.test/calendar";
 const PAGE = { status: 200, body: "<html><body>calendar</body></html>" };
@@ -30,7 +31,12 @@ function candidate(overrides: Record<string, unknown> = {}) {
     startTime: "20:00",
     endDate: null,
     endTime: null,
+    schedule: null,
+    sportsSeason: false,
     venue: "Knuckleheads Saloon",
+    neighborhood: "East Bottoms",
+    outsideGeography: false,
+    kind: "music",
     primaryUrl: CALENDAR_URL,
     dateEvidence: "Sat, Oct 31 · Show 8:00 PM",
     venueEvidence: "Knuckleheads Saloon, 2715 Rochester Ave",
@@ -96,6 +102,17 @@ describe("incremental update", () => {
       },
     ]);
     expect(second.report.counts).toMatchObject({ new: 0, updated: 1 });
+  });
+
+  it("a recurring event's schedule is its date: a new schedule marks it changed, the same schedule does not", async () => {
+    const trivia = (schedule: string) =>
+      candidate({ title: "Trivia", startDate: null, startTime: null, schedule, dateEvidence: `Trivia ${schedule}` });
+    const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(trivia("every Tuesday"))] });
+    const same = await runAt(WEEK_2, first.dataset, { completions: [reply(trivia("every Tuesday"))] });
+    const moved = await runAt(WEEK_3, same.dataset, { completions: [reply(trivia("every Wednesday"))] });
+
+    expect(same.dataset.events[0]).toMatchObject({ recurrence: "recurring", lastChanged: WEEK_1_ISO });
+    expect(moved.dataset.events[0]).toMatchObject({ id: first.dataset.events[0]!.id, schedule: "every Wednesday", lastChanged: WEEK_3_ISO });
   });
 
   it("a postponement with a new date is a date change on the same event, not an expiry", async () => {

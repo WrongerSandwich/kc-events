@@ -8,6 +8,8 @@ import type { RunConfig } from "./config.js";
 import type { Event } from "./dataset.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
 import type { Source } from "./registry.js";
+import { deriveRecurrence } from "./recurrence.js";
+import { toKind, toNeighborhood } from "./taxonomy.js";
 import { fromLocal } from "./time.js";
 
 /** A page body longer than this is cut before it reaches the model; venue calendars rarely need more. */
@@ -27,7 +29,20 @@ export const candidateSchema = z.object({
   startTime: z.string().nullable().describe("Show or start time on the first date, HH:MM 24-hour local. Null when the page gives none."),
   endDate: z.string().nullable().describe("Last date of a multi-date run, YYYY-MM-DD. Null for a single date."),
   endTime: z.string().nullable().describe("End time on the last date, HH:MM, when the page gives one."),
+  schedule: z
+    .string()
+    .nullable()
+    .describe('For something that repeats with no end date (weekly trivia, a monthly market, a team\'s season): how it repeats, as a short phrase from the page, e.g. "Every Tuesday, 7pm". Null otherwise.'),
+  sportsSeason: z.boolean().describe("True when this candidate is a sports team's season of games as a whole rather than one game."),
   venue: z.string().nullable().describe("The venue name as the page gives it. Null when the page does not name one."),
+  neighborhood: z
+    .string()
+    .nullable()
+    .describe(
+      "The neighborhood from the Neighborhoods list under This run that the venue's address or location falls in. When none fits, the neighborhood or city the address is in. Null when the page gives no address or location and the venue is not the source's own.",
+    ),
+  outsideGeography: z.boolean().describe("True when the page places the event outside the Geography under This run."),
+  kind: z.string().describe("One kind from the Kinds list under This run; other when none fits."),
   primaryUrl: z.string().describe("The URL of the page the date and venue were read from, or the event's own page when this page links to one."),
   dateEvidence: z.string().nullable().describe("The exact text from the page body the dates and times were read from. Null when there is none."),
   venueEvidence: z.string().nullable().describe("The exact text from the page body the venue was read from. Null when there is none."),
@@ -60,10 +75,12 @@ export interface ExtractionContext {
   nowIso: string;
   /** Every URL fetched this run, normalized; a candidate's primary page must be among them to verify. */
   fetchedUrls: Set<string>;
+  /** The controlled neighborhood list, seeded from the registry. */
+  neighborhoods: string[];
 }
 
 export function buildExtractionRequest(page: FetchResult, source: Source, context: ExtractionContext): CompletionRequest {
-  const { config, rules, today } = context;
+  const { config, rules, today, neighborhoods } = context;
   const system = [
     rules,
     "",
@@ -72,6 +89,8 @@ export function buildExtractionRequest(page: FetchResult, source: Source, contex
     `- Today: ${today} (${config.timezone})`,
     `- Horizon: the next ${config.horizonWeeks} weeks`,
     `- Geography: ${config.geography}`,
+    `- Kinds: ${config.kinds.join(", ")}`,
+    `- Neighborhoods: ${neighborhoods.join(", ")}`,
     `- Source: ${source.name} (${source.kind}, ${source.neighborhood})`,
     ...(source.checkHints ? [`- Source hints: ${source.checkHints}`] : []),
   ].join("\n");
@@ -124,34 +143,54 @@ export interface CandidateOrigin {
 }
 
 /**
+ * One candidate after cite-or-drop: the event as read off a page this run, whether the page says
+ * it is cancelled, and, when its address mapped to no neighborhood on the list, what the
+ * extractor proposed instead.
+ */
+export interface Sighting {
+  event: Event;
+  cancelled: boolean;
+  unmappable?: { proposed?: string };
+}
+
+/**
  * Cite-or-drop: the candidate becomes active only when its primary page was fetched this run
  * and the model quoted evidence for both a usable date and a venue; anything less is held
- * unverified. A venue the page did not name stays absent rather than borrowing the source's.
- * Recurrence class is derived in a later ticket (#6); every event is a one-off for now.
+ * unverified. A recurring event's date is its schedule phrase, which it carries instead of a
+ * start and end. A venue the page did not name stays absent rather than borrowing the source's.
  */
-export function candidateToEvent(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Event {
+export function candidateToSighting(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Sighting {
   const { timezone } = context.config;
   const primaryUrl = normalizeUrl(candidate.primaryUrl, origin.pageUrl);
   const title = candidate.title.trim();
   const start = localIso(candidate.startDate, candidate.startTime, timezone);
   const end = localIso(candidate.endDate, candidate.endTime, timezone);
+  const schedule = nonEmpty(candidate.schedule);
+  const recurrence = deriveRecurrence({ start, end, schedule, sportsSeason: candidate.sportsSeason });
+  const when = recurrence === "recurring" ? { schedule } : { start, end };
   const dateEvidence = nonEmpty(candidate.dateEvidence);
   const venueEvidence = nonEmpty(candidate.venueEvidence);
   const venue = nonEmpty(candidate.venue);
+  const placement = toNeighborhood(candidate.neighborhood, context.neighborhoods);
 
   const verified =
-    context.fetchedUrls.has(primaryUrl) && start !== undefined && dateEvidence !== undefined && venue !== undefined && venueEvidence !== undefined;
+    context.fetchedUrls.has(primaryUrl) &&
+    (when.start ?? when.schedule) !== undefined &&
+    dateEvidence !== undefined &&
+    venue !== undefined &&
+    venueEvidence !== undefined;
 
-  return {
+  const event: Event = {
     id: newEventId(primaryUrl, title, context.nowIso),
     title,
-    ...(start !== undefined ? { start } : {}),
-    ...(end !== undefined ? { end } : {}),
+    ...(when.start !== undefined ? { start: when.start } : {}),
+    ...(when.end !== undefined ? { end: when.end } : {}),
+    ...(when.schedule !== undefined ? { schedule: when.schedule } : {}),
     ...(venue !== undefined ? { venue } : {}),
-    neighborhood: origin.source.neighborhood,
+    neighborhood: placement.neighborhood,
     primaryUrl,
-    kind: origin.source.kind,
-    recurrence: "one-off",
+    kind: toKind(candidate.kind, context.config.kinds),
+    recurrence,
     dontMiss: false,
     firstSeen: context.nowIso,
     ...(verified ? { lastVerified: context.nowIso } : {}),
@@ -163,6 +202,7 @@ export function candidateToEvent(candidate: Candidate, origin: CandidateOrigin, 
       ...(venueEvidence !== undefined ? { venue: venueEvidence } : {}),
     },
   };
+  return { event, cancelled: candidate.notice === "cancelled", ...("unmappable" in placement ? { unmappable: placement.unmappable } : {}) };
 }
 
 /** The URL in canonical form, or the fallback when it does not parse. */

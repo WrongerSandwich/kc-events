@@ -24,14 +24,16 @@ export interface RunReport {
     updated: number;
     reverified: number;
     heldUnverified: number;
+    /** Candidates dropped because their page placed them outside the geography. */
+    outsideGeography: number;
     expired: Record<ExpiryReason, number>;
   };
   spend: { totalUsd: number; capUsd: number; capHit: boolean };
   sources: SourceReport[];
   /** Registry sources at three or more consecutive failures. */
   failingSources: string[];
-  /** Unmappable neighborhoods: events whose address landed in a neighborhood catch-all. */
-  unmappableNeighborhoods: { eventTitle: string; venue: string; neighborhood: string }[];
+  /** Unmappable neighborhoods: events whose address landed in the elsewhere-in-the-metro catch-all, with what the extractor proposed. */
+  unmappableNeighborhoods: { eventTitle: string; venue?: string; proposed?: string }[];
   /** Discovery sources found twice, suggested for promotion; never added to the registry automatically. */
   promotionSuggestions: string[];
 }
@@ -60,6 +62,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Updated | ${counts.updated} |
 | Re-verified | ${counts.reverified} |
 | Held unverified | ${counts.heldUnverified} |
+| Dropped: outside geography | ${counts.outsideGeography} |
 | Expired: past | ${counts.expired.past} |
 | Expired: two-strike | ${counts.expired["two-strike"]} |
 | Expired: cancelled | ${counts.expired.cancelled} |
@@ -86,7 +89,11 @@ ${markdownList(report.failingSources)}
 
 ## Unmappable neighborhoods
 
-${markdownList(report.unmappableNeighborhoods.map((c) => `${c.eventTitle} at ${c.venue}: ${c.neighborhood}`))}
+${markdownList(
+  report.unmappableNeighborhoods.map(
+    (c) => `${c.eventTitle} at ${c.venue ?? "an unnamed venue"}: ${c.proposed !== undefined ? `the extractor proposed "${c.proposed}"` : "no location on the page"}`,
+  ),
+)}
 
 ## Promotion suggestions
 

@@ -7,16 +7,17 @@ Every field you fill must come from the text of the page body you were given. No
 ## What counts as an event
 
 - An event is one thing happening at a venue over a date range: a show, a run of performances, an exhibition, a festival, a market, a class, a talk, a screening, a game, a tour.
-- List every event on the page that starts within the horizon given below, plus any run or exhibition that is already underway and continues into it. Skip events that end before today.
-- Skip events outside the geography given below. If the page does not say where the event is and the source is not itself a venue, leave the venue null; do not assume.
+- List every event on the page that starts within the horizon given below, plus any run or exhibition that is already underway and continues into it, plus any recurring thing still going on. Skip events that end before today.
+- An event the page places outside the geography given below (a touring act's other cities, a regional festival two states away) is still listed, with `outsideGeography` true, so the run can count what it dropped. If the page does not say where the event is and the source is not itself a venue, leave the venue null and `outsideGeography` false; do not assume.
 - Skip things that are not events: ticket on-sale announcements, newsletter signups, venue rental pitches, past-event recaps, merchandise.
 
 ## One event per occurrence group, not per date
 
 - A band playing two consecutive nights, a festival weekend, a twelve-night musical, a three-month exhibition: each is **one** event with `startDate` the first date and `endDate` the last date. Never emit one candidate per night.
 - A series of separate shows by different acts on a venue calendar is one event per show.
-- A recurring thing (weekly trivia, a monthly market, First Fridays) gets one candidate with the next date the page gives, if it gives one. If the page gives no specific date, leave `startDate` null.
-- A sports team's home schedule is one candidate per listed game only when the page is the schedule itself; do not invent games.
+- A recurring thing (weekly trivia, a monthly market, First Fridays) is one candidate whose `schedule` says how it repeats, in a short phrase built from the page's words ("Every Tuesday, 7pm", "First Friday of the month, 5–9pm"). Leave `startDate`, `startTime`, `endDate`, and `endTime` null: the schedule is its date. `dateEvidence` quotes the text the schedule was read from.
+- Fill `schedule` only for something that repeats with no end date. A run of performances or a series that ends on a stated date ("Thursdays through Oct 25") is not recurring: give its `startDate` and `endDate` and leave `schedule` null.
+- A sports team's season is **one** candidate, not one per game: `sportsSeason` true, a `schedule` such as "Home games, April–September", and the venue where the home games are played. A single game that is billed as its own occasion (a playoff, an exhibition, a one-time match at another venue) is its own candidate with `sportsSeason` false. Do not invent games.
 
 ## Dates and times
 
@@ -34,6 +35,19 @@ Every field you fill must come from the text of the page body you were given. No
 - An event the source is presenting somewhere else (a promoter page, a festival with multiple stages, an off-site performance) takes the venue the page names for that event, not the source's own name.
 - If no venue appears in the page body, leave `venue` null.
 
+## Neighborhood
+
+- `neighborhood` is the name from the Neighborhoods list below that the venue's address or location falls in, spelled as the list spells it. Use the address or place name on the page; you may use what you know about where that address is, since a neighborhood is a mapping, not a fact the page states.
+- "Lawrence" is for anywhere in Lawrence, Kansas. "Elsewhere in the metro" is for a place in the geography that fits nothing else on the list.
+- When the address is in the geography but fits nothing on the list, give the neighborhood or city it is in instead (for example "Olathe"), so the run can flag it for the list to grow. Do not force it onto the nearest name on the list.
+- When the event is at the source's own venue, the source's neighborhood (given below) is the answer.
+- When the page gives no address or location and the event is not at the source's own venue, leave `neighborhood` null.
+
+## Kind
+
+- `kind` is one name from the Kinds list below, spelled as the list spells it, for what the event is, not what the source usually hosts: a comedy night at a music venue is comedy.
+- When none fits, `other`.
+
 ## Cancelled and postponed
 
 - If the page says the event is cancelled (cancelled, canceled, called off, will not take place, show cancelled), set `notice` to `cancelled` and still fill the dates and venue as listed.
@@ -47,7 +61,7 @@ Every field you fill must come from the text of the page body you were given. No
 
 ## Evidence
 
-- `dateEvidence` is the exact text from the page body that the dates and times were read from, copied verbatim including any weekday, month name, and time. Not a paraphrase. Up to one or two short lines.
+- `dateEvidence` is the exact text from the page body that the dates and times (or the schedule) were read from, copied verbatim including any weekday, month name, and time. Not a paraphrase. Up to one or two short lines.
 - `venueEvidence` is the exact text the venue was read from, verbatim. Including the street address when it is beside the name is helpful.
 - An event with no quotable text for a value gets null for that value **and** null for its evidence. Never write evidence for a value you did not fill, and never fill a value you cannot quote.
 

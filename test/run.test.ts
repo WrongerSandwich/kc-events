@@ -42,6 +42,7 @@ describe("run", () => {
       updated: 0,
       reverified: 0,
       heldUnverified: 0,
+      outsideGeography: 0,
       expired: { past: 0, "two-strike": 0, cancelled: 0 },
     });
     expect(report.spend).toEqual({ totalUsd: 0, capUsd: 5, capHit: false });
