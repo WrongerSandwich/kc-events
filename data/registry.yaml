@@ -10,9 +10,14 @@
 #   reason: robots.txt disallows           # required when excluded
 #   notes: free text
 #
-# Point every URL at the page that carries the listings, never a homepage that only links to them.
-# The neighborhood is where the source's own venue is; a source that books many venues names its
-# home base and says so in notes.
+# Point every URL at the page that carries the listings, never a homepage that only links to them;
+# where a homepage is the listings page, the check hints say so. The neighborhood is where the
+# source's own venue is; a source that books many venues names its home base, and its check hints
+# tell the extractor to read the venue from each listing.
+#
+# Feeds are not used yet, though the brief prefers them: an event read from an ICS or RSS feed cites
+# its own page, which the run never fetches, so under cite-or-drop every one stays unverified. A
+# source's feed is kept in its notes for when that changes.
 
 sources:
   # --- Music -------------------------------------------------------------------------------------
@@ -44,7 +49,7 @@ sources:
     neighborhood: Downtown
     checkHints: Arvest Bank Theatre at the Midland, 1228 Main St. The list links each show to an AXS ticket page.
     status: active
-    notes: Offers an RSS feed (https://www.midlandkc.com/events/rss); not used yet, because an event read from a feed cites its own page, which the run never fetches, so it stays unverified.
+    notes: RSS feed at https://www.midlandkc.com/events/rss
 
   - name: T-Mobile Center
     urls: [https://www.t-mobilecenter.com/events]
@@ -59,7 +64,7 @@ sources:
     neighborhood: Midtown
     checkHints: Club at 608 E 31st St; the homepage carries the full show list.
     status: active
-    notes: Extracted cleanly in the 2026-10-02 demo; reset the connection on 2026-10-03 while drafting.
+    notes: Extracted cleanly in the 2026-10-02 demo; on 2026-10-03 its TLS handshake failed for every client, so watch the failing-sources report.
 
   - name: Azura Amphitheater
     urls: [https://www.azuraamp.com/kansas-city-concert-and-events-calendar.html]
@@ -74,20 +79,20 @@ sources:
     neighborhood: Downtown
     checkHints: Historic theater at 300 W 12th St; hosts the Harriman-Jewell Series, Friends of Chamber Music and jazz series.
     status: active
-    notes: Offers an ICS feed (https://follytheater.org/events/?ical=1); not used yet, because an event read from a feed cites its own page, which the run never fetches, so it stays unverified.
+    notes: ICS feed at https://follytheater.org/events/?ical=1
 
   - name: American Jazz Museum
     urls: [https://americanjazzmuseum.org/]
     kind: music
     neighborhood: 18th & Vine
-    checkHints: Live music is in The Blue Room, inside the museum at 1616 E 18th St.
+    checkHints: The homepage's "New & upcoming" list is the calendar. Live music is in The Blue Room, inside the museum at 1616 E 18th St.
     status: active
 
   - name: Harriman-Jewell Series
     urls: [https://www.hjseries.org/]
     kind: music
     neighborhood: Downtown
-    checkHints: Presenter; performances are at the Folly Theater, the Kauffman Center and elsewhere, so read the venue from each listing.
+    checkHints: The homepage carries the season. Presenter; performances are at the Folly Theater, the Kauffman Center and elsewhere, so read the venue from each listing.
     status: active
     notes: Presenter based at William Jewell College in Liberty; most shows are downtown.
 
@@ -102,7 +107,7 @@ sources:
     urls: [https://www.kcchorale.org/concerts]
     kind: music
     neighborhood: Elsewhere in the metro
-    checkHints: Choir; concerts are in churches and halls across the metro, named on each listing.
+    checkHints: Choir; concerts are in churches and halls across the metro, so read the venue from each listing.
     status: active
 
   - name: Midwest Trust Center
@@ -120,7 +125,7 @@ sources:
     neighborhood: Lawrence
     checkHints: Club at 737 New Hampshire St, Lawrence.
     status: active
-    notes: Offers an ICS feed (https://thebottlenecklive.com/events-default/?ical=1); not used yet, because an event read from a feed cites its own page, which the run never fetches, so it stays unverified.
+    notes: ICS feed at https://thebottlenecklive.com/events-default/?ical=1
 
   - name: The Granada
     urls: [https://thegranada.com/events-default/]
@@ -128,7 +133,7 @@ sources:
     neighborhood: Lawrence
     checkHints: Theater at 1020 Massachusetts St, Lawrence.
     status: active
-    notes: Offers an ICS feed (https://thegranada.com/events-default/?ical=1); not used yet, because an event read from a feed cites its own page, which the run never fetches, so it stays unverified.
+    notes: ICS feed at https://thegranada.com/events-default/?ical=1
 
   - name: Replay Lounge
     urls: [https://www.replaylounge.com/calendar-full/]
@@ -136,7 +141,7 @@ sources:
     neighborhood: Lawrence
     checkHints: Bar at 946 Massachusetts St, Lawrence; many nights are recurring DJ or free shows.
     status: active
-    notes: Offers an ICS feed (https://www.replaylounge.com/calendar-full/?ical=1); not used yet, because an event read from a feed cites its own page, which the run never fetches, so it stays unverified.
+    notes: ICS feed at https://www.replaylounge.com/calendar-full/?ical=1
 
   - name: Lied Center of Kansas
     urls: [https://lied.ku.edu/events-all/]
@@ -163,37 +168,35 @@ sources:
 
   # --- Theater and dance -------------------------------------------------------------------------
 
-
   - name: Kansas City Ballet
     urls: [https://kcballet.org/]
     kind: theater/dance
     neighborhood: Crown Center
-    checkHints: Performances are at the Kauffman Center; the Bolender Center (500 W Pershing Rd) hosts smaller ones.
+    checkHints: The homepage carries the season with dates. Performances are at the Kauffman Center; the Bolender Center (500 W Pershing Rd) hosts smaller ones.
     status: active
 
   - name: Kansas City Repertory Theatre
     urls: [https://kcrep.org/]
     kind: theater/dance
     neighborhood: Plaza & Museum District
-    checkHints: Spencer Theatre at UMKC, 4949 Cherry St, and Copaken Stage downtown.
+    checkHints: The homepage carries the season; its calendar page has no dates. Productions are at the Spencer Theatre at UMKC, 4949 Cherry St, and Copaken Stage downtown.
     status: active
 
   - name: Unicorn Theatre
     urls: [https://unicorntheatre.org/]
     kind: theater/dance
     neighborhood: Midtown
-    checkHints: Theater at 3828 Main St; each production is a limited run.
+    checkHints: The homepage carries the season with dates. Theater at 3828 Main St; each production is a limited run.
     status: active
 
   - name: Kansas City Actors Theatre
     urls: [https://www.kcactors.org/all-shows/]
     kind: theater/dance
     neighborhood: Crown Center
-    checkHints: The page lists every season, past ones included; only productions that have not closed matter. Venues vary by show (City Stage at Union Station, Spencer Theatre).
+    checkHints: The page lists every season, past ones included; only productions that have not closed matter. Venues vary by show (City Stage at Union Station, Spencer Theatre), so read the venue from each listing.
     status: active
 
-
-  - name: Broadway in Kansas City
+  - name: American Theatre Guild (Broadway in Kansas City)
     urls:
       - https://www.americantheatreguild.com/kansas-city/shows/phantom-of-the-opera-broadway-tickets-kansas-city-music-hall
       - https://www.americantheatreguild.com/kansas-city/shows/the-outsiders-broadway-tickets-kansas-city-music-hall
@@ -214,7 +217,7 @@ sources:
     urls: [https://kcfringe.org/]
     kind: theater/dance
     neighborhood: Midtown
-    checkHints: Annual festival in July across several venues, plus smaller events through the year.
+    checkHints: The homepage is the festival's front page. Annual festival in July across several venues, plus smaller events through the year; read the venue from each listing.
     status: active
 
   # --- Comedy ------------------------------------------------------------------------------------
@@ -239,7 +242,7 @@ sources:
     urls: [https://www.nelson-atkins.org/events/tivoli/]
     kind: film
     neighborhood: Plaza & Museum District
-    checkHints: The Tivoli now screens at the Nelson-Atkins. Regular screenings are not don't-miss material; special series and one-night events are.
+    checkHints: The Tivoli now screens at the Nelson-Atkins. First-run screenings repeat daily; special series and one-night screenings are one-offs.
     status: active
 
   - name: Kemper Museum of Contemporary Art
@@ -274,7 +277,7 @@ sources:
     urls: [https://charlottestreet.org/2026-event-calendar/]
     kind: art/exhibitions
     neighborhood: Midtown
-    checkHints: Arts nonprofit; events are at its own spaces and partner venues, named on each listing.
+    checkHints: Arts nonprofit; events are at its own spaces and partner venues, so read the venue from each listing.
     status: active
     notes: The calendar page's address carries the year; update it each January.
 
@@ -282,7 +285,7 @@ sources:
     urls: [https://kccrossroads.org/]
     kind: art/exhibitions
     neighborhood: Crossroads
-    checkHints: First Fridays (the first Friday of every month) is recurring; gallery exhibitions and one-off district events are not.
+    checkHints: The homepage carries the district calendar. First Fridays (the first Friday of every month) is recurring; gallery exhibitions and one-off district events are not.
     status: active
 
   - name: Art Garden KC
@@ -296,7 +299,7 @@ sources:
     urls: [https://artsjoco.org/acjc/calendar-of-events/]
     kind: art/exhibitions
     neighborhood: Johnson County
-    checkHints: A community calendar for Johnson County arts; many listings are classes or ongoing, which are not events. Venues are named per listing.
+    checkHints: A community calendar for Johnson County arts; many listings are classes or ongoing, which are not events. Read the venue from each listing.
     status: active
 
   # --- Talks and readings ------------------------------------------------------------------------
@@ -305,14 +308,14 @@ sources:
     urls: [https://kclibrary.org/events]
     kind: talks/readings
     neighborhood: Downtown
-    checkHints: Author talks and programs across branches; the Central Library is at 14 W 10th St. Storytimes and regular classes are recurring.
+    checkHints: Author talks and programs across branches; the Central Library is at 14 W 10th St. Storytimes and regular classes are recurring. Read the branch from each listing.
     status: active
 
   - name: Rainy Day Books
     urls: [https://www.rainydaybooks.com/events]
     kind: talks/readings
-    neighborhood: Plaza & Museum District
-    checkHints: Bookstore at 707 W 47th St; author events are often at other venues, named on each listing.
+    neighborhood: Johnson County
+    checkHints: Bookstore at 2706 W 53rd St, Fairway; author events are often at other venues (Unity Temple on the Plaza and others), so read the venue from each listing.
     status: active
 
   - name: Heartland Book Festival
@@ -342,9 +345,9 @@ sources:
     urls: [https://kcmavericks.com/]
     kind: sports
     neighborhood: Independence
-    checkHints: Home games at Cable Dahmer Arena. The season is one recurring event; theme nights are not separate events.
+    checkHints: The homepage carries the schedule (/schedule is the same page). Home games at Cable Dahmer Arena. The season is one recurring event; theme nights are not separate events.
     status: active
-    notes: Offers an ICS feed (https://kcmavericks.com/schedule-home.ics); not used yet, because an event read from a feed cites its own page, which the run never fetches, so it stays unverified.
+    notes: ICS feed at https://kcmavericks.com/schedule-home.ics
 
   # --- Festivals, markets, community -------------------------------------------------------------
 
@@ -361,7 +364,7 @@ sources:
     neighborhood: Downtown
     checkHints: Public shows and conventions; trade-only events are not for the public.
     status: active
-    notes: Offers an ICS feed (https://kcconvention.com/events/?ical=1); not used yet, because an event read from a feed cites its own page, which the run never fetches, so it stays unverified.
+    notes: ICS feed at https://kcconvention.com/events/?ical=1
 
   - name: City Market
     urls: [https://thecitymarket.org/events/]
@@ -374,9 +377,9 @@ sources:
     urls: [https://americanroyal.com/calendar/]
     kind: festivals/markets
     neighborhood: Elsewhere in the metro
-    checkHints: BBQ, rodeo and livestock events; venues vary.
+    checkHints: BBQ, rodeo and livestock events; venues vary, so read the venue from each listing.
     status: active
-    notes: Offers an ICS feed (https://americanroyal.com/calendar/list/?ical=1); not used yet, because an event read from a feed cites its own page, which the run never fetches, so it stays unverified.
+    notes: ICS feed at https://americanroyal.com/calendar/list/?ical=1
 
   - name: KC Parks and Recreation
     urls: [https://kcparks.org/events/]
@@ -384,7 +387,7 @@ sources:
     neighborhood: Elsewhere in the metro
     checkHints: Events across the city's parks; classes and leagues are not events.
     status: active
-    notes: Offers an ICS feed (https://kcparks.org/events/?ical=1); not used yet, because an event read from a feed cites its own page, which the run never fetches, so it stays unverified.
+    notes: ICS feed at https://kcparks.org/events/?ical=1
 
   - name: Kansas City Zoo & Aquarium
     urls: [https://kansascityzoo.org/events]
@@ -397,7 +400,7 @@ sources:
     urls: [https://powellgardens.org/]
     kind: outdoors/community
     neighborhood: Elsewhere in the metro
-    checkHints: Botanical garden near Kingsville; seasonal festivals like Dark Forest are limited runs.
+    checkHints: The homepage carries the event list; /events is a 404. Botanical garden near Kingsville; seasonal festivals like Dark Forest are limited runs.
     status: active
 
   # --- Excluded: known, deliberately not fetched -------------------------------------------------
@@ -448,10 +451,10 @@ sources:
   - name: Sporting Kansas City
     urls: [https://www.sportingkc.com/schedule/]
     kind: sports
-    neighborhood: Elsewhere in the metro
+    neighborhood: Kansas City, Kansas
     status: excluded
     reason: The schedule is rendered by script; the fetched page has no dates (checked 2026-10-03).
-    notes: Children's Mercy Park is in Kansas City, Kansas.
+    notes: Children's Mercy Park, Kansas City, Kansas.
 
   - name: Kansas City Current
     urls: [https://www.kccurrent.com/schedule]
@@ -477,7 +480,7 @@ sources:
   - name: Kansas City Museum
     urls: [https://www.kansascitymuseum.org/events]
     kind: art/exhibitions
-    neighborhood: Elsewhere in the metro
+    neighborhood: Northeast
     status: excluded
     reason: The site answers the job's fetcher with HTTP 403 (checked 2026-10-03).
 
