@@ -1,0 +1,569 @@
+{
+  "runDate": "2026-10-03",
+  "startedAt": "2026-10-03T16:05:31-05:00",
+  "finishedAt": "2026-10-03T16:29:02-05:00",
+  "horizonWeeks": 3,
+  "counts": {
+    "found": 368,
+    "new": 368,
+    "updated": 0,
+    "reverified": 0,
+    "heldUnverified": 30,
+    "outsideGeography": 4,
+    "expired": {
+      "past": 0,
+      "two-strike": 0,
+      "cancelled": 0
+    }
+  },
+  "spend": {
+    "totalUsd": 0.4544729700000001,
+    "capUsd": 5,
+    "capHit": false,
+    "shortfall": {
+      "pagesNotExtracted": 0,
+      "eventsNotReverified": 0,
+      "queriesNotSearched": 0,
+      "leadsNotFollowed": 0,
+      "eventsNotCurated": 0
+    }
+  },
+  "discovery": {
+    "enabled": true,
+    "queries": 10,
+    "aggregatorPages": 20,
+    "pagesExtracted": 75,
+    "problems": [
+      "https://fonts.googleapis.com/: HTTP 404",
+      "https://fonts.gstatic.com/: HTTP 404",
+      "https://www.googletagmanager.com/: HTTP 404",
+      "robots.txt disallows https://l.sharethis.com/",
+      "https://cmp.inmobi.com/: HTTP 403",
+      "https://cdn.mytheatreland.com/: HTTP 403",
+      "http://www.kansasspeedway.com/: HTTP 403",
+      "https://artskcgo.com/categories/dance: HTTP 403",
+      "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css: robots.txt unreachable (HTTP 522)",
+      "https://assets-sharetribecom.sharetribe.com/: HTTP 403",
+      "https://cdn.adpushup.com/: HTTP 403",
+      "https://www.artskcgo.com/categories/visual-art: HTTP 403",
+      "https://artskcgo.com/categories/art-exhibitions: HTTP 403",
+      "https://www.kcrunningcompany.com/oktoberfest5k: HTTP 404",
+      "https://www.eventbrite.com/e/oktoberfest-in-the-woods-tickets-1004691067027: HTTP 404",
+      "https://www.kcfilmoffice.com/: HTTP 403",
+      "https://do816.com/events/food-drink/2026/10/04: HTTP 403",
+      "robots.txt disallows https://flux.broadstreet.ai/",
+      "https://cdn.broadstreetads.com/: HTTP 403",
+      "https://use.fontawesome.com/: HTTP 404",
+      "https://seatgeek.com/cities/kansas-city/sports: HTTP 403",
+      "https://monarchsbaseball.com/: HTTP 403",
+      "https://artskcgo.com/categories/film: HTTP 403",
+      "https://www.upcomingevents.com/kansas-city/events/outdoors: HTTP 403"
+    ]
+  },
+  "curation": {
+    "calls": 13,
+    "judged": 321,
+    "flagged": 13,
+    "problems": []
+  },
+  "sources": [
+    {
+      "name": "Kauffman Center for the Performing Arts",
+      "result": "fetched",
+      "extracted": 9
+    },
+    {
+      "name": "Kansas City Symphony",
+      "result": "fetched",
+      "extracted": 5
+    },
+    {
+      "name": "recordBar",
+      "result": "fetched",
+      "extracted": 21
+    },
+    {
+      "name": "The Midland",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "T-Mobile Center",
+      "result": "fetched",
+      "extracted": 5
+    },
+    {
+      "name": "The Truman",
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://www.thetruman.com/: ECONNRESET fetching https://www.thetruman.com/robots.txt"
+    },
+    {
+      "name": "Azura Amphitheater",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "Folly Theater",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "American Jazz Museum",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Harriman-Jewell Series",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Friends of Chamber Music",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Kansas City Chorale",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Midwest Trust Center",
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://www.jccc.edu/midwest-trust-center/events/: HTTP 403"
+    },
+    {
+      "name": "The Bottleneck",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "The Granada",
+      "result": "fetched",
+      "extracted": 8
+    },
+    {
+      "name": "Replay Lounge",
+      "result": "fetched",
+      "extracted": 38
+    },
+    {
+      "name": "Lied Center of Kansas",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "Lawrence Arts Center",
+      "result": "fetched",
+      "extracted": 18
+    },
+    {
+      "name": "Spencer Museum of Art",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Kansas City Ballet",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Kansas City Repertory Theatre",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Unicorn Theatre",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Kansas City Actors Theatre",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "American Theatre Guild (Broadway in Kansas City)",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "New Theatre & Restaurant",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "KC Fringe Festival",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "The Comedy Club of Kansas City",
+      "result": "fetched",
+      "extracted": 8
+    },
+    {
+      "name": "Nelson-Atkins Museum of Art",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Tivoli Cinemas",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Kemper Museum of Contemporary Art",
+      "result": "fetched",
+      "extracted": 9
+    },
+    {
+      "name": "Linda Hall Library",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Nerman Museum of Contemporary Art",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "Zhou B Art Center KC",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Charlotte Street Foundation",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Crossroads Arts District",
+      "result": "fetched",
+      "extracted": 18
+    },
+    {
+      "name": "Art Garden KC",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Arts Council of Johnson County",
+      "result": "fetched",
+      "extracted": 16
+    },
+    {
+      "name": "Kansas City Public Library",
+      "result": "fetched",
+      "extracted": 6
+    },
+    {
+      "name": "Rainy Day Books",
+      "result": "fetched",
+      "extracted": 8
+    },
+    {
+      "name": "Heartland Book Festival",
+      "result": "fetched",
+      "extracted": 28
+    },
+    {
+      "name": "National WWI Museum and Memorial",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "GEHA Field at Arrowhead Stadium",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Kansas City Mavericks",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Power & Light District",
+      "result": "fetched",
+      "extracted": 12
+    },
+    {
+      "name": "Kansas City Convention Center",
+      "result": "fetched",
+      "extracted": 6
+    },
+    {
+      "name": "City Market",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "American Royal",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "KC Parks and Recreation",
+      "result": "fetched",
+      "extracted": 9
+    },
+    {
+      "name": "Kansas City Zoo & Aquarium",
+      "result": "fetched",
+      "extracted": 6
+    },
+    {
+      "name": "Powell Gardens",
+      "result": "fetched",
+      "extracted": 4
+    },
+    {
+      "name": "Musical Theater Heritage",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "robots.txt disallows the site (checked 2026-10-03)."
+    },
+    {
+      "name": "Starlight Theatre",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The events and tickets pages redirect to a queue-it waiting room whose robots.txt disallows fetching (checked 2026-10-03)."
+    },
+    {
+      "name": "Knuckleheads",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The show list is rendered by script; the fetched page has no events (checked 2026-10-03)."
+    },
+    {
+      "name": "Liberty Hall",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The event and cinema lists are rendered by script; the fetched page has no events (checked 2026-10-03)."
+    },
+    {
+      "name": "Uptown Theater",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The calendar is rendered by script, and its RSS feed gives post dates, not show dates (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Royals",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The schedule is rendered by script; the fetched page has no dates (checked 2026-10-03)."
+    },
+    {
+      "name": "Sporting Kansas City",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The schedule is rendered by script; the fetched page has no dates (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Current",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Funny Bone Comedy Club",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Renaissance Festival",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Museum",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Union Station",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The events list is rendered by script, and its RSS feed carries no event dates (checked 2026-10-03)."
+    }
+  ],
+  "failingSources": [],
+  "unmappableNeighborhoods": [
+    {
+      "eventTitle": "Baroque at 7:00: Vivaldi's Four Seasons"
+    },
+    {
+      "eventTitle": "Dancing in the Street: Music of Motown"
+    },
+    {
+      "eventTitle": "Interstellar Live"
+    },
+    {
+      "eventTitle": "Frizzi 2 Fulci : Fabio Frizzi and the F2F Band",
+      "venue": "Grand Temple"
+    },
+    {
+      "eventTitle": "Alisa Weilerstein, cello and Inon Barnatan, piano in duo recital"
+    },
+    {
+      "eventTitle": "Stars of American Ballet"
+    },
+    {
+      "eventTitle": "Matinees for Schools"
+    },
+    {
+      "eventTitle": "Roundtable Conversation Series"
+    },
+    {
+      "eventTitle": "Prelude Conversation Series"
+    },
+    {
+      "eventTitle": "Loving Vincent",
+      "venue": "Tivoli Cinema"
+    },
+    {
+      "eventTitle": "2026 Charlotte Street Visual Artist Awards Opening Reception",
+      "venue": "Emily & Todd Voth Artspace",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "2026 Gala: Rodeo Nouveau",
+      "venue": "Charlotte Street",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "CCA Quarterly Mix & Mingle"
+    },
+    {
+      "eventTitle": "Exhibition | State of the Arts 2026",
+      "venue": "R.G. Endres Gallery",
+      "proposed": "Prairie Village"
+    },
+    {
+      "eventTitle": "Exhibit | Recollections: a collaborative exhibition of Poetry & Printmaking",
+      "venue": "Meadowbrook Park Clubhouse",
+      "proposed": "Prairie Village"
+    },
+    {
+      "eventTitle": "Tim Murphy Art Gallery: Vantage Points",
+      "venue": "Tim Murphy Art Gallery",
+      "proposed": "Merriam"
+    },
+    {
+      "eventTitle": "Kansas City Musical Club - October Concert",
+      "venue": "Asbury United Methodist Church",
+      "proposed": "Prairie Village"
+    },
+    {
+      "eventTitle": "KC Chorale & Te Deum - Gretchaninoff: Passion Week (at Village Presbyterian)",
+      "venue": "Village Presbyterian Church",
+      "proposed": "Prairie Village"
+    },
+    {
+      "eventTitle": "Olathe Arts Festival",
+      "venue": "Johnson County Square",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "City Center Live",
+      "venue": "Lenexa City Hall",
+      "proposed": "Lenexa"
+    },
+    {
+      "eventTitle": "Reception & Reading | Recollections: a collaborative exhibition of Poetry & Printmaking",
+      "venue": "Meadowbrook Park Clubhouse",
+      "proposed": "Prairie Village"
+    },
+    {
+      "eventTitle": "FrankenWines"
+    },
+    {
+      "eventTitle": "Panel 2: The End of the World (But Make It Weird)"
+    },
+    {
+      "eventTitle": "World Series of Barbecue"
+    },
+    {
+      "eventTitle": "4-H/FFA Livestock Judging Contest"
+    },
+    {
+      "eventTitle": "Meats Judging Contests"
+    },
+    {
+      "eventTitle": "Collegiate Livestock Judging Contest"
+    },
+    {
+      "eventTitle": "VISUAL VOICE: Moments of Abstraction Exhibit",
+      "venue": "Bruce R. Watkins Cultural Heritage Center",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Mobile Music Box Concert: MLK Park",
+      "venue": "Martin Luther King, Jr. Park",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Brush Creek Art Walk Awards Reception",
+      "venue": "The Anita B. Gorman Conservation Discovery Center",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Paint & Garden",
+      "venue": "Southeast Community Center",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Fire Feast",
+      "venue": "Powell Gardens"
+    },
+    {
+      "eventTitle": "Dark Forest",
+      "venue": "Powell Gardens"
+    },
+    {
+      "eventTitle": "Wild and Useful Things: Foraging with the Seasons (October)",
+      "venue": "Powell Gardens"
+    },
+    {
+      "eventTitle": "Introduction to Soil Health",
+      "venue": "Powell Gardens"
+    },
+    {
+      "eventTitle": "The Wizard of Oz"
+    },
+    {
+      "eventTitle": "48th Annual Ciderfest",
+      "venue": "Louisburg Cider Mill & Country Store",
+      "proposed": "Louisburg"
+    },
+    {
+      "eventTitle": "PBR OUTLAW DAYS FESTIVAL"
+    },
+    {
+      "eventTitle": "'We Are Latinos V' Drive-In Screening",
+      "venue": "Boulevard Drive-In Theatre"
+    },
+    {
+      "eventTitle": "Next Stop Comedy",
+      "venue": "Lifted Spirits Distillery"
+    },
+    {
+      "eventTitle": "Special Screening + Cast & Filmmakers Q&A",
+      "venue": "DISTRKCT"
+    },
+    {
+      "eventTitle": "Open Jam",
+      "venue": "The Bird Comedy Theater"
+    },
+    {
+      "eventTitle": "Heartland Book Festival",
+      "venue": "Mid-Continent Public Library: Woodneath Library Center; Kansas City Public Library: Central Library"
+    }
+  ],
+  "promotionSuggestions": []
+}
