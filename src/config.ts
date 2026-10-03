@@ -1,0 +1,67 @@
+import { z } from "zod";
+
+export const NEIGHBORHOOD_CATCH_ALLS = ["Lawrence", "Elsewhere in the metro"] as const;
+
+export const DEFAULT_KINDS = [
+  "music",
+  "theater/dance",
+  "comedy",
+  "art/exhibitions",
+  "festivals/markets",
+  "food/drink",
+  "sports",
+  "film",
+  "talks/readings",
+  "outdoors/community",
+  "other",
+] as const;
+
+/**
+ * The run config: a typed object loaded from the committed config file.
+ * Strict, so a secret pasted into the file is rejected; secrets come from env only (see loadSecrets).
+ */
+export const configSchema = z.strictObject({
+  horizonWeeks: z.number().int().positive().default(8),
+  timezone: z.string().default("America/Chicago"),
+  geography: z
+    .string()
+    .min(1)
+    .default("Kansas City metro on both sides of the state line, plus Lawrence"),
+  spendCapUsd: z.number().positive().default(5),
+  models: z
+    .strictObject({
+      extraction: z.string().min(1).default("openai/gpt-6-luna"),
+      curation: z.string().min(1).default("anthropic/claude-sonnet-5.5"),
+    })
+    .default({ extraction: "openai/gpt-6-luna", curation: "anthropic/claude-sonnet-5.5" }),
+  kinds: z
+    .array(z.string().min(1))
+    .min(1)
+    .refine((kinds) => kinds.includes("other"), { message: 'kinds must include "other" as the escape hatch' })
+    .default([...DEFAULT_KINDS]),
+  neighborhoods: z
+    .array(z.string().min(1))
+    .refine((list) => NEIGHBORHOOD_CATCH_ALLS.every((c) => list.includes(c)), {
+      message: `neighborhoods must include the catch-alls: ${NEIGHBORHOOD_CATCH_ALLS.join(", ")}`,
+    })
+    .default([...NEIGHBORHOOD_CATCH_ALLS]),
+});
+
+export type RunConfig = z.infer<typeof configSchema>;
+
+export function parseConfig(raw: unknown): RunConfig {
+  return configSchema.parse(raw);
+}
+
+export interface Secrets {
+  openRouterApiKey: string | undefined;
+  tavilyApiKey: string | undefined;
+}
+
+/** Secrets never live in the config file; they come from the environment. */
+export function loadSecrets(env: NodeJS.ProcessEnv): Secrets {
+  return {
+    openRouterApiKey: env.OPENROUTER_API_KEY || undefined,
+    tavilyApiKey: env.TAVILY_API_KEY || undefined,
+  };
+}

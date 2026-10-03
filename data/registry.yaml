@@ -1,0 +1,13 @@
+# The registry: sources checked on every run. Hand-edited only.
+#
+# Each source:
+#   name: Knuckleheads
+#   urls: [https://example.com/calendar]   # prefer a structured feed (ICS/RSS) when one exists
+#   kind: music                            # from the kinds taxonomy in research.config.yaml
+#   neighborhood: East Bottoms             # from the neighborhood list
+#   checkHints: free text passed to the extractor
+#   status: active                         # or excluded, with a reason
+#   reason: robots.txt disallows           # required when excluded
+#   notes: free text
+
+sources: []

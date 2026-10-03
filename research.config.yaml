@@ -1,0 +1,30 @@
+# Run config for the research job. Committed; secrets never go here.
+# Secrets come from the environment (or a gitignored .env for hand runs):
+#   OPENROUTER_API_KEY, TAVILY_API_KEY
+
+horizonWeeks: 8 # the milestone-one hand run uses: pnpm research --horizon-weeks 3
+timezone: America/Chicago
+geography: Kansas City metro on both sides of the state line, plus Lawrence
+spendCapUsd: 5
+
+models:
+  extraction: openai/gpt-6-luna
+  curation: anthropic/claude-sonnet-5.5
+
+kinds:
+  - music
+  - theater/dance
+  - comedy
+  - art/exhibitions
+  - festivals/markets
+  - food/drink
+  - sports
+  - film
+  - talks/readings
+  - outdoors/community
+  - other
+
+# Controlled list; seeded from the registry when it is filled in. The two catch-alls are required.
+neighborhoods:
+  - Lawrence
+  - Elsewhere in the metro

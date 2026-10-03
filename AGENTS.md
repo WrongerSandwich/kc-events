@@ -15,3 +15,11 @@ The five canonical triage roles use their default names (`needs-triage`, `needs-
 ### Domain docs
 
 Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, created lazily as terms and decisions get settled. See `docs/agents/domain.md`.
+
+## Commands
+
+- `pnpm test`: the full vitest suite. `pnpm vitest run <file>` for one file.
+- `pnpm typecheck`: `tsc --noEmit`.
+- `pnpm research [--horizon-weeks N]`: one run. Reads `research.config.yaml`, `data/registry.yaml`, and `data/events.json`; writes `data/events.json` and `data/runs/<run date>.md` plus `.json`. Secrets come from env or a gitignored `.env`.
+
+The run function in `src/run.ts` is the one seam: it takes config, dataset, registry, and four ports (model, search, fetcher, clock) and does no I/O. Test behavior there with the fakes in `test/fakes/`.
