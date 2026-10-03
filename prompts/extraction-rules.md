@@ -70,6 +70,7 @@ Every field you fill must come from the text of the page body you were given. No
 ## Title
 
 - The title as the page gives it, without the venue name or date appended, without trailing "Tickets" or "Buy Now", and without descriptive copy. Keep supporting acts out of the title unless the page bills them together ("A with B").
+- Drop a presenter or promoter prefix: "Mammoth Presents: Stephen Day" is "Stephen Day", and "recordBar presents X" is "X". The presenter is not the event, and the same show must get the same title on every run.
 
 ## Output
 

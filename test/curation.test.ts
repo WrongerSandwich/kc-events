@@ -87,6 +87,23 @@ describe("what is sent for curation", () => {
     expect(second.dataset.events[0]).not.toHaveProperty("whyLine");
   });
 
+  it("a flagged one-off re-read as recurring loses its flag and why-line and is not judged again", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+
+    const second = await runAt(WEEK_2, first.dataset, [extracted(candidate({ startDate: null, startTime: null, schedule: "every Saturday", dateEvidence: "Big Show every Saturday" }))]);
+
+    expect(second.curationCalls).toEqual([]);
+    expect(second.dataset.events[0]).toMatchObject({ id: SHOW_ID, recurrence: "recurring", dontMiss: false });
+    expect(second.dataset.events[0]).not.toHaveProperty("whyLine");
+  });
+
+  it("a judgment naming no event in the batch is reported, not silently dropped", async () => {
+    const { dataset, report } = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: "evt_000000000000", dontMiss: true, why: "Why." })]);
+
+    expect(dataset.events[0]).not.toHaveProperty("lastJudged");
+    expect(report.curation.problems).toEqual([expect.stringContaining("named no event"), expect.stringContaining("not answered")]);
+  });
+
   it("a flag with no why-line is not applied: the event is left unjudged, reported, and comes up again next run", async () => {
     const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "  " })]);
     expect(first.dataset.events[0]).toMatchObject({ dontMiss: false });

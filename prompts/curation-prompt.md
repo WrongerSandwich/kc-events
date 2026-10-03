@@ -22,7 +22,7 @@ Every flag needs one sentence that says why: a claim a reader could disagree wit
 
 - One sentence, under twenty-five words, plain declarative. No exclamation marks, no "don't miss", no "you", no marketing adjectives (unforgettable, incredible, must-see).
 - Say the scarce thing: "The last two weeks of an exhibition that took three years to assemble." "A headliner who last played Kansas City in a much larger room." "The festival's only Kansas City stop this year."
-- Do not describe: "A night of great music at a beloved venue" is a description, not a reason, and a reader cannot disagree with it. Do not restate the listing: the reader already sees the title, date, and venue.
+- Do not describe: "A night of great music at a beloved venue" is a description, not a reason, and a reader cannot disagree with it. Do not restate what the reader already sees: the title, date, and venue.
 - State only what you are sure of. No dates, counts, "first", "last", "only", or "since" claims unless you know them to be true of this act or event. When the scarce thing is the shape of the occasion itself (a closing, a one-night date, an annual festival), say that; it is enough.
 - An event you do not flag gets an empty `why`.
 

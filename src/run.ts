@@ -86,7 +86,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
   const changed = markChanged(dataset.events, reverified.events, startedIso);
-  const curation = await curate(changed, model, { config, prompt: prompts.curationPrompt, today }, startedIso);
+  const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
   const events = curation.events;
   const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso);
   const shortfall = {
@@ -350,15 +350,19 @@ function applySighting(known: Event, { event, cancelled }: Sighting): { event: E
   return { event: known.verificationFailures === 0 ? known : { ...known, verificationFailures: 0 }, refreshed: false };
 }
 
-/** A known event re-read from a page: the new reading, under the known event's identity and curation. */
+/**
+ * A known event re-read from a page: the new reading, under the known event's identity and
+ * curation. A reading that makes it recurring drops its flag: recurring events are never on
+ * the don't-miss list, and curation will not look at it again.
+ */
 function refresh(known: Event, sighting: Event): Event {
+  const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };
   return {
     ...sighting,
     id: known.id,
     firstSeen: known.firstSeen,
     lead: known.lead,
-    dontMiss: known.dontMiss,
-    ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}),
+    ...curated,
     ...(known.lastChanged !== undefined ? { lastChanged: known.lastChanged } : {}),
     ...(known.lastJudged !== undefined ? { lastJudged: known.lastJudged } : {}),
   };
@@ -602,7 +606,7 @@ function markChanged(previous: Event[], events: Event[], nowIso: string): Event[
  * Curation: every event due for it (active, not recurring, new or changed since last judged) goes
  * to the curation model in batches with the curation prompt. A judgment is applied to the event it
  * names; an event the reply does not name, or names with a flag but no why-line, is left unjudged
- * and comes up again next run. A reply that cannot be read leaves its whole batch unjudged. Once
+ * and comes up again next run, and a judgment naming no event in the batch is reported. A reply that cannot be read leaves its whole batch unjudged. Once
  * the spend cap is reached, events still to judge are not sent and are counted as not curated.
  */
 async function curate(events: Event[], model: CappedModel, context: CurationContext, nowIso: string) {
@@ -625,9 +629,14 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
       continue;
     }
     const answered = new Set<string>();
+    let unknown = 0;
     for (const judgment of parsed.data.judgments) {
       const event = batch.find((e) => e.id === judgment.id);
-      if (!event || answered.has(event.id)) continue;
+      if (!event) {
+        unknown++;
+        continue;
+      }
+      if (answered.has(event.id)) continue;
       answered.add(event.id);
       if (judgment.dontMiss && judgment.why.trim() === "") {
         report.problems.push(`"${event.title}" was flagged with no why-line and was left unjudged`);
@@ -635,6 +644,7 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
       }
       judged.set(event.id, applyJudgment(event, judgment, nowIso));
     }
+    if (unknown > 0) report.problems.push(`${unknown} judgment(s) named no event in the batch and were ignored`);
     const unanswered = batch.length - answered.size;
     if (unanswered > 0) report.problems.push(`${unanswered} event(s) in a batch were not answered and were left unjudged`);
   }

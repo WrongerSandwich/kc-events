@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import { citedDate, type Event } from "./dataset.js";
+import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
 import type { Source } from "./registry.js";
 import { deriveRecurrence } from "./recurrence.js";
@@ -54,15 +55,7 @@ export const extractionReplySchema = z.object({ events: z.array(candidateSchema)
 export type Candidate = z.infer<typeof candidateSchema>;
 
 /** The strict JSON schema sent as the response format on every extraction call. */
-export const extractionResponseFormat: CompletionRequest["responseFormat"] = {
-  name: "extracted_events",
-  schema: withoutSchemaKeyword(z.toJSONSchema(extractionReplySchema)),
-};
-
-/** Zod emits a `$schema` declaration that strict-mode response formats do not accept. */
-function withoutSchemaKeyword({ $schema: _, ...schema }: Record<string, unknown>): Record<string, unknown> {
-  return schema;
-}
+export const extractionResponseFormat = strictResponseFormat("extracted_events", extractionReplySchema);
 
 /** What every extraction call and every candidate in one run shares. */
 export interface ExtractionContext {
@@ -94,10 +87,7 @@ export function buildExtractionRequest(page: FetchResult, origin: PageOrigin, co
   const system = [
     rules,
     "",
-    "## This run",
-    "",
-    `- Today: ${today} (${config.timezone})`,
-    `- Horizon: the next ${config.horizonWeeks} weeks`,
+    ...thisRunLines(config, today),
     `- Geography: ${config.geography}`,
     `- Kinds: ${config.kinds.join(", ")}`,
     `- Neighborhoods: ${neighborhoods.join(", ")}`,

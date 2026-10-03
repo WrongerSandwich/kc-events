@@ -8,12 +8,13 @@
 const FUZZY_DATE_WINDOW_DAYS = 3;
 const DAY_MS = 86_400_000;
 
-/** Case, punctuation, and whitespace do not make a different title or venue. */
+/** Case, punctuation, whitespace, and a leading "the" do not make a different title or venue. */
 export function normalizeName(title: string): string {
   return title
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim();
+    .trim()
+    .replace(/^the /, "");
 }
 
 /** Two names (titles or venues) are the same when they normalize alike; two absent names are the same too. */

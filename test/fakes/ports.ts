@@ -1,4 +1,5 @@
 import type { CompletionRequest, CompletionResult, FetchResult, Ports, SearchResult } from "../../src/ports.js";
+import { EVENTS_TO_JUDGE } from "../../src/curation.js";
 import { TEST_MODELS } from "./config.js";
 
 /**
@@ -7,8 +8,9 @@ import { TEST_MODELS } from "./config.js";
  * unchanged events makes no curation call, as it would after a real reply.
  */
 function nothingFlagged(request: CompletionRequest): CompletionResult {
-  const ids = request.messages.at(-1)?.content.match(/evt_[0-9a-f]{12}/g) ?? [];
-  return { value: { judgments: ids.map((id) => ({ id, dontMiss: false, why: "" })) }, costUsd: 0 };
+  const listed = request.messages.at(-1)?.content.split(`${EVENTS_TO_JUDGE}\n\n`)[1] ?? "[]";
+  const events = JSON.parse(listed) as { id: string }[];
+  return { value: { judgments: events.map(({ id }) => ({ id, dontMiss: false, why: "" })) }, costUsd: 0 };
 }
 
 /** A canned response: a page with a status, a robots.txt block, or a network failure. */

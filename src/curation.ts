@@ -6,6 +6,7 @@
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import type { Event } from "./dataset.js";
+import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest } from "./ports.js";
 
 /** Events judged per curation call; enough for the model to weigh them against each other, few enough to answer every one. */
@@ -23,21 +24,13 @@ export const curationReplySchema = z.object({ judgments: z.array(judgmentSchema)
 export type Judgment = z.infer<typeof judgmentSchema>;
 
 /** The strict JSON schema sent as the response format on every curation call. */
-export const curationResponseFormat: CompletionRequest["responseFormat"] = {
-  name: "curation_judgments",
-  schema: withoutSchemaKeyword(z.toJSONSchema(curationReplySchema)),
-};
-
-/** Zod emits a `$schema` declaration that strict-mode response formats do not accept. */
-function withoutSchemaKeyword({ $schema: _, ...schema }: Record<string, unknown>): Record<string, unknown> {
-  return schema;
-}
+export const curationResponseFormat = strictResponseFormat("curation_judgments", curationReplySchema);
 
 /** What every curation call in one run shares. */
 export interface CurationContext {
   config: RunConfig;
   /** The curation prompt document, the second editorial surface. */
-  prompt: string;
+  curationPrompt: string;
   /** The run's local date, so the model knows how far off each event is. */
   today: string;
 }
@@ -52,10 +45,16 @@ export function needsCuration(event: Event): boolean {
   return event.lastJudged === undefined || Date.parse(event.lastChanged) > Date.parse(event.lastJudged);
 }
 
-/** One curation call over a batch of eligible events: the prompt document, this run's dates, and the events as data. */
+/** The line that opens the user message of a curation request; the events follow as a JSON array. */
+export const EVENTS_TO_JUDGE = "Events to judge:";
+
+/**
+ * One curation call over a batch of eligible events: the curation prompt, this run's dates, and
+ * the events as data. Recurrence goes along so the model can tell a closing run from a one-night date.
+ */
 export function buildCurationRequest(events: Event[], context: CurationContext): CompletionRequest {
-  const { config, prompt, today } = context;
-  const system = [prompt, "", "## This run", "", `- Today: ${today} (${config.timezone})`, `- Horizon: the next ${config.horizonWeeks} weeks`].join("\n");
+  const { config, curationPrompt, today } = context;
+  const system = [curationPrompt, "", ...thisRunLines(config, today)].join("\n");
   const listed = events.map((e) => ({
     id: e.id,
     title: e.title,
@@ -71,7 +70,7 @@ export function buildCurationRequest(events: Event[], context: CurationContext):
     model: config.models.curation,
     messages: [
       { role: "system", content: system },
-      { role: "user", content: `Events to judge:\n\n${JSON.stringify(listed, null, 2)}` },
+      { role: "user", content: `${EVENTS_TO_JUDGE}\n\n${JSON.stringify(listed, null, 2)}` },
     ],
     responseFormat: curationResponseFormat,
   };

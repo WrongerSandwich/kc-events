@@ -40,12 +40,12 @@ describe("incremental update", () => {
     expect(second.dataset.events.map((e) => e.lastChanged)).toEqual([WEEK_1_ISO, WEEK_1_ISO]);
   });
 
-  it("a venue the model spells with different case or punctuation is not a change", async () => {
+  it("a venue the model spells with different case, punctuation, or a leading article is not a change", async () => {
     const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
 
-    const second = await runAt(WEEK_2, first.dataset, { completions: [reply(candidate({ venue: "KNUCKLEHEADS." }))] });
+    const second = await runAt(WEEK_2, first.dataset, { completions: [reply(candidate({ venue: "The KNUCKLEHEADS." }))] });
 
-    expect(second.dataset.events[0]).toMatchObject({ venue: "KNUCKLEHEADS.", lastVerified: WEEK_2_ISO, lastChanged: WEEK_1_ISO });
+    expect(second.dataset.events[0]).toMatchObject({ venue: "The KNUCKLEHEADS.", lastVerified: WEEK_2_ISO, lastChanged: WEEK_1_ISO });
   });
 
   it("a date change keeps the id and marks the event as changed for curation", async () => {
