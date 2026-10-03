@@ -3,51 +3,20 @@ import { run } from "../src/run.js";
 import { emptyDataset, parseDataset } from "../src/dataset.js";
 import { fakePorts } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
+import { candidateAt, costing, source, WEEK_1, WEEK_1_ISO, WEEK_2, WEEK_2_ISO } from "./fakes/fixtures.js";
 
-// 2026-10-03T03:15:00Z is 22:15 on 2026-10-02 in Kansas City (CDT, UTC-5).
-const NOW = new Date("2026-10-03T03:15:00Z");
-const NOW_ISO = "2026-10-02T22:15:00-05:00";
-
-const CALENDAR_URL = "https://knuckleheads.test/calendar";
-const knuckleheads = {
-  name: "Knuckleheads",
-  urls: [CALENDAR_URL],
-  kind: "music",
-  neighborhood: "East Bottoms",
-  checkHints: "Doors and show times are listed per show.",
-  status: "active" as const,
-};
-
-/** What the extraction model says about one candidate; fields default to a fully cited single-night show. */
-function candidate(overrides: Record<string, unknown> = {}) {
-  return {
-    title: "Big Show",
-    startDate: "2026-10-10",
-    startTime: "20:00",
-    endDate: null,
-    endTime: null,
-    schedule: null,
-    sportsSeason: false,
-    venue: "Knuckleheads Saloon",
-    neighborhood: "East Bottoms",
-    outsideGeography: false,
-    kind: "music",
-    primaryUrl: CALENDAR_URL,
-    dateEvidence: "Sat, Oct 10 · Doors 7:00 PM · Show 8:00 PM",
-    venueEvidence: "Knuckleheads Saloon, 2715 Rochester Ave",
-    notice: "none",
-    ...overrides,
-  };
-}
+const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms", checkHints: "Doors and show times are listed per show." });
+const CALENDAR_URL = knuckleheads.urls[0]!;
+const candidate = (overrides: Record<string, unknown> = {}) => candidateAt(knuckleheads, overrides);
 
 const runOver = (ports: ReturnType<typeof fakePorts>["ports"], dataset = emptyDataset()) =>
   run({ config: testConfig(), prompts: testPrompts(), dataset, registry: { sources: [knuckleheads] }, ports });
 
 describe("extraction over the registry lane", () => {
   it("a page with a date and venue yields an active event with both evidence snippets", async () => {
-    const { ports, requests } = fakePorts(NOW, {
-      pages: { [CALENDAR_URL]: { status: 200, body: "<html><body><h2>Big Show</h2><p>Sat, Oct 10</p></body></html>" } },
-      completions: [{ value: { events: [candidate()] }, costUsd: 0.0123 }],
+    const { ports, requests } = fakePorts(WEEK_1, {
+      pages: { [CALENDAR_URL]: { status: 200, body: "<html><body><h2>Big Show</h2><p>Sat, Oct 31</p></body></html>" } },
+      completions: [costing(0.0123, candidate())],
     });
 
     const { dataset, report } = await runOver(ports);
@@ -56,20 +25,20 @@ describe("extraction over the registry lane", () => {
       {
         id: expect.stringMatching(/^evt_[0-9a-f]{12}$/),
         title: "Big Show",
-        start: "2026-10-10T20:00:00-05:00",
-        venue: "Knuckleheads Saloon",
+        start: "2026-10-31T20:00:00-05:00",
+        venue: "Knuckleheads",
         neighborhood: "East Bottoms",
         primaryUrl: CALENDAR_URL,
         kind: "music",
         recurrence: "one-off",
         dontMiss: false,
-        firstSeen: NOW_ISO,
-        lastVerified: NOW_ISO,
-        lastChanged: NOW_ISO,
+        firstSeen: WEEK_1_ISO,
+        lastVerified: WEEK_1_ISO,
+        lastChanged: WEEK_1_ISO,
         status: "active",
         verificationFailures: 0,
         lead: { lane: "registry", source: "Knuckleheads" },
-        evidence: { date: "Sat, Oct 10 · Doors 7:00 PM · Show 8:00 PM", venue: "Knuckleheads Saloon, 2715 Rochester Ave" },
+        evidence: { date: "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM", venue: "Knuckleheads, 1 Main St" },
       },
     ]);
     expect(parseDataset(dataset)).toEqual(dataset);
@@ -91,9 +60,9 @@ describe("extraction over the registry lane", () => {
   });
 
   it("a page lacking a date yields an unverified event that is counted as held, never as publishable", async () => {
-    const { ports } = fakePorts(NOW, {
+    const { ports } = fakePorts(WEEK_1, {
       pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show, coming soon</body></html>" } },
-      completions: [{ value: { events: [candidate({ startDate: null, startTime: null, dateEvidence: null })] }, costUsd: 0.01 }],
+      completions: [costing(0.01, candidate({ startDate: null, startTime: null, dateEvidence: null }))],
     });
 
     const { dataset, report } = await runOver(ports);
@@ -102,8 +71,8 @@ describe("extraction over the registry lane", () => {
     expect(dataset.events[0]).toMatchObject({
       title: "Big Show",
       status: "unverified",
-      venue: "Knuckleheads Saloon",
-      evidence: { venue: "Knuckleheads Saloon, 2715 Rochester Ave" },
+      venue: "Knuckleheads",
+      evidence: { venue: "Knuckleheads, 1 Main St" },
     });
     expect(dataset.events[0]).not.toHaveProperty("start");
     expect(dataset.events[0]).not.toHaveProperty("lastVerified");
@@ -113,9 +82,9 @@ describe("extraction over the registry lane", () => {
   });
 
   it("a candidate pointing at a primary page that was not fetched is held unverified even with a date and venue", async () => {
-    const { ports } = fakePorts(NOW, {
+    const { ports } = fakePorts(WEEK_1, {
       pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show</body></html>" } },
-      completions: [{ value: { events: [candidate({ primaryUrl: "https://knuckleheads.test/events/big-show" })] }, costUsd: 0.01 }],
+      completions: [costing(0.01, candidate({ primaryUrl: "https://knuckleheads.test/events/big-show" }))],
     });
 
     const { dataset, report } = await runOver(ports);
@@ -123,32 +92,28 @@ describe("extraction over the registry lane", () => {
     expect(dataset.events[0]).toMatchObject({
       status: "unverified",
       primaryUrl: "https://knuckleheads.test/events/big-show",
-      start: "2026-10-10T20:00:00-05:00",
-      evidence: { date: "Sat, Oct 10 · Doors 7:00 PM · Show 8:00 PM", venue: "Knuckleheads Saloon, 2715 Rochester Ave" },
+      start: "2026-10-31T20:00:00-05:00",
+      evidence: { date: "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM", venue: "Knuckleheads, 1 Main St" },
     });
     expect(dataset.events[0]).not.toHaveProperty("lastVerified");
     expect(report.counts).toMatchObject({ found: 1, heldUnverified: 1 });
   });
 
   it("a multi-night listing yields one active event with a start and an end", async () => {
-    const { ports } = fakePorts(NOW, {
+    const { ports } = fakePorts(WEEK_1, {
       pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Two Nights</body></html>" } },
       completions: [
-        {
-          value: {
-            events: [
-              candidate({
-                title: "Two Nights",
-                startDate: "2026-10-16",
-                startTime: "20:00",
-                endDate: "2026-10-17",
-                endTime: null,
-                dateEvidence: "Fri Oct 16 & Sat Oct 17, 8pm",
-              }),
-            ],
-          },
-          costUsd: 0.01,
-        },
+        costing(
+          0.01,
+          candidate({
+            title: "Two Nights",
+            startDate: "2026-10-16",
+            startTime: "20:00",
+            endDate: "2026-10-17",
+            endTime: null,
+            dateEvidence: "Fri Oct 16 & Sat Oct 17, 8pm",
+          }),
+        ),
       ],
     });
 
@@ -167,9 +132,9 @@ describe("extraction over the registry lane", () => {
   });
 
   it("a page saying cancelled yields nothing to publish: the candidate is counted as extracted but no event is recorded", async () => {
-    const { ports } = fakePorts(NOW, {
+    const { ports } = fakePorts(WEEK_1, {
       pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show - CANCELLED</body></html>" } },
-      completions: [{ value: { events: [candidate({ notice: "cancelled" })] }, costUsd: 0.01 }],
+      completions: [costing(0.01, candidate({ notice: "cancelled" }))],
     });
 
     const { dataset, report } = await runOver(ports);
@@ -180,59 +145,58 @@ describe("extraction over the registry lane", () => {
   });
 
   it("a page naming no venue yields an unverified event with no venue rather than borrowing the source's name", async () => {
-    const { ports } = fakePorts(NOW, {
-      pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show, Oct 10</body></html>" } },
-      completions: [{ value: { events: [candidate({ venue: null, venueEvidence: null })] }, costUsd: 0.01 }],
+    const { ports } = fakePorts(WEEK_1, {
+      pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show, Oct 31</body></html>" } },
+      completions: [costing(0.01, candidate({ venue: null, venueEvidence: null }))],
     });
 
     const { dataset } = await runOver(ports);
 
-    expect(dataset.events[0]).toMatchObject({ status: "unverified", evidence: { date: "Sat, Oct 10 · Doors 7:00 PM · Show 8:00 PM" } });
+    expect(dataset.events[0]).toMatchObject({ status: "unverified", evidence: { date: "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM" } });
     expect(dataset.events[0]).not.toHaveProperty("venue");
     expect(parseDataset(dataset)).toEqual(dataset);
   });
 
   it("the same page and title seen on a later run refreshes the event under its original id instead of duplicating it", async () => {
-    const first = fakePorts(NOW, {
+    const first = fakePorts(WEEK_1, {
       pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show</body></html>" } },
-      completions: [{ value: { events: [candidate()] }, costUsd: 0.01 }],
+      completions: [costing(0.01, candidate())],
     });
     const { dataset: after1 } = await runOver(first.ports);
 
-    const LATER = new Date("2026-10-10T03:15:00Z");
-    const second = fakePorts(LATER, {
+    const second = fakePorts(WEEK_2, {
       pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show</body></html>" } },
-      completions: [{ value: { events: [candidate({ startTime: "21:00", dateEvidence: "Sat, Oct 10 · Show 9:00 PM" })] }, costUsd: 0.01 }],
+      completions: [costing(0.01, candidate({ startTime: "21:00", dateEvidence: "Sat, Oct 31 · Show 9:00 PM" }))],
     });
     const { dataset: after2, report } = await runOver(second.ports, after1);
 
     expect(after2.events).toHaveLength(1);
     expect(after2.events[0]).toMatchObject({
       id: after1.events[0]!.id,
-      firstSeen: NOW_ISO,
-      lastVerified: "2026-10-09T22:15:00-05:00",
-      start: "2026-10-10T21:00:00-05:00",
-      evidence: { date: "Sat, Oct 10 · Show 9:00 PM" },
+      firstSeen: WEEK_1_ISO,
+      lastVerified: WEEK_2_ISO,
+      start: "2026-10-31T21:00:00-05:00",
+      evidence: { date: "Sat, Oct 31 · Show 9:00 PM" },
     });
     expect(report.counts).toMatchObject({ found: 1, new: 0, updated: 1 });
   });
 
   it("a sighting that cannot be verified leaves a known active event untouched, and a repeat on a second page of the same source counts once", async () => {
-    const first = fakePorts(NOW, {
+    const first = fakePorts(WEEK_1, {
       pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show</body></html>" } },
-      completions: [{ value: { events: [candidate()] }, costUsd: 0.01 }],
+      completions: [costing(0.01, candidate())],
     });
     const { dataset: after1 } = await runOver(first.ports);
 
     const FEED_URL = "https://knuckleheads.test/feed.ics";
-    const second = fakePorts(new Date("2026-10-10T03:15:00Z"), {
+    const second = fakePorts(WEEK_2, {
       pages: {
         [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show, date TBA</body></html>" },
         [FEED_URL]: { status: 200, body: "BEGIN:VCALENDAR" },
       },
       completions: [
-        { value: { events: [candidate({ title: "BIG  SHOW!", startDate: null, startTime: null, dateEvidence: null })] }, costUsd: 0.01 },
-        { value: { events: [candidate({ title: "Big Show" })] }, costUsd: 0.01 },
+        costing(0.01, candidate({ title: "BIG  SHOW!", startDate: null, startTime: null, dateEvidence: null })),
+        costing(0.01, candidate({ title: "Big Show" })),
       ],
     });
     const { dataset: after2, report } = await run({
@@ -244,15 +208,15 @@ describe("extraction over the registry lane", () => {
     });
 
     expect(after2.events).toHaveLength(1);
-    expect(after2.events[0]).toMatchObject({ id: after1.events[0]!.id, status: "active", start: "2026-10-10T20:00:00-05:00" });
+    expect(after2.events[0]).toMatchObject({ id: after1.events[0]!.id, status: "active", start: "2026-10-31T20:00:00-05:00" });
     expect(report.counts).toMatchObject({ found: 1, new: 0, updated: 1, heldUnverified: 0 });
     expect(report.sources).toEqual([{ name: "Knuckleheads", result: "fetched", extracted: 2 }]);
   });
 
   it("a model reply that is not in the expected shape yields no events from that page and is noted on the source", async () => {
-    const { ports } = fakePorts(NOW, {
+    const { ports } = fakePorts(WEEK_1, {
       pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show</body></html>" } },
-      completions: [{ value: { events: [{ title: "Big Show" }] }, costUsd: 0.01 }],
+      completions: [costing(0.01, { title: "Big Show" })],
     });
 
     const { dataset, report } = await runOver(ports);

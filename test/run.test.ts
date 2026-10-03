@@ -3,17 +3,16 @@ import { run } from "../src/run.js";
 import { emptyDataset, parseDataset, DATASET_SCHEMA_VERSION } from "../src/dataset.js";
 import { fakePorts } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
+import { costing, WEEK_1 } from "./fakes/fixtures.js";
 
-// 2026-10-03T03:15:00Z is 22:15 on 2026-10-02 in Kansas City (CDT, UTC-5).
-const NOW = new Date("2026-10-03T03:15:00Z");
 /** The extraction model finding nothing on a page; these tests are about fetching. */
-const NO_EVENTS = { value: { events: [] }, costUsd: 0 };
+const NO_EVENTS = costing(0);
 
 describe("run", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("an empty registry and empty dataset produce an empty dataset and an all-zero report without touching any port", async () => {
-    const { ports, calls } = fakePorts(NOW);
+    const { ports, calls } = fakePorts(WEEK_1);
     vi.stubGlobal("fetch", () => {
       throw new Error("the run must reach the network only through its ports");
     });
@@ -63,7 +62,7 @@ describe("registry lane fetching", () => {
   });
 
   it("a robots-blocked registry source appears in the report as blocked and is not fetched", async () => {
-    const { ports, calls } = fakePorts(NOW, {
+    const { ports, calls } = fakePorts(WEEK_1, {
       pages: {
         "https://open.test/calendar": { status: 200, body: "<html>calendar</html>" },
         "https://blocked.test/events": "robots-blocked",
@@ -89,7 +88,7 @@ describe("registry lane fetching", () => {
   });
 
   it("a failing source increments its failure count, and a fetched source resets it", async () => {
-    const { ports } = fakePorts(NOW, {
+    const { ports } = fakePorts(WEEK_1, {
       pages: {
         "https://down.test/": new Error("connect ECONNREFUSED"),
         "https://gone.test/": { status: 404, body: "not found" },
@@ -129,7 +128,7 @@ describe("registry lane fetching", () => {
   });
 
   it("a source reaching three consecutive failures is flagged in the report", async () => {
-    const { ports } = fakePorts(NOW, {
+    const { ports } = fakePorts(WEEK_1, {
       pages: {
         "https://third.test/": { status: 500, body: "" },
         "https://second.test/": { status: 503, body: "" },
@@ -152,7 +151,7 @@ describe("registry lane fetching", () => {
   });
 
   it("an excluded source is skipped with its reason shown and its state left alone", async () => {
-    const { ports, calls } = fakePorts(NOW);
+    const { ports, calls } = fakePorts(WEEK_1);
 
     const { dataset, report } = await run({
       config: testConfig(),
@@ -171,7 +170,7 @@ describe("registry lane fetching", () => {
   });
 
   it("a source with one blocked URL and one failed URL counts as failed and shows both", async () => {
-    const { ports } = fakePorts(NOW, {
+    const { ports } = fakePorts(WEEK_1, {
       pages: { "https://mixed.test/blocked": "robots-blocked", "https://mixed.test/feed": { status: 500, body: "" } },
     });
 

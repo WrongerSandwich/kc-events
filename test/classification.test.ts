@@ -5,46 +5,14 @@ import type { RunConfig } from "../src/config.js";
 import { renderReportMarkdown } from "../src/report.js";
 import { fakePorts } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
+import { candidateAt, costing, PAGE, source, WEEK_1 } from "./fakes/fixtures.js";
 
-// 22:15 on 2026-10-02 in Kansas City (CDT, UTC-5).
-const NOW = new Date("2026-10-03T03:15:00Z");
-
-const CALENDAR_URL = "https://recordbar.test/calendar";
-const recordBar = {
-  name: "recordBar",
-  urls: [CALENDAR_URL],
-  kind: "music",
-  neighborhood: "Crossroads",
-  status: "active" as const,
-};
-
-/** A fully cited single-night show at the source's own venue. */
-function candidate(overrides: Record<string, unknown> = {}) {
-  return {
-    title: "Big Show",
-    startDate: "2026-10-10",
-    startTime: "20:00",
-    endDate: null,
-    endTime: null,
-    schedule: null,
-    sportsSeason: false,
-    venue: "recordBar",
-    neighborhood: "Crossroads",
-    outsideGeography: false,
-    kind: "music",
-    primaryUrl: CALENDAR_URL,
-    dateEvidence: "Sat, Oct 10 · Show 8:00 PM",
-    venueEvidence: "recordBar, 1520 Grand Blvd",
-    notice: "none",
-    ...overrides,
-  };
-}
+const recordBar = source("recordBar", { neighborhood: "Crossroads" });
+const CALENDAR_URL = recordBar.urls[0]!;
+const candidate = (overrides: Record<string, unknown> = {}) => candidateAt(recordBar, overrides);
 
 async function runOver(candidates: unknown[], config: RunConfig = testConfig()) {
-  const fakes = fakePorts(NOW, {
-    pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>calendar</body></html>" } },
-    completions: [{ value: { events: candidates }, costUsd: 0.01 }],
-  });
+  const fakes = fakePorts(WEEK_1, { pages: { [CALENDAR_URL]: PAGE }, completions: [costing(0.01, ...candidates)] });
   const result = await run({ config, prompts: testPrompts(), dataset: emptyDataset(), registry: { sources: [recordBar] }, ports: fakes.ports });
   expect(parseDataset(result.dataset)).toEqual(result.dataset);
   return { ...result, requests: fakes.requests };

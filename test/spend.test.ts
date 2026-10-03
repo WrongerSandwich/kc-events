@@ -3,56 +3,21 @@ import { run } from "../src/run.js";
 import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
 import { renderReportMarkdown } from "../src/report.js";
 import type { CompletionResult } from "../src/ports.js";
+import type { Source } from "../src/registry.js";
 import { fakePorts, type CannedPage } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
+import { candidateAt, costing, PAGE, source, WEEK_1, WEEK_1_ISO, WEEK_2 } from "./fakes/fixtures.js";
 
-// Weekly runs at 22:15 Kansas City time: Oct 2 and Oct 9 (CDT, UTC-5).
-const WEEK_1 = new Date("2026-10-03T03:15:00Z");
-const WEEK_2 = new Date("2026-10-10T03:15:00Z");
-const WEEK_1_ISO = "2026-10-02T22:15:00-05:00";
-
-const PAGE = { status: 200, body: "<html><body>calendar</body></html>" };
-
-const venue = (name: string) => ({
-  name,
-  urls: [`https://${name.toLowerCase()}.test/calendar`],
-  kind: "music",
-  neighborhood: "Westport",
-  status: "active" as const,
-});
-const ALPHA = venue("Alpha");
-const BRAVO = venue("Bravo");
-const CHARLIE = venue("Charlie");
-const pagesOf = (...sources: { urls: string[] }[]): Record<string, CannedPage> =>
-  Object.fromEntries(sources.map((s) => [s.urls[0], PAGE]));
-
-/** A fully cited show on a source's calendar page. */
-function show(source: { name: string; urls: string[] }, title = `${source.name} Show`) {
-  return {
-    title,
-    startDate: "2026-10-31",
-    startTime: "20:00",
-    endDate: null,
-    endTime: null,
-    schedule: null,
-    sportsSeason: false,
-    venue: `${source.name} Hall`,
-    neighborhood: "Westport",
-    outsideGeography: false,
-    kind: "music",
-    primaryUrl: source.urls[0],
-    dateEvidence: "Sat, Oct 31 · Show 8:00 PM",
-    venueEvidence: `${source.name} Hall, 1 Main St`,
-    notice: "none",
-  };
-}
-
-const costing = (costUsd: number, ...candidates: unknown[]): CompletionResult => ({ value: { events: candidates }, costUsd });
+const ALPHA = source("Alpha");
+const BRAVO = source("Bravo");
+const CHARLIE = source("Charlie");
+const pagesOf = (...sources: Source[]): Record<string, CannedPage> => Object.fromEntries(sources.map((s) => [s.urls[0], PAGE]));
+const show = (at: Source) => candidateAt(at, { title: `${at.name} Show` });
 
 async function runAt(
   now: Date,
   dataset: Dataset,
-  { sources, pages, completions, spendCapUsd }: { sources: (typeof ALPHA)[]; pages: Record<string, CannedPage>; completions: CompletionResult[]; spendCapUsd: number },
+  { sources, pages, completions, spendCapUsd }: { sources: Source[]; pages: Record<string, CannedPage>; completions: CompletionResult[]; spendCapUsd: number },
 ) {
   const fakes = fakePorts(now, { pages, completions });
   const result = await run({

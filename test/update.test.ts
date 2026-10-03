@@ -4,48 +4,12 @@ import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
 import type { CompletionResult } from "../src/ports.js";
 import { fakePorts, type CannedPage } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
+import { candidateAt, costing, PAGE, source, WEEK_1, WEEK_1_ISO, WEEK_2, WEEK_2_ISO, WEEK_3, WEEK_3_ISO } from "./fakes/fixtures.js";
 
-// Weekly runs at 22:15 Kansas City time: Oct 2, Oct 9, Oct 16 (CDT, UTC-5).
-const WEEK_1 = new Date("2026-10-03T03:15:00Z");
-const WEEK_2 = new Date("2026-10-10T03:15:00Z");
-const WEEK_3 = new Date("2026-10-17T03:15:00Z");
-const WEEK_1_ISO = "2026-10-02T22:15:00-05:00";
-const WEEK_2_ISO = "2026-10-09T22:15:00-05:00";
-const WEEK_3_ISO = "2026-10-16T22:15:00-05:00";
-
-const CALENDAR_URL = "https://knuckleheads.test/calendar";
-const PAGE = { status: 200, body: "<html><body>calendar</body></html>" };
-const knuckleheads = {
-  name: "Knuckleheads",
-  urls: [CALENDAR_URL],
-  kind: "music",
-  neighborhood: "East Bottoms",
-  status: "active" as const,
-};
-
-/** A fully cited show on the calendar page, a few weeks out. */
-function candidate(overrides: Record<string, unknown> = {}) {
-  return {
-    title: "Big Show",
-    startDate: "2026-10-31",
-    startTime: "20:00",
-    endDate: null,
-    endTime: null,
-    schedule: null,
-    sportsSeason: false,
-    venue: "Knuckleheads Saloon",
-    neighborhood: "East Bottoms",
-    outsideGeography: false,
-    kind: "music",
-    primaryUrl: CALENDAR_URL,
-    dateEvidence: "Sat, Oct 31 · Show 8:00 PM",
-    venueEvidence: "Knuckleheads Saloon, 2715 Rochester Ave",
-    notice: "none",
-    ...overrides,
-  };
-}
-
-const reply = (...candidates: unknown[]) => ({ value: { events: candidates }, costUsd: 0.01 });
+const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms" });
+const CALENDAR_URL = knuckleheads.urls[0]!;
+const candidate = (overrides: Record<string, unknown> = {}) => candidateAt(knuckleheads, overrides);
+const reply = (...candidates: unknown[]) => costing(0.01, ...candidates);
 
 /** One run over the Knuckleheads calendar with the given canned pages and model replies. */
 async function runAt(
@@ -79,9 +43,9 @@ describe("incremental update", () => {
   it("a venue the model spells with different case or punctuation is not a change", async () => {
     const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
 
-    const second = await runAt(WEEK_2, first.dataset, { completions: [reply(candidate({ venue: "KNUCKLEHEADS SALOON." }))] });
+    const second = await runAt(WEEK_2, first.dataset, { completions: [reply(candidate({ venue: "KNUCKLEHEADS." }))] });
 
-    expect(second.dataset.events[0]).toMatchObject({ venue: "KNUCKLEHEADS SALOON.", lastVerified: WEEK_2_ISO, lastChanged: WEEK_1_ISO });
+    expect(second.dataset.events[0]).toMatchObject({ venue: "KNUCKLEHEADS.", lastVerified: WEEK_2_ISO, lastChanged: WEEK_1_ISO });
   });
 
   it("a date change keeps the id and marks the event as changed for curation", async () => {
