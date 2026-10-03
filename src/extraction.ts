@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
-import type { Event } from "./dataset.js";
+import { citedDate, type Event } from "./dataset.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
 import type { Source } from "./registry.js";
 import { deriveRecurrence } from "./recurrence.js";
@@ -175,7 +175,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
 
   const verified =
     context.fetchedUrls.has(primaryUrl) &&
-    (when.start ?? when.schedule) !== undefined &&
+    citedDate({ recurrence, ...when }) !== undefined &&
     dateEvidence !== undefined &&
     venue !== undefined &&
     venueEvidence !== undefined;

@@ -3,12 +3,9 @@
  * against the list ignoring case and punctuation and replaced by the list's own spelling; anything
  * else falls to the list's escape hatch.
  */
-import { NEIGHBORHOOD_CATCH_ALLS, type RunConfig } from "./config.js";
+import { ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
 import { normalizeName } from "./identity.js";
 import type { Registry } from "./registry.js";
-
-/** The catch-all for an address that maps to nothing on the neighborhood list. */
-export const ELSEWHERE_IN_THE_METRO: (typeof NEIGHBORHOOD_CATCH_ALLS)[number] = "Elsewhere in the metro";
 
 /** The list's own spelling of a value, or undefined when it is not on the list. */
 function fromList(value: string | null, list: readonly string[]): string | undefined {

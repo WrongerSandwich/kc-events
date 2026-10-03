@@ -86,7 +86,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     spend: { totalUsd: extraction.spendUsd + reverified.spendUsd, capUsd: config.spendCapUsd, capHit: false },
     sources: sourceReports,
     failingSources: registryLane.failingSources,
-    unmappableNeighborhoods: unmappable([...extraction.sightings, ...reverified.sightings]),
+    unmappableNeighborhoods: unmappableNeighborhoods([...extraction.sightings, ...reverified.sightings]),
     promotionSuggestions: [],
   };
 
@@ -336,7 +336,6 @@ async function reverify(events: Event[], lane: RegistryLaneOutcome, registry: Re
     if (read.sightings) sightingsAt.set(url, read.sightings);
   }
 
-
   const checked = events.map((event) => {
     const sightings = sightingsAt.get(event.primaryUrl);
     if (!pending.includes(event) || !sightings) return event;
@@ -388,8 +387,8 @@ function sourceFor(event: Event, url: string, registry: Registry): Source {
 
 /**
  * Stamps last-changed on every event that is new this run or whose date (a recurring event's
- * schedule), venue, or status differs from the dataset it started from, so curation knows what to re-judge. A venue
- * spelled with different case or punctuation is the same venue.
+ * schedule), venue, or status differs from the dataset it started from, so curation knows what
+ * to re-judge. A venue spelled with different case or punctuation is the same venue.
  */
 function markChanged(previous: Event[], events: Event[], nowIso: string): Event[] {
   const before = new Map(previous.map((e) => [e.id, e]));
@@ -418,7 +417,7 @@ function countExpired(previous: Event[], events: Event[]): Record<ExpiryReason, 
  * The run report's unmappable neighborhoods: every sighting this run whose address landed in the
  * catch-all, once per title and venue. A cancelled sighting has nothing to place.
  */
-function unmappable(sightings: Sighting[]): RunReport["unmappableNeighborhoods"] {
+function unmappableNeighborhoods(sightings: Sighting[]): RunReport["unmappableNeighborhoods"] {
   const seen = new Set<string>();
   const flagged: RunReport["unmappableNeighborhoods"] = [];
   for (const { event, cancelled, unmappable } of sightings) {

@@ -32,7 +32,10 @@ export interface RunReport {
   sources: SourceReport[];
   /** Registry sources at three or more consecutive failures. */
   failingSources: string[];
-  /** Unmappable neighborhoods: events whose address landed in the elsewhere-in-the-metro catch-all, with what the extractor proposed. */
+  /**
+   * Unmappable neighborhoods: events whose address landed in the elsewhere-in-the-metro catch-all,
+   * with the neighborhood or city the extractor proposed instead, when it proposed one.
+   */
   unmappableNeighborhoods: { eventTitle: string; venue?: string; proposed?: string }[];
   /** Discovery sources found twice, suggested for promotion; never added to the registry automatically. */
   promotionSuggestions: string[];
@@ -91,7 +94,7 @@ ${markdownList(report.failingSources)}
 
 ${markdownList(
   report.unmappableNeighborhoods.map(
-    (c) => `${c.eventTitle} at ${c.venue ?? "an unnamed venue"}: ${c.proposed !== undefined ? `the extractor proposed "${c.proposed}"` : "no location on the page"}`,
+    (c) => `${c.eventTitle} at ${c.venue ?? "an unnamed venue"}: ${c.proposed !== undefined ? `the extractor proposed "${c.proposed}"` : "no neighborhood proposed"}`,
   ),
 )}
 

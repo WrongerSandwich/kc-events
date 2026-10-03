@@ -26,6 +26,7 @@ Every field you fill must come from the text of the page body you were given. No
 - **Doors versus show.** When a page lists both, `startTime` is the show or start time, not doors. Quote the whole phrase ("Doors 7pm, Show 8pm") as evidence.
 - A time range ("7–9pm") gives `startTime` and `endTime` on the same date. "Until late" or "all day" gives no `endTime`.
 - Opening hours of an exhibition are not an event time; leave `startTime` null and give the date range.
+- A run or exhibition already underway whose page gives only its closing date ("On view through Feb 28") gets that `endDate` and a null `startDate`. Do not use today or any other date as its start.
 - If the page gives only a month or a season ("coming this fall"), leave `startDate` null.
 - Never derive a date from the URL, a slug, a query string, or an image filename.
 
@@ -38,8 +39,8 @@ Every field you fill must come from the text of the page body you were given. No
 ## Neighborhood
 
 - `neighborhood` is the name from the Neighborhoods list below that the venue's address or location falls in, spelled as the list spells it. Use the address or place name on the page; you may use what you know about where that address is, since a neighborhood is a mapping, not a fact the page states.
-- "Lawrence" is for anywhere in Lawrence, Kansas. "Elsewhere in the metro" is for a place in the geography that fits nothing else on the list.
-- When the address is in the geography but fits nothing on the list, give the neighborhood or city it is in instead (for example "Olathe"), so the run can flag it for the list to grow. Do not force it onto the nearest name on the list.
+- "Lawrence" is for anywhere in Lawrence, Kansas.
+- When the address is in the geography but fits nothing on the list, give the neighborhood or city it is in instead (for example "Olathe"), so the run can flag it for the list to grow. Do not force it onto the nearest name on the list, and do not answer "Elsewhere in the metro" yourself: the run puts it there.
 - When the event is at the source's own venue, the source's neighborhood (given below) is the answer.
 - When the page gives no address or location and the event is not at the source's own venue, leave `neighborhood` null.
 

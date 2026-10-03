@@ -2,7 +2,10 @@ import { z } from "zod";
 
 const DEFAULT_MODELS = { extraction: "openai/gpt-6-luna", curation: "anthropic/claude-sonnet-5.5" };
 
-export const NEIGHBORHOOD_CATCH_ALLS = ["Lawrence", "Elsewhere in the metro"] as const;
+/** The catch-all for an address that maps to nothing on the neighborhood list. */
+export const ELSEWHERE_IN_THE_METRO = "Elsewhere in the metro";
+
+export const NEIGHBORHOOD_CATCH_ALLS = ["Lawrence", ELSEWHERE_IN_THE_METRO] as const;
 
 export const DEFAULT_KINDS = [
   "music",

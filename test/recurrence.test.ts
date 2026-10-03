@@ -37,4 +37,8 @@ describe("recurrence class derived from evidence", () => {
   it("nothing to go on is a one-off", () => {
     expect(deriveRecurrence({ sportsSeason: false })).toBe("one-off");
   });
+
+  it("a run already underway that gives only its closing date is a limited run", () => {
+    expect(deriveRecurrence({ end: "2027-02-28", sportsSeason: false })).toBe("limited-run");
+  });
 });

@@ -51,9 +51,17 @@ const eventFields = z.strictObject({
 });
 
 /**
- * Cite-or-drop as a schema invariant: an active event has a cited date (a start, or a schedule
- * phrase when recurring) and venue and a last-verified stamp. A recurring event carries its
- * schedule instead of a start and end; nothing else carries a schedule.
+ * What an event's date was read as: a recurring event's schedule phrase; otherwise its start, or
+ * for a run already underway whose page gives only a closing date, its end.
+ */
+export function citedDate(e: { recurrence: RecurrenceClass; start?: string; end?: string; schedule?: string }): string | undefined {
+  return e.recurrence === "recurring" ? e.schedule : (e.start ?? e.end);
+}
+
+/**
+ * Cite-or-drop as a schema invariant: an active event has a cited date and venue and a
+ * last-verified stamp. A recurring event carries its schedule instead of a start and end;
+ * nothing else carries a schedule.
  */
 export const eventSchema = eventFields
   .refine((e) => (e.recurrence === "recurring" ? e.start === undefined && e.end === undefined : e.schedule === undefined), {
@@ -62,12 +70,12 @@ export const eventSchema = eventFields
   .refine(
     (e) =>
       e.status !== "active" ||
-      ((e.recurrence === "recurring" ? e.schedule : e.start) !== undefined &&
+      (citedDate(e) !== undefined &&
         e.venue !== undefined &&
         e.lastVerified !== undefined &&
         e.evidence.date !== undefined &&
         e.evidence.venue !== undefined),
-    { message: "an active event needs a start (a schedule when recurring), venue, lastVerified, and evidence for both date and venue" },
+    { message: "an active event needs a cited date (a schedule when recurring), venue, lastVerified, and evidence for both date and venue" },
   );
 
 export const sourceStateSchema = z.strictObject({

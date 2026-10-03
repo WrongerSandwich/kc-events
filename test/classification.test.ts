@@ -157,4 +157,20 @@ describe("recurrence, kind, geography, and neighborhood", () => {
     expect(report.unmappableNeighborhoods).toEqual([]);
     expect(renderReportMarkdown(report)).toContain("| Dropped: outside geography | 1 |");
   });
+
+  it("an exhibition already underway, with only its closing date on the page, is an active limited run", async () => {
+    const { dataset } = await runOver([
+      candidate({ title: "Glass", startDate: null, startTime: null, endDate: "2027-01-17", dateEvidence: "On view through January 17, 2027" }),
+    ]);
+
+    expect(dataset.events[0]).toMatchObject({ recurrence: "limited-run", end: "2027-01-17", status: "active" });
+    expect(dataset.events[0]).not.toHaveProperty("start");
+  });
+
+  it("an address the extractor itself put in the catch-all is flagged without a proposal, not as a page with no location", async () => {
+    const { report } = await runOver([candidate({ neighborhood: "Elsewhere in the metro" })]);
+
+    expect(report.unmappableNeighborhoods).toEqual([{ eventTitle: "Big Show", venue: "recordBar" }]);
+    expect(renderReportMarkdown(report)).toContain("- Big Show at recordBar: no neighborhood proposed");
+  });
 });
