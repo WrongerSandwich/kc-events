@@ -1,0 +1,3 @@
+# The public site is standalone; the personal push consumes its published dataset
+
+Two products share one dataset, split so that the public product (research job, dataset, static site, all in this public repo on GitHub Actions) never touches personal infrastructure, and the personal product (a weekly taste-filtered push, built elsewhere) is a thin consumer of the published `events.json`. Coupling the public site to the personal hub was rejected: the public thing should not gate on or expose personal infra, and GitHub Actions is free and sufficient for a weekly job. The published dataset is therefore a contract, not an internal file.

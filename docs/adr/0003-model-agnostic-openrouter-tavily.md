@@ -1,0 +1,3 @@
+# Model-agnostic research loop over an OpenAI-compatible endpoint, with Tavily for search
+
+The research agent is a hand-rolled or thin-framework tool-calling loop against an OpenAI-compatible chat endpoint (OpenRouter), with its own tools for Tavily search and page fetching. Model IDs for extraction and curation are config values and may differ. We deliberately do not use any provider's built-in web search or a personal Claude subscription. Reason: this job must run weekly for years without being hostage to one vendor's rate limits or one subscription's quota, and a Tavily account already exists. The cost is that the loop is more work than a provider-native search tool; accepted.

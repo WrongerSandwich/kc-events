@@ -1,0 +1,3 @@
+# Research events from primary pages, never scrape the aggregators
+
+The obvious build is to scrape the local listing aggregators. We instead run an LLM research loop that reads aggregators only as an index of leads and follows every lead to the event's own primary page, where the date and venue are read and our own one-line summary is written. Two reasons: the aggregators monetize their listings, so republishing their text and images is the legally exposed posture while link-out with own-written summaries from primary pages is the defensible one (what search engines do); and primary pages are stable where aggregator layouts churn. Higher cost per run than scraping, accepted knowingly.
