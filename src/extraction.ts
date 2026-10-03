@@ -79,8 +79,18 @@ export interface ExtractionContext {
   neighborhoods: string[];
 }
 
-export function buildExtractionRequest(page: FetchResult, source: Source, context: ExtractionContext): CompletionRequest {
+/** Where a page came from: a registry source, or a discovery search that led to it. */
+export type PageOrigin = { lane: "registry"; source: Source } | { lane: "discovery"; query: string };
+
+export function buildExtractionRequest(page: FetchResult, origin: PageOrigin, context: ExtractionContext): CompletionRequest {
   const { config, rules, today, neighborhoods } = context;
+  const sourceLines =
+    origin.lane === "registry"
+      ? [
+          `- Source: ${origin.source.name} (${origin.source.kind}, ${origin.source.neighborhood})`,
+          ...(origin.source.checkHints ? [`- Source hints: ${origin.source.checkHints}`] : []),
+        ]
+      : [`- Source: none; this page was found by the web search "${origin.query}"`];
   const system = [
     rules,
     "",
@@ -91,8 +101,7 @@ export function buildExtractionRequest(page: FetchResult, source: Source, contex
     `- Geography: ${config.geography}`,
     `- Kinds: ${config.kinds.join(", ")}`,
     `- Neighborhoods: ${neighborhoods.join(", ")}`,
-    `- Source: ${source.name} (${source.kind}, ${source.neighborhood})`,
-    ...(source.checkHints ? [`- Source hints: ${source.checkHints}`] : []),
+    ...sourceLines,
   ].join("\n");
   const user = `Page URL: ${page.finalUrl}\n\n${pageText(page.body)}`;
   return {
@@ -135,12 +144,11 @@ export function newEventId(primaryUrl: string, title: string, nowIso: string): s
   return `evt_${digest.slice(0, 12)}`;
 }
 
-/** Where a candidate came from: the source whose page it was read on. */
-export interface CandidateOrigin {
-  source: Source;
+/** Where a candidate came from: how its page was found, and the page itself. */
+export type CandidateOrigin = PageOrigin & {
   /** The page this candidate was read from, normalized; the fallback primary URL. */
   pageUrl: string;
-}
+};
 
 /**
  * One candidate after cite-or-drop: the event as read off a page this run, whether the page says
@@ -196,7 +204,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     ...(verified ? { lastVerified: context.nowIso } : {}),
     status: verified ? "active" : "unverified",
     verificationFailures: 0,
-    lead: { lane: "registry", source: origin.source.name },
+    lead: origin.lane === "registry" ? { lane: "registry", source: origin.source.name } : { lane: "discovery", query: origin.query },
     evidence: {
       ...(dateEvidence !== undefined ? { date: dateEvidence } : {}),
       ...(venueEvidence !== undefined ? { venue: venueEvidence } : {}),

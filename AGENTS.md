@@ -20,7 +20,7 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, created lazil
 
 - `pnpm test`: the full vitest suite. `pnpm vitest run <file>` for one file.
 - `pnpm typecheck`: `tsc --noEmit`.
-- `pnpm research [--horizon-weeks N]`: one run. Reads `research.config.yaml`, `prompts/extraction-rules.md`, `data/registry.yaml`, and `data/events.json`; writes `data/events.json` and `data/runs/<run date>.md` plus `.json`. Secrets come from env or a gitignored `.env` (`OPENROUTER_API_KEY`; needed as soon as the registry has an active source). Spend has two layers: `spendCapUsd` in the config stops model calls within a run (`src/spend.ts` wraps the model port), and a monthly limit on the OpenRouter key itself, set by hand in the milestone hand-run wizard (#11), backstops a bug in the first.
+- `pnpm research [--horizon-weeks N] [--discovery]`: one run; `--discovery` turns the discovery lane on for it. Reads `research.config.yaml`, `prompts/extraction-rules.md`, `data/registry.yaml`, and `data/events.json`; writes `data/events.json` and `data/runs/<run date>.md` plus `.json`. Secrets come from env or a gitignored `.env` (`OPENROUTER_API_KEY`, needed as soon as the registry has an active source; `TAVILY_API_KEY`, needed when discovery is on). Spend has two layers: `spendCapUsd` in the config stops model calls within a run (`src/spend.ts` wraps the model port), and a monthly limit on the OpenRouter key itself, set by hand in the milestone hand-run wizard (#11), backstops a bug in the first.
 
 The two editorial surfaces are plain Markdown under `prompts/`: `extraction-rules.md` goes to the extraction model with every page. A wrong date or venue in the dataset is a bug in that document first.
 

@@ -33,8 +33,23 @@ export interface RunReport {
     capUsd: number;
     /** Spend reached the cap and it cut work: some model call the run needed was not made. */
     capHit: boolean;
-    /** What the cap left undone: fetched pages never extracted, and events never re-verified. */
-    shortfall: { pagesNotExtracted: number; eventsNotReverified: number };
+    /**
+     * What the cap left undone: fetched pages never extracted, events never re-verified, and
+     * discovery searches never made and leads never followed.
+     */
+    shortfall: { pagesNotExtracted: number; eventsNotReverified: number; queriesNotSearched: number; leadsNotFollowed: number };
+  };
+  /** The discovery lane this run; all zero when it is disabled. */
+  discovery: {
+    enabled: boolean;
+    /** Searches made. */
+    queries: number;
+    /** Aggregator pages read as an index; never extracted. */
+    aggregatorPages: number;
+    /** Primary pages found by discovery and handed to extraction. */
+    pagesExtracted: number;
+    /** Leads that could not be fetched, searches that failed, and replies that could not be read. */
+    problems: string[];
   };
   sources: SourceReport[];
   /** Registry sources at three or more consecutive failures. */
@@ -44,12 +59,15 @@ export interface RunReport {
    * with the neighborhood or city the extractor proposed instead, when it proposed one.
    */
   unmappableNeighborhoods: { eventTitle: string; venue?: string; proposed?: string }[];
-  /** Discovery sources found twice, suggested for promotion; never added to the registry automatically. */
-  promotionSuggestions: string[];
+  /**
+   * Hosts the discovery lane has found events on in two or more runs, including this one, suggested
+   * for promotion into the registry; never added to it automatically.
+   */
+  promotionSuggestions: { host: string; runsSeen: number; exampleUrl: string }[];
 }
 
-function plural(n: number, noun: string): string {
-  return `${n} ${noun}${n === 1 ? "" : "s"}`;
+function plural(n: number, noun: string, nouns = `${noun}s`): string {
+  return `${n} ${n === 1 ? noun : nouns}`;
 }
 
 function markdownList(items: string[]): string {
@@ -83,7 +101,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 
 ## Spend
 
-${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified; they stay as they were and are checked next run.` : ""}
+${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified, ${plural(spend.shortfall.queriesNotSearched, "discovery search", "discovery searches")} not made, ${plural(spend.shortfall.leadsNotFollowed, "discovery lead")} not followed; they stay as they were and are checked next run.` : ""}
 
 ## Sources
 
@@ -95,6 +113,16 @@ ${
         "| --- | --- | ---: | --- |",
         ...report.sources.map((s) => `| ${tableCell(s.name)} | ${s.result} | ${s.extracted} | ${tableCell(s.detail ?? "")} |`),
       ].join("\n")
+}
+
+## Discovery
+
+${
+  report.discovery.enabled
+    ? `${plural(report.discovery.queries, "search", "searches")}, ${plural(report.discovery.aggregatorPages, "aggregator page")} read as an index, ${plural(report.discovery.pagesExtracted, "primary page")} extracted.${
+        report.discovery.problems.length > 0 ? `\n\n${markdownList(report.discovery.problems)}` : ""
+      }`
+    : "_Disabled._"
 }
 
 ## Failing sources
@@ -111,6 +139,6 @@ ${markdownList(
 
 ## Promotion suggestions
 
-${markdownList(report.promotionSuggestions)}
+${markdownList(report.promotionSuggestions.map((p) => `${p.host}: events found in ${p.runsSeen} runs, e.g. ${p.exampleUrl}`))}
 `;
 }

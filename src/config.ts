@@ -22,6 +22,48 @@ export const DEFAULT_KINDS = [
 ] as const;
 
 /**
+ * Third-party listing sites: read only as an index of leads, never extracted from (ADR 0001).
+ * A host matches itself and its subdomains.
+ */
+export const DEFAULT_AGGREGATOR_HOSTS = [
+  "do816.com",
+  "visitkc.com",
+  "thepitchkc.com",
+  "kansascity.com",
+  "kcparent.com",
+  "allevents.in",
+  "songkick.com",
+  "bandsintown.com",
+  "patch.com",
+  "feverup.com",
+] as const;
+
+/** Hosts never followed as leads: social media and the like, which need a login or carry no primary page. */
+export const DEFAULT_IGNORED_HOSTS = [
+  "facebook.com",
+  "instagram.com",
+  "x.com",
+  "twitter.com",
+  "tiktok.com",
+  "youtube.com",
+  "linkedin.com",
+  "pinterest.com",
+  "reddit.com",
+  "google.com",
+  "apple.com",
+] as const;
+
+const discoverySchema = z.strictObject({
+  enabled: z.boolean().default(false),
+  /** The geography in the few words a search engine wants; queries are built from it. */
+  place: z.string().min(1).default("Kansas City"),
+  resultsPerQuery: z.number().int().positive().default(5),
+  linksPerAggregatorPage: z.number().int().positive().default(10),
+  aggregatorHosts: z.array(z.string().min(1)).default([...DEFAULT_AGGREGATOR_HOSTS]),
+  ignoredHosts: z.array(z.string().min(1)).default([...DEFAULT_IGNORED_HOSTS]),
+});
+
+/**
  * The run config: a typed object loaded from the committed config file.
  * Strict, so a secret pasted into the file is rejected; secrets come from env only.
  */
@@ -50,6 +92,7 @@ export const configSchema = z.strictObject({
       message: `neighborhoods must include the catch-alls: ${NEIGHBORHOOD_CATCH_ALLS.join(", ")}`,
     })
     .default([...NEIGHBORHOOD_CATCH_ALLS]),
+  discovery: discoverySchema.default(discoverySchema.parse({})),
 });
 
 export type RunConfig = z.infer<typeof configSchema>;

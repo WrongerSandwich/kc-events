@@ -42,6 +42,7 @@ Every field you fill must come from the text of the page body you were given. No
 - "Lawrence" is for anywhere in Lawrence, Kansas.
 - When the address is in the geography but fits nothing on the list, give the neighborhood or city it is in instead (for example "Olathe"), so the run can flag it for the list to grow. Do not force it onto the nearest name on the list, and do not answer "Elsewhere in the metro" yourself: the run puts it there.
 - When the event is at the source's own venue, the source's neighborhood (given below) is the answer.
+- A page found by web search has no source (the Source line below says so): take the neighborhood from the address or location the page gives, never from what the search was for.
 - When the page gives no address or location and the event is not at the source's own venue, leave `neighborhood` null.
 
 ## Kind

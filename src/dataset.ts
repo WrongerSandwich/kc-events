@@ -82,6 +82,14 @@ export const sourceStateSchema = z.strictObject({
   consecutiveFailures: z.number().int().nonnegative(),
 });
 
+/** What the run remembers about a host the discovery lane found events on, for promotion suggestions. */
+export const discoveryHostStateSchema = z.strictObject({
+  /** How many runs have found an active event on this host. */
+  runsSeen: z.number().int().positive(),
+  /** The start of the last run that did. */
+  lastSeen: isoDateTime,
+});
+
 export const datasetSchema = z.strictObject({
   schemaVersion: z.literal(DATASET_SCHEMA_VERSION),
   /** When this file was written; null only before the first run. */
@@ -91,6 +99,8 @@ export const datasetSchema = z.strictObject({
   events: z.array(eventSchema),
   /** Keyed by registry source name. */
   sourceState: z.record(z.string(), sourceStateSchema),
+  /** Keyed by host, without "www.". */
+  discoveryState: z.record(z.string(), discoveryHostStateSchema).default({}),
 });
 
 export type Event = z.infer<typeof eventSchema>;
@@ -109,5 +119,6 @@ export function emptyDataset(): Dataset {
     lastSuccessfulRun: null,
     events: [],
     sourceState: {},
+    discoveryState: {},
   };
 }

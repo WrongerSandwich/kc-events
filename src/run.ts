@@ -7,8 +7,10 @@ import {
   extractionReplySchema,
   normalizeUrl,
   type ExtractionContext,
+  type PageOrigin,
   type Sighting,
 } from "./extraction.js";
+import { discoveryQueries, hostOf, onHost, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { findMatch, normalizeName, sameName } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
@@ -62,12 +64,26 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   };
   const extraction = await extractFromPages(registryLane.pages, model, extractionContext);
   const sourceReports = registryLane.sourceReports.map((report) => withExtraction(report, extraction.bySource.get(report.name)));
-  const merged = mergeSightings(dataset.events, extraction.sightings, today);
+  // Discovery runs after the registry lane, so a page the registry already read is not read again.
+  const discovery = await discover({ ...ports, model }, extractionContext, registryLane.triedUrls);
+  // Registry sightings merge first: an event both lanes found keeps its registry lead.
+  const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], today);
   // Past events expire before re-verification, so nothing is fetched to check a date already gone.
   const current = merged.events.map((e) => expirePast(e, today));
-  const laneOutcome = { touched: merged.touched, triedUrls: registryLane.triedUrls, unreadUrls: extraction.unreadUrls };
+  const laneOutcome = {
+    touched: merged.touched,
+    triedUrls: new Set([...registryLane.triedUrls, ...discovery.triedUrls]),
+    unreadUrls: new Set([...extraction.unreadUrls, ...discovery.unreadUrls]),
+  };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
   const events = markChanged(dataset.events, reverified.events, startedIso);
+  const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, registry, startedIso);
+  const shortfall = {
+    pagesNotExtracted: extraction.pagesNotExtracted + discovery.pagesNotExtracted,
+    eventsNotReverified: reverified.notReverified,
+    queriesNotSearched: discovery.queriesNotSearched,
+    leadsNotFollowed: discovery.leadsNotFollowed,
+  };
 
   const finishedIso = toLocalIso(ports.clock.now(), config.timezone);
 
@@ -82,20 +98,21 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       updated: merged.counts.updated,
       reverified: reverified.reverified,
       heldUnverified: merged.counts.heldUnverified,
-      outsideGeography: extraction.outsideGeography + reverified.outsideGeography,
+      outsideGeography: extraction.outsideGeography + discovery.outsideGeography + reverified.outsideGeography,
       expired: countExpired(dataset.events, events),
     },
     spend: {
       totalUsd: model.totalUsd(),
       capUsd: config.spendCapUsd,
       // Hit means the cap cut something; a last call that merely crossed it cut nothing.
-      capHit: extraction.pagesNotExtracted + reverified.notReverified > 0,
-      shortfall: { pagesNotExtracted: extraction.pagesNotExtracted, eventsNotReverified: reverified.notReverified },
+      capHit: Object.values(shortfall).some((n) => n > 0),
+      shortfall,
     },
+    discovery: discovery.report,
     sources: sourceReports,
     failingSources: registryLane.failingSources,
-    unmappableNeighborhoods: unmappableNeighborhoods([...extraction.sightings, ...reverified.sightings]),
-    promotionSuggestions: [],
+    unmappableNeighborhoods: unmappableNeighborhoods([...extraction.sightings, ...discovery.sightings, ...reverified.sightings]),
+    promotionSuggestions: promotion.promotionSuggestions,
   };
 
   return {
@@ -103,6 +120,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       ...dataset,
       events,
       sourceState: registryLane.sourceState,
+      discoveryState: promotion.discoveryState,
       generatedAt: finishedIso,
       lastSuccessfulRun: finishedIso,
     },
@@ -203,9 +221,13 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   for (const { source, page } of pages) {
     const outcome = bySource.get(source.name) ?? { extracted: 0, problems: [] };
     bySource.set(source.name, outcome);
+    if (onHost(page.finalUrl, context.config.discovery.aggregatorHosts)) {
+      outcome.problems.push(`${page.finalUrl} is an aggregator page and was not extracted`);
+      continue;
+    }
     let read: Awaited<ReturnType<typeof extractPage>>;
     try {
-      read = await extractPage(page, source, model, context);
+      read = await extractPage(page, { lane: "registry", source }, model, context);
     } catch (error) {
       if (!(error instanceof SpendCapReached)) throw error;
       pagesNotExtracted++;
@@ -229,11 +251,11 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
  */
 async function extractPage(
   page: FetchResult,
-  source: Source,
+  origin: PageOrigin,
   model: ModelPort,
   context: ExtractionContext,
 ): Promise<{ sightings?: Sighting[]; extracted: number; outsideGeography: number; problems: string[] }> {
-  const reply = await model.complete(buildExtractionRequest(page, source, context));
+  const reply = await model.complete(buildExtractionRequest(page, origin, context));
   const parsed = extractionReplySchema.safeParse(reply.value);
   if (!parsed.success) {
     return {
@@ -242,7 +264,7 @@ async function extractPage(
       problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`],
     };
   }
-  const origin = { source, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl) };
+  const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl) };
   const sightings: Sighting[] = [];
   const problems: string[] = [];
   let outsideGeography = 0;
@@ -255,7 +277,7 @@ async function extractPage(
       outsideGeography++;
       continue;
     }
-    sightings.push(candidateToSighting(candidate, origin, context));
+    sightings.push(candidateToSighting(candidate, candidateOrigin, context));
   }
   return { sightings, extracted: parsed.data.events.length, outsideGeography, problems };
 }
@@ -267,8 +289,9 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
 }
 
 /**
- * Folds this run's sightings into the dataset. A sighting matching a known event (ADR 0007)
- * is applied to it; an unmatched one is new, unless it is cancelled or already past: nothing
+ * Folds this run's sightings into the dataset, registry lane first. A sighting matching a known
+ * event (ADR 0007) is applied to it, unless the event was already read verified this run; an
+ * unmatched one is new, unless it is cancelled or already past: nothing
  * to publish. Matching includes expired events, so a page listing one again revives it under
  * its old id rather than starting a duplicate.
  */
@@ -277,6 +300,7 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string)
   const touched = new Set<string>();
   const refreshed = new Set<string>();
   const created = new Set<string>();
+  const readVerified = new Set<string>();
 
   for (const { event, cancelled } of sightings) {
     const known = findMatch(event, events);
@@ -285,9 +309,13 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string)
       events.push(event);
       touched.add(event.id);
       created.add(event.id);
+      if (event.status === "active") readVerified.add(event.id);
       continue;
     }
+    // The first verified reading this run stands; a later page listing the same event only confirms it.
+    if (readVerified.has(known.id) && event.status === "active" && !cancelled) continue;
     touched.add(known.id);
+    if (event.status === "active") readVerified.add(known.id);
     const applied = applySighting(known, { event, cancelled });
     events[events.indexOf(known)] = applied.event;
     if (applied.refreshed && !created.has(known.id)) refreshed.add(known.id);
@@ -361,7 +389,7 @@ async function reverify(
     }
     const event = pending.find((e) => e.primaryUrl === url)!;
     const pageUrls = new Set([url, normalizeUrl(page.finalUrl, url)]);
-    const read = await extractPage(page, sourceFor(event, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
+    const read = await extractPage(page, originFor(event, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
     outsideGeography += read.outsideGeography;
     if (read.sightings) sightingsAt.set(url, read.sightings);
   }
@@ -389,30 +417,122 @@ interface RegistryLaneOutcome {
 
 /** A page that came back readable, or nothing: a network error, a non-2xx status, or a robots.txt block. */
 async function fetchPage(url: string, fetcher: FetchPort): Promise<FetchResult | undefined> {
+  const fetched = await fetchOrWhyNot(url, fetcher);
+  return typeof fetched === "string" ? undefined : fetched;
+}
+
+/** A page that came back readable, or why it did not. */
+async function fetchOrWhyNot(url: string, fetcher: FetchPort): Promise<FetchResult | string> {
   try {
     const page = await fetcher.fetch(url);
-    return page.robotsAllowed && page.status >= 200 && page.status < 300 ? page : undefined;
-  } catch {
-    return undefined;
+    if (!page.robotsAllowed) return `robots.txt disallows ${url}`;
+    return page.status >= 200 && page.status < 300 ? page : `${url}: HTTP ${page.status}`;
+  } catch (error) {
+    return `${url}: ${error instanceof Error ? error.message : String(error)}`;
   }
 }
 
 /**
- * The source an event's page is read as: its registry source when it has one, otherwise the
- * event's own kind and neighborhood standing in, so the extraction request has the same shape.
+ * The discovery lane: each query goes through the search port and each result is a lead. A lead
+ * on an aggregator host is fetched only to read its outbound links, which are followed as leads
+ * in turn; its text never reaches extraction. Any other lead is a primary page, fetched (robots.txt
+ * and all, as the fetcher always does) and extracted under the same cite-or-drop rules as the
+ * registry lane, with the query as the lead of what it finds. A URL is followed once a run, and
+ * not at all when the registry lane already tried it. Once the spend cap is reached, searches and
+ * leads still to go are skipped and counted, so nothing is fetched that could not be read.
  */
-function sourceFor(event: Event, url: string, registry: Registry): Source {
-  const lead = event.lead;
-  const registered = lead.lane === "registry" ? registry.sources.find((s) => s.name === lead.source) : undefined;
-  return (
-    registered ?? {
-      name: lead.lane === "registry" ? lead.source : `discovery: ${lead.query}`,
-      urls: [url],
-      kind: event.kind,
-      neighborhood: event.neighborhood,
-      status: "active",
+async function discover(ports: Ports & { model: CappedModel }, context: ExtractionContext, registryTried: Set<string>) {
+  const { config } = context;
+  const { aggregatorHosts, ignoredHosts, resultsPerQuery } = config.discovery;
+  const sightings: Sighting[] = [];
+  const triedUrls = new Set<string>();
+  const unreadUrls = new Set<string>();
+  /** Host to an example page, for every host whose page yielded an active event this run. */
+  const hosts = new Map<string, string>();
+  const report: RunReport["discovery"] = { enabled: config.discovery.enabled, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [] };
+  let outsideGeography = 0;
+  let pagesNotExtracted = 0;
+  let queriesNotSearched = 0;
+  let leadsNotFollowed = 0;
+  const followed = new Set<string>();
+  const firstFollow = (url: string) => {
+    if (followed.has(url) || registryTried.has(url)) return false;
+    followed.add(url);
+    return true;
+  };
+
+  const readPrimaryPage = async (url: string, query: string) => {
+    if (!firstFollow(url)) return;
+    if (ports.model.exhausted()) return void leadsNotFollowed++;
+    triedUrls.add(url);
+    const page = await fetchOrWhyNot(url, ports.fetcher);
+    if (typeof page === "string") return void report.problems.push(page);
+    const pageUrls = [url, normalizeUrl(page.finalUrl, url)];
+    if (onHost(page.finalUrl, aggregatorHosts)) return void report.problems.push(`${url} led to an aggregator page and was not extracted`);
+    for (const u of pageUrls) triedUrls.add(u);
+    let read: Awaited<ReturnType<typeof extractPage>>;
+    try {
+      read = await extractPage(page, { lane: "discovery", query }, ports.model, { ...context, fetchedUrls: new Set([...context.fetchedUrls, ...pageUrls]) });
+    } catch (error) {
+      if (!(error instanceof SpendCapReached)) throw error;
+      pagesNotExtracted++;
+      for (const u of pageUrls) unreadUrls.add(u);
+      return;
     }
-  );
+    report.pagesExtracted++;
+    outsideGeography += read.outsideGeography;
+    report.problems.push(...read.problems);
+    if (!read.sightings) return void pageUrls.forEach((u) => unreadUrls.add(u));
+    sightings.push(...read.sightings);
+    const host = hostOf(page.finalUrl);
+    if (host && !hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) hosts.set(host, pageUrls[1]!);
+  };
+
+  const readIndex = async (url: string, query: string) => {
+    if (!firstFollow(url)) return;
+    if (ports.model.exhausted()) return void leadsNotFollowed++;
+    const page = await fetchOrWhyNot(url, ports.fetcher);
+    if (typeof page === "string") return void report.problems.push(page);
+    report.aggregatorPages++;
+    for (const link of outboundLinks(page, config)) await readPrimaryPage(link, query);
+  };
+
+  for (const query of config.discovery.enabled ? discoveryQueries(config, context.today) : []) {
+    if (ports.model.exhausted()) {
+      queriesNotSearched++;
+      continue;
+    }
+    let results: Awaited<ReturnType<Ports["search"]["search"]>>;
+    try {
+      results = await ports.search.search(query);
+    } catch (error) {
+      report.problems.push(`search "${query}" failed: ${error instanceof Error ? error.message : String(error)}`);
+      continue;
+    }
+    report.queries++;
+    for (const result of results.slice(0, resultsPerQuery)) {
+      const url = normalizeUrl(result.url, "");
+      if (!/^https?:/i.test(url) || onHost(url, ignoredHosts)) continue;
+      await (onHost(url, aggregatorHosts) ? readIndex(url, query) : readPrimaryPage(url, query));
+    }
+  }
+
+  return { sightings, triedUrls, unreadUrls, hosts, report, outsideGeography, pagesNotExtracted, queriesNotSearched, leadsNotFollowed };
+}
+
+/**
+ * Where an event's page is read as coming from: its lead's discovery search, or its registry
+ * source; a source since removed from the registry has the event's own kind and neighborhood
+ * standing in, so the extraction request has the same shape.
+ */
+function originFor(event: Event, url: string, registry: Registry): PageOrigin {
+  const lead = event.lead;
+  if (lead.lane === "discovery") return { lane: "discovery", query: lead.query };
+  const registered = registry.sources.find((s) => s.name === lead.source);
+  return {
+    lane: "registry",
+    source: registered ?? { name: lead.source, urls: [url], kind: event.kind, neighborhood: event.neighborhood, status: "active" },
+  };
 }
 
 /**

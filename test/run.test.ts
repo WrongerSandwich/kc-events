@@ -32,6 +32,7 @@ describe("run", () => {
       lastSuccessfulRun: "2026-10-02T22:15:00-05:00",
       events: [],
       sourceState: {},
+      discoveryState: {},
     });
     expect(parseDataset(dataset)).toEqual(dataset);
     expect(report.runDate).toBe("2026-10-02");
@@ -44,10 +45,11 @@ describe("run", () => {
       outsideGeography: 0,
       expired: { past: 0, "two-strike": 0, cancelled: 0 },
     });
-    expect(report.spend).toEqual({ totalUsd: 0, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0 } });
+    expect(report.spend).toEqual({ totalUsd: 0, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0 } });
     expect(report.sources).toEqual([]);
     expect(report.failingSources).toEqual([]);
     expect(report.unmappableNeighborhoods).toEqual([]);
+    expect(report.discovery).toEqual({ enabled: false, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [] });
     expect(report.promotionSuggestions).toEqual([]);
   });
 });

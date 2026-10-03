@@ -1,4 +1,4 @@
-import type { CompletionRequest, CompletionResult, FetchResult, Ports } from "../../src/ports.js";
+import type { CompletionRequest, CompletionResult, FetchResult, Ports, SearchResult } from "../../src/ports.js";
 
 /** A canned response: a page with a status, a robots.txt block, or a network failure. */
 export type CannedPage = { status: number; body: string } | "robots-blocked" | Error;
@@ -7,10 +7,12 @@ export interface FakePortOptions {
   pages?: Record<string, CannedPage>;
   /** Scripted model replies, consumed in call order. */
   completions?: CompletionResult[];
+  /** Search results by query; a query not listed returns nothing, an Error is thrown. */
+  searches?: Record<string, SearchResult[] | Error>;
 }
 
 /** Fake ports that record every call; none of them reach the network. */
-export function fakePorts(now: Date, { pages = {}, completions = [] }: FakePortOptions = {}) {
+export function fakePorts(now: Date, { pages = {}, completions = [], searches = {} }: FakePortOptions = {}) {
   const calls: string[] = [];
   const requests: CompletionRequest[] = [];
   const replies = [...completions];
@@ -27,7 +29,9 @@ export function fakePorts(now: Date, { pages = {}, completions = [] }: FakePortO
     search: {
       async search(query) {
         calls.push(`search:${query}`);
-        return [];
+        const results = searches[query] ?? [];
+        if (results instanceof Error) throw results;
+        return results;
       },
     },
     fetcher: {

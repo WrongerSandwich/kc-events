@@ -46,7 +46,7 @@ describe("spend cap", () => {
       totalUsd: 0.06,
       capUsd: 0.05,
       capHit: true,
-      shortfall: { pagesNotExtracted: 1, eventsNotReverified: 0 },
+      shortfall: { pagesNotExtracted: 1, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0 },
     });
     expect(report.sources.find((s) => s.name === "Charlie")).toMatchObject({
       result: "fetched",
@@ -111,7 +111,7 @@ describe("spend cap", () => {
       totalUsd: 0.035,
       capUsd: 5,
       capHit: false,
-      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0 },
+      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0 },
     });
   });
 
@@ -127,7 +127,7 @@ describe("spend cap", () => {
       totalUsd: 0.06,
       capUsd: 0.05,
       capHit: false,
-      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0 },
+      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0 },
     });
   });
 
