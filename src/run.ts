@@ -1,7 +1,8 @@
 import type { RunConfig } from "./config.js";
-import type { Dataset, Event, SourceState } from "./dataset.js";
+import type { Dataset, Event, ExpiryReason, SourceState } from "./dataset.js";
+import { expire, expirePast, strike } from "./expiry.js";
 import { buildExtractionRequest, candidateToEvent, extractionReplySchema, normalizeUrl, type ExtractionContext } from "./extraction.js";
-import { sameEvent } from "./identity.js";
+import { findMatch, normalizeName } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
 import type { RunReport, SourceReport } from "./report.js";
@@ -37,21 +38,22 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const startedAt = ports.clock.now();
   const startedIso = toLocalIso(startedAt, config.timezone);
 
+  const today = toLocalDate(startedAt, config.timezone);
   const registryLane = await checkRegistry(registry, dataset.sourceState, ports.fetcher);
-  const extraction = await extractFromPages(registryLane.pages, ports.model, {
-    config,
-    rules: prompts.extractionRules,
-    today: toLocalDate(startedAt, config.timezone),
-    nowIso: startedIso,
-    fetchedUrls: new Set(registryLane.pages.flatMap(({ page }) => [page.url, page.finalUrl]).map((u) => normalizeUrl(u, u))),
-  });
+  const fetchedUrls = new Set(registryLane.pages.flatMap(({ page }) => [page.url, page.finalUrl]).map((u) => normalizeUrl(u, u)));
+  const extractionContext: ExtractionContext = { config, rules: prompts.extractionRules, today, nowIso: startedIso, fetchedUrls };
+  const extraction = await extractFromPages(registryLane.pages, ports.model, extractionContext);
   const sourceReports = registryLane.sourceReports.map((report) => withExtraction(report, extraction.bySource.get(report.name)));
-  const merged = mergeEvents(dataset.events, extraction.events);
+  const merged = mergeSightings(dataset.events, extraction.sightings, today);
+  // Past events expire before re-verification, so nothing is fetched to check a date already gone.
+  const current = merged.events.map((e) => expirePast(e, today));
+  const reverified = await reverify(current, merged.touched, registryLane.triedUrls, registry, ports, extractionContext);
+  const events = markChanged(dataset.events, reverified.events, startedIso);
 
   const finishedIso = toLocalIso(ports.clock.now(), config.timezone);
 
   const report: RunReport = {
-    runDate: toLocalDate(startedAt, config.timezone),
+    runDate: today,
     startedAt: startedIso,
     finishedAt: finishedIso,
     horizonWeeks: config.horizonWeeks,
@@ -59,12 +61,12 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       found: merged.counts.found,
       new: merged.counts.new,
       updated: merged.counts.updated,
-      reverified: 0,
+      reverified: reverified.reverified,
       heldUnverified: merged.counts.heldUnverified,
-      expired: { past: 0, "two-strike": 0, cancelled: 0 },
+      expired: countExpired(dataset.events, events),
     },
     // Spend is summed from every call; stopping at the cap arrives with #7.
-    spend: { totalUsd: extraction.spendUsd, capUsd: config.spendCapUsd, capHit: false },
+    spend: { totalUsd: extraction.spendUsd + reverified.spendUsd, capUsd: config.spendCapUsd, capHit: false },
     sources: sourceReports,
     failingSources: registryLane.failingSources,
     unmappableNeighborhoods: [],
@@ -74,7 +76,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   return {
     dataset: {
       ...dataset,
-      events: merged.events,
+      events,
       sourceState: registryLane.sourceState,
       generatedAt: finishedIso,
       lastSuccessfulRun: finishedIso,
@@ -97,6 +99,7 @@ interface SourcePage {
 async function checkRegistry(registry: Registry, previous: Record<string, SourceState>, fetcher: FetchPort) {
   const sourceReports: SourceReport[] = [];
   const pages: SourcePage[] = [];
+  const triedUrls = new Set<string>();
   const sourceState = { ...previous };
   const failuresOf = (name: string) => sourceState[name]?.consecutiveFailures ?? 0;
 
@@ -106,6 +109,7 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
       continue;
     }
     const checked = await checkSource(source, fetcher);
+    for (const url of [...source.urls, ...checked.pages.map((p) => p.finalUrl)]) triedUrls.add(normalizeUrl(url, url));
     sourceReports.push(checked.report);
     pages.push(...checked.pages.map((page) => ({ source, page })));
     if (checked.report.result === "fetched") sourceState[source.name] = { consecutiveFailures: 0 };
@@ -115,7 +119,7 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
   const failingSources = registry.sources
     .filter((s) => s.status === "active" && failuresOf(s.name) >= FAILING_SOURCE_THRESHOLD)
     .map((s) => s.name);
-  return { sourceReports, sourceState, failingSources, pages };
+  return { sourceReports, sourceState, failingSources, pages, triedUrls };
 }
 
 /**
@@ -155,42 +159,53 @@ interface SourceExtraction {
   problems: string[];
 }
 
+/** One event as read off a page this run, and whether the page says it is cancelled. */
+interface Sighting {
+  event: Event;
+  cancelled: boolean;
+}
+
 /**
  * Hands every fetched page to the extraction model with the rules document and turns the
- * candidates into events under cite-or-drop. A reply that fails validation yields no events
- * from that page; a candidate with no title cannot be an event; a candidate the page says is
- * cancelled is nothing to publish (expiring an existing event on that word arrives with #5).
+ * candidates into sightings under cite-or-drop. A reply that fails validation yields nothing
+ * from that page; a candidate with no title cannot be an event.
  */
 async function extractFromPages(pages: SourcePage[], model: ModelPort, context: ExtractionContext) {
-  const events: Event[] = [];
+  const sightings: Sighting[] = [];
   const bySource = new Map<string, SourceExtraction>();
   let spendUsd = 0;
 
   for (const { source, page } of pages) {
     const outcome = bySource.get(source.name) ?? { extracted: 0, problems: [] };
     bySource.set(source.name, outcome);
-
-    const reply = await model.complete(buildExtractionRequest(page, source, context));
-    spendUsd += reply.costUsd;
-
-    const parsed = extractionReplySchema.safeParse(reply.value);
-    if (!parsed.success) {
-      outcome.problems.push(`extraction reply for ${page.finalUrl} was not in the expected shape`);
-      continue;
-    }
-    const origin = { source, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl) };
-    for (const candidate of parsed.data.events) {
-      outcome.extracted++;
-      if (candidate.title.trim() === "") {
-        outcome.problems.push(`a candidate on ${page.finalUrl} had no title and was skipped`);
-        continue;
-      }
-      if (candidate.notice === "cancelled") continue;
-      events.push(candidateToEvent(candidate, origin, context));
-    }
+    const read = await extractPage(page, source, model, context);
+    spendUsd += read.costUsd;
+    sightings.push(...read.sightings);
+    outcome.extracted += read.extracted;
+    outcome.problems.push(...read.problems);
   }
 
-  return { events, spendUsd, bySource };
+  return { sightings, spendUsd, bySource };
+}
+
+/** One extraction call over one page. */
+async function extractPage(page: FetchResult, source: Source, model: ModelPort, context: ExtractionContext) {
+  const reply = await model.complete(buildExtractionRequest(page, source, context));
+  const parsed = extractionReplySchema.safeParse(reply.value);
+  if (!parsed.success) {
+    return { sightings: [], extracted: 0, costUsd: reply.costUsd, problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`] };
+  }
+  const origin = { source, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl) };
+  const sightings: Sighting[] = [];
+  const problems: string[] = [];
+  for (const candidate of parsed.data.events) {
+    if (candidate.title.trim() === "") {
+      problems.push(`a candidate on ${page.finalUrl} had no title and was skipped`);
+      continue;
+    }
+    sightings.push({ event: candidateToEvent(candidate, origin, context), cancelled: candidate.notice === "cancelled" });
+  }
+  return { sightings, extracted: parsed.data.events.length, costUsd: reply.costUsd, problems };
 }
 
 function withExtraction(report: SourceReport, extraction: SourceExtraction | undefined): SourceReport {
@@ -200,33 +215,149 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
 }
 
 /**
- * Folds this run's events into the dataset. An event matching one already known (same primary
- * page and normalized title, ADR 0007) refreshes that record and keeps its id, first-seen, and
- * lead; a sighting that could not be verified leaves a known record alone, since whether it
- * should lose its standing is re-verification's call (#5). The rest are new.
+ * Folds this run's sightings into the dataset. A sighting matching a known event (ADR 0007)
+ * refreshes that record and keeps its id, first-seen, lead, and curation; a page saying
+ * cancelled expires it. A sighting that could not be verified leaves a known record alone:
+ * the page still lists it, so it is not missing, but nothing on it can be re-cited. An
+ * unmatched sighting is new, unless it is cancelled or already past: nothing to publish.
  */
-function mergeEvents(existing: Event[], found: Event[]) {
+function mergeSightings(existing: Event[], sightings: Sighting[], today: string) {
   const events = [...existing];
   const touched = new Set<string>();
   const refreshed = new Set<string>();
   let created = 0;
 
-  for (const event of found) {
-    const index = events.findIndex((known) => sameEvent(known, event));
-    const known = index === -1 ? undefined : events[index];
+  for (const { event, cancelled } of sightings) {
+    const known = findMatch(event, events);
     if (!known) {
+      if (cancelled || expirePast(event, today) !== event) continue;
       events.push(event);
       touched.add(event.id);
       created++;
       continue;
     }
     touched.add(known.id);
-    if (event.status === "active") {
-      events[index] = { ...event, id: known.id, firstSeen: known.firstSeen, lead: known.lead };
+    const index = events.indexOf(known);
+    if (cancelled) {
+      if (known.status !== "expired") events[index] = expire(known, "cancelled");
+    } else if (event.status === "active") {
+      events[index] = refresh(known, event);
       refreshed.add(known.id);
     }
   }
 
   const heldUnverified = events.filter((e) => touched.has(e.id) && e.status === "unverified").length;
-  return { events, counts: { found: touched.size, new: created, updated: refreshed.size, heldUnverified } };
+  return { events, touched, counts: { found: touched.size, new: created, updated: refreshed.size, heldUnverified } };
+}
+
+/** A known event re-read from a page: the new reading, under the known event's identity and curation. */
+function refresh(known: Event, sighting: Event): Event {
+  return {
+    ...sighting,
+    id: known.id,
+    firstSeen: known.firstSeen,
+    lead: known.lead,
+    dontMiss: known.dontMiss,
+    ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}),
+    ...(known.lastChanged !== undefined ? { lastChanged: known.lastChanged } : {}),
+  };
+}
+
+/**
+ * Re-verification: every active event the registry lane did not sight is checked against its
+ * primary page. A page the registry lane already tried this run is not fetched again: if it was
+ * read, the event is missing from it; if it failed, it failed. Either way that is a strike, as
+ * is a re-fetch that fails or a page that no longer lists the event. A page that lists it again
+ * refreshes it; one saying cancelled expires it; one listing it without anything citable leaves
+ * it alone, as in the registry lane.
+ */
+async function reverify(events: Event[], touched: Set<string>, triedUrls: Set<string>, registry: Registry, ports: Ports, context: ExtractionContext) {
+  const pending = events.filter((e) => e.status === "active" && !touched.has(e.id));
+  const sightingsAt = new Map<string, Sighting[]>();
+  const refreshed = new Set<string>();
+  let spendUsd = 0;
+
+  for (const url of new Set(pending.map((e) => e.primaryUrl))) {
+    if (triedUrls.has(url)) {
+      sightingsAt.set(url, []);
+      continue;
+    }
+    const page = await fetchPage(url, ports.fetcher);
+    if (!page) {
+      sightingsAt.set(url, []);
+      continue;
+    }
+    const event = pending.find((e) => e.primaryUrl === url)!;
+    const pageUrls = new Set([url, normalizeUrl(page.finalUrl, url)]);
+    const read = await extractPage(page, sourceFor(event, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
+    spendUsd += read.costUsd;
+    sightingsAt.set(url, read.sightings);
+  }
+
+  const checked = events.map((event) => {
+    const sightings = sightingsAt.get(event.primaryUrl);
+    if (!pending.includes(event) || !sightings) return event;
+    const sighting = sightings.find((s) => findMatch(s.event, [event]));
+    if (!sighting) return strike(event);
+    if (sighting.cancelled) return expire(event, "cancelled");
+    if (sighting.event.status !== "active") return event;
+    refreshed.add(event.id);
+    return refresh(event, sighting.event);
+  });
+  return { events: checked, reverified: refreshed.size, spendUsd };
+}
+
+/** A page that came back readable, or nothing: a network error, a non-2xx status, or a robots.txt block. */
+async function fetchPage(url: string, fetcher: FetchPort): Promise<FetchResult | undefined> {
+  try {
+    const page = await fetcher.fetch(url);
+    return page.robotsAllowed && page.status >= 200 && page.status < 300 ? page : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The source an event's page is read as: its registry source when it has one, otherwise the
+ * event's own kind and neighborhood standing in, so the extraction request has the same shape.
+ */
+function sourceFor(event: Event, url: string, registry: Registry): Source {
+  const lead = event.lead;
+  const registered = lead.lane === "registry" ? registry.sources.find((s) => s.name === lead.source) : undefined;
+  return (
+    registered ?? {
+      name: lead.lane === "registry" ? lead.source : `discovery: ${lead.query}`,
+      urls: [url],
+      kind: event.kind,
+      neighborhood: event.neighborhood,
+      status: "active",
+    }
+  );
+}
+
+/**
+ * Stamps last-changed on every event that is new this run or whose date, venue, or status
+ * differs from the dataset it started from, so curation knows what to re-judge. A venue
+ * spelled with different case or punctuation is the same venue.
+ */
+function markChanged(previous: Event[], events: Event[], nowIso: string): Event[] {
+  const before = new Map(previous.map((e) => [e.id, e]));
+  return events.map((event) => {
+    const was = before.get(event.id);
+    const changed =
+      !was || was.start !== event.start || was.end !== event.end || !sameName(was.venue, event.venue) || was.status !== event.status;
+    return changed ? { ...event, lastChanged: nowIso } : event;
+  });
+}
+
+function sameName(a: string | undefined, b: string | undefined): boolean {
+  return a === undefined || b === undefined ? a === b : normalizeName(a) === normalizeName(b);
+}
+
+/** How many events became expired this run, by reason. */
+function countExpired(previous: Event[], events: Event[]): Record<ExpiryReason, number> {
+  const wasExpired = new Set(previous.filter((e) => e.status === "expired").map((e) => e.id));
+  const counts: Record<ExpiryReason, number> = { past: 0, "two-strike": 0, cancelled: 0 };
+  for (const e of events) if (e.status === "expired" && e.expiryReason && !wasExpired.has(e.id)) counts[e.expiryReason]++;
+  return counts;
 }

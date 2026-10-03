@@ -64,8 +64,10 @@ async function main() {
   await writeFile(`${reportBase}.md`, renderReportMarkdown(result.report));
 
   const { counts, spend } = result.report;
+  const expired = counts.expired.past + counts.expired["two-strike"] + counts.expired.cancelled;
   console.log(
-    `Run ${result.report.runDate}: ${counts.found} found, ${counts.new} new, ${counts.heldUnverified} held unverified; ` +
+    `Run ${result.report.runDate}: ${counts.found} found, ${counts.new} new, ${counts.updated} updated, ${counts.reverified} re-verified, ` +
+      `${counts.heldUnverified} held unverified, ${expired} expired; ` +
       `${spend.totalUsd.toFixed(4)} of ${spend.capUsd} USD.`,
   );
   console.log(`Wrote ${DATASET_PATH}, ${reportBase}.md, ${reportBase}.json`);

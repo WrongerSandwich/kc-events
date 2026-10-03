@@ -60,6 +60,7 @@ describe("extraction over the registry lane", () => {
         dontMiss: false,
         firstSeen: NOW_ISO,
         lastVerified: NOW_ISO,
+        lastChanged: NOW_ISO,
         status: "active",
         verificationFailures: 0,
         lead: { lane: "registry", source: "Knuckleheads" },

@@ -37,6 +37,8 @@ const eventFields = z.strictObject({
   whyLine: z.string().min(1).optional(),
   firstSeen: isoDateTime,
   lastVerified: isoDateTime.optional(),
+  /** The run that first saw the event or last changed its date, venue, or status; curation re-judges on it. */
+  lastChanged: isoDateTime.optional(),
   status: z.enum(EVENT_STATUSES),
   expiryReason: z.enum(EXPIRY_REASONS).optional(),
   verificationFailures: z.number().int().nonnegative(),

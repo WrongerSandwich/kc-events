@@ -48,6 +48,9 @@ Whether an event is publishable: `active` (verified and current), `unverified` (
 **Last-verified**:
 The date of the most recent run that read the event's date and venue from its primary page. Shown on every published event.
 
+**Last-changed**:
+The run that first saw an event or last changed its date, venue, or status. Curation re-judges an event only when it has changed since it was last judged.
+
 **Lead**:
 How an event was first found: which registry source or which discovery search.
 
