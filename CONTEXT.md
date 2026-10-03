@@ -86,6 +86,13 @@ The part of a run that checks every registry source directly.
 One event as the extraction model reports it from a single page, before cite-or-drop decides whether it becomes an active or unverified event. A candidate is not yet in the dataset.
 _Avoid_: result, hit, extraction
 
+**Sighting**:
+A candidate after cite-or-drop has made it an active or unverified event, together with whether its page says it is cancelled. A run matches each sighting against the dataset by event identity.
+_Avoid_: match, hit
+
+**Strike**:
+One run in which an active event's primary page failed to load or no longer listed it. Any run that lists the event clears its strikes; the second consecutive strike is two-strike expiry.
+
 **Extraction rules**:
 The editable document (`prompts/extraction-rules.md`) sent to the extraction model with every page. The first of the two editorial surfaces; a wrong date in the dataset is a bug here first.
 _Avoid_: prompt (when meaning this document specifically), system prompt

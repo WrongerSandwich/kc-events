@@ -12,14 +12,15 @@ export function expire(event: Event, reason: ExpiryReason): Event {
   return { ...event, status: "expired", expiryReason: reason };
 }
 
-/**
- * Expires an event whose last date (its end, else its start) is before today's local date.
- * An undated event cannot be past, and an event already expired keeps its reason.
- */
-export function expirePast(event: Event, today: string): Event {
+/** Whether an event's last date (its end, else its start) is before today's local date. An undated event cannot be past. */
+export function isPast(event: Event, today: string): boolean {
   const lastDate = (event.end ?? event.start)?.slice(0, 10);
-  if (event.status === "expired" || lastDate === undefined || lastDate >= today) return event;
-  return expire(event, "past");
+  return lastDate !== undefined && lastDate < today;
+}
+
+/** Expires a past event; an event already expired keeps its reason. */
+export function expirePast(event: Event, today: string): Event {
+  return event.status !== "expired" && isPast(event, today) ? expire(event, "past") : event;
 }
 
 /** Records one failed re-verification; the second consecutive one expires the event. */

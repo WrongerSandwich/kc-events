@@ -1,8 +1,8 @@
 import type { RunConfig } from "./config.js";
 import type { Dataset, Event, ExpiryReason, SourceState } from "./dataset.js";
-import { expire, expirePast, strike } from "./expiry.js";
+import { expire, expirePast, isPast, strike } from "./expiry.js";
 import { buildExtractionRequest, candidateToEvent, extractionReplySchema, normalizeUrl, type ExtractionContext } from "./extraction.js";
-import { findMatch, normalizeName } from "./identity.js";
+import { findMatch, sameName } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
 import type { RunReport, SourceReport } from "./report.js";
@@ -47,7 +47,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const merged = mergeSightings(dataset.events, extraction.sightings, today);
   // Past events expire before re-verification, so nothing is fetched to check a date already gone.
   const current = merged.events.map((e) => expirePast(e, today));
-  const reverified = await reverify(current, merged.touched, registryLane.triedUrls, registry, ports, extractionContext);
+  const laneOutcome = { touched: merged.touched, triedUrls: registryLane.triedUrls, unreadUrls: extraction.unreadUrls };
+  const reverified = await reverify(current, laneOutcome, registry, ports, extractionContext);
   const events = markChanged(dataset.events, reverified.events, startedIso);
 
   const finishedIso = toLocalIso(ports.clock.now(), config.timezone);
@@ -159,7 +160,7 @@ interface SourceExtraction {
   problems: string[];
 }
 
-/** One event as read off a page this run, and whether the page says it is cancelled. */
+/** One candidate after cite-or-drop: the event as read off a page this run, and whether the page says it is cancelled. */
 interface Sighting {
   event: Event;
   cancelled: boolean;
@@ -173,6 +174,7 @@ interface Sighting {
 async function extractFromPages(pages: SourcePage[], model: ModelPort, context: ExtractionContext) {
   const sightings: Sighting[] = [];
   const bySource = new Map<string, SourceExtraction>();
+  const unreadUrls = new Set<string>();
   let spendUsd = 0;
 
   for (const { source, page } of pages) {
@@ -180,20 +182,26 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     bySource.set(source.name, outcome);
     const read = await extractPage(page, source, model, context);
     spendUsd += read.costUsd;
-    sightings.push(...read.sightings);
+    if (read.sightings) sightings.push(...read.sightings);
+    else for (const url of [page.url, page.finalUrl]) unreadUrls.add(normalizeUrl(url, url));
     outcome.extracted += read.extracted;
     outcome.problems.push(...read.problems);
   }
 
-  return { sightings, spendUsd, bySource };
+  return { sightings, spendUsd, bySource, unreadUrls };
 }
 
-/** One extraction call over one page. */
-async function extractPage(page: FetchResult, source: Source, model: ModelPort, context: ExtractionContext) {
+/** One extraction call over one page. Sightings are absent when the reply could not be read. */
+async function extractPage(
+  page: FetchResult,
+  source: Source,
+  model: ModelPort,
+  context: ExtractionContext,
+): Promise<{ sightings?: Sighting[]; extracted: number; costUsd: number; problems: string[] }> {
   const reply = await model.complete(buildExtractionRequest(page, source, context));
   const parsed = extractionReplySchema.safeParse(reply.value);
   if (!parsed.success) {
-    return { sightings: [], extracted: 0, costUsd: reply.costUsd, problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`] };
+    return { extracted: 0, costUsd: reply.costUsd, problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`] };
   }
   const origin = { source, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl) };
   const sightings: Sighting[] = [];
@@ -216,38 +224,45 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
 
 /**
  * Folds this run's sightings into the dataset. A sighting matching a known event (ADR 0007)
- * refreshes that record and keeps its id, first-seen, lead, and curation; a page saying
- * cancelled expires it. A sighting that could not be verified leaves a known record alone:
- * the page still lists it, so it is not missing, but nothing on it can be re-cited. An
- * unmatched sighting is new, unless it is cancelled or already past: nothing to publish.
+ * is applied to it; an unmatched one is new, unless it is cancelled or already past: nothing
+ * to publish. Matching includes expired events, so a page listing one again revives it under
+ * its old id rather than starting a duplicate.
  */
 function mergeSightings(existing: Event[], sightings: Sighting[], today: string) {
   const events = [...existing];
   const touched = new Set<string>();
   const refreshed = new Set<string>();
-  let created = 0;
+  const created = new Set<string>();
 
   for (const { event, cancelled } of sightings) {
     const known = findMatch(event, events);
     if (!known) {
-      if (cancelled || expirePast(event, today) !== event) continue;
+      if (cancelled || isPast(event, today)) continue;
       events.push(event);
       touched.add(event.id);
-      created++;
+      created.add(event.id);
       continue;
     }
     touched.add(known.id);
-    const index = events.indexOf(known);
-    if (cancelled) {
-      if (known.status !== "expired") events[index] = expire(known, "cancelled");
-    } else if (event.status === "active") {
-      events[index] = refresh(known, event);
-      refreshed.add(known.id);
-    }
+    const applied = applySighting(known, { event, cancelled });
+    events[events.indexOf(known)] = applied.event;
+    if (applied.refreshed && !created.has(known.id)) refreshed.add(known.id);
   }
 
   const heldUnverified = events.filter((e) => touched.has(e.id) && e.status === "unverified").length;
-  return { events, touched, counts: { found: touched.size, new: created, updated: refreshed.size, heldUnverified } };
+  return { events, touched, counts: { found: touched.size, new: created.size, updated: refreshed.size, heldUnverified } };
+}
+
+/**
+ * What a sighting of a known event does to it: a page saying cancelled expires it (an event
+ * already expired keeps its reason); a verified reading refreshes it; a reading with nothing
+ * citable leaves it as it was, except that the page still lists it, so it is not missing and
+ * any strike is cleared.
+ */
+function applySighting(known: Event, { event, cancelled }: Sighting): { event: Event; refreshed: boolean } {
+  if (cancelled) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false };
+  if (event.status === "active") return { event: refresh(known, event), refreshed: true };
+  return { event: known.verificationFailures === 0 ? known : { ...known, verificationFailures: 0 }, refreshed: false };
 }
 
 /** A known event re-read from a page: the new reading, under the known event's identity and curation. */
@@ -267,18 +282,18 @@ function refresh(known: Event, sighting: Event): Event {
  * Re-verification: every active event the registry lane did not sight is checked against its
  * primary page. A page the registry lane already tried this run is not fetched again: if it was
  * read, the event is missing from it; if it failed, it failed. Either way that is a strike, as
- * is a re-fetch that fails or a page that no longer lists the event. A page that lists it again
- * refreshes it; one saying cancelled expires it; one listing it without anything citable leaves
- * it alone, as in the registry lane.
+ * is a re-fetch that fails or a page that no longer lists the event. A page that does list it
+ * applies the sighting as in the registry lane. When the model's reply about a page could not be
+ * read, nothing is known either way and the event is left alone: a bad reply is not a dead page.
  */
-async function reverify(events: Event[], touched: Set<string>, triedUrls: Set<string>, registry: Registry, ports: Ports, context: ExtractionContext) {
-  const pending = events.filter((e) => e.status === "active" && !touched.has(e.id));
+async function reverify(events: Event[], lane: RegistryLaneOutcome, registry: Registry, ports: Ports, context: ExtractionContext) {
+  const pending = events.filter((e) => e.status === "active" && !lane.touched.has(e.id) && !lane.unreadUrls.has(e.primaryUrl));
   const sightingsAt = new Map<string, Sighting[]>();
   const refreshed = new Set<string>();
   let spendUsd = 0;
 
   for (const url of new Set(pending.map((e) => e.primaryUrl))) {
-    if (triedUrls.has(url)) {
+    if (lane.triedUrls.has(url)) {
       sightingsAt.set(url, []);
       continue;
     }
@@ -291,7 +306,7 @@ async function reverify(events: Event[], touched: Set<string>, triedUrls: Set<st
     const pageUrls = new Set([url, normalizeUrl(page.finalUrl, url)]);
     const read = await extractPage(page, sourceFor(event, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
     spendUsd += read.costUsd;
-    sightingsAt.set(url, read.sightings);
+    if (read.sightings) sightingsAt.set(url, read.sightings);
   }
 
   const checked = events.map((event) => {
@@ -299,12 +314,20 @@ async function reverify(events: Event[], touched: Set<string>, triedUrls: Set<st
     if (!pending.includes(event) || !sightings) return event;
     const sighting = sightings.find((s) => findMatch(s.event, [event]));
     if (!sighting) return strike(event);
-    if (sighting.cancelled) return expire(event, "cancelled");
-    if (sighting.event.status !== "active") return event;
-    refreshed.add(event.id);
-    return refresh(event, sighting.event);
+    const applied = applySighting(event, sighting);
+    if (applied.refreshed) refreshed.add(event.id);
+    return applied.event;
   });
   return { events: checked, reverified: refreshed.size, spendUsd };
+}
+
+/** What the registry lane leaves for re-verification: which events it sighted and which pages it tried. */
+interface RegistryLaneOutcome {
+  touched: Set<string>;
+  /** Every URL the lane requested or was redirected to, normalized, whether or not it came back. */
+  triedUrls: Set<string>;
+  /** Pages that came back but whose extraction reply could not be read. */
+  unreadUrls: Set<string>;
 }
 
 /** A page that came back readable, or nothing: a network error, a non-2xx status, or a robots.txt block. */
@@ -348,10 +371,6 @@ function markChanged(previous: Event[], events: Event[], nowIso: string): Event[
       !was || was.start !== event.start || was.end !== event.end || !sameName(was.venue, event.venue) || was.status !== event.status;
     return changed ? { ...event, lastChanged: nowIso } : event;
   });
-}
-
-function sameName(a: string | undefined, b: string | undefined): boolean {
-  return a === undefined || b === undefined ? a === b : normalizeName(a) === normalizeName(b);
 }
 
 /** How many events became expired this run, by reason. */

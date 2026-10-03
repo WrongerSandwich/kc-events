@@ -16,6 +16,11 @@ export function normalizeName(title: string): string {
     .trim();
 }
 
+/** Two names (titles or venues) are the same when they normalize alike; two absent names are the same too. */
+export function sameName(a: string | undefined, b: string | undefined): boolean {
+  return a === undefined || b === undefined ? a === b : normalizeName(a) === normalizeName(b);
+}
+
 export interface EventIdentity {
   primaryUrl: string;
   title: string;
@@ -33,14 +38,14 @@ export function findMatch<T extends EventIdentity>(sighting: EventIdentity, know
 }
 
 function sameEventExactly(a: EventIdentity, b: EventIdentity): boolean {
-  return a.primaryUrl === b.primaryUrl && normalizeName(a.title) === normalizeName(b.title);
+  return a.primaryUrl === b.primaryUrl && sameName(a.title, b.title);
 }
 
 function sameEventFuzzily(a: EventIdentity, b: EventIdentity): boolean {
   if (a.venue === undefined || b.venue === undefined || a.start === undefined || b.start === undefined) return false;
   return (
-    normalizeName(a.title) === normalizeName(b.title) &&
-    normalizeName(a.venue) === normalizeName(b.venue) &&
+    sameName(a.title, b.title) &&
+    sameName(a.venue, b.venue) &&
     Math.abs(Date.parse(a.start.slice(0, 10)) - Date.parse(b.start.slice(0, 10))) <= FUZZY_DATE_WINDOW_DAYS * DAY_MS
   );
 }

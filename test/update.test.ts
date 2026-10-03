@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { run } from "../src/run.js";
 import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
+import type { CompletionResult } from "../src/ports.js";
 import { fakePorts, type CannedPage } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
 
@@ -48,7 +49,7 @@ async function runAt(
     pages = { [CALENDAR_URL]: PAGE },
     completions,
     source = knuckleheads,
-  }: { pages?: Record<string, CannedPage>; completions: ReturnType<typeof reply>[]; source?: typeof knuckleheads },
+  }: { pages?: Record<string, CannedPage>; completions: CompletionResult[]; source?: typeof knuckleheads },
 ) {
   const fakes = fakePorts(now, { pages, completions });
   const result = await run({ config: testConfig(), prompts: testPrompts(), dataset, registry: { sources: [source] }, ports: fakes.ports });
@@ -227,5 +228,31 @@ describe("re-verification and expiry", () => {
 
     expect(dataset.events).toEqual([]);
     expect(report.counts).toMatchObject({ found: 0, new: 0 });
+  });
+
+  it("two strikes must be consecutive: a run that lists the event, even without anything citable, clears its strike", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
+    const struck = await runAt(WEEK_2, first.dataset, { completions: [reply()] });
+    expect(struck.dataset.events[0]!.verificationFailures).toBe(1);
+
+    const listed = await runAt(WEEK_3, struck.dataset, {
+      completions: [reply(candidate({ startDate: null, startTime: null, dateEvidence: null }))],
+    });
+
+    expect(listed.dataset.events[0]).toMatchObject({ status: "active", verificationFailures: 0, lastVerified: WEEK_1_ISO });
+  });
+
+  it("a model reply that cannot be read is not a strike against the events on that page", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
+
+    const second = await runAt(WEEK_2, first.dataset, { completions: [{ value: { nonsense: true }, costUsd: 0.01 }] });
+
+    expect(second.dataset.events).toEqual(first.dataset.events);
+  });
+
+  it("an event seen twice in one run is new, not also updated", async () => {
+    const { report } = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate(), candidate({ title: "big show" }))] });
+
+    expect(report.counts).toMatchObject({ found: 1, new: 1, updated: 0 });
   });
 });
