@@ -28,13 +28,13 @@ export interface RunReport {
   sources: SourceReport[];
   /** Registry sources at three or more consecutive failures. */
   failingSources: string[];
-  /** Events whose address could not be mapped and landed in a neighborhood catch-all. */
-  catchAllNeighborhoods: { eventTitle: string; venue: string; neighborhood: string }[];
-  /** Discovery hosts seen in two runs, suggested for the registry; never added automatically. */
+  /** Unmappable neighborhoods: events whose address landed in a neighborhood catch-all. */
+  unmappableNeighborhoods: { eventTitle: string; venue: string; neighborhood: string }[];
+  /** Discovery sources found twice, suggested for promotion; never added to the registry automatically. */
   promotionSuggestions: string[];
 }
 
-function list(items: string[]): string {
+function markdownList(items: string[]): string {
   return items.length === 0 ? "_None._" : items.map((i) => `- ${i}`).join("\n");
 }
 
@@ -71,14 +71,14 @@ ${
 
 ## Failing sources
 
-${list(report.failingSources)}
+${markdownList(report.failingSources)}
 
-## Neighborhood catch-alls
+## Unmappable neighborhoods
 
-${list(report.catchAllNeighborhoods.map((c) => `${c.eventTitle} at ${c.venue}: ${c.neighborhood}`))}
+${markdownList(report.unmappableNeighborhoods.map((c) => `${c.eventTitle} at ${c.venue}: ${c.neighborhood}`))}
 
 ## Promotion suggestions
 
-${list(report.promotionSuggestions)}
+${markdownList(report.promotionSuggestions)}
 `;
 }

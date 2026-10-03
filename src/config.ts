@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+const DEFAULT_MODELS = { extraction: "openai/gpt-6-luna", curation: "anthropic/claude-sonnet-5.5" };
+
 export const NEIGHBORHOOD_CATCH_ALLS = ["Lawrence", "Elsewhere in the metro"] as const;
 
 export const DEFAULT_KINDS = [
@@ -18,7 +20,7 @@ export const DEFAULT_KINDS = [
 
 /**
  * The run config: a typed object loaded from the committed config file.
- * Strict, so a secret pasted into the file is rejected; secrets come from env only (see loadSecrets).
+ * Strict, so a secret pasted into the file is rejected; secrets come from env only.
  */
 export const configSchema = z.strictObject({
   horizonWeeks: z.number().int().positive().default(8),
@@ -30,10 +32,10 @@ export const configSchema = z.strictObject({
   spendCapUsd: z.number().positive().default(5),
   models: z
     .strictObject({
-      extraction: z.string().min(1).default("openai/gpt-6-luna"),
-      curation: z.string().min(1).default("anthropic/claude-sonnet-5.5"),
+      extraction: z.string().min(1).default(DEFAULT_MODELS.extraction),
+      curation: z.string().min(1).default(DEFAULT_MODELS.curation),
     })
-    .default({ extraction: "openai/gpt-6-luna", curation: "anthropic/claude-sonnet-5.5" }),
+    .default(DEFAULT_MODELS),
   kinds: z
     .array(z.string().min(1))
     .min(1)
@@ -51,17 +53,4 @@ export type RunConfig = z.infer<typeof configSchema>;
 
 export function parseConfig(raw: unknown): RunConfig {
   return configSchema.parse(raw);
-}
-
-export interface Secrets {
-  openRouterApiKey: string | undefined;
-  tavilyApiKey: string | undefined;
-}
-
-/** Secrets never live in the config file; they come from the environment. */
-export function loadSecrets(env: NodeJS.ProcessEnv): Secrets {
-  return {
-    openRouterApiKey: env.OPENROUTER_API_KEY || undefined,
-    tavilyApiKey: env.TAVILY_API_KEY || undefined,
-  };
 }

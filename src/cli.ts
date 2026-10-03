@@ -30,7 +30,10 @@ async function main() {
 
   const fileConfig = parseConfig(parseYaml(await readFile(CONFIG_PATH, "utf8")) ?? {});
   const horizon = values["horizon-weeks"];
-  const config = horizon === undefined ? fileConfig : parseConfig({ ...fileConfig, horizonWeeks: Number(horizon) });
+  if (horizon !== undefined && !(Number.isInteger(Number(horizon)) && Number(horizon) > 0)) {
+    throw new Error(`--horizon-weeks must be a positive whole number, got "${horizon}"`);
+  }
+  const config = horizon === undefined ? fileConfig : { ...fileConfig, horizonWeeks: Number(horizon) };
 
   const registry = parseRegistry(parseYaml(await readFile(REGISTRY_PATH, "utf8")));
   const dataset = existsSync(DATASET_PATH)

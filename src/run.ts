@@ -43,7 +43,7 @@ export async function run({ config, dataset, ports }: RunInput): Promise<RunOutp
     spend: { totalUsd: 0, capUsd: config.spendCapUsd, capHit: false },
     sources: [],
     failingSources: [],
-    catchAllNeighborhoods: [],
+    unmappableNeighborhoods: [],
     promotionSuggestions: [],
   };
 

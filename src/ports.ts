@@ -35,14 +35,15 @@ export interface ModelPort {
   complete(request: CompletionRequest): Promise<CompletionResult>;
 }
 
-export interface Lead {
+/** One web-search hit. Not a glossary Lead, which is how an event was first found. */
+export interface SearchResult {
   url: string;
   title: string;
   snippet: string;
 }
 
 export interface SearchPort {
-  search(query: string): Promise<Lead[]>;
+  search(query: string): Promise<SearchResult[]>;
 }
 
 export interface FetchResult {

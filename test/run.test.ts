@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { run } from "../src/run.js";
 import { emptyDataset, parseDataset, DATASET_SCHEMA_VERSION } from "../src/dataset.js";
 import { fakePorts } from "./fakes/ports.js";
@@ -8,8 +8,13 @@ import { testConfig } from "./fakes/config.js";
 const NOW = new Date("2026-10-03T03:15:00Z");
 
 describe("run", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   it("an empty registry and empty dataset produce an empty dataset and an all-zero report without touching any port", async () => {
     const { ports, calls } = fakePorts(NOW);
+    vi.stubGlobal("fetch", () => {
+      throw new Error("the run must reach the network only through its ports");
+    });
 
     const { dataset, report } = await run({
       config: testConfig(),
@@ -39,7 +44,7 @@ describe("run", () => {
     expect(report.spend).toEqual({ totalUsd: 0, capUsd: 5, capHit: false });
     expect(report.sources).toEqual([]);
     expect(report.failingSources).toEqual([]);
-    expect(report.catchAllNeighborhoods).toEqual([]);
+    expect(report.unmappableNeighborhoods).toEqual([]);
     expect(report.promotionSuggestions).toEqual([]);
   });
 });
