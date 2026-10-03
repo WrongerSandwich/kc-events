@@ -150,6 +150,22 @@ describe("spend cap", () => {
     });
   });
 
+  it("a last call that crosses the cap with nothing left to do is not a cap hit", async () => {
+    const { report } = await runAt(WEEK_1, emptyDataset(), {
+      sources: [ALPHA],
+      pages: pagesOf(ALPHA),
+      completions: [costing(0.06, show(ALPHA))],
+      spendCapUsd: 0.05,
+    });
+
+    expect(report.spend).toEqual({
+      totalUsd: 0.06,
+      capUsd: 0.05,
+      capHit: false,
+      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0 },
+    });
+  });
+
   it("the Markdown report shows spend against the cap whether or not the cap was hit", async () => {
     const under = await runAt(WEEK_1, emptyDataset(), {
       sources: [ALPHA],
@@ -165,7 +181,7 @@ describe("spend cap", () => {
     });
 
     const underMd = renderReportMarkdown(under.report);
-    expect(underMd).toContain("0.0123 USD of a 5.00 USD cap.");
+    expect(underMd).toContain("0.0123 USD of a 5 USD cap.");
     expect(underMd).not.toContain("Cap hit");
 
     const overMd = renderReportMarkdown(over.report);

@@ -13,8 +13,7 @@ export class SpendCapReached extends Error {
   }
 }
 
-export interface CappedModel {
-  model: ModelPort;
+export interface CappedModel extends ModelPort {
   /** True once spend has reached the cap: the next call would be refused. */
   exhausted(): boolean;
   totalUsd(): number;
@@ -28,13 +27,11 @@ export function capSpend(model: ModelPort, capUsd: number): CappedModel {
   let totalUsd = 0;
   const exhausted = () => totalUsd >= capUsd;
   return {
-    model: {
-      async complete(request) {
-        if (exhausted()) throw new SpendCapReached(capUsd);
-        const result = await model.complete(request);
-        totalUsd += result.costUsd;
-        return result;
-      },
+    async complete(request) {
+      if (exhausted()) throw new SpendCapReached(capUsd);
+      const result = await model.complete(request);
+      totalUsd += result.costUsd;
+      return result;
     },
     exhausted,
     totalUsd: () => totalUsd,

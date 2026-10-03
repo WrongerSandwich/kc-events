@@ -60,7 +60,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     fetchedUrls,
     neighborhoods: neighborhoodList(config, registry),
   };
-  const extraction = await extractFromPages(registryLane.pages, model.model, extractionContext);
+  const extraction = await extractFromPages(registryLane.pages, model, extractionContext);
   const sourceReports = registryLane.sourceReports.map((report) => withExtraction(report, extraction.bySource.get(report.name)));
   const merged = mergeSightings(dataset.events, extraction.sightings, today);
   // Past events expire before re-verification, so nothing is fetched to check a date already gone.
@@ -88,7 +88,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     spend: {
       totalUsd: model.totalUsd(),
       capUsd: config.spendCapUsd,
-      capHit: model.exhausted(),
+      // Hit means the cap cut something; a last call that merely crossed it cut nothing.
+      capHit: extraction.pagesNotExtracted + reverified.notReverified > 0,
       shortfall: { pagesNotExtracted: extraction.pagesNotExtracted, eventsNotReverified: reverified.notReverified },
     },
     sources: sourceReports,
@@ -195,6 +196,9 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   const unreadUrls = new Set<string>();
   let outsideGeography = 0;
   let pagesNotExtracted = 0;
+  const markUnread = (page: FetchResult) => {
+    for (const url of [page.url, page.finalUrl]) unreadUrls.add(normalizeUrl(url, url));
+  };
 
   for (const { source, page } of pages) {
     const outcome = bySource.get(source.name) ?? { extracted: 0, problems: [] };
@@ -205,13 +209,13 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     } catch (error) {
       if (!(error instanceof SpendCapReached)) throw error;
       pagesNotExtracted++;
-      for (const url of [page.url, page.finalUrl]) unreadUrls.add(normalizeUrl(url, url));
+      markUnread(page);
       outcome.problems.push(`${page.finalUrl} not extracted: spend cap reached`);
       continue;
     }
     outsideGeography += read.outsideGeography;
     if (read.sightings) sightings.push(...read.sightings);
-    else for (const url of [page.url, page.finalUrl]) unreadUrls.add(normalizeUrl(url, url));
+    else markUnread(page);
     outcome.extracted += read.extracted;
     outcome.problems.push(...read.problems);
   }
@@ -332,7 +336,7 @@ async function reverify(
   events: Event[],
   lane: RegistryLaneOutcome,
   registry: Registry,
-  ports: Omit<Ports, "model"> & { model: CappedModel },
+  ports: Ports & { model: CappedModel },
   context: ExtractionContext,
 ) {
   const pending = events.filter((e) => e.status === "active" && !lane.touched.has(e.id) && !lane.unreadUrls.has(e.primaryUrl));
@@ -357,7 +361,7 @@ async function reverify(
     }
     const event = pending.find((e) => e.primaryUrl === url)!;
     const pageUrls = new Set([url, normalizeUrl(page.finalUrl, url)]);
-    const read = await extractPage(page, sourceFor(event, url, registry), ports.model.model, { ...context, fetchedUrls: pageUrls });
+    const read = await extractPage(page, sourceFor(event, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
     outsideGeography += read.outsideGeography;
     if (read.sightings) sightingsAt.set(url, read.sightings);
   }

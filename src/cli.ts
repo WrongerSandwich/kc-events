@@ -70,7 +70,7 @@ async function main() {
       `${counts.heldUnverified} held unverified, ${expired} expired; ` +
       `${spend.totalUsd.toFixed(4)} of ${spend.capUsd} USD` +
       (spend.capHit
-        ? `, cap hit (${spend.shortfall.pagesNotExtracted} pages not extracted, ${spend.shortfall.eventsNotReverified} events not re-verified).`
+        ? `, cap hit (${spend.shortfall.pagesNotExtracted} page(s) not extracted, ${spend.shortfall.eventsNotReverified} event(s) not re-verified).`
         : "."),
   );
   console.log(`Wrote ${DATASET_PATH}, ${reportBase}.md, ${reportBase}.json`);

@@ -31,7 +31,7 @@ export interface RunReport {
   spend: {
     totalUsd: number;
     capUsd: number;
-    /** Spend reached the cap, so any model call after that point was not made. */
+    /** Spend reached the cap and it cut work: some model call the run needed was not made. */
     capHit: boolean;
     /** What the cap left undone: fetched pages never extracted, and events never re-verified. */
     shortfall: { pagesNotExtracted: number; eventsNotReverified: number };
@@ -83,7 +83,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 
 ## Spend
 
-${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd.toFixed(2)} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified; they stay as they were and are checked next run.` : ""}
+${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified; they stay as they were and are checked next run.` : ""}
 
 ## Sources
 
