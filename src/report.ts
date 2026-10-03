@@ -34,10 +34,10 @@ export interface RunReport {
     /** Spend reached the cap and it cut work: some model call the run needed was not made. */
     capHit: boolean;
     /**
-     * What the cap left undone: fetched pages never extracted, events never re-verified, and
-     * discovery searches never made and leads never followed.
+     * What the cap left undone: fetched pages never extracted, events never re-verified,
+     * discovery searches never made and leads never followed, and events due for curation never judged.
      */
-    shortfall: { pagesNotExtracted: number; eventsNotReverified: number; queriesNotSearched: number; leadsNotFollowed: number };
+    shortfall: { pagesNotExtracted: number; eventsNotReverified: number; queriesNotSearched: number; leadsNotFollowed: number; eventsNotCurated: number };
   };
   /** The discovery lane this run; all zero when it is disabled. */
   discovery: {
@@ -49,6 +49,17 @@ export interface RunReport {
     /** Primary pages found by discovery and handed to extraction. */
     pagesExtracted: number;
     /** Leads that could not be fetched, searches that failed, and replies that could not be read. */
+    problems: string[];
+  };
+  /** Don't-miss curation this run: only events new or changed since last judged are sent, so a quiet run makes no calls. */
+  curation: {
+    /** Curation model calls made; events go in batches. */
+    calls: number;
+    /** Events that received a judgment. */
+    judged: number;
+    /** Of those, events flagged don't-miss. */
+    flagged: number;
+    /** Replies that could not be read, events the model did not answer, and flags with no why-line. */
     problems: string[];
   };
   sources: SourceReport[];
@@ -101,7 +112,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 
 ## Spend
 
-${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified, ${plural(spend.shortfall.queriesNotSearched, "discovery search", "discovery searches")} not made, ${plural(spend.shortfall.leadsNotFollowed, "discovery lead")} not followed; they stay as they were and are checked next run.` : ""}
+${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified, ${plural(spend.shortfall.queriesNotSearched, "discovery search", "discovery searches")} not made, ${plural(spend.shortfall.leadsNotFollowed, "discovery lead")} not followed, ${plural(spend.shortfall.eventsNotCurated, "event")} not curated; they stay as they were and are checked next run.` : ""}
 
 ## Sources
 
@@ -123,6 +134,12 @@ ${
         report.discovery.problems.length > 0 ? `\n\n${markdownList(report.discovery.problems)}` : ""
       }`
     : "_Disabled._"
+}
+
+## Curation
+
+${plural(report.curation.judged, "event")} judged in ${plural(report.curation.calls, "call")}, ${report.curation.flagged} flagged don't-miss.${
+  report.curation.problems.length > 0 ? `\n\n${markdownList(report.curation.problems)}` : ""
 }
 
 ## Failing sources

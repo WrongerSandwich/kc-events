@@ -46,7 +46,7 @@ describe("spend cap", () => {
       totalUsd: 0.06,
       capUsd: 0.05,
       capHit: true,
-      shortfall: { pagesNotExtracted: 1, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0 },
+      shortfall: { pagesNotExtracted: 1, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 2 },
     });
     expect(report.sources.find((s) => s.name === "Charlie")).toMatchObject({
       result: "fetched",
@@ -111,15 +111,17 @@ describe("spend cap", () => {
       totalUsd: 0.035,
       capUsd: 5,
       capHit: false,
-      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0 },
+      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 },
     });
   });
 
   it("a last call that crosses the cap with nothing left to do is not a cap hit", async () => {
+    // A recurring event is never curated, so after this one page nothing remains for the cap to cut.
+    const trivia = candidateAt(ALPHA, { title: "Trivia", startDate: null, startTime: null, schedule: "every Tuesday", dateEvidence: "Trivia every Tuesday" });
     const { report } = await runAt(WEEK_1, emptyDataset(), {
       sources: [ALPHA],
       pages: pagesOf(ALPHA),
-      completions: [costing(0.06, show(ALPHA))],
+      completions: [costing(0.06, trivia)],
       spendCapUsd: 0.05,
     });
 
@@ -127,8 +129,20 @@ describe("spend cap", () => {
       totalUsd: 0.06,
       capUsd: 0.05,
       capHit: false,
-      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0 },
+      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 },
     });
+  });
+
+  it("a one-off the cap leaves unjudged is a cap hit, counted as not curated", async () => {
+    const { report } = await runAt(WEEK_1, emptyDataset(), {
+      sources: [ALPHA],
+      pages: pagesOf(ALPHA),
+      completions: [costing(0.06, show(ALPHA))],
+      spendCapUsd: 0.05,
+    });
+
+    expect(report.spend).toMatchObject({ capHit: true, shortfall: { eventsNotCurated: 1 } });
+    expect(renderReportMarkdown(report)).toContain("1 event not curated");
   });
 
   it("the Markdown report shows spend against the cap whether or not the cap was hit", async () => {

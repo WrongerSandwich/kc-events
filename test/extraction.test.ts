@@ -35,6 +35,7 @@ describe("extraction over the registry lane", () => {
         firstSeen: WEEK_1_ISO,
         lastVerified: WEEK_1_ISO,
         lastChanged: WEEK_1_ISO,
+        lastJudged: WEEK_1_ISO,
         status: "active",
         verificationFailures: 0,
         lead: { lane: "registry", source: "Knuckleheads" },
@@ -48,9 +49,9 @@ describe("extraction over the registry lane", () => {
     expect(report.sources).toEqual([{ name: "Knuckleheads", result: "fetched", extracted: 1 }]);
 
     // One extraction call: the configured extraction model, the rules document, the page, and a strict schema.
-    expect(requests).toHaveLength(1);
-    const request = requests[0]!;
-    expect(request.model).toBe("test/extraction");
+    const extractions = requests.filter((r) => r.model === "test/extraction");
+    expect(extractions).toHaveLength(1);
+    const request = extractions[0]!;
     expect(request.messages.map((m) => m.role)).toEqual(["system", "user"]);
     expect(request.messages[0]!.content).toContain("TEST EXTRACTION RULES");
     expect(request.messages[1]!.content).toContain(CALENDAR_URL);

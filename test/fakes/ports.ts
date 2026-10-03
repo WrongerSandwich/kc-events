@@ -1,28 +1,43 @@
 import type { CompletionRequest, CompletionResult, FetchResult, Ports, SearchResult } from "../../src/ports.js";
+import { TEST_MODELS } from "./config.js";
+
+/**
+ * What an unscripted curation call gets, so tests about other stages need not script one: every
+ * event in the batch judged not don't-miss, at no cost. Judged, not ignored, so a later run over
+ * unchanged events makes no curation call, as it would after a real reply.
+ */
+function nothingFlagged(request: CompletionRequest): CompletionResult {
+  const ids = request.messages.at(-1)?.content.match(/evt_[0-9a-f]{12}/g) ?? [];
+  return { value: { judgments: ids.map((id) => ({ id, dontMiss: false, why: "" })) }, costUsd: 0 };
+}
 
 /** A canned response: a page with a status, a robots.txt block, or a network failure. */
 export type CannedPage = { status: number; body: string } | "robots-blocked" | Error;
 
 export interface FakePortOptions {
   pages?: Record<string, CannedPage>;
-  /** Scripted model replies, consumed in call order. */
+  /** Scripted extraction replies, consumed in call order; running out is an error. */
   completions?: CompletionResult[];
+  /** Scripted curation replies, consumed in call order; running out flags nothing. */
+  curations?: CompletionResult[];
   /** Search results by query; a query not listed returns nothing, an Error is thrown. */
   searches?: Record<string, SearchResult[] | Error>;
 }
 
 /** Fake ports that record every call; none of them reach the network. */
-export function fakePorts(now: Date, { pages = {}, completions = [], searches = {} }: FakePortOptions = {}) {
+export function fakePorts(now: Date, { pages = {}, completions = [], curations = [], searches = {} }: FakePortOptions = {}) {
   const calls: string[] = [];
   const requests: CompletionRequest[] = [];
   const replies = [...completions];
+  const judgments = [...curations];
   const ports: Ports = {
     model: {
       async complete(request) {
         calls.push(`model:${request.model}`);
         requests.push(request);
+        if (request.model === TEST_MODELS.curation) return judgments.shift() ?? nothingFlagged(request);
         const reply = replies.shift();
-        if (!reply) throw new Error("fake model has no scripted response left");
+        if (!reply) throw new Error("fake model has no scripted extraction response left");
         return reply;
       },
     },

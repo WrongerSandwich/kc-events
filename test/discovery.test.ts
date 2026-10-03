@@ -94,10 +94,11 @@ describe("discovery lane", () => {
       completions: [costing(0.01, candidateAt(PROMOTER, { title: "Big Show", venue: "The Truman" }))],
     });
 
-    expect(calls).toEqual([`search:${QUERY}`, `fetch:${listing}`, `fetch:${PROMOTER_PAGE}`, "model:test/extraction"]);
-    expect(requests).toHaveLength(1);
-    expect(requests[0]!.messages[1]!.content).toContain(`Page URL: ${PROMOTER_PAGE}`);
-    expect(requests[0]!.messages[1]!.content).not.toContain("listings.test");
+    expect(calls).toEqual([`search:${QUERY}`, `fetch:${listing}`, `fetch:${PROMOTER_PAGE}`, "model:test/extraction", "model:test/curation"]);
+    const extractions = requests.filter((r) => r.model === "test/extraction");
+    expect(extractions).toHaveLength(1);
+    expect(extractions[0]!.messages[1]!.content).toContain(`Page URL: ${PROMOTER_PAGE}`);
+    expect(extractions[0]!.messages[1]!.content).not.toContain("listings.test");
     expect(dataset.events.map((e) => [e.title, e.primaryUrl, e.lead])).toEqual([["Big Show", PROMOTER_PAGE, { lane: "discovery", query: QUERY }]]);
     expect(report.discovery).toMatchObject({ queries: 1, aggregatorPages: 1, pagesExtracted: 1 });
   });

@@ -40,6 +40,8 @@ const eventFields = z.strictObject({
   lastVerified: isoDateTime.optional(),
   /** The run that first saw the event or last changed its date, venue, or status; curation re-judges on it. */
   lastChanged: isoDateTime.optional(),
+  /** The run that last judged the event for don't-miss; absent until curation has seen it. */
+  lastJudged: isoDateTime.optional(),
   status: z.enum(EVENT_STATUSES),
   expiryReason: z.enum(EXPIRY_REASONS).optional(),
   verificationFailures: z.number().int().nonnegative(),
@@ -76,7 +78,10 @@ export const eventSchema = eventFields
         e.evidence.date !== undefined &&
         e.evidence.venue !== undefined),
     { message: "an active event needs a cited date (a schedule when recurring), venue, lastVerified, and evidence for both date and venue" },
-  );
+  )
+  .refine((e) => !e.dontMiss || (e.recurrence !== "recurring" && e.whyLine !== undefined), {
+    message: "a don't-miss flag needs a why-line and is never on a recurring event",
+  });
 
 export const sourceStateSchema = z.strictObject({
   consecutiveFailures: z.number().int().nonnegative(),

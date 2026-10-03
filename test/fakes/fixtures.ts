@@ -47,3 +47,8 @@ export function candidateAt(at: Source, overrides: Record<string, unknown> = {})
 export function costing(costUsd: number, ...candidates: unknown[]): CompletionResult {
   return { value: { events: candidates }, costUsd };
 }
+
+/** A scripted curation reply carrying these judgments, at a per-call cost. */
+export function judging(costUsd: number, ...judgments: { id: string; dontMiss: boolean; why: string }[]): CompletionResult {
+  return { value: { judgments }, costUsd };
+}

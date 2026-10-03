@@ -63,6 +63,7 @@ describe("incremental update", () => {
         evidence: { ...first.dataset.events[0]!.evidence, date: "Sat, Nov 7 · Show 8:00 PM" },
         lastVerified: WEEK_2_ISO,
         lastChanged: WEEK_2_ISO,
+        lastJudged: WEEK_2_ISO,
       },
     ]);
     expect(second.report.counts).toMatchObject({ new: 0, updated: 1 });

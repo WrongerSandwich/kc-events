@@ -26,6 +26,7 @@ const REGISTRY_PATH = join(DATA_DIR, "registry.yaml");
 const DATASET_PATH = join(DATA_DIR, "events.json");
 const RUNS_DIR = join(DATA_DIR, "runs");
 const EXTRACTION_RULES_PATH = join(ROOT, "prompts", "extraction-rules.md");
+const CURATION_PROMPT_PATH = join(ROOT, "prompts", "curation-prompt.md");
 
 async function main() {
   const { values } = parseArgs({ options: { "horizon-weeks": { type: "string" }, "no-discovery": { type: "boolean" } } });
@@ -48,7 +49,10 @@ async function main() {
     throw new Error("discovery is on but TAVILY_API_KEY is not set; put it in the environment or a gitignored .env");
   }
 
-  const prompts = { extractionRules: await readFile(EXTRACTION_RULES_PATH, "utf8") };
+  const prompts = {
+    extractionRules: await readFile(EXTRACTION_RULES_PATH, "utf8"),
+    curationPrompt: await readFile(CURATION_PROMPT_PATH, "utf8"),
+  };
   const registry = parseRegistry(parseYaml(await readFile(REGISTRY_PATH, "utf8")));
   const dataset = existsSync(DATASET_PATH)
     ? parseDataset(JSON.parse(await readFile(DATASET_PATH, "utf8")))
@@ -73,7 +77,7 @@ async function main() {
   await writeFile(`${reportBase}.json`, JSON.stringify(result.report, null, 2) + "\n");
   await writeFile(`${reportBase}.md`, renderReportMarkdown(result.report));
 
-  const { counts, spend, discovery, promotionSuggestions } = result.report;
+  const { counts, spend, discovery, curation, promotionSuggestions } = result.report;
   const expired = counts.expired.past + counts.expired["two-strike"] + counts.expired.cancelled;
   console.log(
     `Run ${result.report.runDate}: ${counts.found} found, ${counts.new} new, ${counts.updated} updated, ${counts.reverified} re-verified, ` +
@@ -81,7 +85,8 @@ async function main() {
       `${spend.totalUsd.toFixed(4)} of ${spend.capUsd} USD` +
       (spend.capHit
         ? `, cap hit (${spend.shortfall.pagesNotExtracted} page(s) not extracted, ${spend.shortfall.eventsNotReverified} event(s) not re-verified, ` +
-          `${spend.shortfall.queriesNotSearched} search(es) not made, ${spend.shortfall.leadsNotFollowed} lead(s) not followed).`
+          `${spend.shortfall.queriesNotSearched} search(es) not made, ${spend.shortfall.leadsNotFollowed} lead(s) not followed, ` +
+          `${spend.shortfall.eventsNotCurated} event(s) not curated).`
         : "."),
   );
   if (discovery.enabled) {
@@ -90,6 +95,10 @@ async function main() {
         `${discovery.pagesExtracted} primary page(s) extracted; ${promotionSuggestions.length} promotion suggestion(s).`,
     );
   }
+  console.log(
+    `Curation: ${curation.calls} call(s), ${curation.judged} event(s) judged, ${curation.flagged} flagged don't-miss` +
+      (curation.problems.length > 0 ? `, ${curation.problems.length} problem(s).` : "."),
+  );
   console.log(`Wrote ${DATASET_PATH}, ${reportBase}.md, ${reportBase}.json`);
 }
 

@@ -54,6 +54,9 @@ The date of the most recent run that read the event's date and venue from its pr
 **Last-changed**:
 The run that first saw an event or last changed its date, venue, or status. Curation re-judges an event only when it has changed since it was last judged.
 
+**Last-judged**:
+The run that last judged an event for the don't-miss flag. Absent until curation has seen the event; a run the spend cap cuts short leaves it absent, so the event comes up again.
+
 **Lead**:
 How an event was first found: which registry source or which discovery search.
 
@@ -99,6 +102,10 @@ One run in which an active event's primary page failed to load or no longer list
 **Extraction rules**:
 The editable document (`prompts/extraction-rules.md`) sent to the extraction model with every page. The first of the two editorial surfaces; a wrong date in the dataset is a bug here first.
 _Avoid_: prompt (when meaning this document specifically), system prompt
+
+**Curation prompt**:
+The editable document (`prompts/curation-prompt.md`) sent to the curation model with every curation call, which judges active one-offs and limited runs in batches. The second of the two editorial surfaces; a flag that reads as arbitrary is a bug here first.
+_Avoid_: prompt (when meaning this document specifically), system prompt, curation rules
 
 **Evidence snippet**:
 The exact text, quoted verbatim from the primary page, that a date or venue was read from. Stored beside the value so it can be audited without re-fetching.

@@ -10,6 +10,7 @@ import {
   type PageOrigin,
   type Sighting,
 } from "./extraction.js";
+import { applyJudgment, buildCurationRequest, CURATION_BATCH_SIZE, curationReplySchema, needsCuration, type CurationContext } from "./curation.js";
 import { discoveryQueries, hostOf, isLead, onHost, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { findMatch, normalizeName, sameName } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
@@ -26,6 +27,8 @@ const FAILING_SOURCE_THRESHOLD = 3;
 export interface Prompts {
   /** The extraction rules document, sent with every extraction call. */
   extractionRules: string;
+  /** The curation prompt document, sent with every curation call. */
+  curationPrompt: string;
 }
 
 export interface RunInput {
@@ -82,13 +85,16 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     unreadUrls: new Set([...extraction.unreadUrls, ...discovery.unreadUrls]),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
-  const events = markChanged(dataset.events, reverified.events, startedIso);
+  const changed = markChanged(dataset.events, reverified.events, startedIso);
+  const curation = await curate(changed, model, { config, prompt: prompts.curationPrompt, today }, startedIso);
+  const events = curation.events;
   const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso);
   const shortfall = {
     pagesNotExtracted: extraction.pagesNotExtracted + discovery.pagesNotExtracted,
     eventsNotReverified: reverified.notReverified,
     queriesNotSearched: discovery.queriesNotSearched,
     leadsNotFollowed: discovery.leadsNotFollowed,
+    eventsNotCurated: curation.notCurated,
   };
 
   const finishedIso = toLocalIso(ports.clock.now(), config.timezone);
@@ -115,6 +121,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       shortfall,
     },
     discovery: discovery.report,
+    curation: curation.report,
     sources: sourceReports,
     failingSources: registryLane.failingSources,
     unmappableNeighborhoods: unmappableNeighborhoods([...extraction.sightings, ...discovery.sightings, ...reverified.sightings]),
@@ -353,6 +360,7 @@ function refresh(known: Event, sighting: Event): Event {
     dontMiss: known.dontMiss,
     ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}),
     ...(known.lastChanged !== undefined ? { lastChanged: known.lastChanged } : {}),
+    ...(known.lastJudged !== undefined ? { lastJudged: known.lastJudged } : {}),
   };
 }
 
@@ -588,6 +596,52 @@ function markChanged(previous: Event[], events: Event[], nowIso: string): Event[
       was.status !== event.status;
     return changed ? { ...event, lastChanged: nowIso } : event;
   });
+}
+
+/**
+ * Curation: every event due for it (active, not recurring, new or changed since last judged) goes
+ * to the curation model in batches with the curation prompt. A judgment is applied to the event it
+ * names; an event the reply does not name, or names with a flag but no why-line, is left unjudged
+ * and comes up again next run. A reply that cannot be read leaves its whole batch unjudged. Once
+ * the spend cap is reached, events still to judge are not sent and are counted as not curated.
+ */
+async function curate(events: Event[], model: CappedModel, context: CurationContext, nowIso: string) {
+  const due = events.filter(needsCuration);
+  const judged = new Map<string, Event>();
+  const report: RunReport["curation"] = { calls: 0, judged: 0, flagged: 0, problems: [] };
+  let notCurated = 0;
+
+  for (let i = 0; i < due.length; i += CURATION_BATCH_SIZE) {
+    const batch = due.slice(i, i + CURATION_BATCH_SIZE);
+    if (model.exhausted()) {
+      notCurated += batch.length;
+      continue;
+    }
+    const reply = await model.complete(buildCurationRequest(batch, context));
+    report.calls++;
+    const parsed = curationReplySchema.safeParse(reply.value);
+    if (!parsed.success) {
+      report.problems.push(`a curation reply was not in the expected shape; ${batch.length} event(s) left unjudged`);
+      continue;
+    }
+    const answered = new Set<string>();
+    for (const judgment of parsed.data.judgments) {
+      const event = batch.find((e) => e.id === judgment.id);
+      if (!event || answered.has(event.id)) continue;
+      answered.add(event.id);
+      if (judgment.dontMiss && judgment.why.trim() === "") {
+        report.problems.push(`"${event.title}" was flagged with no why-line and was left unjudged`);
+        continue;
+      }
+      judged.set(event.id, applyJudgment(event, judgment, nowIso));
+    }
+    const unanswered = batch.length - answered.size;
+    if (unanswered > 0) report.problems.push(`${unanswered} event(s) in a batch were not answered and were left unjudged`);
+  }
+
+  report.judged = judged.size;
+  report.flagged = [...judged.values()].filter((e) => e.dontMiss).length;
+  return { events: events.map((e) => judged.get(e.id) ?? e), report, notCurated };
 }
 
 /** How many events became expired this run, by reason. */
