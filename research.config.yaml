@@ -5,6 +5,11 @@
 horizonWeeks: 8 # the milestone-one hand run uses: pnpm research --horizon-weeks 3
 timezone: America/Chicago
 geography: Kansas City metro on both sides of the state line, plus Lawrence
+# Per-run spend cap in USD, summed from the cost OpenRouter reports on every model call. Once it is
+# reached no further model calls are made; pages left unread and events left unchecked stay as
+# they were, and the run report records the shortfall. This is the first of two layers: the
+# second is a monthly limit set by hand on the OpenRouter key itself (the milestone hand-run
+# wizard, #11, walks setting it), so a bug in this cap cannot cost more than that ceiling.
 spendCapUsd: 5
 
 models:
