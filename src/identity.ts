@@ -1,6 +1,6 @@
 /**
  * Event identity (ADR 0007): an event is its primary page plus its normalized title; failing
- * that, the same normalized title at the same venue on a date within a few days. Ids are opaque
+ * that, the same normalized title (or one cut short) at the same venue on a date within a few days. Ids are opaque
  * and fixed at first-seen; matching never looks at them.
  */
 
@@ -41,10 +41,19 @@ function sameEventExactly(a: EventIdentity, b: EventIdentity): boolean {
   return a.primaryUrl === b.primaryUrl && sameName(a.title, b.title);
 }
 
+/**
+ * The same title, or one that is the other cut short at a word boundary: a page may bill an
+ * event in full one week ("A / Orchestra and Choirs") and give only its lead title the next.
+ */
+function sameOrShortenedTitle(a: string, b: string): boolean {
+  const [shorter, longer] = [normalizeName(a), normalizeName(b)].sort((x, y) => x.length - y.length) as [string, string];
+  return shorter !== "" && (longer === shorter || longer.startsWith(`${shorter} `));
+}
+
 function sameEventFuzzily(a: EventIdentity, b: EventIdentity): boolean {
   if (a.venue === undefined || b.venue === undefined || a.start === undefined || b.start === undefined) return false;
   return (
-    sameName(a.title, b.title) &&
+    sameOrShortenedTitle(a.title, b.title) &&
     sameName(a.venue, b.venue) &&
     Math.abs(Date.parse(a.start.slice(0, 10)) - Date.parse(b.start.slice(0, 10))) <= FUZZY_DATE_WINDOW_DAYS * DAY_MS
   );

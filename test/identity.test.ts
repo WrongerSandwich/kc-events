@@ -37,6 +37,14 @@ describe("event identity", () => {
     expect(findMatch({ ...elsewhere }, [known])).toBeUndefined();
   });
 
+  it("a title the page gives in full one week and cut short the next matches at the same venue and date", () => {
+    const full = { ...known, title: "“At the Heart of Kansas City” / UMKC Conservatory Symphony Orchestra and Choirs" };
+    const short = { ...known, title: "“At the Heart of Kansas City”" };
+    expect(findMatch(short, [full])).toBe(full);
+    expect(findMatch(full, [short])).toBe(short);
+    expect(findMatch({ ...short, title: "At the Heart" + "land" }, [full])).toBeUndefined();
+  });
+
   it("an exact match wins over an earlier fuzzy one", () => {
     const fuzzy = { ...known, primaryUrl: "https://promoter.test/big-show" };
     expect(findMatch(known, [fuzzy, known])).toBe(known);
