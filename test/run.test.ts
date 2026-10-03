@@ -48,3 +48,138 @@ describe("run", () => {
     expect(report.promotionSuggestions).toEqual([]);
   });
 });
+
+describe("registry lane fetching", () => {
+  const source = (name: string, urls: string[]) => ({
+    name,
+    urls,
+    kind: "music",
+    neighborhood: "Westport",
+    status: "active" as const,
+  });
+
+  it("a robots-blocked registry source appears in the report as blocked and is not fetched", async () => {
+    const { ports, calls } = fakePorts(NOW, {
+      pages: {
+        "https://open.test/calendar": { status: 200, body: "<html>calendar</html>" },
+        "https://blocked.test/events": "robots-blocked",
+      },
+    });
+
+    const { report } = await run({
+      config: testConfig(),
+      dataset: emptyDataset(),
+      registry: {
+        sources: [source("Open Venue", ["https://open.test/calendar"]), source("Blocked Venue", ["https://blocked.test/events"])],
+      },
+      ports,
+    });
+
+    expect(calls).not.toContain("fetch:https://blocked.test/events");
+    expect(report.sources).toEqual([
+      { name: "Open Venue", result: "fetched", extracted: 0 },
+      { name: "Blocked Venue", result: "blocked", extracted: 0, detail: "robots.txt disallows https://blocked.test/events" },
+    ]);
+  });
+
+  it("a failing source increments its failure count, and a fetched source resets it", async () => {
+    const { ports } = fakePorts(NOW, {
+      pages: {
+        "https://down.test/": new Error("connect ECONNREFUSED"),
+        "https://gone.test/": { status: 404, body: "not found" },
+        "https://back.test/": { status: 200, body: "<html>calendar</html>" },
+      },
+    });
+
+    const { dataset, report } = await run({
+      config: testConfig(),
+      dataset: {
+        ...emptyDataset(),
+        sourceState: { "Down Venue": { consecutiveFailures: 1 }, "Back Venue": { consecutiveFailures: 2 } },
+      },
+      registry: {
+        sources: [
+          source("Down Venue", ["https://down.test/"]),
+          source("Gone Venue", ["https://gone.test/"]),
+          source("Back Venue", ["https://back.test/"]),
+        ],
+      },
+      ports,
+    });
+
+    expect(dataset.sourceState).toEqual({
+      "Down Venue": { consecutiveFailures: 2 },
+      "Gone Venue": { consecutiveFailures: 1 },
+      "Back Venue": { consecutiveFailures: 0 },
+    });
+    expect(report.sources).toEqual([
+      { name: "Down Venue", result: "failed", extracted: 0, detail: "https://down.test/: connect ECONNREFUSED" },
+      { name: "Gone Venue", result: "failed", extracted: 0, detail: "https://gone.test/: HTTP 404" },
+      { name: "Back Venue", result: "fetched", extracted: 0 },
+    ]);
+    expect(report.failingSources).toEqual([]);
+  });
+
+  it("a source reaching three consecutive failures is flagged in the report", async () => {
+    const { ports } = fakePorts(NOW, {
+      pages: {
+        "https://third.test/": { status: 500, body: "" },
+        "https://second.test/": { status: 503, body: "" },
+      },
+    });
+
+    const { dataset, report } = await run({
+      config: testConfig(),
+      dataset: {
+        ...emptyDataset(),
+        sourceState: { "Third Strike": { consecutiveFailures: 2 }, "Second Strike": { consecutiveFailures: 1 } },
+      },
+      registry: { sources: [source("Third Strike", ["https://third.test/"]), source("Second Strike", ["https://second.test/"])] },
+      ports,
+    });
+
+    expect(dataset.sourceState["Third Strike"]).toEqual({ consecutiveFailures: 3 });
+    expect(report.failingSources).toEqual(["Third Strike"]);
+  });
+
+  it("an excluded source is skipped with its reason shown and its state left alone", async () => {
+    const { ports, calls } = fakePorts(NOW);
+
+    const { dataset, report } = await run({
+      config: testConfig(),
+      dataset: { ...emptyDataset(), sourceState: { "Old Venue": { consecutiveFailures: 4 } } },
+      registry: {
+        sources: [{ ...source("Old Venue", ["https://old.test/"]), status: "excluded", reason: "closed in 2026" }],
+      },
+      ports,
+    });
+
+    expect(calls).toEqual([]);
+    expect(report.sources).toEqual([{ name: "Old Venue", result: "excluded", extracted: 0, detail: "closed in 2026" }]);
+    expect(report.failingSources).toEqual([]);
+    expect(dataset.sourceState).toEqual({ "Old Venue": { consecutiveFailures: 4 } });
+  });
+
+  it("a source with one blocked URL and one failed URL counts as failed and shows both", async () => {
+    const { ports } = fakePorts(NOW, {
+      pages: { "https://mixed.test/blocked": "robots-blocked", "https://mixed.test/feed": { status: 500, body: "" } },
+    });
+
+    const { dataset, report } = await run({
+      config: testConfig(),
+      dataset: emptyDataset(),
+      registry: { sources: [source("Mixed Venue", ["https://mixed.test/blocked", "https://mixed.test/feed"])] },
+      ports,
+    });
+
+    expect(dataset.sourceState["Mixed Venue"]).toEqual({ consecutiveFailures: 1 });
+    expect(report.sources).toEqual([
+      {
+        name: "Mixed Venue",
+        result: "failed",
+        extracted: 0,
+        detail: "https://mixed.test/feed: HTTP 500; robots.txt disallows https://mixed.test/blocked",
+      },
+    ]);
+  });
+});

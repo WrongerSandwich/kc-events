@@ -7,6 +7,8 @@ export interface SourceReport {
   result: SourceResult;
   /** Candidate events extracted from this source this run. */
   extracted: number;
+  /** Why a source was blocked, failed, or excluded. */
+  detail?: string;
 }
 
 /** The record of one run, committed as Markdown with a JSON twin. */
@@ -38,6 +40,11 @@ function markdownList(items: string[]): string {
   return items.length === 0 ? "_None._" : items.map((i) => `- ${i}`).join("\n");
 }
 
+/** Keeps free text (error messages, reasons) from breaking a Markdown table row. */
+function tableCell(text: string): string {
+  return text.replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ");
+}
+
 export function renderReportMarkdown(report: RunReport): string {
   const { counts, spend } = report;
   return `# Run report ${report.runDate}
@@ -66,7 +73,11 @@ ${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd.toFixed(2)} USD cap.${spend
 ${
   report.sources.length === 0
     ? "_No sources checked._"
-    : ["| Source | Result | Extracted |", "| --- | --- | ---: |", ...report.sources.map((s) => `| ${s.name} | ${s.result} | ${s.extracted} |`)].join("\n")
+    : [
+        "| Source | Result | Extracted | Detail |",
+        "| --- | --- | ---: | --- |",
+        ...report.sources.map((s) => `| ${tableCell(s.name)} | ${s.result} | ${s.extracted} | ${tableCell(s.detail ?? "")} |`),
+      ].join("\n")
 }
 
 ## Failing sources

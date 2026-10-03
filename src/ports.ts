@@ -53,7 +53,10 @@ export interface FetchResult {
   finalUrl: string;
   status: number;
   body: string;
-  /** False when robots.txt disallowed the fetch; body is then empty and nothing was requested. */
+  /**
+   * False when robots.txt disallowed the URL, or a URL it redirected to; body is then empty and
+   * the disallowed URL was never requested (earlier redirect hops may have been).
+   */
   robotsAllowed: boolean;
 }
 

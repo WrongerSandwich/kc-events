@@ -14,7 +14,8 @@ import { emptyDataset, parseDataset } from "./dataset.js";
 import { parseRegistry } from "./registry.js";
 import { renderReportMarkdown } from "./report.js";
 import { run } from "./run.js";
-import { systemClock, unbuiltFetcher, unbuiltModel, unbuiltSearch } from "./adapters/system.js";
+import { systemClock, unbuiltModel, unbuiltSearch } from "./adapters/system.js";
+import { createFetcher } from "./adapters/fetcher.js";
 
 const ROOT = process.cwd();
 const CONFIG_PATH = join(ROOT, "research.config.yaml");
@@ -44,7 +45,7 @@ async function main() {
     config,
     dataset,
     registry,
-    ports: { model: unbuiltModel, search: unbuiltSearch, fetcher: unbuiltFetcher, clock: systemClock },
+    ports: { model: unbuiltModel, search: unbuiltSearch, fetcher: createFetcher(), clock: systemClock },
   });
 
   await mkdir(RUNS_DIR, { recursive: true });
