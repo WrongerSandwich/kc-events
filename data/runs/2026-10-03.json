@@ -1,23 +1,23 @@
 {
   "runDate": "2026-10-03",
-  "startedAt": "2026-10-03T16:05:31-05:00",
-  "finishedAt": "2026-10-03T16:29:02-05:00",
+  "startedAt": "2026-10-03T17:01:07-05:00",
+  "finishedAt": "2026-10-03T17:22:23-05:00",
   "horizonWeeks": 3,
   "counts": {
-    "found": 368,
-    "new": 368,
-    "updated": 0,
-    "reverified": 0,
-    "heldUnverified": 30,
+    "found": 386,
+    "new": 36,
+    "updated": 318,
+    "reverified": 14,
+    "heldUnverified": 18,
     "outsideGeography": 4,
     "expired": {
       "past": 0,
-      "two-strike": 0,
+      "two-strike": 8,
       "cancelled": 0
     }
   },
   "spend": {
-    "totalUsd": 0.4544729700000001,
+    "totalUsd": 0.20131436000000003,
     "capUsd": 5,
     "capHit": false,
     "shortfall": {
@@ -31,8 +31,8 @@
   "discovery": {
     "enabled": true,
     "queries": 10,
-    "aggregatorPages": 20,
-    "pagesExtracted": 75,
+    "aggregatorPages": 17,
+    "pagesExtracted": 72,
     "problems": [
       "https://fonts.googleapis.com/: HTTP 404",
       "https://fonts.gstatic.com/: HTTP 404",
@@ -44,12 +44,10 @@
       "https://artskcgo.com/categories/dance: HTTP 403",
       "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css: robots.txt unreachable (HTTP 522)",
       "https://assets-sharetribecom.sharetribe.com/: HTTP 403",
-      "https://cdn.adpushup.com/: HTTP 403",
-      "https://www.artskcgo.com/categories/visual-art: HTTP 403",
-      "https://artskcgo.com/categories/art-exhibitions: HTTP 403",
-      "https://www.kcrunningcompany.com/oktoberfest5k: HTTP 404",
-      "https://www.eventbrite.com/e/oktoberfest-in-the-woods-tickets-1004691067027: HTTP 404",
       "https://www.kcfilmoffice.com/: HTTP 403",
+      "https://artskcgo.com/categories/visual-art: HTTP 403",
+      "https://artskcgo.com/: HTTP 403",
+      "https://kcur.secureallegiance.com/kcur/WebModule/Donate.aspx?P=KCG0226&PAGETYPE=PLG&CHECK=%2b5g%2fQkV05qm4ViHtxJWDB%2bzWDeZ%2beA1M: HTTP 403",
       "https://do816.com/events/food-drink/2026/10/04: HTTP 403",
       "robots.txt disallows https://flux.broadstreet.ai/",
       "https://cdn.broadstreetads.com/: HTTP 403",
@@ -57,13 +55,13 @@
       "https://seatgeek.com/cities/kansas-city/sports: HTTP 403",
       "https://monarchsbaseball.com/: HTTP 403",
       "https://artskcgo.com/categories/film: HTTP 403",
-      "https://www.upcomingevents.com/kansas-city/events/outdoors: HTTP 403"
+      "https://artskcgo.com/categories/community: HTTP 403"
     ]
   },
   "curation": {
-    "calls": 13,
-    "judged": 321,
-    "flagged": 13,
+    "calls": 3,
+    "judged": 65,
+    "flagged": 2,
     "problems": []
   },
   "sources": [
@@ -96,7 +94,7 @@
       "name": "The Truman",
       "result": "failed",
       "extracted": 0,
-      "detail": "https://www.thetruman.com/: ECONNRESET fetching https://www.thetruman.com/robots.txt"
+      "detail": "https://www.thetruman.com/: ECONNRESET fetching https://www.thetruman.com/"
     },
     {
       "name": "Azura Amphitheater",
@@ -130,9 +128,8 @@
     },
     {
       "name": "Midwest Trust Center",
-      "result": "failed",
-      "extracted": 0,
-      "detail": "https://www.jccc.edu/midwest-trust-center/events/: HTTP 403"
+      "result": "fetched",
+      "extracted": 13
     },
     {
       "name": "The Bottleneck",
@@ -147,7 +144,7 @@
     {
       "name": "Replay Lounge",
       "result": "fetched",
-      "extracted": 38
+      "extracted": 39
     },
     {
       "name": "Lied Center of Kansas",
@@ -187,7 +184,7 @@
     {
       "name": "American Theatre Guild (Broadway in Kansas City)",
       "result": "fetched",
-      "extracted": 0
+      "extracted": 1
     },
     {
       "name": "New Theatre & Restaurant",
@@ -207,7 +204,7 @@
     {
       "name": "Nelson-Atkins Museum of Art",
       "result": "fetched",
-      "extracted": 3
+      "extracted": 2
     },
     {
       "name": "Tivoli Cinemas",
@@ -252,7 +249,7 @@
     {
       "name": "Arts Council of Johnson County",
       "result": "fetched",
-      "extracted": 16
+      "extracted": 17
     },
     {
       "name": "Kansas City Public Library",
@@ -292,7 +289,7 @@
     {
       "name": "Kansas City Convention Center",
       "result": "fetched",
-      "extracted": 6
+      "extracted": 9
     },
     {
       "name": "City Market",
@@ -307,7 +304,7 @@
     {
       "name": "KC Parks and Recreation",
       "result": "fetched",
-      "extracted": 9
+      "extracted": 10
     },
     {
       "name": "Kansas City Zoo & Aquarium",
@@ -392,7 +389,9 @@
       "detail": "The events list is rendered by script, and its RSS feed carries no event dates (checked 2026-10-03)."
     }
   ],
-  "failingSources": [],
+  "failingSources": [
+    "The Truman"
+  ],
   "unmappableNeighborhoods": [
     {
       "eventTitle": "Baroque at 7:00: Vivaldi's Four Seasons"
@@ -404,7 +403,7 @@
       "eventTitle": "Interstellar Live"
     },
     {
-      "eventTitle": "Frizzi 2 Fulci : Fabio Frizzi and the F2F Band",
+      "eventTitle": "Frizzi 2 Fulci",
       "venue": "Grand Temple"
     },
     {
@@ -412,6 +411,26 @@
     },
     {
       "eventTitle": "Stars of American Ballet"
+    },
+    {
+      "eventTitle": "VOCES8: Towards Paradise",
+      "venue": "Village Presbyterian Church"
+    },
+    {
+      "eventTitle": "Modigliani Quartet",
+      "venue": "St. Paul’s Episcopal Church"
+    },
+    {
+      "eventTitle": "Art of the Piano: Gabriela Montero",
+      "venue": "Folly Theater"
+    },
+    {
+      "eventTitle": "Tiny Toy Tales: Storytelling and Early Childhood Literacy – 'Anansi and the Moss-Covered Rock' with Kassie Misiewicz",
+      "venue": "SMSD Center for Academic Achievement"
+    },
+    {
+      "eventTitle": "Add More Arts to Your Classroom: Virtual Professional Development",
+      "venue": "Online"
     },
     {
       "eventTitle": "Matinees for Schools"
@@ -423,8 +442,9 @@
       "eventTitle": "Prelude Conversation Series"
     },
     {
-      "eventTitle": "Loving Vincent",
-      "venue": "Tivoli Cinema"
+      "eventTitle": "Red Like Fruit",
+      "venue": "Unicorn Theatre",
+      "proposed": "Kansas City"
     },
     {
       "eventTitle": "2026 Charlotte Street Visual Artist Awards Opening Reception",
@@ -432,27 +452,63 @@
       "proposed": "Kansas City"
     },
     {
-      "eventTitle": "2026 Gala: Rodeo Nouveau",
-      "venue": "Charlotte Street",
-      "proposed": "Kansas City"
+      "eventTitle": "2026 Gala: Rodeo Nouveau"
     },
     {
       "eventTitle": "CCA Quarterly Mix & Mingle"
     },
     {
-      "eventTitle": "Exhibition | State of the Arts 2026",
+      "eventTitle": "The Wizard of Oz"
+    },
+    {
+      "eventTitle": "State of the Arts 2026",
       "venue": "R.G. Endres Gallery",
       "proposed": "Prairie Village"
     },
     {
-      "eventTitle": "Exhibit | Recollections: a collaborative exhibition of Poetry & Printmaking",
+      "eventTitle": "Tipping Point - Rebecca Beese",
+      "venue": "Johnson County Arts & Heritage Center",
+      "proposed": "Overland Park"
+    },
+    {
+      "eventTitle": "Recollections: a collaborative exhibition of Poetry & Printmaking",
       "venue": "Meadowbrook Park Clubhouse",
       "proposed": "Prairie Village"
     },
     {
-      "eventTitle": "Tim Murphy Art Gallery: Vantage Points",
+      "eventTitle": "Sport and Spectator",
+      "venue": "Nerman Museum of Contemporary Art",
+      "proposed": "Overland Park"
+    },
+    {
+      "eventTitle": "Betsabeé Romero: A Field with Roots (Un campo con raíces)",
+      "venue": "Nerman Museum of Contemporary Art",
+      "proposed": "Overland Park"
+    },
+    {
+      "eventTitle": "ALL WE HAVE IS RIGHT NOW",
+      "venue": "Nerman Museum of Contemporary Art",
+      "proposed": "Overland Park"
+    },
+    {
+      "eventTitle": "Norman Akers Navigates the Space Between",
+      "venue": "Nerman Museum of Contemporary Art",
+      "proposed": "Overland Park"
+    },
+    {
+      "eventTitle": "Vantage Points",
       "venue": "Tim Murphy Art Gallery",
       "proposed": "Merriam"
+    },
+    {
+      "eventTitle": "Pottery & Pinot",
+      "venue": "House of Clay",
+      "proposed": "Overland Park"
+    },
+    {
+      "eventTitle": "Kansas City Symphony’s Mobile Music Box at Heritage Park (JoCo)",
+      "venue": "Heritage Park",
+      "proposed": "Olathe"
     },
     {
       "eventTitle": "Kansas City Musical Club - October Concert",
@@ -465,6 +521,11 @@
       "proposed": "Prairie Village"
     },
     {
+      "eventTitle": "Giggle Time Children's Program",
+      "venue": "Tomahawk Ridge Community Center",
+      "proposed": "Overland Park"
+    },
+    {
       "eventTitle": "Olathe Arts Festival",
       "venue": "Johnson County Square",
       "proposed": "Olathe"
@@ -473,6 +534,11 @@
       "eventTitle": "City Center Live",
       "venue": "Lenexa City Hall",
       "proposed": "Lenexa"
+    },
+    {
+      "eventTitle": "'The Billy Joel Legacy'",
+      "venue": "Midwest Trust Center at Johnson County Community College",
+      "proposed": "Overland Park"
     },
     {
       "eventTitle": "Reception & Reading | Recollections: a collaborative exhibition of Poetry & Printmaking",
@@ -508,16 +574,6 @@
       "proposed": "Kansas City"
     },
     {
-      "eventTitle": "Brush Creek Art Walk Awards Reception",
-      "venue": "The Anita B. Gorman Conservation Discovery Center",
-      "proposed": "Kansas City"
-    },
-    {
-      "eventTitle": "Paint & Garden",
-      "venue": "Southeast Community Center",
-      "proposed": "Kansas City"
-    },
-    {
       "eventTitle": "Fire Feast",
       "venue": "Powell Gardens"
     },
@@ -534,12 +590,19 @@
       "venue": "Powell Gardens"
     },
     {
-      "eventTitle": "The Wizard of Oz"
+      "eventTitle": "Witch Way to the Wine",
+      "venue": "Downtown Excelsior Springs, Missouri",
+      "proposed": "Excelsior Springs"
     },
     {
-      "eventTitle": "48th Annual Ciderfest",
-      "venue": "Louisburg Cider Mill & Country Store",
-      "proposed": "Louisburg"
+      "eventTitle": "MoJo Real Estate Oktoberfest 2026: Brody Buster Live",
+      "venue": "English Landing Park",
+      "proposed": "Parkville"
+    },
+    {
+      "eventTitle": "Weston Whiskey Fest",
+      "venue": "Weston Burley House Inc",
+      "proposed": "Weston"
     },
     {
       "eventTitle": "PBR OUTLAW DAYS FESTIVAL"
@@ -561,9 +624,29 @@
       "venue": "The Bird Comedy Theater"
     },
     {
-      "eventTitle": "Heartland Book Festival",
-      "venue": "Mid-Continent Public Library: Woodneath Library Center; Kansas City Public Library: Central Library"
+      "eventTitle": "Heartland Book Festival"
+    },
+    {
+      "eventTitle": "Walktober 2026: Kemper Outdoor Education Center",
+      "venue": "Kemper Outdoor Education Center",
+      "proposed": "Blue Springs"
+    },
+    {
+      "eventTitle": "Ciderfest",
+      "venue": "Louisburg Cider Mill & Country Store",
+      "proposed": "Louisburg"
+    },
+    {
+      "eventTitle": "Tabernacle Encounter in Kansas City",
+      "venue": "Metropolitan Community College Gymnasium",
+      "proposed": "Kansas City"
     }
   ],
-  "promotionSuggestions": []
+  "promotionSuggestions": [
+    {
+      "host": "rooftopcinemaclub.com",
+      "runsSeen": 3,
+      "exampleUrl": "https://rooftopcinemaclub.com/us/kansas-city/crossroads-kansas-city/screenings/twin-peaks-25047"
+    }
+  ]
 }
