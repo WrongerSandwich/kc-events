@@ -5,7 +5,7 @@
  *   pnpm grade [--run YYYY-MM-DD]     defaults to the latest run report in data/runs
  */
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { parseDataset } from "./dataset.js";
@@ -37,7 +37,6 @@ async function main() {
   const dataset = parseDataset(JSON.parse(await readFile(DATASET_PATH, "utf8")));
   const existing = existsSync(GRADING_PATH) ? await readFile(GRADING_PATH, "utf8") : undefined;
 
-  await mkdir(join(ROOT, "docs"), { recursive: true });
   await writeFile(GRADING_PATH, renderGrading({ report, dataset, existing }));
   console.log(`${existing === undefined ? "Wrote" : "Refreshed counts three and four in"} ${GRADING_PATH} from run ${runDate}`);
 }

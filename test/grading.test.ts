@@ -64,6 +64,8 @@ describe("the milestone grading document", () => {
     expect(doc).toContain("0.9000 USD");
     expect(doc).toContain("3.90 USD a month");
     expect(doc).toContain("15 USD");
+    expect(doc).toContain("This was a first run");
+    expect(doc).toContain("10 Tavily searches");
     expect(doc).toMatch(/Count four: \*\*pass\*\*/);
   });
 
@@ -87,6 +89,7 @@ describe("the milestone grading document", () => {
     const doc = renderGrading({ report: report(), dataset: dataset([active(), noVenue, pageNotFetched]) });
 
     const countThree = doc.slice(doc.indexOf("## 3."), doc.indexOf("## 4."));
+    expect(countThree).toContain("Count three: **2 unverifiable**");
     expect(countThree).toContain("2 held unverified");
     expect(countThree).toContain("| Mystery Night | https://www.therecordbar.com/shows/mystery | no venue could be cited |");
     expect(countThree).toContain("| Offsite Gig | https://tickets.example.com/offsite-gig | primary page not fetched this run |");

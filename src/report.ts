@@ -1,4 +1,5 @@
 import type { ExpiryReason } from "./dataset.js";
+import { markdownList, plural, tableCell } from "./markdown.js";
 
 export type SourceResult = "fetched" | "failed" | "blocked" | "excluded";
 
@@ -75,19 +76,6 @@ export interface RunReport {
    * for promotion into the registry; never added to it automatically.
    */
   promotionSuggestions: { host: string; runsSeen: number; exampleUrl: string }[];
-}
-
-function plural(n: number, noun: string, nouns = `${noun}s`): string {
-  return `${n} ${n === 1 ? noun : nouns}`;
-}
-
-function markdownList(items: string[]): string {
-  return items.length === 0 ? "_None._" : items.map((i) => `- ${i}`).join("\n");
-}
-
-/** Keeps free text (error messages, reasons) from breaking a Markdown table row. */
-function tableCell(text: string): string {
-  return text.replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ");
 }
 
 export function renderReportMarkdown(report: RunReport): string {

@@ -27,7 +27,7 @@ Every field you fill must come from the text of the page body you were given. No
 - **Doors versus show.** When a page lists both, `startTime` is the show or start time, not doors. Quote the whole phrase ("Doors 7pm, Show 8pm") as evidence.
 - A time range ("7–9pm") gives `startTime` and `endTime` on the same date. "Until late" or "all day" gives no `endTime`.
 - Opening hours of an exhibition are not an event time; leave `startTime` null and give the date range.
-- A time of midnight ("12:00 am", "00:00") on a date or date range is a listing system's placeholder, not a start time: leave `startTime` null.
+- A time of midnight ("12:00 am", "00:00") is a ticketing system's placeholder for a time not yet announced, not a start time: leave `startTime` null, unless the page says in words that the event starts at midnight.
 - A run or exhibition already underway whose page gives only its closing date ("On view through Feb 28") gets that `endDate` and a null `startDate`. Do not use today or any other date as its start.
 - If the page gives only a month or a season ("coming this fall"), leave `startDate` null.
 - Never derive a date from the URL, a slug, a query string, or an image filename.

@@ -107,6 +107,10 @@ _Avoid_: prompt (when meaning this document specifically), system prompt
 The editable document (`prompts/curation-prompt.md`) sent to the curation model with every curation call, which judges active one-offs and limited runs in batches. The second of the two editorial surfaces; a flag that reads as arbitrary is a bug here first.
 _Avoid_: prompt (when meaning this document specifically), system prompt, curation rules
 
+**Reading**:
+One value an event carries, its date or its venue, together with the evidence snippet it was read from. The grading audit checks each reading against its primary page.
+_Avoid_: extraction, value
+
 **Evidence snippet**:
 The exact text, quoted verbatim from the primary page, that a date or venue was read from. Stored beside the value so it can be audited without re-fetching.
 _Avoid_: citation, quote, proof

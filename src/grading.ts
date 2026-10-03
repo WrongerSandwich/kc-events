@@ -6,10 +6,11 @@
  */
 import { citedDate, type Dataset, type Event } from "./dataset.js";
 import { normalizeName } from "./identity.js";
+import { markdownTable, plural, tableCell } from "./markdown.js";
 import type { RunReport } from "./report.js";
 
 /** What makes a run the milestone run, and what passes count four. */
-export const MILESTONE = {
+const MILESTONE = {
   horizonWeeks: 3,
   capUsd: 5,
   /** The monthly figure Evan is willing to pay for years. */
@@ -86,45 +87,34 @@ ${block("count-4", blocks["count-4"]!)}
 `;
 }
 
-/** Keeps free text from breaking a Markdown table row. */
-function cell(text: string | undefined): string {
-  return (text ?? "").replace(/\|/g, "\\|").replace(/\s*\n\s*/g, " ");
-}
-
-function plural(n: number, noun: string, nouns = `${noun}s`): string {
-  return `${n} ${n === 1 ? noun : nouns}`;
-}
-
 function countThree(report: RunReport, dataset: Dataset): string {
   const unverified = dataset.events.filter((e) => e.status === "unverified");
   const active = dataset.events.filter((e) => e.status === "active");
-  const flags = active.flatMap((e) => auditFlags(e, report).map((flag) => `- ${e.title}: ${flag} (${e.primaryUrl})`));
+  const doubts = active.flatMap((e) => auditDoubts(e, report).map((doubt) => `- ${e.title}: ${doubt} (${e.primaryUrl})`));
 
-  return `Unverifiable: ${report.counts.heldUnverified} held unverified this run; ${plural(unverified.length, "event is", "events are")} unverified in the dataset. None of them is published.
+  return `Count three: **${report.counts.heldUnverified} unverifiable** (held, never published) plus whatever the audit records under "Wrong dates or venues found" below.
 
-${
-  unverified.length === 0
-    ? "_No unverified events._"
-    : ["| Event | Primary page | Why unverified |", "| --- | --- | --- |", ...unverified.map((e) => `| ${cell(e.title)} | ${e.primaryUrl} | ${whyUnverified(e)} |`)].join("\n")
-}
+Unverifiable: ${report.counts.heldUnverified} held unverified this run; ${plural(unverified.length, "event is", "events are")} unverified in the dataset. None of them is published.
 
-Wrong: ${plural(active.length, "active event is", "active events are")} published. Each date and venue below was read from the page named, and the text it was read from is beside it. ${flags.length === 0 ? "Nothing was flagged mechanically" : `${plural(flags.length, "reading was", "readings were")} flagged mechanically`}; the audit checks every row against its primary page regardless.
+${markdownTable(
+  ["Event", "Primary page", "Why unverified"],
+  unverified.map((e) => [tableCell(e.title), e.primaryUrl, whyUnverified(e)]),
+  "_No unverified events._",
+)}
+
+Wrong: ${plural(active.length, "active event is", "active events are")} published. Each date and venue below was read from the page named, and the text it was read from is beside it. ${doubts.length === 0 ? "Nothing was flagged mechanically" : `${plural(doubts.length, "reading was", "readings were")} flagged mechanically`}; the audit checks every row against its primary page regardless.
 
 ### Flagged for checking
 
-${flags.length === 0 ? "_None._" : flags.join("\n")}
+${doubts.length === 0 ? "_None._" : doubts.join("\n")}
 
 ### Every active reading
 
-${
-  active.length === 0
-    ? "_No active events._"
-    : [
-        "| Event | Date read | Venue read | Date evidence | Venue evidence | Primary page |",
-        "| --- | --- | --- | --- | --- | --- |",
-        ...active.map((e) => `| ${cell(e.title)} | ${cell(dateRead(e))} | ${cell(e.venue)} | ${cell(e.evidence.date)} | ${cell(e.evidence.venue)} | ${e.primaryUrl} |`),
-      ].join("\n")
-}`;
+${markdownTable(
+  ["Event", "Date read", "Venue read", "Date evidence", "Venue evidence", "Primary page"],
+  active.map((e) => [tableCell(e.title), tableCell(dateRead(e)), tableCell(e.venue), tableCell(e.evidence.date), tableCell(e.evidence.venue), e.primaryUrl]),
+  "_No active events._",
+)}`;
 }
 
 /** Why cite-or-drop held an event: what could not be read, or that its page was never fetched. */
@@ -145,39 +135,43 @@ function dateRead(e: Event): string {
 }
 
 /**
- * Mechanical doubts about one active reading, for the audit to settle: a date whose evidence
- * does not carry its day or month, a venue whose evidence does not carry its name, a one-off
- * already past, or a start beyond the horizon. Recurring events have a schedule phrase instead
- * of a date, so only their venue is checked.
+ * Mechanical doubts about one active event's readings, for the audit to settle: a date whose
+ * evidence does not carry its day or month, a venue whose evidence does not carry its name, a
+ * one-off already past, or a start beyond the horizon. Recurring events have a schedule phrase
+ * instead of a date, so only their venue is checked.
  */
-export function auditFlags(e: Event, report: Pick<RunReport, "runDate" | "horizonWeeks">): string[] {
-  const flags: string[] = [];
+function auditDoubts(e: Event, report: Pick<RunReport, "runDate" | "horizonWeeks">): string[] {
+  const doubts: string[] = [];
   const dateEvidence = (e.evidence.date ?? "").toLowerCase();
   if (e.recurrence !== "recurring") {
     for (const iso of [e.start, e.end].filter((d): d is string => d !== undefined)) {
-      const [year, month, day] = iso.slice(0, 10).split("-").map(Number) as [number, number, number];
-      if (!new RegExp(`(^|[^0-9])0?${day}([^0-9]|$)`).test(dateEvidence)) flags.push(`the date evidence does not mention day ${day}`);
+      const [, month, day] = iso.slice(0, 10).split("-").map(Number) as [number, number, number];
+      if (!new RegExp(`(^|[^0-9])0?${day}([^0-9]|$)`).test(dateEvidence)) doubts.push(`the date evidence does not mention day ${day}`);
       const monthName = MONTHS[month - 1]!;
       const mentionsMonth = dateEvidence.includes(monthName.slice(0, 3)) || new RegExp(`(^|[^0-9])0?${month}[/.-]`).test(dateEvidence);
-      if (!mentionsMonth) flags.push(`the date evidence does not mention ${monthName[0]!.toUpperCase()}${monthName.slice(1)}`);
-      void year;
+      if (!mentionsMonth) doubts.push(`the date evidence does not mention ${monthName[0]!.toUpperCase()}${monthName.slice(1)}`);
     }
     const horizonEnd = new Date(Date.parse(report.runDate) + report.horizonWeeks * 7 * DAY_MS).toISOString().slice(0, 10);
-    if (e.start !== undefined && e.start.slice(0, 10) > horizonEnd) flags.push(`starts ${e.start.slice(0, 10)}, after the horizon ends on ${horizonEnd}`);
+    if (e.start !== undefined && e.start.slice(0, 10) > horizonEnd) doubts.push(`starts ${e.start.slice(0, 10)}, after the horizon ends on ${horizonEnd}`);
     const last = (e.end ?? e.start)?.slice(0, 10);
-    if (e.recurrence === "one-off" && last !== undefined && last < report.runDate) flags.push(`ended ${last}, before the run date`);
+    if (e.recurrence === "one-off" && last !== undefined && last < report.runDate) doubts.push(`ended ${last}, before the run date`);
   }
   if (e.venue !== undefined && !normalizeName(e.evidence.venue ?? "").includes(normalizeName(e.venue))) {
-    flags.push(`the venue evidence does not mention "${e.venue}"`);
+    doubts.push(`the venue evidence does not mention "${e.venue}"`);
   }
-  return flags;
+  return doubts;
 }
 
 function countFour(report: RunReport): string {
   const perRun = report.spend.totalUsd;
   const monthly = perRun * MILESTONE.runsPerMonth;
   const verdict = monthly <= MILESTONE.passLineUsdPerMonth ? "pass" : "fail";
-  return `This run cost ${perRun.toFixed(4)} USD of the ${report.spend.capUsd} USD cap. Weekly, that is ${monthly.toFixed(2)} USD a month against the ${MILESTONE.passLineUsdPerMonth} USD pass line.
+  const coldStart = report.counts.reverified === 0 && report.counts.new > 0;
+  return `This run cost ${perRun.toFixed(4)} USD of the ${report.spend.capUsd} USD cap in model calls. Weekly, that is ${monthly.toFixed(2)} USD a month against the ${MILESTONE.passLineUsdPerMonth} USD pass line.${
+    coldStart
+      ? ` This was a first run: every event was new and every eligible one was judged, with nothing to re-verify. A steady weekly run re-fetches each active event's primary page and judges only what changed, so its cost differs from this one in both directions.`
+      : ""
+  } Search is not in the figure: ${plural(report.discovery.queries, "Tavily search", "Tavily searches")} this run, against a free tier of 1,000 a month.
 
 Count four: **${verdict}**.`;
 }

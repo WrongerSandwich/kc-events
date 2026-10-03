@@ -239,18 +239,25 @@ if [[ -n "${OPENROUTER_API_KEY:-}" ]] && command -v curl >/dev/null 2>&1; then
       printf '    %s\n' "$KEY_INFO"
       note "(install jq for a tidier readout)"
     fi
-    if printf '%s' "$KEY_INFO" | grep -q '"limit":null'; then
+    if command -v jq >/dev/null 2>&1; then
+      KEY_LIMIT=$(printf '%s' "$KEY_INFO" | jq -r '.data.limit // "null"' 2>/dev/null || echo "?")
+      KEY_RESET=$(printf '%s' "$KEY_INFO" | jq -r '.data.limit_reset // "null"' 2>/dev/null || echo "?")
+    else
+      KEY_LIMIT=$(printf '%s' "$KEY_INFO" | grep -oE '"limit"[[:space:]]*:[[:space:]]*[^,}]+' | head -n1 | sed -E 's/.*:[[:space:]]*//; s/"//g')
+      KEY_RESET=$(printf '%s' "$KEY_INFO" | grep -oE '"limit_reset"[[:space:]]*:[[:space:]]*[^,}]+' | head -n1 | sed -E 's/.*:[[:space:]]*//; s/"//g')
+    fi
+    if [[ -z "$KEY_LIMIT" || "$KEY_LIMIT" == "null" ]]; then
       warn "the key has no limit yet"
       SKIPPED+=("set the monthly limit on the OpenRouter key (it reads back as none)")
-    elif ! printf '%s' "$KEY_INFO" | grep -q '"limit_reset":"monthly"'; then
+    elif [[ "$KEY_RESET" != "monthly" ]]; then
       warn "the key has a limit but it does not reset monthly; it caps lifetime spend instead"
       SKIPPED+=("make the OpenRouter key's limit reset monthly, or remember to raise it when it runs down")
     fi
+    confirm "Does the limit above look right?" || SKIPPED+=("fix the OpenRouter key limit in the dashboard")
   fi
 else
   SKIPPED+=("confirm the OpenRouter key's monthly limit in the dashboard")
 fi
-confirm "Does the limit above look right?" || SKIPPED+=("fix the OpenRouter key limit in the dashboard")
 
 # ── Stage 3: Tavily key ───────────────────────────────────────────────────
 stage "Tavily: API key"
