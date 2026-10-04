@@ -13,7 +13,7 @@ The job ran three times on 2026-10-03, each over the same 3-week horizon with th
 _Evan's. The don't-miss list with why-lines is the quickest place to start:_
 
 ```
-jq -r '.events[] | select(.dontMiss) | "\(.start // .end) \(.title) at \(.venue): \(.whyLine)"' data/events.json | sort
+node -e 'for (const e of require("./data/events.json").events.filter(e => e.dontMiss)) console.log((e.start ?? e.end).slice(0, 10), e.title, "@", e.venue, "\n   ", e.whyLine)'
 ```
 
 ## 2. Missed that friends knew about
