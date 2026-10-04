@@ -97,7 +97,11 @@ A candidate after cite-or-drop has made it an active or unverified event, togeth
 _Avoid_: match, hit
 
 **Strike**:
-One run in which an active event's primary page failed to load or no longer listed it. Any run that lists the event clears its strikes; the second consecutive strike is two-strike expiry.
+One run in which an active event's primary page loaded and no longer listed it, or told the job it is gone (not found) or may not be read (its `robots.txt` now disallows it). Any run that lists the event clears its strikes; the second consecutive strike is two-strike expiry.
+
+**Outage**:
+One run in which an event's primary page could not be loaded: the connection failed, the site refused the job, or it errored. An outage says nothing about the event, so it is not a strike. An event is held as it was through a few consecutive outages, then becomes `unverified` until its page loads and lists it again.
+_Avoid_: failed check, strike (when the page never loaded)
 
 **Extraction rules**:
 The editable document (`prompts/extraction-rules.md`) sent to the extraction model with every page. The first of the two editorial surfaces; a wrong date in the dataset is a bug here first.
@@ -125,7 +129,7 @@ A third-party events listing site. Read only as an index of leads, never as a so
 The rule that an event publishes only if its date and venue were read from its fetched primary page. Anything less is held as `unverified` and never rendered.
 
 **Two-strike expiry**:
-The rule that an active event which fails re-verification on two consecutive runs becomes `expired` on the site while staying in the dataset.
+The rule that an active event which takes a strike on two consecutive runs becomes `expired` on the site while staying in the dataset. Outages do not count toward it.
 
 **Spend cap**:
 The per-run cost ceiling, enforced by the loop from the cost returned on every model call and backstopped by a monthly limit on the API key itself. When hit, the run publishes what it verified and logs the shortfall.

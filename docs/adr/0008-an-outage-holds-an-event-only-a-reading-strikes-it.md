@@ -1,0 +1,5 @@
+# An outage holds an event; only a reading strikes it
+
+Two-strike expiry used to count any failed re-verification, so a page that could not be loaded (a connection reset, a 403 from a site blocking the job's runner, a 5xx) struck an event exactly as a page that no longer listed it did. One blocked runner address was enough to expire every event from a healthy venue in two weeks. Now only a reading strikes: the page loaded and no longer lists the event, is gone (404 or 410), or its `robots.txt` now disallows the job. A page that cannot be loaded is an outage, which neither adds a strike nor clears one. The event is held as it was through up to three consecutive outages, then becomes `unverified` (hidden, not expired) and keeps being re-checked each run until its page lists it again or it is past.
+
+This sets what "a recent run" means in cite-or-drop (ADR 0002): a published reading is at most three outages old, and its last-verified date is shown. We chose hold-then-unverify over striking on outage, which loses good events to bad networks, and over holding indefinitely, which lets a stale reading publish for the whole of a limited run.
