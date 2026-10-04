@@ -63,9 +63,11 @@ neighborhoods:
 # The discovery lane: web searches (Tavily, basic depth, one credit each; needs TAVILY_API_KEY) for
 # events outside the registry. One query per kind but "other", naming the place and the horizon's
 # months. Every result is a lead: a primary page is fetched and extracted under the same rules as a
-# registry page, with the query recorded as the event's lead. An aggregator page is read only as an
-# index: its outbound links are followed, its own text never reaches extraction. A host discovery
-# finds events on in two runs is suggested for promotion in the run report, never added here.
+# registry page, with the query recorded as the event's lead. An index page (any aggregator page, or a
+# platform listing under `platformIndexPaths`) is read only for its links: they are followed, its own
+# text never reaches extraction, and an event citing one as its primary page is expired as index-page.
+# A host discovery finds events on in two runs is suggested for promotion in the run report, never
+# added here.
 # `pnpm research --no-discovery` turns it off for one run.
 discovery:
   enabled: true
@@ -122,3 +124,6 @@ discovery:
     - tixr.com
     - universe.com
     - simpletix.com
+  platformIndexPaths: # a platform's listing pages (search, browse, category) are index pages; its event pages are not
+    ticketmaster.com: [/discover/, /search] # a prefix matches at a path segment boundary
+    eventbrite.com: [/d/, /b/]

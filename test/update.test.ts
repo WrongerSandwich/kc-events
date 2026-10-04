@@ -182,7 +182,7 @@ describe("re-verification and expiry", () => {
     const second = await runAt(WEEK_2, first.dataset, { completions: [reply()] });
 
     expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], status: "expired", expiryReason: "past", lastChanged: WEEK_2_ISO }]);
-    expect(second.report.counts.expired).toEqual({ past: 1, "two-strike": 0, cancelled: 0 });
+    expect(second.report.counts.expired).toEqual({ past: 1, "two-strike": 0, cancelled: 0, "index-page": 0 });
   });
 
   it("a past-dated candidate the page still shows is not recorded as a new event", async () => {

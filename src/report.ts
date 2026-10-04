@@ -57,7 +57,7 @@ export interface RunReport {
     enabled: boolean;
     /** Searches made. */
     queries: number;
-    /** Aggregator pages read as an index; never extracted. */
+    /** Index pages (aggregator pages and platform listings) read for their links; never extracted. Named before platform listings counted. */
     aggregatorPages: number;
     /** Primary pages found by discovery and handed to extraction. */
     pagesExtracted: number;
@@ -116,6 +116,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Expired: past | ${counts.expired.past} |
 | Expired: two-strike | ${counts.expired["two-strike"]} |
 | Expired: cancelled | ${counts.expired.cancelled} |
+| Expired: index-page | ${counts.expired["index-page"]} |
 
 ## Spend
 
@@ -137,7 +138,7 @@ ${
 
 ${
   report.discovery.enabled
-    ? `${plural(report.discovery.queries, "search", "searches")}, ${plural(report.discovery.aggregatorPages, "aggregator page")} read as an index, ${plural(report.discovery.pagesExtracted, "primary page")} extracted.${
+    ? `${plural(report.discovery.queries, "search", "searches")}, ${plural(report.discovery.aggregatorPages, "index page")} read for links, ${plural(report.discovery.pagesExtracted, "primary page")} extracted.${
         report.discovery.problems.length > 0 ? `\n\n${markdownList(report.discovery.problems)}` : ""
       }`
     : "_Disabled._"

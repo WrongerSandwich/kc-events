@@ -8,7 +8,7 @@ import { fakePorts, type CannedPage } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
 import { candidateAt, costing, PAGE, source, WEEK_1, WEEK_1_ISO, WEEK_2, WEEK_3 } from "./fakes/fixtures.js";
 import { renderReportMarkdown } from "../src/report.js";
-import { discoveryQueries } from "../src/discovery.js";
+import { discoveryQueries, isIndexPage } from "../src/discovery.js";
 
 /** The one query the test config makes: its only kind besides "other", the place, and the horizon's months. */
 const QUERY = "music events in Kansas City, October to November 2026";
@@ -172,14 +172,14 @@ describe("discovery lane", () => {
     });
   });
 
-  it("a candidate citing an aggregator page as its primary page is held unverified", async () => {
+  it("a candidate citing an aggregator page as its primary page is expired as index-page", async () => {
     const { dataset } = await discoverAt(WEEK_1, emptyDataset(), {
       searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
       pages: { [PROMOTER_PAGE]: PAGE },
       completions: [costing(0.01, candidateAt(PROMOTER, { primaryUrl: "https://listings.test/kc/event/123" }))],
     });
 
-    expect(dataset.events.map((e) => [e.primaryUrl, e.status])).toEqual([["https://listings.test/kc/event/123", "unverified"]]);
+    expect(dataset.events.map((e) => [e.primaryUrl, e.status, e.expiryReason])).toEqual([["https://listings.test/kc/event/123", "expired", "index-page"]]);
   });
 
   it("an event found by both lanes is one record, keeping its registry lead", async () => {
@@ -286,20 +286,73 @@ describe("discovery lane", () => {
     expect(second.report.promotionSuggestions).toEqual([]);
   });
 
-  it("an active event whose primary page is on an aggregator is struck on re-verification, never extracted", async () => {
-    const listingPage = "https://listings.test/kc/event/123";
-    const known = (await discoverAt(WEEK_1, emptyDataset(), {
-      searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
-      pages: { [PROMOTER_PAGE]: PAGE },
-      completions: [costing(0.01, candidateAt(PROMOTER))],
-    })).dataset;
-    // An event made active by some earlier rule, now pointing at an aggregator page.
-    const dataset = { ...known, events: known.events.map((e) => ({ ...e, primaryUrl: listingPage })) };
+  describe("a ticketing platform's listing page is an index page", () => {
+    const TM_SHOW = "https://www.ticketmaster.com/big-show-kansas-city-missouri-10-31-2026/event/0600611";
+    const TM_OTHER = "https://www.ticketmaster.com/other-show-kansas-city-missouri-11-01-2026/event/0600612";
+    const atTm = source("The Truman", { urls: [TM_SHOW], neighborhood: "Westport" });
+    const atTmOther = source("The Truman", { urls: [TM_OTHER], neighborhood: "Westport" });
+    const listingBody = (...links: string[]) =>
+      `<html><body><h2>Concerts in Kansas City</h2>${links.map((l) => `<a href="${l}">Tickets</a>`).join("")}</body></html>`;
 
-    const { calls, dataset: after } = await discoverAt(WEEK_2, dataset, { pages: { [listingPage]: PAGE } });
+    it.each([
+      ["a Ticketmaster discover page", "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=x"],
+      ["a Ticketmaster search page", "https://www.ticketmaster.com/search?q=kansas+city"],
+      ["an Eventbrite /d/ listing", "https://eventbrite.com/d/mo--kansas-city/music--events/"],
+      ["an Eventbrite /b/ listing", "https://www.eventbrite.com/b/mo--kansas-city/music/"],
+      ["an Eventbrite listing on a subdomain", "https://events.eventbrite.com/d/mo--kansas-city/events/"],
+    ])("%s is read for its event links and never sent to the model", async (_, listing) => {
+      const { dataset, report, requests, calls } = await discoverAt(WEEK_1, emptyDataset(), {
+        searches: { [QUERY]: [lead(listing)] },
+        pages: { [listing]: { status: 200, body: listingBody(TM_SHOW, TM_OTHER) }, [TM_SHOW]: PAGE, [TM_OTHER]: PAGE },
+        completions: [
+          costing(0.01, candidateAt(atTm, { title: "Big Show" })),
+          costing(0.01, candidateAt(atTmOther, { title: "Other Show", startDate: "2026-11-01" })),
+        ],
+      });
 
-    expect(calls.filter((c) => c.startsWith("model:") || c.startsWith("fetch:"))).toEqual([]);
-    expect(after.events[0]).toMatchObject({ status: "active", verificationFailures: 1 });
+      expect(calls.filter((c) => c.startsWith("fetch:"))).toEqual([`fetch:${listing}`, `fetch:${TM_SHOW}`, `fetch:${TM_OTHER}`]);
+      const extractions = requests.filter((r) => r.model === "test/extraction").map((r) => r.messages[1]!.content);
+      expect(extractions).toHaveLength(2);
+      for (const content of extractions) expect(content).not.toContain(listing);
+      expect(dataset.events.map((e) => [e.title, e.primaryUrl, e.status])).toEqual([
+        ["Big Show", TM_SHOW, "active"],
+        ["Other Show", TM_OTHER, "active"],
+      ]);
+      expect(report.discovery).toMatchObject({ aggregatorPages: 1, pagesExtracted: 2 });
+    });
+
+    it("a platform event page found by search is still extracted as a primary page", async () => {
+      const eventPage = "https://www.eventbrite.com/e/big-show-tickets-123456789";
+      const atEb = source("The Truman", { urls: [eventPage], neighborhood: "Westport" });
+      const { dataset, report } = await discoverAt(WEEK_1, emptyDataset(), {
+        searches: { [QUERY]: [lead(eventPage)] },
+        pages: { [eventPage]: PAGE },
+        completions: [costing(0.01, candidateAt(atEb))],
+      });
+
+      expect(dataset.events.map((e) => [e.primaryUrl, e.status])).toEqual([[eventPage, "active"]]);
+      expect(report.discovery).toMatchObject({ aggregatorPages: 0, pagesExtracted: 1 });
+    });
+
+    it.each([
+      ["a platform index page", "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=x"],
+      ["an aggregator page", "https://listings.test/kc/event/123"],
+    ])("an active event whose primary page is %s is expired as index-page in one run, without fetching it", async (_, indexPage) => {
+      const known = (await discoverAt(WEEK_1, emptyDataset(), {
+        searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
+        pages: { [PROMOTER_PAGE]: PAGE },
+        completions: [costing(0.01, candidateAt(PROMOTER))],
+      })).dataset;
+      // An event read before index pages were known, citing one as its primary page.
+      const dataset = { ...known, events: known.events.map((e) => ({ ...e, primaryUrl: indexPage })) };
+
+      const { calls, dataset: after, report } = await discoverAt(WEEK_2, dataset, { pages: { [indexPage]: PAGE } });
+
+      expect(calls.filter((c) => c.startsWith("model:") || c.startsWith("fetch:"))).toEqual([]);
+      expect(after.events[0]).toMatchObject({ status: "expired", expiryReason: "index-page", verificationFailures: 0 });
+      expect(report.counts.expired["index-page"]).toBe(1);
+      expect(renderReportMarkdown(report)).toContain("| Expired: index-page | 1 |");
+    });
   });
 
   it.each<[string, CannedPage, object]>([
@@ -387,5 +440,38 @@ describe("discovery queries", () => {
       "music events in Kansas City, October 2026",
       "theater and dance events in Kansas City, October 2026",
     ]);
+  });
+});
+
+describe("isIndexPage", () => {
+  const config = testConfig({});
+  const withAggregator = { ...config, discovery: { ...config.discovery, aggregatorHosts: ["listings.test"] } };
+
+  it.each([
+    ["https://listings.test/kc/event/123", true],
+    ["https://news.listings.test/anything", true],
+    ["https://www.ticketmaster.com/discover/kansas-city-mo", true],
+    ["https://ticketmaster.com/discover", true],
+    ["https://www.ticketmaster.com/search?q=kc", true],
+    ["https://www.ticketmaster.com/search/kc", true],
+    ["https://www.ticketmaster.com/searching-for-sugar-man-tickets/event/1", false],
+    ["https://www.ticketmaster.com/discovery-day-tickets/event/1", false],
+    ["https://www.ticketmaster.com/big-show/event/0600611", false],
+    ["https://www.eventbrite.com/d/mo--kansas-city/events/", true],
+    ["https://www.eventbrite.com/b/mo--kansas-city/music/", true],
+    ["https://www.eventbrite.com/e/big-show-tickets-1", false],
+    ["https://www.eventbrite.com/bands/big-show", false],
+    ["https://www.axs.com/discover/kc", false],
+    ["https://promoter.test/d/shows", false],
+  ])("%s → %s", (url, expected) => {
+    expect(isIndexPage(url, withAggregator)).toBe(expected);
+  });
+
+  it("matches a configured host's subdomains and prefixes given without a trailing slash", () => {
+    const custom = { ...config, discovery: { ...config.discovery, platformIndexPaths: { "axs.com": ["/browse"] } } };
+    expect(isIndexPage("https://shop.axs.com/browse/kc", custom)).toBe(true);
+    expect(isIndexPage("https://shop.axs.com/browser/kc", custom)).toBe(false);
+    // Replacing the map drops the seeds.
+    expect(isIndexPage("https://www.ticketmaster.com/discover/kc", custom)).toBe(false);
   });
 });

@@ -1,7 +1,7 @@
 /**
- * The discovery lane's pure parts: the search queries a run makes, which hosts are aggregators or
- * ignored, the outbound links read off an aggregator page, and which discovery hosts to suggest for
- * promotion. The lane itself, which searches and fetches through the ports, lives in the run.
+ * The discovery lane's pure parts: the search queries a run makes, which pages are index pages and
+ * which hosts are ignored, the outbound links read off an index page, and which discovery hosts to
+ * suggest for promotion. The lane itself, which searches and fetches through the ports, lives in the run.
  */
 import type { RunConfig } from "./config.js";
 import type { Dataset } from "./dataset.js";
@@ -64,15 +64,39 @@ export function onHost(url: string, hosts: readonly string[]): boolean {
   return hosts.map(bareHost).some((listed) => host === listed || host.endsWith(`.${listed}`));
 }
 
-/** A search result worth following: http(s) and not on an ignored host. It may still be an aggregator. */
+/**
+ * An index page: read only for its links to events, never as a primary page. Every page on an
+ * aggregator host is one, and so is a platform page whose path is under one of that host's index
+ * prefixes. Discovery and the expiry pass both decide by this, so they cannot drift.
+ */
+export function isIndexPage(url: string, config: RunConfig): boolean {
+  if (onHost(url, config.discovery.aggregatorHosts)) return true;
+  let path: string;
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    return false;
+  }
+  return Object.entries(config.discovery.platformIndexPaths).some(
+    ([host, prefixes]) => onHost(url, [host]) && prefixes.some((prefix) => underPrefix(path, prefix)),
+  );
+}
+
+/** Whether the path is the prefix or under it, at a segment boundary: "/search" covers "/search/kc" but not "/searching". */
+function underPrefix(path: string, prefix: string): boolean {
+  const base = prefix.replace(/\/+$/, "");
+  return path === base || path.startsWith(`${base}/`);
+}
+
+/** A search result worth following: http(s) and not on an ignored host. It may still be an index page. */
 export function isLead(url: string, config: RunConfig): boolean {
   return /^https?:/i.test(url) && !onHost(url, config.discovery.ignoredHosts);
 }
 
 /**
- * An aggregator page read as an index: the anchors on it a person could click that leave the
- * aggregator for a followable host and are not a static asset, in page order, each once, up to the
- * configured number. Nothing else on the page is read.
+ * An index page read for its leads: the anchors on it a person could click that go to a followable
+ * page other than another index page and are not a static asset, in page order, each once, up to
+ * the configured number. Nothing else on the page is read.
  */
 export function outboundLinks(page: FetchResult, config: RunConfig): string[] {
   const links: string[] = [];
@@ -88,7 +112,7 @@ export function outboundLinks(page: FetchResult, config: RunConfig): string[] {
     url.hash = "";
     if (STATIC_ASSET_PATH.test(url.pathname)) continue;
     const link = url.href;
-    if (!isLead(link, config) || onHost(link, config.discovery.aggregatorHosts) || links.includes(link)) continue;
+    if (!isLead(link, config) || isIndexPage(link, config) || links.includes(link)) continue;
     links.push(link);
     if (links.length >= config.discovery.linksPerAggregatorPage) break;
   }

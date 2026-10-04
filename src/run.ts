@@ -11,7 +11,7 @@ import {
   type Sighting,
 } from "./extraction.js";
 import { applyJudgment, buildCurationRequest, CURATION_BATCH_SIZE, curationReplySchema, needsCuration, type CurationContext } from "./curation.js";
-import { discoveryQueries, hostOf, isLead, onHost, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
+import { discoveryQueries, hostOf, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { findMatch, normalizeName, sameName } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
@@ -57,12 +57,12 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const model = capSpend(ports.model, config.spendCapUsd);
   const registryLane = await checkRegistry(registry, dataset.sourceState, ports.fetcher);
   assertSomethingFetched(registryLane.sourceReports);
-  // An aggregator page is never a primary page, so nothing can be cited to one even if the registry fetched it.
+  // An index page is never a primary page, so nothing can be cited to one even if the registry fetched it.
   const fetchedUrls = new Set(
     registryLane.pages
       .flatMap(({ page }) => [page.url, page.finalUrl])
       .map((u) => normalizeUrl(u, u))
-      .filter((u) => !onHost(u, config.discovery.aggregatorHosts)),
+      .filter((u) => !isIndexPage(u, config)),
   );
   const extractionContext: ExtractionContext = {
     config,
@@ -78,8 +78,9 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const discovery = await discover({ ...ports, model }, extractionContext, registryLane.attempts.tried);
   // Registry sightings merge first: an event both lanes found keeps its registry lead.
   const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], today);
-  // Past events expire before re-verification, so nothing is fetched to check a date already gone.
-  const current = merged.events.map((e) => expirePast(e, today));
+  // Past events, and events citing an index page as their primary page, expire before re-verification,
+  // so nothing is fetched to check a date already gone or a page that is never read.
+  const current = merged.events.map((e) => expireIndexCited(expirePast(e, today), config));
   const laneOutcome = {
     touched: merged.touched,
     attempts: combineAttempts({ ...registryLane.attempts, unread: extraction.unreadUrls }, discovery.attempts),
@@ -261,8 +262,8 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   for (const { source, page } of pages) {
     const outcome = bySource.get(source.name) ?? { extracted: 0, problems: [] };
     bySource.set(source.name, outcome);
-    if (onHost(page.finalUrl, context.config.discovery.aggregatorHosts)) {
-      outcome.problems.push(`${page.finalUrl} is an aggregator page and was not extracted`);
+    if (isIndexPage(page.finalUrl, context.config)) {
+      outcome.problems.push(`${page.finalUrl} is an index page and was not extracted`);
       continue;
     }
     let read: Awaited<ReturnType<typeof extractPage>>;
@@ -407,8 +408,8 @@ function refresh(known: Event, sighting: Event): Event {
  * and so is every event hidden since it was verified (by outages, ADR 0008, or an uncitable
  * re-reading), each run until it is past. A hidden event a lane sighted is checked too when the
  * lanes did not try its primary page: a calendar that lists an event under its own page cites
- * nothing for it, and only that page can bring it back. A primary page on an aggregator is never
- * fetched or read; that is a strike. A page either lane already tried this run is not fetched
+ * nothing for it, and only that page can bring it back. An event citing an index page has already
+ * expired, so none is fetched here. A page either lane already tried this run is not fetched
  * again; it counts as that attempt ended. A page that loaded and no longer lists the event is a
  * strike, as is one that is gone or that robots.txt now disallows. A page that could not be loaded
  * is an outage (see fetchReadable): it holds an active event as it was, up to the outage limit. A
@@ -438,11 +439,6 @@ async function reverify(
   let notReverified = 0;
 
   for (const url of new Set(pending.map((e) => e.primaryUrl))) {
-    // An aggregator page is never read, so it can never again show the event: a strike.
-    if (onHost(url, context.config.discovery.aggregatorHosts)) {
-      sightingsAt.set(url, []);
-      continue;
-    }
     if (lane.attempts.outages.has(url)) {
       outageAt.add(url);
       continue;
@@ -554,7 +550,7 @@ async function fetchReadable(
 /** What the discovery lane found, and what it leaves for merging, re-verification, and the report. */
 interface DiscoveryLaneOutcome {
   sightings: Sighting[];
-  /** The primary pages the lane tried; never an aggregator page read as an index. */
+  /** The primary pages the lane tried; never an index page. */
   attempts: PageAttempts;
   /** Host to an example page, for every host whose page yielded an active event this run. */
   hosts: Map<string, string>;
@@ -567,7 +563,7 @@ interface DiscoveryLaneOutcome {
 
 /**
  * The discovery lane: each query goes through the search port and each result is a lead. A lead
- * on an aggregator host is fetched only to read its outbound links, which are followed as leads
+ * to an index page is fetched only to read its outbound links, which are followed as leads
  * in turn; its text never reaches extraction. Any other lead is a primary page, fetched (robots.txt
  * and all, as the fetcher always does) and extracted under the same cite-or-drop rules as the
  * registry lane, with the query as the lead of what it finds. A URL is followed once a run, and
@@ -609,8 +605,8 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     const page = await follow(url);
     if (!page) return;
     const pageUrls = [url, normalizeUrl(page.finalUrl, url)];
-    if (onHost(page.finalUrl, config.discovery.aggregatorHosts)) {
-      report.problems.push(`${url} led to an aggregator page and was not extracted`);
+    if (isIndexPage(page.finalUrl, config)) {
+      report.problems.push(`${url} led to an index page and was not extracted`);
       return;
     }
     for (const u of pageUrls) attempts.tried.add(u);
@@ -658,7 +654,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     for (const result of results.slice(0, config.discovery.resultsPerQuery)) {
       const url = normalizeUrl(result.url, "");
       if (!isLead(url, config)) continue;
-      await (onHost(url, config.discovery.aggregatorHosts) ? readIndex(url, query) : readPrimaryPage(url, query));
+      await (isIndexPage(url, config) ? readIndex(url, query) : readPrimaryPage(url, query));
     }
   }
   return outcome;
@@ -751,10 +747,19 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
   return { events: events.map((e) => judged.get(e.id) ?? e), report, notCurated };
 }
 
+/**
+ * Expires an event citing an index page as its primary page: the page is never read, so it can
+ * never verify the event. That covers events read before the page counted as one, such as when a
+ * host is added to the aggregator list. An event already expired keeps its reason.
+ */
+function expireIndexCited(event: Event, config: RunConfig): Event {
+  return event.status !== "expired" && isIndexPage(event.primaryUrl, config) ? expire(event, "index-page") : event;
+}
+
 /** How many events became expired this run, by reason. */
 function countExpired(previous: Event[], events: Event[]): Record<ExpiryReason, number> {
   const wasExpired = new Set(previous.filter((e) => e.status === "expired").map((e) => e.id));
-  const counts: Record<ExpiryReason, number> = { past: 0, "two-strike": 0, cancelled: 0 };
+  const counts: Record<ExpiryReason, number> = { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0 };
   for (const e of events) if (e.status === "expired" && e.expiryReason && !wasExpired.has(e.id)) counts[e.expiryReason]++;
   return counts;
 }

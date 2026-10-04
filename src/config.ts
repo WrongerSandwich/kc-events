@@ -70,6 +70,16 @@ export const DEFAULT_PLATFORM_HOSTS = [
   "simpletix.com",
 ] as const;
 
+/**
+ * A ticketing platform's listing pages (search, browse, category): index pages like an aggregator's,
+ * while the platform's event pages stay primary pages. Host to path prefixes; a host matches itself
+ * and its subdomains, and a prefix matches the URL path at a segment boundary.
+ */
+export const DEFAULT_PLATFORM_INDEX_PATHS: Record<string, string[]> = {
+  "ticketmaster.com": ["/discover/", "/search"],
+  "eventbrite.com": ["/d/", "/b/"],
+};
+
 const discoverySchema = z.strictObject({
   enabled: z.boolean().default(false),
   /** The geography in the few words a search engine wants; queries are built from it. */
@@ -79,6 +89,9 @@ const discoverySchema = z.strictObject({
   aggregatorHosts: z.array(z.string().min(1)).default([...DEFAULT_AGGREGATOR_HOSTS]),
   ignoredHosts: z.array(z.string().min(1)).default([...DEFAULT_IGNORED_HOSTS]),
   platformHosts: z.array(z.string().min(1)).default([...DEFAULT_PLATFORM_HOSTS]),
+  platformIndexPaths: z
+    .record(z.string().min(1), z.array(z.string().startsWith("/")).min(1))
+    .default(() => structuredClone(DEFAULT_PLATFORM_INDEX_PATHS)),
 });
 
 /**

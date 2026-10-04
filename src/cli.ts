@@ -78,7 +78,7 @@ async function main() {
   await writeFile(`${reportBase}.md`, renderReportMarkdown(result.report));
 
   const { counts, spend, discovery, curation, promotionSuggestions } = result.report;
-  const expired = counts.expired.past + counts.expired["two-strike"] + counts.expired.cancelled;
+  const expired = Object.values(counts.expired).reduce((sum, n) => sum + n, 0);
   console.log(
     `Run ${result.report.runDate}: ${counts.found} found, ${counts.new} new, ${counts.updated} updated, ${counts.reverified} re-verified, ` +
       `${counts.heldUnverified} held unverified, ${expired} expired; ` +
@@ -91,7 +91,7 @@ async function main() {
   );
   if (discovery.enabled) {
     console.log(
-      `Discovery: ${discovery.queries} search(es), ${discovery.aggregatorPages} aggregator page(s) read as an index, ` +
+      `Discovery: ${discovery.queries} search(es), ${discovery.aggregatorPages} index page(s) read for links, ` +
         `${discovery.pagesExtracted} primary page(s) extracted; ${promotionSuggestions.length} promotion suggestion(s).`,
     );
   }

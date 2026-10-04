@@ -14,7 +14,8 @@ describe("committed config and registry", () => {
 
   it("loads the committed dataset", () => {
     const raw = JSON.parse(readFileSync(new URL("../data/events.json", import.meta.url), "utf8"));
-    expect(() => parseDataset(raw)).not.toThrow();
+    // Loading fills fields newer than the file with their defaults and changes nothing else.
+    expect(parseDataset(raw)).toEqual({ ...raw, events: raw.events.map((e: object) => ({ consecutiveOutages: 0, ...e })) });
   });
 
   it("gives every source a kind from the taxonomy", () => {
