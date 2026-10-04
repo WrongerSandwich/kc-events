@@ -98,6 +98,7 @@ discovery:
     - upcomingevents.com
     - artskcgo.com
     - concertfix.com
+    - concerts50.com # #16: the 2026-10-03 hand run read three Midland shows from its listing page
   ignoredHosts: # never followed: social media and the like, which carry no primary page
     - facebook.com
     - instagram.com
@@ -127,3 +128,15 @@ discovery:
   platformIndexPaths: # a platform's listing pages (search, browse, category) are index pages; its event pages are not
     ticketmaster.com: [/discover/, /search] # a prefix matches at a path segment boundary
     eventbrite.com: [/d/, /b/]
+
+# Venue aliases (ADR 0007): a venue's display name, then the other names pages give it, a room inside
+# it or a program that runs there. Event identity treats them all as one venue, so the same show read
+# as "Helzberg Hall" on one page and "Kauffman Center for the Performing Arts" on another is one event.
+# Names are compared with case and punctuation ignored, and a name containing another at word
+# boundaries is the same name ("Bartle Exhibit Hall (A – E)" is "Bartle Exhibit Hall"). Hand-kept.
+venueAliases:
+  Kauffman Center for the Performing Arts: [Muriel Kauffman Theatre, Helzberg Hall]
+  Nelson-Atkins Museum of Art: [Atkins Auditorium, Tivoli Cinema]
+  Kansas City Convention Center: [Bartle Hall, Bartle Exhibit Hall]
+  Midwest Trust Center: [Yardley Hall, Midwest Trust Center at Johnson County Community College]
+  Kansas City Power & Light District: [Kansas City Power & Light, PBR Big Sky]

@@ -124,6 +124,11 @@ export const configSchema = z.strictObject({
     })
     .default([...NEIGHBORHOOD_CATCH_ALLS]),
   discovery: discoverySchema.default(discoverySchema.parse({})),
+  /**
+   * Venue aliases (ADR 0007): a venue's display name to the other names it goes by, a room inside it
+   * or a program that runs there. Event identity treats them all as one venue. Hand-kept.
+   */
+  venueAliases: z.record(z.string().min(1), z.array(z.string().min(1))).default({}),
 });
 
 export type RunConfig = z.infer<typeof configSchema>;

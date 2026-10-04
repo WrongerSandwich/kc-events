@@ -12,7 +12,7 @@ import {
 } from "./extraction.js";
 import { applyJudgment, buildCurationRequest, CURATION_BATCH_SIZE, curationReplySchema, needsCuration, type CurationContext } from "./curation.js";
 import { discoveryQueries, hostOf, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
-import { findMatch, normalizeName, sameName } from "./identity.js";
+import { findMatch, normalizeName, sameEvent, sameName, type VenueAliases } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
 import type { EventRef, RunReport, SourceReport } from "./report.js";
@@ -77,12 +77,20 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   // Discovery runs after the registry lane, so a page the registry already read is not read again.
   const discovery = await discover({ ...ports, model }, extractionContext, registryLane.attempts.tried);
   // Registry sightings merge first: an event both lanes found keeps its registry lead.
-  const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], today);
+  const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], today, config.venueAliases);
   // Past events, and events citing an index page as their primary page, expire before re-verification,
-  // so nothing is fetched to check a date already gone or a page that is never read.
-  const current = merged.events.map((e) => expireIndexCited(expirePast(e, today), config));
+  // so nothing is fetched to check a date already gone or a page that is never read. Duplicates fold
+  // after that, among what is left, and before re-verification, so a duplicate is not checked either.
+  const folded = foldDuplicates(
+    merged.events.map((e) => expireIndexCited(expirePast(e, today), config)),
+    config.venueAliases,
+  );
+  const current = folded.events;
+  // A lane that sighted a duplicate sighted the record it was folded into.
+  const touched = new Set(merged.touched);
+  for (const [duplicate, kept] of folded.foldedInto) if (touched.has(duplicate)) touched.add(kept);
   const laneOutcome = {
-    touched: merged.touched,
+    touched,
     attempts: combineAttempts({ ...registryLane.attempts, unread: extraction.unreadUrls }, discovery.attempts),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
@@ -335,9 +343,10 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
  * unmatched one is new, unless it is cancelled or already past: nothing
  * to publish. Matching includes expired events, so a page listing one again revives it under
  * its old id rather than starting a duplicate; all but those expired as index-page, which were
- * never read from an event's own page, so a reading of the real page starts a new event.
+ * never read from an event's own page, so a reading of the real page starts a new event, and those
+ * expired as duplicate, whose sightings belong to the record they were folded into.
  */
-function mergeSightings(existing: Event[], sightings: Sighting[], today: string) {
+function mergeSightings(existing: Event[], sightings: Sighting[], today: string, aliases: VenueAliases) {
   const events = [...existing];
   const touched = new Set<string>();
   const refreshed = new Set<string>();
@@ -346,7 +355,7 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string)
   const uncitable = new Set<string>();
 
   for (const { event, cancelled } of sightings) {
-    const known = findMatch(event, events.filter((e) => e.expiryReason !== "index-page"));
+    const known = findMatch(event, events.filter(matchable), aliases);
     if (!known) {
       if (cancelled || isPast(event, today)) continue;
       events.push(event);
@@ -359,7 +368,7 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string)
     if (readVerified.has(known.id) && !cancelled) continue;
     touched.add(known.id);
     if (event.status === "active") readVerified.add(known.id);
-    const applied = applySighting(known, { event, cancelled });
+    const applied = applySighting(known, { event, cancelled }, event.primaryUrl === known.primaryUrl);
     events[events.indexOf(known)] = applied.event;
     if (applied.refreshed && !created.has(known.id)) refreshed.add(known.id);
     if (applied.uncitable) uncitable.add(known.id);
@@ -370,20 +379,65 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string)
   return { events, touched, uncitable, counts: { found: touched.size, new: created.size, updated: refreshed.size, heldUnverified } };
 }
 
+/** A known event a sighting can be matched to: not one expired as index-page or as duplicate. */
+function matchable(event: Event): boolean {
+  return event.expiryReason !== "index-page" && event.expiryReason !== "duplicate";
+}
+
 /**
  * What a sighting of a known event does to it: a page saying cancelled expires it (an event
- * already expired keeps its reason); a verified reading refreshes it; a reading with nothing
- * citable makes an active event unverified, keeping its old reading and curation, since the rules
- * no longer support publishing it, and leaves any other event's status alone. Either way the page
- * still lists the event, so it is not missing and any strike and any run of outages is cleared.
+ * already expired keeps its reason); a verified reading refreshes it; a reading of the event's own
+ * primary page with nothing citable makes an active event unverified, keeping its old reading and
+ * curation, since the rules no longer support publishing it, and leaves any other event's status
+ * alone. Another page with nothing citable, such as one that names no venue, cannot speak for the
+ * reading the event's own page gave. Either way the page still lists the event, so it is not missing
+ * and any strike and any run of outages is cleared.
  */
-function applySighting(known: Event, { event, cancelled }: Sighting): { event: Event; refreshed: boolean; uncitable: boolean } {
+function applySighting(
+  known: Event,
+  { event, cancelled }: Sighting,
+  fromOwnPage: boolean,
+): { event: Event; refreshed: boolean; uncitable: boolean } {
   if (cancelled) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
   if (event.status === "active") return { event: refresh(known, event), refreshed: true, uncitable: false };
   const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
-  if (known.status === "active") return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
+  if (known.status === "active" && fromOwnPage) return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
   const cleared = known.verificationFailures === 0 && known.consecutiveOutages === 0;
   return { event: cleared ? known : listed, refreshed: false, uncitable: false };
+}
+
+/**
+ * Folds records that turn out to be the same event (ADR 0007, amended): any two not expired that
+ * match each other under the identity rules, recurring events aside, which never fuzzily match.
+ * The record seen first is kept, a tie going to the one earlier in the dataset, which was created
+ * first; the other expires as duplicate. A kept record that is not active takes an active
+ * duplicate's reading under its own id, first-seen, and curation. Folding repeats until nothing
+ * matches, since a fold can leave a venue-less record with one candidate where it had two. The
+ * result depends only on the dataset. Returns which record each duplicate was folded into.
+ */
+function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event[]; foldedInto: Map<string, string> } {
+  const byId = new Map(events.map((e) => [e.id, e]));
+  const foldedInto = new Map<string, string>();
+  let live = events
+    .filter((e) => e.status !== "expired" && e.recurrence !== "recurring")
+    .sort((a, b) => Date.parse(a.firstSeen) - Date.parse(b.firstSeen));
+  for (let changed = true; changed; ) {
+    changed = false;
+    for (let j = 1; j < live.length; j++) {
+      const later = live[j]!;
+      const i = live.slice(0, j).findIndex((earlier) => sameEvent(earlier, later, live, aliases));
+      if (i === -1) continue;
+      const kept = live[i]!;
+      const merged = kept.status !== "active" && later.status === "active" ? refresh(kept, later) : kept;
+      byId.set(kept.id, merged);
+      byId.set(later.id, expire(later, "duplicate"));
+      foldedInto.set(later.id, kept.id);
+      live = live.filter((e) => e !== later).map((e) => (e === kept ? merged : e));
+      j--;
+      changed = true;
+    }
+  }
+  return { events: events.map((e) => byId.get(e.id)!), foldedInto };
 }
 
 /**
@@ -479,9 +533,10 @@ async function reverify(
     }
     const sightings = sightingsAt.get(event.primaryUrl);
     if (!sightings) return event;
-    const sighting = sightings.find((s) => findMatch(s.event, [event]));
+    const sighting = sightings.find((s) => findMatch(s.event, [event], context.config.venueAliases));
     if (!sighting) return strike(event);
-    const applied = applySighting(event, sighting);
+    // The page read here is the event's primary page, whatever page the sighting cites.
+    const applied = applySighting(event, sighting, true);
     if (applied.refreshed) refreshed.add(event.id);
     if (applied.uncitable) uncitable.add(event.id);
     return applied.event;

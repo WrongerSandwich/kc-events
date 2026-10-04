@@ -1,7 +1,8 @@
 /**
  * Expiry: how an event stops being publishable. It stays in the dataset as expired, with the
  * reason: past (its last date is behind us), two-strike (two consecutive strikes), cancelled
- * (its page says so), or index-page (its primary page is an index page, which is never read). A
+ * (its page says so), index-page (its primary page is an index page, which is never read), or
+ * duplicate (another record is the same event and was seen first; see foldDuplicates in run). A
  * postponement is a date change, not this. An outage never expires an event; enough of them in a
  * row make it unverified.
  */

@@ -9,7 +9,7 @@ const isoDateTime = z.iso.datetime({ offset: true });
 
 export const RECURRENCE_CLASSES = ["one-off", "limited-run", "recurring"] as const;
 export const EVENT_STATUSES = ["active", "unverified", "expired"] as const;
-export const EXPIRY_REASONS = ["past", "two-strike", "cancelled", "index-page"] as const;
+export const EXPIRY_REASONS = ["past", "two-strike", "cancelled", "index-page", "duplicate"] as const;
 
 export type RecurrenceClass = (typeof RECURRENCE_CLASSES)[number];
 export type ExpiryReason = (typeof EXPIRY_REASONS)[number];
