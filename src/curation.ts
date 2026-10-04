@@ -79,6 +79,60 @@ export function buildCurationRequest(events: Event[], context: CurationContext):
 /** The event with a judgment applied and stamped as judged now; the why-line is kept only with the flag. */
 export function applyJudgment(event: Event, judgment: Judgment, nowIso: string): Event {
   const { whyLine: _, ...rest } = event;
-  const why = judgment.why.trim();
+  const why = cleanWhyLine(judgment.why);
   return { ...rest, dontMiss: judgment.dontMiss, ...(judgment.dontMiss ? { whyLine: why } : {}), lastJudged: nowIso };
+}
+
+const occurrences = (line: string, char: string) => line.split(char).length - 1;
+
+/** Whether the line opens with `open` and the partner of that opening is its last character. */
+function wrappedIn(line: string, open: string, close: string): boolean {
+  if (line.length < 2 || line[0] !== open || line.at(-1) !== close) return false;
+  if (open === close) return occurrences(line, open) === 2;
+  let depth = 0;
+  for (let i = 0; i < line.length - 1; i++) {
+    if (line[i] === open) depth++;
+    else if (line[i] === close && --depth === 0) return false;
+  }
+  return true;
+}
+
+/** The line with one piece of stray JSON punctuation taken off either end, or unchanged when there is none. */
+function stripOnce(line: string): string {
+  const last = line.at(-1);
+  const first = line[0];
+  const oddQuotes = occurrences(line, '"') % 2 === 1;
+  if (last === "," || (last === "}" && occurrences(line, "}") > occurrences(line, "{")) || (last === "]" && occurrences(line, "]") > occurrences(line, "[")) || (last === '"' && oddQuotes)) {
+    return line.slice(0, -1);
+  }
+  if ((first === "{" && occurrences(line, "{") > occurrences(line, "}")) || (first === "[" && occurrences(line, "[") > occurrences(line, "]")) || (first === '"' && oddQuotes)) {
+    return line.slice(1);
+  }
+  if (wrappedIn(line, "{", "}") || wrappedIn(line, "[", "]") || wrappedIn(line, '"', '"')) return line.slice(1, -1);
+  return line;
+}
+
+/**
+ * A why-line with stray JSON punctuation taken off its ends. Structured output guarantees the
+ * reply's shape, not the text inside a field, so a why-line can come back carrying a brace, bracket,
+ * comma or quote from the JSON around it. Unpartnered ones at either end go, as does a pair wrapping
+ * the whole line; balanced brackets and quotes inside the sentence, and its own punctuation, stay.
+ * A line that cleans to empty is no why-line.
+ */
+export function cleanWhyLine(raw: string): string {
+  let line = raw.trim();
+  for (;;) {
+    const next = stripOnce(line).trim();
+    if (next === line) return line;
+    line = next;
+  }
+}
+
+/** A stored event with its why-line cleaned; a flag whose why-line cleans to empty is no flag. Not a change, and not a judgment. */
+export function cleanStoredWhyLine(event: Event): Event {
+  if (event.whyLine === undefined) return event;
+  const why = cleanWhyLine(event.whyLine);
+  if (why === event.whyLine) return event;
+  const { whyLine: _, ...rest } = event;
+  return why === "" ? { ...rest, dontMiss: false } : { ...rest, whyLine: why };
 }

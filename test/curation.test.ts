@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { run } from "../src/run.js";
+import { cleanWhyLine } from "../src/curation.js";
 import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
 import type { CompletionResult } from "../src/ports.js";
 import { newEventId } from "../src/extraction.js";
@@ -127,5 +128,87 @@ describe("curation and the spend cap", () => {
     const next = await runAt(WEEK_2, cut.dataset, [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
     expect(next.report.spend).toMatchObject({ totalUsd: 0.03, capHit: false });
     expect(next.dataset.events[0]).toMatchObject({ dontMiss: true, lastJudged: WEEK_2_ISO });
+  });
+});
+
+describe("cleaning a why-line", () => {
+  it("strips a trailing brace left over from the JSON around it", () => {
+    expect(cleanWhyLine("In a church sanctuary rather than a large hall.}")).toBe("In a church sanctuary rather than a large hall.");
+  });
+
+  it.each([
+    '{"A rare visit."}',
+    '"A rare visit."}',
+    '{"A rare visit.',
+    'A rare visit."}',
+    '  A rare visit.", ',
+    '["A rare visit."]',
+    '[{"A rare visit."}],',
+  ])("strips stray braces, brackets, commas and quotes from either end of %j", (raw) => {
+    expect(["A rare visit.", '"A rare visit."']).toContain(cleanWhyLine(raw));
+  });
+
+  it.each([
+    'Plays the "Four Seasons" complete.',
+    "A rare visit (their first since 2019).",
+    "The program notes call it a premiere [sic].",
+    '"Four Seasons" in full, and then "Winter" again',
+    "Worth the drive!",
+  ])("leaves %j unchanged", (line) => {
+    expect(cleanWhyLine(line)).toBe(line);
+  });
+
+  it("cleans a line of nothing but punctuation to empty", () => {
+    expect(cleanWhyLine(' "}", ')).toBe("");
+  });
+});
+
+/** The committed Modigliani Quartet why-line, with the brace the curation model left on it. */
+const MODIGLIANI_WHY = "A string quartet of international standing playing a single Kansas City chamber-series date, in a church sanctuary rather than a large hall.";
+
+describe("why-lines already stored", () => {
+  it("every run cleans a stored why-line without a curation call, and the event does not count as changed or judged", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+    const stored = {
+      ...first.dataset,
+      events: first.dataset.events.map((e) => ({ ...e, whyLine: `${MODIGLIANI_WHY}}` })),
+    };
+
+    const second = await runAt(WEEK_2, stored, [extracted(candidate())]);
+
+    expect(second.curationCalls).toEqual([]);
+    expect(second.dataset.events[0]).toMatchObject({
+      dontMiss: true,
+      whyLine: MODIGLIANI_WHY,
+      lastChanged: WEEK_1_ISO,
+      lastJudged: WEEK_1_ISO,
+    });
+  });
+
+  it("a stored flag whose why-line cleans to empty is no longer a flag", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+    const stored = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, whyLine: '"}' })) };
+
+    const second = await runAt(WEEK_2, stored, [extracted(candidate())]);
+
+    expect(second.curationCalls).toEqual([]);
+    expect(second.dataset.events[0]).toMatchObject({ dontMiss: false, lastJudged: WEEK_1_ISO });
+    expect(second.dataset.events[0]).not.toHaveProperty("whyLine");
+  });
+});
+
+describe("a judgment's why-line", () => {
+  it("is cleaned before it is stored", async () => {
+    const { dataset } = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: 'A rare visit."}' })]);
+
+    expect(dataset.events[0]).toMatchObject({ dontMiss: true, whyLine: "A rare visit." });
+  });
+
+  it("that cleans to empty leaves the event unflagged", async () => {
+    const { dataset, report } = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: ' "}, ' })]);
+
+    expect(dataset.events[0]).toMatchObject({ dontMiss: false });
+    expect(dataset.events[0]).not.toHaveProperty("whyLine");
+    expect(report.curation.problems).toEqual([expect.stringContaining("no why-line")]);
   });
 });

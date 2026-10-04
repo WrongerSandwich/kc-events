@@ -10,7 +10,7 @@ import {
   type PageOrigin,
   type Sighting,
 } from "./extraction.js";
-import { applyJudgment, buildCurationRequest, CURATION_BATCH_SIZE, curationReplySchema, needsCuration, type CurationContext } from "./curation.js";
+import { applyJudgment, buildCurationRequest, cleanStoredWhyLine, cleanWhyLine, CURATION_BATCH_SIZE, curationReplySchema, needsCuration, type CurationContext } from "./curation.js";
 import { discoveryQueries, hostOf, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { findMatch, normalizeName, sameEvent, sameName, type VenueAliases } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
@@ -99,7 +99,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const uncitable = reverified.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
   const changed = markChanged(dataset.events, reverified.events, startedIso);
   const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
-  const events = curation.events;
+  // Stored why-lines are cleaned the same way new ones are, so one stored before the cleaning existed is fixed without re-judging.
+  const events = curation.events.map(cleanStoredWhyLine);
   const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso);
   const shortfall = {
     pagesNotExtracted: extraction.pagesNotExtracted + discovery.pagesNotExtracted,
@@ -787,7 +788,7 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
       }
       if (answered.has(event.id)) continue;
       answered.add(event.id);
-      if (judgment.dontMiss && judgment.why.trim() === "") {
+      if (judgment.dontMiss && cleanWhyLine(judgment.why) === "") {
         report.problems.push(`"${event.title}" was flagged with no why-line and was left unjudged`);
         continue;
       }
