@@ -60,21 +60,28 @@ export function isLead(url: string, config: RunConfig): boolean {
   return /^https?:/i.test(url) && !onHost(url, config.discovery.ignoredHosts);
 }
 
+/** A URL path ending in one of these is a stylesheet, script, font, image or file, never an event page. */
+const STATIC_ASSET_PATH = /\.(css|m?js|woff2?|ttf|otf|eot|png|jpe?g|gif|svg|webp|ico|avif|pdf|xml|json|zip|mp3|mp4)$/i;
+
 /**
- * An aggregator page read as an index: the links on it that leave the aggregator for a followable
- * host, in page order, each once, up to the configured number. Nothing else on the page is read.
+ * An aggregator page read as an index: the anchors on it a person could click that leave the
+ * aggregator for a followable host and are not a static asset, in page order, each once, up to the
+ * configured number. Nothing else on the page is read.
  */
 export function outboundLinks(page: FetchResult, config: RunConfig): string[] {
   const links: string[] = [];
-  for (const [, href] of page.body.matchAll(/href\s*=\s*["']([^"']+)["']/gi)) {
-    let url: string;
+  for (const [, href] of page.body.matchAll(/<a\s(?:[^>]*?\s)?href\s*=\s*["']([^"']+)["']/gi)) {
+    let url: URL;
     try {
-      url = new URL(href!.replace(/&amp;/g, "&"), page.finalUrl).href.replace(/#.*$/, "");
+      url = new URL(href!.replace(/&amp;/g, "&"), page.finalUrl);
     } catch {
       continue;
     }
-    if (!isLead(url, config) || onHost(url, config.discovery.aggregatorHosts) || links.includes(url)) continue;
-    links.push(url);
+    url.hash = "";
+    if (STATIC_ASSET_PATH.test(url.pathname)) continue;
+    const link = url.href;
+    if (!isLead(link, config) || onHost(link, config.discovery.aggregatorHosts) || links.includes(link)) continue;
+    links.push(link);
     if (links.length >= config.discovery.linksPerAggregatorPage) break;
   }
   return links;

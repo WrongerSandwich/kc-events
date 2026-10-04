@@ -103,6 +103,71 @@ describe("discovery lane", () => {
     expect(report.discovery).toMatchObject({ queries: 1, aggregatorPages: 1, pagesExtracted: 1 });
   });
 
+  describe("an aggregator page's leads are the anchors a person could click", () => {
+    const listing = "https://www.listings.test/kc/this-week";
+    /** One aggregator lead, the listing page, and the promoter page with one extracted event. */
+    const bigShow = costing(0.01, candidateAt(PROMOTER, { title: "Big Show", venue: "The Truman" }));
+    const discoverFromListing = (
+      body: string,
+      { pages = {}, completions = [bigShow], discovery = {} }: { pages?: Record<string, CannedPage>; completions?: CompletionResult[]; discovery?: Partial<RunConfig["discovery"]> } = {},
+    ) =>
+      discoverAt(WEEK_1, emptyDataset(), {
+        searches: { [QUERY]: [lead(listing)] },
+        pages: { [listing]: { status: 200, body }, [PROMOTER_PAGE]: PAGE, ...pages },
+        completions,
+        discovery,
+      });
+    const fetched = (calls: string[]) => calls.filter((c) => c.startsWith("fetch:") && c !== `fetch:${listing}`);
+
+    it("stylesheet, script and document links are not followed; the event page is", async () => {
+      const { calls, report } = await discoverFromListing(`<html><head>
+          <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">
+          <link rel="preconnect" href="https://cdn.venue.test">
+          <script src="https://www.googletagmanager.com/gtag/js?id=G-1"></script>
+        </head><body>
+          <a href="https://venue.test/files/fall-calendar.pdf">Printable calendar</a>
+          <a href="${PROMOTER_PAGE}">Big Show tickets</a>
+        </body></html>`);
+
+      expect(fetched(calls)).toEqual([`fetch:${PROMOTER_PAGE}`]);
+      expect(report.discovery.problems).toEqual([]);
+    });
+
+    it("asset anchors ahead of the event links do not use up the per-page budget", async () => {
+      const second = "https://promoter.test/shows/second-show";
+      const assets = ["a.css", "b.js", "c.mjs", "d.woff2", "e.PNG", "f.svg", "g.ico", "h.json", "i.mp3", "j.xml?v=2"]
+        .map((file) => `<a href="https://cdn.test/static/${file}">asset</a>`)
+        .join("\n");
+      const { calls } = await discoverFromListing(
+        `<body>${assets}<a href="${PROMOTER_PAGE}">Big Show</a><a href="${second}">Second</a><a href="https://promoter.test/three">Third</a></body>`,
+        { pages: { [second]: PAGE }, completions: [bigShow, costing(0.01)], discovery: { linksPerAggregatorPage: 2 } },
+      );
+
+      expect(fetched(calls)).toEqual([`fetch:${PROMOTER_PAGE}`, `fetch:${second}`]);
+    });
+
+    it("an anchor with its attributes in another order and single quotes is still followed", async () => {
+      const { calls } = await discoverFromListing(`<body><a class="x" data-id='7' href='${PROMOTER_PAGE}'>Big Show</a></body>`);
+
+      expect(fetched(calls)).toEqual([`fetch:${PROMOTER_PAGE}`]);
+    });
+
+    it("an event URL whose query string mentions a script is still followed", async () => {
+      const page = `${PROMOTER_PAGE}?ref=app.js`;
+      const { calls } = await discoverFromListing(`<body><a href="${page}">Big Show</a></body>`, { pages: { [page]: PAGE } });
+
+      expect(fetched(calls)).toEqual([`fetch:${page}`]);
+    });
+
+    it("href on a base or area element is not a lead", async () => {
+      const { calls } = await discoverFromListing(
+        `<head><base href="https://cdn.venue.test/"></head><body><map><area href="https://venue.test/map-region"></map><abbr href="https://venue.test/x">x</abbr><a href="${PROMOTER_PAGE}">Big Show</a></body>`,
+      );
+
+      expect(fetched(calls)).toEqual([`fetch:${PROMOTER_PAGE}`]);
+    });
+  });
+
   it("a candidate citing an aggregator page as its primary page is held unverified", async () => {
     const { dataset } = await discoverAt(WEEK_1, emptyDataset(), {
       searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
