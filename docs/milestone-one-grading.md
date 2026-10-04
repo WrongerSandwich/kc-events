@@ -10,15 +10,21 @@ The job ran three times on 2026-10-03, each over the same 3-week horizon with th
 
 ## 1. Found and would propose
 
-_Evan's. The don't-miss list with why-lines is the quickest place to start:_
+Evan, 2026-10-03: none of the 17 don't-miss picks were known beforehand (no active searching, which is the premise). Would genuinely recommend to friends:
 
-```
-node -e 'for (const e of require("./data/events.json").events.filter(e => e.dontMiss)) console.log((e.start ?? e.end).slice(0, 10), e.title, "@", e.venue, "\n   ", e.whyLine)'
-```
+- John Green, Hollywood, Ending (Oct 6, Unity Temple on the Plaza)
+- 13th Annual Dia de los Muertos Celebration (Oct 17, The Museum of Kansas City)
+- Black Country, New Road (Oct 17, The Granada)
+
+Count one: **3**.
+
+Observation: the picks lean heavily toward music. That is the registry's composition, not the curation prompt: 121 of the first run's 338 active events were music, because the seed registry is heavy on concert rooms, the Symphony, and chamber series, and those sources list many dated one-offs, which is the shape the don't-miss question rewards. Museums, parks, and festival organizers mostly yield runs and recurring things. Noted in #17 for the registry.
 
 ## 2. Missed that friends knew about
 
-_Evan's. Ask them; word of mouth is the ground truth here. Note whether each miss was a source the registry lacks (the usual fix) or an event a checked source lists that the job did not read (a rules or extraction bug)._
+Not measured: Evan does not usually check with friends about upcoming events, so there is no word-of-mouth baseline for this run. The lived acceptance test after the site exists (proposing one thing to friends found through this and not otherwise) covers the same ground.
+
+Count two: **not measured**.
 
 ## 3. Wrong or unverifiable dates and venues
 
@@ -541,4 +547,4 @@ Run one, the cold start with nothing to re-verify, cost 0.4545 USD, or 1.97 USD 
 
 ## Result
 
-_Evan's: pass or fail, once counts one and two are in. Count three's verdict above and count four's below are the Fable-stage acceptance test._
+**Pass.** Evan, 2026-10-03. The job found three things worth proposing to friends that would not have been found otherwise, published zero wrong dates, and costs under a dollar a month. Count two is unmeasured and is picked up by the lived test once the site exists. Milestone two (the site, then the hub push) is worth building; #12 lands the weekly workflow first so real weeks of data accumulate.
