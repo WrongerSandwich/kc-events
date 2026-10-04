@@ -213,10 +213,13 @@ async function checkSource(source: Source, fetcher: FetchPort): Promise<{ report
   const pages: FetchResult[] = [];
   for (const url of source.urls) {
     const fetched = await fetchReadable(url, fetcher);
-    if ("page" in fetched) pages.push(fetched.page);
-    else if (fetched.failure === "disallowed") blocked.push(url);
+    if ("page" in fetched) {
+      pages.push(fetched.page);
+      continue;
+    }
+    if (fetched.failure === "disallowed") blocked.push(url);
     else failed.push(fetched.problem);
-    if ("failure" in fetched && fetched.failure === "outage") outages.push(url);
+    if (fetched.failure === "outage") outages.push(url);
   }
 
   const report: SourceReport = { name: source.name, result: "fetched", extracted: 0 };
@@ -391,9 +394,8 @@ function refresh(known: Event, sighting: Event): Event {
  * and so is every event outages hid (ADR 0008), each run until it is past. A primary page on an
  * aggregator is never fetched or read; that is a strike. A page either lane already tried this run
  * is not fetched again; it counts as that attempt ended. A page that loaded and no longer lists the
- * event is a strike, as is one that is gone (404, 410) or that robots.txt now disallows. A page
- * that could not be loaded (a network error, robots.txt unreachable, 403, 429, 5xx or any other
- * failure) is an outage: it holds an active event as it was, up to the outage limit. A page that
+ * event is a strike, as is one that is gone or that robots.txt now disallows. A page that could not
+ * be loaded is an outage (see fetchReadable): it holds an active event as it was, up to the outage limit. A page that
  * does list the event applies the sighting as in the registry lane, which revives a hidden event
  * whose reading is verified. When the model's reply about a page could not be read, nothing is
  * known either way and the event is left alone: a bad reply is not a dead page. Once the spend cap
@@ -411,7 +413,7 @@ async function reverify(
     (e) => (e.status === "active" || hiddenByOutage(e)) && !lane.touched.has(e.id) && !lane.unreadUrls.has(e.primaryUrl),
   );
   const sightingsAt = new Map<string, Sighting[]>();
-  const down = new Set<string>();
+  const outageAt = new Set<string>();
   const refreshed = new Set<string>();
   let outsideGeography = 0;
   let notReverified = 0;
@@ -423,7 +425,7 @@ async function reverify(
       continue;
     }
     if (lane.outageUrls.has(url)) {
-      down.add(url);
+      outageAt.add(url);
       continue;
     }
     if (lane.triedUrls.has(url)) {
@@ -436,7 +438,7 @@ async function reverify(
     }
     const fetched = await fetchReadable(url, ports.fetcher);
     if (!("page" in fetched)) {
-      if (fetched.failure === "outage") down.add(url);
+      if (fetched.failure === "outage") outageAt.add(url);
       else sightingsAt.set(url, []);
       continue;
     }
@@ -452,7 +454,7 @@ async function reverify(
   const outageLimited: Event[] = [];
   const checked = events.map((event) => {
     if (!pending.includes(event)) return event;
-    if (down.has(event.primaryUrl)) {
+    if (outageAt.has(event.primaryUrl)) {
       const held = outage(event);
       if (event.status === "active" && held.status === "active") heldThroughOutage++;
       if (event.status === "active" && held.status === "unverified") outageLimited.push(held);

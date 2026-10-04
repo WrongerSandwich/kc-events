@@ -10,7 +10,7 @@ import type { Event, ExpiryReason } from "./dataset.js";
 const STRIKES_TO_EXPIRE = 2;
 
 /** Consecutive outages after which an active event becomes unverified (ADR 0008). */
-export const OUTAGES_TO_UNVERIFY = 3;
+const OUTAGES_TO_UNVERIFY = 3;
 
 export function expire(event: Event, reason: ExpiryReason): Event {
   return { ...event, status: "expired", expiryReason: reason };
