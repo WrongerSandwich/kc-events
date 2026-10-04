@@ -3,8 +3,8 @@
 # dataset stands, and the job goes red with the error in the "Research run" step's log.
 #
 # Secrets OPENROUTER_API_KEY and TAVILY_API_KEY are set by scripts/weekly-workflow-setup.sh.
-# The weekly commit is also the repo activity that keeps GitHub from disabling this schedule after
-# 60 quiet days.
+# The weekly commit is meant to be the repo activity that keeps GitHub from disabling this schedule
+# after 60 quiet days. If GitHub disables it anyway, re-enable it on the Actions page.
 name: Weekly research
 
 on:
@@ -29,7 +29,7 @@ concurrency:
 
 defaults:
   run:
-    shell: bash # -eo pipefail, so a failed CLI fails its step even through tee
+    shell: bash # runs as bash -eo pipefail: any failed command fails its step
 
 jobs:
   research:
@@ -62,10 +62,14 @@ jobs:
           TRIGGER: ${{ github.event_name }}
         run: |
           git add data/events.json data/runs
+          if git diff --cached --quiet; then
+            echo "::error::the run finished but changed nothing under data/; every run should at least restamp the dataset"
+            exit 1
+          fi
           # The report written this run names the run date the CLI used, which is the one to commit under.
-          run_date=$(git diff --cached --name-only -- data/runs | sed -n 's|^data/runs/\(.*\)\.json$|\1|p' | head -n1)
+          run_date=$(git diff --cached --name-only -- data/runs | sed -n -E 's%^data/runs/(.*)\.(json|md)$%\1%p' | head -n1)
           if [[ -z "$run_date" ]]; then
-            echo "::error::the run finished but wrote no report under data/runs"
+            echo "::error::the run finished but its report under data/runs did not change"
             exit 1
           fi
           message="Weekly research run $run_date"
@@ -77,3 +81,13 @@ jobs:
           git pull --quiet --rebase origin "$GITHUB_REF_NAME"
           git push origin "HEAD:$GITHUB_REF_NAME"
           cat "data/runs/$run_date.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Say what a failure leaves behind
+        if: failure()
+        run: |
+          {
+            echo "## The research run failed"
+            echo
+            echo "Nothing was committed: the dataset and source state stay as of the last successful run."
+            echo "The error is in the log of the step that failed above. Fix it, then re-run from the Actions page (Run workflow)."
+          } >> "$GITHUB_STEP_SUMMARY"

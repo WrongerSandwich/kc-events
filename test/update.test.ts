@@ -11,18 +11,18 @@ const CALENDAR_URL = knuckleheads.urls[0]!;
 const candidate = (overrides: Record<string, unknown> = {}) => candidateAt(knuckleheads, overrides);
 const reply = (...candidates: unknown[]) => costing(0.01, ...candidates);
 
-/** One run over the Knuckleheads calendar with the given canned pages and model replies. */
+/** One run over the Knuckleheads calendar (or the given sources) with the given canned pages and model replies. */
 async function runAt(
   now: Date,
   dataset: Dataset,
   {
     pages = { [CALENDAR_URL]: PAGE },
     completions,
-    source = knuckleheads,
-  }: { pages?: Record<string, CannedPage>; completions: CompletionResult[]; source?: typeof knuckleheads },
+    sources = [knuckleheads],
+  }: { pages?: Record<string, CannedPage>; completions: CompletionResult[]; sources?: (typeof knuckleheads)[] },
 ) {
   const fakes = fakePorts(now, { pages, completions });
-  const result = await run({ config: testConfig(), prompts: testPrompts(), dataset, registry: { sources: [source] }, ports: fakes.ports });
+  const result = await run({ config: testConfig(), prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports });
   expect(parseDataset(result.dataset)).toEqual(result.dataset);
   return { ...result, calls: fakes.calls };
 }
@@ -130,7 +130,7 @@ describe("re-verification and expiry", () => {
       const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
 
       const second = await runAt(WEEK_2, first.dataset, {
-        source: moved,
+        sources: [moved],
         pages: { [NEW_CALENDAR_URL]: PAGE, [CALENDAR_URL]: PAGE },
         completions: [reply(), reply(candidate())],
       });
@@ -145,7 +145,7 @@ describe("re-verification and expiry", () => {
       const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate(), candidate({ title: "Other Band" }))] });
 
       const second = await runAt(WEEK_2, first.dataset, {
-        source: moved,
+        sources: [moved],
         pages: { [NEW_CALENDAR_URL]: PAGE, [CALENDAR_URL]: PAGE },
         completions: [reply(), reply(candidate({ notice: "cancelled" }))],
       });
@@ -162,7 +162,7 @@ describe("re-verification and expiry", () => {
       const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
 
       const second = await runAt(WEEK_2, first.dataset, {
-        source: moved,
+        sources: [moved],
         pages: { [NEW_CALENDAR_URL]: PAGE, [CALENDAR_URL]: { status: 404, body: "gone" } },
         completions: [reply()],
       });
@@ -177,19 +177,13 @@ describe("re-verification and expiry", () => {
 
     // Another source still answers: a run in which every source fails stops instead (see the run tests).
     const elsewhere = source("Elsewhere");
-    const fakes = fakePorts(WEEK_2, {
+    const second = await runAt(WEEK_2, first.dataset, {
       pages: { [CALENDAR_URL]: new Error("connect ECONNREFUSED"), [elsewhere.urls[0]!]: PAGE },
       completions: [reply()],
-    });
-    const second = await run({
-      config: testConfig(),
-      prompts: testPrompts(),
-      dataset: first.dataset,
-      registry: { sources: [knuckleheads, elsewhere] },
-      ports: fakes.ports,
+      sources: [knuckleheads, elsewhere],
     });
 
-    expect(fakes.calls.filter((c) => c.includes("knuckleheads"))).toEqual(["fetch:https://knuckleheads.test/calendar"]);
+    expect(second.calls.filter((c) => c.includes("knuckleheads"))).toEqual(["fetch:https://knuckleheads.test/calendar"]);
     expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], verificationFailures: 1 }]);
   });
 

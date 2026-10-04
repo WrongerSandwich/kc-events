@@ -150,7 +150,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
  */
 function assertSomethingFetched(sourceReports: SourceReport[]): void {
   const checked = sourceReports.filter((r) => r.result !== "excluded");
-  if (checked.length === 0 || checked.some((r) => r.result !== "failed")) return;
+  if (checked.length === 0 || !checked.every((r) => r.result === "failed")) return;
   const details = checked.map((r) => `  ${r.name}: ${r.detail ?? "failed"}`).join("\n");
   throw new Error(`none of the ${checked.length} active registry sources could be fetched; the run stops so no event is struck:\n${details}`);
 }
