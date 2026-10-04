@@ -46,7 +46,7 @@ The category of an event, from a fixed taxonomy.
 _Avoid_: type, category, genre
 
 **Status**:
-Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, or `index-page` (its primary page was an index page). A postponement with a new date is a date change, not an expiry.
+Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, `index-page` (its primary page was an index page), or `duplicate` (another record turned out to be the same event and was seen first). A postponement with a new date is a date change, not an expiry.
 
 **Last-verified**:
 The date of the most recent run that read the event's date and venue from its primary page. Shown on every published event.
@@ -61,7 +61,8 @@ The run that last judged an event for the don't-miss flag. Absent until curation
 How an event was first found: which registry source or which discovery search.
 
 **Venue**:
-The place an event happens. A venue is not the same as a source, even when the venue's website is a source.
+The place an event happens. A venue is not the same as a source, even when the venue's website is a source. One venue can go by several names: the building, a room inside it ("Helzberg Hall" at the Kauffman Center), or a program that runs there ("Tivoli Cinema" at the Nelson-Atkins). These are its **venue aliases**, kept by hand; event identity treats them as one venue.
+_Avoid_: location, room (when meaning the venue as a whole)
 
 **Neighborhood**:
 The part of the metro a venue is in, from a controlled list, shown on the site in place of a street address. The list is the config's plus every registry source's neighborhood. "Lawrence" and "elsewhere in the metro" are the catch-alls; an address that maps to nothing lands in elsewhere in the metro and is flagged as unmappable in the run report.

@@ -1,3 +1,5 @@
 # An event's identity is its primary page plus its normalized title
 
 Deduplication could key on (title, date, venue), but a date can change and still be the same event, and keying on primary URL alone breaks when a venue uses one calendar URL for every show that month. So an incoming event matches an existing record when its primary URL and normalized title match; failing that, a fuzzy match on normalized title, venue, and a date within a few days. Ids are assigned at first-seen and never change, so a date move is an update that triggers re-judging rather than a new record.
+
+**Amended (#16):** the fuzzy match treats two venue names as one venue when they normalize alike, when one contains the other, or when a hand-kept venue alias list names both. A sighting with no venue matches on title and the same calendar date alone, but only when exactly one known event qualifies. Two records that come to match each other are folded: the one seen first is kept, and the other expires as `duplicate`.
