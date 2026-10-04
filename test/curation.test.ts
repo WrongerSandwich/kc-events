@@ -137,15 +137,15 @@ describe("cleaning a why-line", () => {
   });
 
   it.each([
-    '{"A rare visit."}',
-    '"A rare visit."}',
-    '{"A rare visit.',
-    'A rare visit."}',
-    '  A rare visit.", ',
-    '["A rare visit."]',
-    '[{"A rare visit."}],',
-  ])("strips stray braces, brackets, commas and quotes from either end of %j", (raw) => {
-    expect(["A rare visit.", '"A rare visit."']).toContain(cleanWhyLine(raw));
+    ['{"A rare visit."}', '"A rare visit."'],
+    ['"A rare visit."}', '"A rare visit."'],
+    ['{"A rare visit.', "A rare visit."],
+    ['A rare visit."}', "A rare visit."],
+    ['  A rare visit.", ', "A rare visit."],
+    ['["A rare visit."]', '"A rare visit."'],
+    ['[{"A rare visit."}],', '"A rare visit."'],
+  ])("strips stray braces, brackets, commas and quotes from either end of %j", (raw, clean) => {
+    expect(cleanWhyLine(raw)).toBe(clean);
   });
 
   it.each([
@@ -154,12 +154,13 @@ describe("cleaning a why-line", () => {
     "The program notes call it a premiere [sic].",
     '"Four Seasons" in full, and then "Winter" again',
     "Worth the drive!",
+    '"Four Seasons" and "Winter"',
   ])("leaves %j unchanged", (line) => {
     expect(cleanWhyLine(line)).toBe(line);
   });
 
   it("cleans a line of nothing but punctuation to empty", () => {
-    expect(cleanWhyLine(' "}", ')).toBe("");
+    expect(cleanWhyLine(' }", ')).toBe("");
   });
 });
 
@@ -205,10 +206,23 @@ describe("a judgment's why-line", () => {
   });
 
   it("that cleans to empty leaves the event unflagged", async () => {
-    const { dataset, report } = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: ' "}, ' })]);
+    const { dataset, report } = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: ' }", ' })]);
 
     expect(dataset.events[0]).toMatchObject({ dontMiss: false });
     expect(dataset.events[0]).not.toHaveProperty("whyLine");
     expect(report.curation.problems).toEqual([expect.stringContaining("no why-line")]);
+  });
+
+  it("that cleans to empty, on a re-judge of a flagged event, takes the old flag away", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+
+    const second = await runAt(WEEK_2, first.dataset, [
+      extracted(candidate({ startDate: "2026-11-07", dateEvidence: "Sat, Nov 7 · Show 8:00 PM" })),
+      judging(0.02, { id: SHOW_ID, dontMiss: true, why: '"}' }),
+    ]);
+
+    expect(second.curationCalls).toHaveLength(1);
+    expect(second.dataset.events[0]).toMatchObject({ dontMiss: false, lastChanged: WEEK_2_ISO, lastJudged: WEEK_1_ISO });
+    expect(second.dataset.events[0]).not.toHaveProperty("whyLine");
   });
 });

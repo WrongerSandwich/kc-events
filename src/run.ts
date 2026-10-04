@@ -10,7 +10,7 @@ import {
   type PageOrigin,
   type Sighting,
 } from "./extraction.js";
-import { applyJudgment, buildCurationRequest, cleanStoredWhyLine, cleanWhyLine, CURATION_BATCH_SIZE, curationReplySchema, needsCuration, type CurationContext } from "./curation.js";
+import { applyJudgment, buildCurationRequest, cleanStoredWhyLine, cleanWhyLine, unflagged, CURATION_BATCH_SIZE, curationReplySchema, needsCuration, type CurationContext } from "./curation.js";
 import { discoveryQueries, hostOf, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { findMatch, normalizeName, sameEvent, sameName, type VenueAliases } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
@@ -99,7 +99,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const uncitable = reverified.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
   const changed = markChanged(dataset.events, reverified.events, startedIso);
   const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
-  // Stored why-lines are cleaned the same way new ones are, so one stored before the cleaning existed is fixed without re-judging.
+  // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = curation.events.map(cleanStoredWhyLine);
   const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso);
   const shortfall = {
@@ -756,12 +756,13 @@ function markChanged(previous: Event[], events: Event[], nowIso: string): Event[
  * Curation: every event due for it (active, not recurring, new or changed since last judged) goes
  * to the curation model in batches with the curation prompt. A judgment is applied to the event it
  * names; an event the reply does not name, or names with a flag but no why-line, is left unjudged
- * and comes up again next run, and a judgment naming no event in the batch is reported. A reply that cannot be read leaves its whole batch unjudged. Once
+ * and comes up again next run (the second losing any flag it had, since a flag with no why-line is no flag), and a judgment naming no event in the batch is reported. A reply that cannot be read leaves its whole batch unjudged. Once
  * the spend cap is reached, events still to judge are not sent and are counted as not curated.
  */
 async function curate(events: Event[], model: CappedModel, context: CurationContext, nowIso: string) {
   const due = events.filter(needsCuration);
   const judged = new Map<string, Event>();
+  const unjudgedFlags = new Map<string, Event>();
   const report: RunReport["curation"] = { calls: 0, judged: 0, flagged: 0, problems: [] };
   let notCurated = 0;
 
@@ -790,6 +791,7 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
       answered.add(event.id);
       if (judgment.dontMiss && cleanWhyLine(judgment.why) === "") {
         report.problems.push(`"${event.title}" was flagged with no why-line and was left unjudged`);
+        unjudgedFlags.set(event.id, unflagged(event));
         continue;
       }
       judged.set(event.id, applyJudgment(event, judgment, nowIso));
@@ -801,7 +803,7 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
 
   report.judged = judged.size;
   report.flagged = [...judged.values()].filter((e) => e.dontMiss).length;
-  return { events: events.map((e) => judged.get(e.id) ?? e), report, notCurated };
+  return { events: events.map((e) => judged.get(e.id) ?? unjudgedFlags.get(e.id) ?? e), report, notCurated };
 }
 
 /** How many events became expired this run, by reason. */

@@ -83,12 +83,25 @@ export function applyJudgment(event: Event, judgment: Judgment, nowIso: string):
   return { ...rest, dontMiss: judgment.dontMiss, ...(judgment.dontMiss ? { whyLine: why } : {}), lastJudged: nowIso };
 }
 
+/** Brackets that pair as an opening and a closing character, keyed by the closing one. */
+const OPENING: Record<string, string> = { "}": "{", "]": "[" };
+const CLOSING: Record<string, string> = { "{": "}", "[": "]" };
+
 const occurrences = (line: string, char: string) => line.split(char).length - 1;
 
-/** Whether the line opens with `open` and the partner of that opening is its last character. */
-function wrappedIn(line: string, open: string, close: string): boolean {
-  if (line.length < 2 || line[0] !== open || line.at(-1) !== close) return false;
-  if (open === close) return occurrences(line, open) === 2;
+/** Whether this character, at one end of the line, has no partner in it: a comma never does; a quote doesn't when the count is odd. */
+function unpartnered(line: string, char: string | undefined): boolean {
+  if (char === ",") return true;
+  if (char === '"') return occurrences(line, '"') % 2 === 1;
+  const partner = char === undefined ? undefined : (OPENING[char] ?? CLOSING[char]);
+  return partner !== undefined && occurrences(line, char!) > occurrences(line, partner);
+}
+
+/** Whether the line opens with a brace or bracket whose partner is its last character. */
+function wrapped(line: string): boolean {
+  const open = line[0]!;
+  const close = CLOSING[open];
+  if (close === undefined || line.length < 2 || line.at(-1) !== close) return false;
   let depth = 0;
   for (let i = 0; i < line.length - 1; i++) {
     if (line[i] === open) depth++;
@@ -97,35 +110,37 @@ function wrappedIn(line: string, open: string, close: string): boolean {
   return true;
 }
 
-/** The line with one piece of stray JSON punctuation taken off either end, or unchanged when there is none. */
-function stripOnce(line: string): string {
+/** The line with one stray piece of JSON punctuation taken off either end, or unchanged when there is none. */
+function stripStrayEnd(line: string): string {
   const last = line.at(-1);
   const first = line[0];
-  const oddQuotes = occurrences(line, '"') % 2 === 1;
-  if (last === "," || (last === "}" && occurrences(line, "}") > occurrences(line, "{")) || (last === "]" && occurrences(line, "]") > occurrences(line, "[")) || (last === '"' && oddQuotes)) {
-    return line.slice(0, -1);
-  }
-  if ((first === "{" && occurrences(line, "{") > occurrences(line, "}")) || (first === "[" && occurrences(line, "[") > occurrences(line, "]")) || (first === '"' && oddQuotes)) {
-    return line.slice(1);
-  }
-  if (wrappedIn(line, "{", "}") || wrappedIn(line, "[", "]") || wrappedIn(line, '"', '"')) return line.slice(1, -1);
+  if (last !== undefined && "}],\"".includes(last) && unpartnered(line, last)) return line.slice(0, -1);
+  if (first !== undefined && "{[\"".includes(first) && unpartnered(line, first)) return line.slice(1);
+  if (wrapped(line)) return line.slice(1, -1);
   return line;
 }
 
 /**
  * A why-line with stray JSON punctuation taken off its ends. Structured output guarantees the
  * reply's shape, not the text inside a field, so a why-line can come back carrying a brace, bracket,
- * comma or quote from the JSON around it. Unpartnered ones at either end go, as does a pair wrapping
- * the whole line; balanced brackets and quotes inside the sentence, and its own punctuation, stay.
- * A line that cleans to empty is no why-line.
+ * comma or quote from the JSON around it. Unpartnered ones at either end go, as does a brace or
+ * bracket pair wrapping the whole line; balanced brackets and quotes inside the sentence, and its own
+ * punctuation, stay. Quotes are partnered by count, so which end an odd one is taken from assumes the
+ * stray is at the end, where the JSON leaves it. A line that cleans to empty is no why-line.
  */
 export function cleanWhyLine(raw: string): string {
   let line = raw.trim();
   for (;;) {
-    const next = stripOnce(line).trim();
+    const next = stripStrayEnd(line).trim();
     if (next === line) return line;
     line = next;
   }
+}
+
+/** The event with no flag and no why-line. */
+export function unflagged(event: Event): Event {
+  const { whyLine: _, ...rest } = event;
+  return { ...rest, dontMiss: false };
 }
 
 /** A stored event with its why-line cleaned; a flag whose why-line cleans to empty is no flag. Not a change, and not a judgment. */
@@ -133,6 +148,5 @@ export function cleanStoredWhyLine(event: Event): Event {
   if (event.whyLine === undefined) return event;
   const why = cleanWhyLine(event.whyLine);
   if (why === event.whyLine) return event;
-  const { whyLine: _, ...rest } = event;
-  return why === "" ? { ...rest, dontMiss: false } : { ...rest, whyLine: why };
+  return why === "" ? unflagged(event) : { ...event, whyLine: why };
 }
