@@ -29,6 +29,8 @@ export interface RunReport {
     heldThroughOutage: number;
     /** Active events made unverified this run by their third consecutive outage. */
     unverifiedByOutageLimit: number;
+    /** Active events made unverified this run because their page still lists them but a re-reading cited no date or venue. */
+    unverifiedByUncitableReading: number;
     /** Candidates dropped because their page placed them outside the geography. */
     outsideGeography: number;
     expired: Record<ExpiryReason, number>;
@@ -82,6 +84,8 @@ export interface RunReport {
   promotionSuggestions: { host: string; runsSeen: number; exampleUrl: string }[];
   /** The events unverified by the outage limit this run; re-checked each run until their page lists them again. */
   outageLimited: { title: string; primaryUrl: string }[];
+  /** The events unverified by an uncitable re-reading this run; a model wobble shows up here. Re-checked each run until a reading is verified again. */
+  uncitableReadings: { title: string; primaryUrl: string }[];
 }
 
 export function renderReportMarkdown(report: RunReport): string {
@@ -101,6 +105,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Held unverified | ${counts.heldUnverified} |
 | Held through an outage | ${counts.heldThroughOutage} |
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
+| Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
 | Dropped: outside geography | ${counts.outsideGeography} |
 | Expired: past | ${counts.expired.past} |
 | Expired: two-strike | ${counts.expired["two-strike"]} |
@@ -153,6 +158,10 @@ ${markdownList(
 ## Unverified by outage limit
 
 ${markdownList(report.outageLimited.map((e) => `${e.title}: ${e.primaryUrl}`))}
+
+## Unverified by an uncitable re-reading
+
+${markdownList(report.uncitableReadings.map((e) => `${e.title}: ${e.primaryUrl}`))}
 
 ## Promotion suggestions
 

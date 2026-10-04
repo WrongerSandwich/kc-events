@@ -44,6 +44,7 @@ describe("run", () => {
       heldUnverified: 0,
       heldThroughOutage: 0,
       unverifiedByOutageLimit: 0,
+      unverifiedByUncitableReading: 0,
       outsideGeography: 0,
       expired: { past: 0, "two-strike": 0, cancelled: 0 },
     });
@@ -55,6 +56,7 @@ describe("run", () => {
     expect(report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, problems: [] });
     expect(report.promotionSuggestions).toEqual([]);
     expect(report.outageLimited).toEqual([]);
+    expect(report.uncitableReadings).toEqual([]);
   });
 });
 

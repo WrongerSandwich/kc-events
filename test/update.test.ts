@@ -194,16 +194,15 @@ describe("re-verification and expiry", () => {
     expect(report.counts).toMatchObject({ found: 0, new: 0 });
   });
 
-  it("two strikes must be consecutive: a run that lists the event, even without anything citable, clears its strike", async () => {
+  it("an active event its page still lists without a citable venue is unverified, with its reading and curation kept and its strike cleared", async () => {
     const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
-    const struck = await runAt(WEEK_2, first.dataset, { completions: [reply()] });
+    const flagged = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, dontMiss: true, whyLine: "The one show this fall." })) };
+    const struck = await runAt(WEEK_2, flagged, { completions: [reply()] });
     expect(struck.dataset.events[0]!.verificationFailures).toBe(1);
 
-    const listed = await runAt(WEEK_3, struck.dataset, {
-      completions: [reply(candidate({ startDate: null, startTime: null, dateEvidence: null }))],
-    });
+    const listed = await runAt(WEEK_3, struck.dataset, { completions: [reply(candidate({ venue: null, venueEvidence: null }))] });
 
-    expect(listed.dataset.events[0]).toMatchObject({ status: "active", verificationFailures: 0, lastVerified: WEEK_1_ISO });
+    expect(listed.dataset.events).toEqual([{ ...flagged.events[0], status: "unverified", verificationFailures: 0, lastChanged: WEEK_3_ISO }]);
   });
 
   it("a model reply that cannot be read is not a strike against the events on that page", async () => {

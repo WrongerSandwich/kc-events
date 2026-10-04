@@ -5,6 +5,7 @@
  * repeated run replaces only those blocks and keeps the hand-written text around them.
  */
 import { citedDate, type Dataset, type Event } from "./dataset.js";
+import { onceVerified } from "./expiry.js";
 import { normalizeName } from "./identity.js";
 import { markdownTable, plural, tableCell } from "./markdown.js";
 import type { RunReport } from "./report.js";
@@ -119,6 +120,7 @@ ${markdownTable(
 
 /** Why cite-or-drop held an event: what could not be read, or that its page was never fetched. */
 function whyUnverified(e: Event): string {
+  if (onceVerified(e)) return "verified before; since hidden by an outage limit or an uncitable re-reading";
   const noDate = citedDate(e) === undefined || e.evidence.date === undefined;
   const noVenue = e.venue === undefined || e.evidence.venue === undefined;
   if (noDate && noVenue) return "no date or venue could be cited";
