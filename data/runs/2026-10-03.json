@@ -1,23 +1,23 @@
 {
   "runDate": "2026-10-03",
-  "startedAt": "2026-10-03T17:01:07-05:00",
-  "finishedAt": "2026-10-03T17:22:23-05:00",
-  "horizonWeeks": 3,
+  "startedAt": "2026-10-03T21:47:36-05:00",
+  "finishedAt": "2026-10-03T22:09:41-05:00",
+  "horizonWeeks": 8,
   "counts": {
-    "found": 386,
-    "new": 36,
-    "updated": 318,
+    "found": 521,
+    "new": 237,
+    "updated": 267,
     "reverified": 14,
-    "heldUnverified": 18,
-    "outsideGeography": 4,
+    "heldUnverified": 30,
+    "outsideGeography": 6,
     "expired": {
       "past": 0,
-      "two-strike": 8,
+      "two-strike": 18,
       "cancelled": 0
     }
   },
   "spend": {
-    "totalUsd": 0.20131436000000003,
+    "totalUsd": 0.3933546200000001,
     "capUsd": 5,
     "capHit": false,
     "shortfall": {
@@ -31,8 +31,8 @@
   "discovery": {
     "enabled": true,
     "queries": 10,
-    "aggregatorPages": 17,
-    "pagesExtracted": 72,
+    "aggregatorPages": 12,
+    "pagesExtracted": 65,
     "problems": [
       "https://fonts.googleapis.com/: HTTP 404",
       "https://fonts.gstatic.com/: HTTP 404",
@@ -40,55 +40,53 @@
       "robots.txt disallows https://l.sharethis.com/",
       "https://cmp.inmobi.com/: HTTP 403",
       "https://cdn.mytheatreland.com/: HTTP 403",
-      "http://www.kansasspeedway.com/: HTTP 403",
+      "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7nJ: HTTP 403",
+      "https://www.kcfilmoffice.com/: HTTP 403",
+      "https://mindtrip.ai/: HTTP 403",
       "https://artskcgo.com/categories/dance: HTTP 403",
       "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css: robots.txt unreachable (HTTP 522)",
-      "https://assets-sharetribecom.sharetribe.com/: HTTP 403",
-      "https://www.kcfilmoffice.com/: HTTP 403",
-      "https://artskcgo.com/categories/visual-art: HTTP 403",
+      "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7na&classificationId=KnvZfZ7vAe1: HTTP 403",
+      "https://seatgeek.com/cities/kansas-city/comedy: HTTP 403",
+      "https://kcparks.org/: HTTP 403",
+      "http://www.kansasspeedway.com/: HTTP 403",
       "https://artskcgo.com/: HTTP 403",
-      "https://kcur.secureallegiance.com/kcur/WebModule/Donate.aspx?P=KCG0226&PAGETYPE=PLG&CHECK=%2b5g%2fQkV05qm4ViHtxJWDB%2bzWDeZ%2beA1M: HTTP 403",
-      "https://do816.com/events/food-drink/2026/10/04: HTTP 403",
-      "robots.txt disallows https://flux.broadstreet.ai/",
-      "https://cdn.broadstreetads.com/: HTTP 403",
-      "https://use.fontawesome.com/: HTTP 404",
       "https://seatgeek.com/cities/kansas-city/sports: HTTP 403",
-      "https://monarchsbaseball.com/: HTTP 403",
+      "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7nE: HTTP 403",
       "https://artskcgo.com/categories/film: HTTP 403",
-      "https://artskcgo.com/categories/community: HTTP 403"
+      "https://gonorthkc.com/events: HTTP 403"
     ]
   },
   "curation": {
-    "calls": 3,
-    "judged": 65,
-    "flagged": 2,
+    "calls": 11,
+    "judged": 273,
+    "flagged": 10,
     "problems": []
   },
   "sources": [
     {
       "name": "Kauffman Center for the Performing Arts",
       "result": "fetched",
-      "extracted": 9
+      "extracted": 21
     },
     {
       "name": "Kansas City Symphony",
       "result": "fetched",
-      "extracted": 5
+      "extracted": 12
     },
     {
       "name": "recordBar",
       "result": "fetched",
-      "extracted": 21
+      "extracted": 40
     },
     {
       "name": "The Midland",
       "result": "fetched",
-      "extracted": 7
+      "extracted": 15
     },
     {
       "name": "T-Mobile Center",
       "result": "fetched",
-      "extracted": 5
+      "extracted": 12
     },
     {
       "name": "The Truman",
@@ -104,7 +102,7 @@
     {
       "name": "Folly Theater",
       "result": "fetched",
-      "extracted": 7
+      "extracted": 10
     },
     {
       "name": "American Jazz Museum",
@@ -114,12 +112,12 @@
     {
       "name": "Harriman-Jewell Series",
       "result": "fetched",
-      "extracted": 2
+      "extracted": 4
     },
     {
       "name": "Friends of Chamber Music",
       "result": "fetched",
-      "extracted": 3
+      "extracted": 4
     },
     {
       "name": "Kansas City Chorale",
@@ -128,8 +126,9 @@
     },
     {
       "name": "Midwest Trust Center",
-      "result": "fetched",
-      "extracted": 13
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://www.jccc.edu/midwest-trust-center/events/: HTTP 403"
     },
     {
       "name": "The Bottleneck",
@@ -139,22 +138,22 @@
     {
       "name": "The Granada",
       "result": "fetched",
-      "extracted": 8
+      "extracted": 10
     },
     {
       "name": "Replay Lounge",
       "result": "fetched",
-      "extracted": 39
+      "extracted": 45
     },
     {
       "name": "Lied Center of Kansas",
       "result": "fetched",
-      "extracted": 7
+      "extracted": 15
     },
     {
       "name": "Lawrence Arts Center",
       "result": "fetched",
-      "extracted": 18
+      "extracted": 22
     },
     {
       "name": "Spencer Museum of Art",
@@ -164,17 +163,17 @@
     {
       "name": "Kansas City Ballet",
       "result": "fetched",
-      "extracted": 2
+      "extracted": 3
     },
     {
       "name": "Kansas City Repertory Theatre",
       "result": "fetched",
-      "extracted": 3
+      "extracted": 4
     },
     {
       "name": "Unicorn Theatre",
       "result": "fetched",
-      "extracted": 1
+      "extracted": 2
     },
     {
       "name": "Kansas City Actors Theatre",
@@ -184,12 +183,13 @@
     {
       "name": "American Theatre Guild (Broadway in Kansas City)",
       "result": "fetched",
-      "extracted": 1
+      "extracted": 2
     },
     {
       "name": "New Theatre & Restaurant",
-      "result": "fetched",
-      "extracted": 1
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://www.newtheatre.com/shows: ECONNRESET fetching https://www.newtheatre.com/robots.txt"
     },
     {
       "name": "KC Fringe Festival",
@@ -199,22 +199,22 @@
     {
       "name": "The Comedy Club of Kansas City",
       "result": "fetched",
-      "extracted": 8
+      "extracted": 12
     },
     {
       "name": "Nelson-Atkins Museum of Art",
       "result": "fetched",
-      "extracted": 2
+      "extracted": 8
     },
     {
       "name": "Tivoli Cinemas",
       "result": "fetched",
-      "extracted": 3
+      "extracted": 6
     },
     {
       "name": "Kemper Museum of Contemporary Art",
       "result": "fetched",
-      "extracted": 9
+      "extracted": 13
     },
     {
       "name": "Linda Hall Library",
@@ -234,12 +234,13 @@
     {
       "name": "Charlotte Street Foundation",
       "result": "fetched",
-      "extracted": 3
+      "extracted": 10
     },
     {
       "name": "Crossroads Arts District",
-      "result": "fetched",
-      "extracted": 18
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://kccrossroads.org/: HTTP 403"
     },
     {
       "name": "Art Garden KC",
@@ -249,17 +250,17 @@
     {
       "name": "Arts Council of Johnson County",
       "result": "fetched",
-      "extracted": 17
+      "extracted": 18
     },
     {
       "name": "Kansas City Public Library",
       "result": "fetched",
-      "extracted": 6
+      "extracted": 9
     },
     {
       "name": "Rainy Day Books",
       "result": "fetched",
-      "extracted": 8
+      "extracted": 9
     },
     {
       "name": "Heartland Book Festival",
@@ -269,12 +270,12 @@
     {
       "name": "National WWI Museum and Memorial",
       "result": "fetched",
-      "extracted": 10
+      "extracted": 15
     },
     {
       "name": "GEHA Field at Arrowhead Stadium",
       "result": "fetched",
-      "extracted": 2
+      "extracted": 4
     },
     {
       "name": "Kansas City Mavericks",
@@ -284,12 +285,12 @@
     {
       "name": "Power & Light District",
       "result": "fetched",
-      "extracted": 12
+      "extracted": 22
     },
     {
       "name": "Kansas City Convention Center",
       "result": "fetched",
-      "extracted": 9
+      "extracted": 12
     },
     {
       "name": "City Market",
@@ -299,17 +300,18 @@
     {
       "name": "American Royal",
       "result": "fetched",
-      "extracted": 7
+      "extracted": 9
     },
     {
       "name": "KC Parks and Recreation",
-      "result": "fetched",
-      "extracted": 10
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://kcparks.org/events/: HTTP 403"
     },
     {
       "name": "Kansas City Zoo & Aquarium",
       "result": "fetched",
-      "extracted": 6
+      "extracted": 8
     },
     {
       "name": "Powell Gardens",
@@ -403,7 +405,22 @@
       "eventTitle": "Interstellar Live"
     },
     {
-      "eventTitle": "Frizzi 2 Fulci",
+      "eventTitle": "Prokofiev’s Sixth and Barber’s Violin Concerto"
+    },
+    {
+      "eventTitle": "Petite Performances: Halloween Spooktacular"
+    },
+    {
+      "eventTitle": "Happy Hour: Beethoven, Brahms and the Romantic Spirit"
+    },
+    {
+      "eventTitle": "The Music of Studio Ghibli"
+    },
+    {
+      "eventTitle": "Brahms’ German Requiem"
+    },
+    {
+      "eventTitle": "Frizzi 2 Fulci : Fabio Frizzi and the F2F Band",
       "venue": "Grand Temple"
     },
     {
@@ -413,27 +430,16 @@
       "eventTitle": "Stars of American Ballet"
     },
     {
-      "eventTitle": "VOCES8: Towards Paradise",
-      "venue": "Village Presbyterian Church"
+      "eventTitle": "Patrick Page: All The Devils Are Here"
     },
     {
-      "eventTitle": "Modigliani Quartet",
-      "venue": "St. Paul’s Episcopal Church"
-    },
-    {
-      "eventTitle": "Art of the Piano: Gabriela Montero",
-      "venue": "Folly Theater"
-    },
-    {
-      "eventTitle": "Tiny Toy Tales: Storytelling and Early Childhood Literacy – 'Anansi and the Moss-Covered Rock' with Kassie Misiewicz",
-      "venue": "SMSD Center for Academic Achievement"
-    },
-    {
-      "eventTitle": "Add More Arts to Your Classroom: Virtual Professional Development",
-      "venue": "Online"
+      "eventTitle": "Les Arts Florissants: The Magic of Monteverdi with William Christie and Paul Agnew, directors"
     },
     {
       "eventTitle": "Matinees for Schools"
+    },
+    {
+      "eventTitle": "The Nutcracker"
     },
     {
       "eventTitle": "Roundtable Conversation Series"
@@ -442,23 +448,25 @@
       "eventTitle": "Prelude Conversation Series"
     },
     {
-      "eventTitle": "Red Like Fruit",
-      "venue": "Unicorn Theatre",
-      "proposed": "Kansas City"
-    },
-    {
-      "eventTitle": "2026 Charlotte Street Visual Artist Awards Opening Reception",
-      "venue": "Emily & Todd Voth Artspace",
-      "proposed": "Kansas City"
+      "eventTitle": "A Christmas Carol 2026"
     },
     {
       "eventTitle": "2026 Gala: Rodeo Nouveau"
     },
     {
-      "eventTitle": "CCA Quarterly Mix & Mingle"
+      "eventTitle": "EMAS Presents"
     },
     {
-      "eventTitle": "The Wizard of Oz"
+      "eventTitle": "Nightshades Experimental Animation Festival"
+    },
+    {
+      "eventTitle": "Beyond the Black Crack: 50th Anniversary Celebration"
+    },
+    {
+      "eventTitle": "Artist Market @ Rooms We Carry Opening Reception"
+    },
+    {
+      "eventTitle": "Rooms We Carry Opening Reception"
     },
     {
       "eventTitle": "State of the Arts 2026",
@@ -486,7 +494,7 @@
       "proposed": "Overland Park"
     },
     {
-      "eventTitle": "ALL WE HAVE IS RIGHT NOW",
+      "eventTitle": "Carlos Rolón: ALL WE HAVE IS RIGHT NOW",
       "venue": "Nerman Museum of Contemporary Art",
       "proposed": "Overland Park"
     },
@@ -516,7 +524,7 @@
       "proposed": "Prairie Village"
     },
     {
-      "eventTitle": "KC Chorale & Te Deum - Gretchaninoff: Passion Week (at Village Presbyterian)",
+      "eventTitle": "Gretchaninoff: Passion Week",
       "venue": "Village Presbyterian Church",
       "proposed": "Prairie Village"
     },
@@ -531,7 +539,7 @@
       "proposed": "Olathe"
     },
     {
-      "eventTitle": "City Center Live",
+      "eventTitle": "War of the Worlds: The 1938 Radio Script",
       "venue": "Lenexa City Hall",
       "proposed": "Lenexa"
     },
@@ -546,7 +554,17 @@
       "proposed": "Prairie Village"
     },
     {
-      "eventTitle": "FrankenWines"
+      "eventTitle": "Fountain City String Quartet",
+      "venue": "Lenexa City Hall",
+      "proposed": "Lenexa"
+    },
+    {
+      "eventTitle": "FrankenWines",
+      "venue": "Offsite Location"
+    },
+    {
+      "eventTitle": "An Evening with Joyce Carol Oates",
+      "venue": "Offsite Location"
     },
     {
       "eventTitle": "Panel 2: The End of the World (But Make It Weird)"
@@ -564,14 +582,7 @@
       "eventTitle": "Collegiate Livestock Judging Contest"
     },
     {
-      "eventTitle": "VISUAL VOICE: Moments of Abstraction Exhibit",
-      "venue": "Bruce R. Watkins Cultural Heritage Center",
-      "proposed": "Kansas City"
-    },
-    {
-      "eventTitle": "Mobile Music Box Concert: MLK Park",
-      "venue": "Martin Luther King, Jr. Park",
-      "proposed": "Kansas City"
+      "eventTitle": "UPHA American Royal National Championship Horse Show"
     },
     {
       "eventTitle": "Fire Feast",
@@ -590,19 +601,408 @@
       "venue": "Powell Gardens"
     },
     {
-      "eventTitle": "Witch Way to the Wine",
-      "venue": "Downtown Excelsior Springs, Missouri",
-      "proposed": "Excelsior Springs"
+      "eventTitle": "Doja Cat - Tour Ma Vie World Tour",
+      "venue": "T-Mobile Center",
+      "proposed": "Kansas City"
     },
     {
-      "eventTitle": "MoJo Real Estate Oktoberfest 2026: Brody Buster Live",
-      "venue": "English Landing Park",
-      "proposed": "Parkville"
+      "eventTitle": "Chris Stapleton's All-American Road Show",
+      "venue": "Morton Amphitheater",
+      "proposed": "Kansas City"
     },
     {
-      "eventTitle": "Weston Whiskey Fest",
-      "venue": "Weston Burley House Inc",
-      "proposed": "Weston"
+      "eventTitle": "Bryson Tiller Presents: The Neo Trapsoul Tour",
+      "venue": "Morton Amphitheater",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Elevation Worship w/ Pastor Steven Furtick",
+      "venue": "T-Mobile Center",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Parcels",
+      "venue": "The Midland Theatre",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "BADDIES & BOSSES LIVE IN CONCERT-KANSAS CITY",
+      "venue": "Municipal Auditorium",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Earl Sweatshirt w/ MIKE",
+      "venue": "The Truman",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Daughtry - 20 Years Unplugged Tour",
+      "venue": "Uptown Theater",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "BECK: RIDE LONESOME TOUR",
+      "venue": "Uptown Theater",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "GEESE",
+      "venue": "The Midland Theatre",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Sueco The Child",
+      "venue": "Warehouse On Broadway",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Taking Back Sunday",
+      "venue": "The Midland Theatre",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "SOMBR - You Are The Reason Tour",
+      "venue": "T-Mobile Center",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "The Neighbourhood THE WORLD TOUR",
+      "venue": "T-Mobile Center",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Three Days Grace - Alienation Tour",
+      "venue": "T-Mobile Center",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Skillet",
+      "venue": "The Midland Theatre",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Jonas Brothers: The Burning Up Tour All Over Again",
+      "venue": "T-Mobile Center",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Thomas Rhett: The Soundtrack to Life Tour",
+      "venue": "Morton Amphitheater",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Meduza - Ages 18+",
+      "venue": "KC Live!",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Clara La San - Chosen Silences Tour Fall 2026",
+      "venue": "The Truman",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Em Beihold",
+      "venue": "Warehouse On Broadway",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "MercyMe w/ Jeremy Camp",
+      "venue": "T-Mobile Center",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Kenny G",
+      "venue": "The Midland Theatre",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Brandi Carlile: Burn The Setlist Tour (The All Request Tour)",
+      "venue": "Uptown Theater",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Almost Monday",
+      "venue": "The Truman",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "The Struts",
+      "venue": "Ameristar Casino and Hotel",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "David Nail",
+      "venue": "Saloon Stage At Knuckleheads Saloon",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Chasing Abbey",
+      "venue": "Warehouse On Broadway",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "Kansas City Symphony",
+      "venue": "Helzberg Hall - Kauffman Center for the Performing Arts",
+      "proposed": "Kansas City"
+    },
+    {
+      "eventTitle": "The Wizard of Oz"
+    },
+    {
+      "eventTitle": "Bourbon, Bacon & Brews",
+      "venue": "Clock Tower Landing"
+    },
+    {
+      "eventTitle": "Boulevard Tailgate Gala with Creed Humphrey",
+      "venue": "Boulevard Brewing Company"
+    },
+    {
+      "eventTitle": "10/20- Lee's Summit, MO- Dinner After Dark",
+      "venue": "Cooper’s Hawk Winery & Restaurant",
+      "proposed": "Lee's Summit"
+    },
+    {
+      "eventTitle": "BBQ Mentor Guest Chef Dinner",
+      "venue": "Broadmoor Bistro @ The Center for Academic Achievement"
+    },
+    {
+      "eventTitle": "Food 4 Thought Trivia Night at Cinder Block Brewing | Harvesters",
+      "venue": "Cinder Block Brewery"
+    },
+    {
+      "eventTitle": "10/19- Lee's Summit, MO- Dinner After Dark",
+      "venue": "Cooper’s Hawk Winery & Restaurant",
+      "proposed": "Lee's Summit"
+    },
+    {
+      "eventTitle": "McCormick & Schmick's + Duckhorn Wine Dinner - Kansas City",
+      "venue": "McCormick & Schmick's Seafood & Steaks"
+    },
+    {
+      "eventTitle": "Ghouls Pop Up Bar: A Halloween Pop Up Experience",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Fall Festival {ticketed, family-friendly}",
+      "venue": "KC Pumpkin Patch",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Sourdough Make & Take Class (Copy)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Live Music at Ghouls Pop Up Bar",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "2000's Music Bingo (FREE to Play)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Fall Cookie Decorating (Tickted)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Harry Potter Trivia",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "$5 Friday at Ghouls Pop Up Bar",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Hat Burning Workshop",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Pilates at the Farm {ticketed}",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Country Music Bingo",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Line Dancing at the Vineyard",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Boozy Book Exchange",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "FREE Friends Trivia",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Interactive Succulent Bar",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Cross Stitch Bag Charm Workshop (ticketd)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Taylor Swift Music Bingo",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Sip & Crochet Social: Mini Pumpkins (ticketed)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Wicked Trivia",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Mutts & Merlot: A Dog Friendly Weekend",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Mahjong 101: Beginner Lessons (Copy)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Holiday Wreath Make & Take",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "70's Music Bingo (FREE TO PLAY)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Dueling Pianos",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Char-BOO-uterie Make and Take Workshop",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Halloween Wine Walk (21+ Trick or Treating)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Jingle Pop Up Bar",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "$5 Friday",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "FREE Live Music at the Vineyard",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Holiday Market: Sip & Shop (FREE ENTRY)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "80's Music Bingo (Free to Play w/ Prizes)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Dueling Pianos (FREE Show)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Mahjong 101: Beginner Lessons",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Speed Dating {21-30}",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Country Music Bingo (Free to Play)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Line Dancing at the Vineyard (NO COVER)",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Door Mat Painting Workshop: Make & Take",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Hair Bands Music Bingo",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Speed dating {30-45}",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "FREE 90's Music Bingo",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Winter Wonderland {ticketed, family-friendly}",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Breakfast w/ The Mean One",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Jingle Bell Music Bingo",
+      "venue": "KC Wine Co",
+      "proposed": "Olathe"
+    },
+    {
+      "eventTitle": "Men's Soccer vs Tulsa"
+    },
+    {
+      "eventTitle": "Fun Farm 2026 Fall Festival",
+      "venue": "Fun Farm Pumpkin Patch"
+    },
+    {
+      "eventTitle": "Olathe Arts Festival 2026",
+      "proposed": "Olathe"
     },
     {
       "eventTitle": "PBR OUTLAW DAYS FESTIVAL"
@@ -612,41 +1012,28 @@
       "venue": "Boulevard Drive-In Theatre"
     },
     {
-      "eventTitle": "Next Stop Comedy",
+      "eventTitle": "Next Stop Comedy at Lifted Spirits Distillery! - Kansas City, MO",
       "venue": "Lifted Spirits Distillery"
     },
     {
-      "eventTitle": "Special Screening + Cast & Filmmakers Q&A",
-      "venue": "DISTRKCT"
+      "eventTitle": "Film Screening: Alfred Hitchcock - Master of Suspense",
+      "venue": "1900 Building"
     },
     {
-      "eventTitle": "Open Jam",
+      "eventTitle": "Bird Watching - A Short Film Showcase",
       "venue": "The Bird Comedy Theater"
-    },
-    {
-      "eventTitle": "Heartland Book Festival"
-    },
-    {
-      "eventTitle": "Walktober 2026: Kemper Outdoor Education Center",
-      "venue": "Kemper Outdoor Education Center",
-      "proposed": "Blue Springs"
-    },
-    {
-      "eventTitle": "Ciderfest",
-      "venue": "Louisburg Cider Mill & Country Store",
-      "proposed": "Louisburg"
-    },
-    {
-      "eventTitle": "Tabernacle Encounter in Kansas City",
-      "venue": "Metropolitan Community College Gymnasium",
-      "proposed": "Kansas City"
     }
   ],
   "promotionSuggestions": [
     {
-      "host": "rooftopcinemaclub.com",
-      "runsSeen": 3,
-      "exampleUrl": "https://rooftopcinemaclub.com/us/kansas-city/crossroads-kansas-city/screenings/twin-peaks-25047"
+      "host": "kansascitybrewfest.com",
+      "runsSeen": 2,
+      "exampleUrl": "https://www.kansascitybrewfest.com/"
+    },
+    {
+      "host": "btt.boldtypetickets.com",
+      "runsSeen": 2,
+      "exampleUrl": "https://btt.boldtypetickets.com/events/185466137/2026-hump-film-festival-fall-season-kansas-city-mo"
     }
   ]
 }
