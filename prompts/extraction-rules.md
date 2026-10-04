@@ -38,13 +38,17 @@ Every field you fill must come from the text of the page body you were given. No
 - `venue` is the name of the place as the page gives it. If the page is the venue's own site and it names itself anywhere in the body (header, footer, address block), that is the venue. Do not expand abbreviations or add words the page does not use.
 - An event the source is presenting somewhere else (a promoter page, a festival with multiple stages, an off-site performance) takes the venue the page names for that event, not the source's own name.
 - An organization is not a venue. A directory or district page lists events under the company, ensemble, presenter, or arts organization that puts them on (a ballet, a chorale, a concert series, a gallery that shows elsewhere), often with that organization's office address. The venue is only what the page names as the place the event happens; if it names none for the event, leave `venue` null. A business that is itself a place (a bar, a cafe, a theater, a shop) is a venue.
-- If no venue appears in the page body, leave `venue` null.
+- On a venue's own site, its own street address in the page body is evidence for the venue: the venue is the source's name, and the evidence is the address as the page gives it. This holds only for the source's own venue (named on the Source line below), never for an address that belongs to some other place.
+- When the page gives a street address for the event but no place name, and the address is not the source's own, the address is the venue, as the page gives it.
+- If no venue or address appears in the page body, leave `venue` null.
 
 ## Neighborhood
 
 - `neighborhood` is the name from the Neighborhoods list below that the venue's address or location falls in, spelled as the list spells it. Use the address or place name on the page; you may use what you know about where that address is, since a neighborhood is a mapping, not a fact the page states.
+- Give the most specific name on the list that the address falls in: a district such as "Crossroads" or "Westport" within Kansas City, Missouri; the city itself, such as "Overland Park" or "Olathe", in the suburbs.
+- "Kansas City" or "Kansas City, Missouri" alone is never an answer. An address in Kansas City, Missouri falls in one of its districts on the list; pick it. "Kansas City, Kansas" is on the list and is the answer for Wyandotte County addresses outside Bonner Springs.
 - "Lawrence" is for anywhere in Lawrence, Kansas.
-- When the address is in the geography but fits nothing on the list, give the neighborhood or city it is in instead (for example "Olathe"), so the run can flag it for the list to grow. Do not force it onto the nearest name on the list, and do not answer "Elsewhere in the metro" yourself: the run puts it there.
+- When the address is in the geography but fits nothing on the list, give the neighborhood or city it is in instead (for example "Gladstone"), so the run can flag it for the list to grow. Do not force it onto the nearest name on the list, and do not answer "Elsewhere in the metro" yourself: the run puts it there.
 - When the event is at the source's own venue, the source's neighborhood (given below) is the answer.
 - A page found by web search has no source (the Source line below says so): take the neighborhood from the address or location the page gives, never from what the search was for.
 - When the page gives no address or location and the event is not at the source's own venue, leave `neighborhood` null.

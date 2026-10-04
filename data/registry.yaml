@@ -2,7 +2,7 @@
 #
 # Each source:
 #   name: Knuckleheads
-#   urls: [https://example.com/calendar]   # prefer a structured feed (ICS/RSS) when one exists
+#   urls: [https://example.com/calendar]   # the calendar page, not a feed (see below)
 #   kind: music                            # from the kinds taxonomy in research.config.yaml
 #   neighborhood: East Bottoms             # joins the neighborhood list if it is not already on it
 #   checkHints: free text passed to the extractor
@@ -14,6 +14,11 @@
 # where a homepage is the listings page, the check hints say so. The neighborhood is where the
 # source's own venue is; a source that books many venues names its home base, and its check hints
 # tell the extractor to read the venue from each listing.
+#
+# Growing the registry: the first runs' don't-miss picks leaned heavily to music, because concert
+# rooms and series list many dated one-offs while museums, parks and festivals mostly yield runs and
+# recurring things. Weight new sources toward non-music ones that list dated one-offs: comedy rooms,
+# film societies, lecture series, food and drink organizers, sports beyond the big teams.
 #
 # Feeds are not used yet, though the brief prefers them: an event read from an ICS or RSS feed cites
 # its own page, which the run never fetches, so under cite-or-drop every one stays unverified. A
@@ -93,7 +98,8 @@ sources:
     kind: music
     neighborhood: Downtown
     checkHints: The homepage carries the season. Presenter; performances are at the Folly Theater, the Kauffman Center and elsewhere, so read the venue from each listing.
-    status: active
+    status: excluded
+    reason: Its homepage names no venue for any performance, so every event is held unverified; its performances are found on the Folly Theater and Lied Center calendars, which name the hall (checked 2026-10-04).
     notes: Presenter based at William Jewell College in Liberty; most shows are downtown.
 
   - name: Friends of Chamber Music
@@ -107,13 +113,13 @@ sources:
     urls: [https://www.kcchorale.org/concerts]
     kind: music
     neighborhood: Elsewhere in the metro
-    checkHints: Choir; concerts are in churches and halls across the metro, so read the venue from each listing.
+    checkHints: Choir; concerts are in churches and halls across the metro, so read the venue from each listing. The concert cards cut long venue names short ("The Cathedral of the Immaculate Concepti"); give the name as the card does, which is a faithful reading, not a typo.
     status: active
 
   - name: Midwest Trust Center
     urls: [https://www.jccc.edu/midwest-trust-center/events/]
     kind: music
-    neighborhood: Johnson County
+    neighborhood: Overland Park
     checkHints: Performing arts center at Johnson County Community College, Overland Park; Yardley Hall and Polsky Theatre.
     status: active
 
@@ -209,7 +215,7 @@ sources:
   - name: New Theatre & Restaurant
     urls: [https://www.newtheatre.com/shows]
     kind: theater/dance
-    neighborhood: Johnson County
+    neighborhood: Overland Park
     checkHints: Dinner theater in Overland Park; each production is a limited run.
     status: active
 
@@ -262,7 +268,7 @@ sources:
   - name: Nerman Museum of Contemporary Art
     urls: [https://www.nermanmuseum.org/exhibitions/]
     kind: art/exhibitions
-    neighborhood: Johnson County
+    neighborhood: Overland Park
     checkHints: Museum at Johnson County Community College, Overland Park. Exhibitions are limited runs.
     status: active
 
@@ -298,7 +304,7 @@ sources:
   - name: Arts Council of Johnson County
     urls: [https://artsjoco.org/acjc/calendar-of-events/]
     kind: art/exhibitions
-    neighborhood: Johnson County
+    neighborhood: Overland Park
     checkHints: A community calendar for Johnson County arts; many listings are classes or ongoing, which are not events. Read the venue from each listing.
     status: active
 
@@ -314,7 +320,7 @@ sources:
   - name: Rainy Day Books
     urls: [https://www.rainydaybooks.com/events]
     kind: talks/readings
-    neighborhood: Johnson County
+    neighborhood: Fairway
     checkHints: Bookstore at 2706 W 53rd St, Fairway; author events are often at other venues (Unity Temple on the Plaza and others), so read the venue from each listing.
     status: active
 
@@ -466,7 +472,7 @@ sources:
   - name: Funny Bone Comedy Club
     urls: [https://kc.funnybone.com/]
     kind: comedy
-    neighborhood: Johnson County
+    neighborhood: Overland Park
     status: excluded
     reason: The site answers the job's fetcher with HTTP 403 (checked 2026-10-03).
 

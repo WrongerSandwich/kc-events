@@ -65,7 +65,7 @@ The place an event happens. A venue is not the same as a source, even when the v
 _Avoid_: location, room (when meaning the venue as a whole)
 
 **Neighborhood**:
-The part of the metro a venue is in, from a controlled list, shown on the site in place of a street address. The list is the config's plus every registry source's neighborhood. "Lawrence" and "elsewhere in the metro" are the catch-alls; an address that maps to nothing lands in elsewhere in the metro and is flagged as unmappable in the run report.
+The part of the metro a venue is in, from a controlled list, shown on the site in place of a street address: the most specific place name people use, a district in the core ("Crossroads") or a city in the suburbs ("Olathe"). The list is the config's plus every registry source's neighborhood. "Lawrence" and "elsewhere in the metro" are the catch-alls; an address that maps to nothing lands in elsewhere in the metro and is flagged as unmappable in the run report.
 
 ### Research
 
@@ -147,6 +147,10 @@ A source the job knows about but does not fetch, with the reason recorded: its `
 **Don't-miss list**:
 The top section of the site: one-offs and limited runs carrying the don't-miss flag, grouped by horizon.
 _Avoid_: picks, highlights, featured
+
+**Region**:
+A group of neighborhoods at the scale of a trip decision (Central KC, Johnson County, the Northland). Fixed by the neighborhood list, not read from any page: an event's region is its neighborhood's. What the site lets a reader browse by; the neighborhood is what each event shows.
+_Avoid_: area, zone
 
 **Horizon**:
 The time bucket a don't-miss event falls into: this weekend, next two weeks, further out.
