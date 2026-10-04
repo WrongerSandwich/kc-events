@@ -6,7 +6,7 @@ Run 2026-10-03 (`data/runs/2026-10-03.md`), horizon 3 weeks, cap 5 USD.
 
 Counts one and two are Evan's: write under their headings. Counts three and four are filled by `pnpm grade` from the run report and dataset, and their marked blocks are replaced on every re-run; write outside the markers, never inside.
 
-The job ran three times on 2026-10-03, each over the same 3-week horizon with the 5 USD cap, and the report file carries the last run. Run one (16:05) is at commit 9c3119e: 368 found, 338 active, 30 held unverified, 13 flagged, 0.4545 USD. Run two (16:36), after the first audit's fixes: 382 found, 38 new, 324 updated, 9 re-verified, 19 held, 0.2125 USD. Run three (17:01), after the second audit's fixes, is the one below. Spend fell by half once the dataset existed, since the extraction model only re-reads pages and curation judges only what changed.
+The job ran three times on 2026-10-03, each over the same 3-week horizon with the 5 USD cap, and the report file carries the last run. Run one (16:05) is at commit 9c3119e: 368 found, 338 active, 30 held unverified, 13 flagged, 0.4545 USD. Run two (16:36), after the first audit's fixes: 382 found, 38 new, 324 updated, 9 re-verified, 19 held, 0.2125 USD. Run three (17:01), after the second audit's fixes, is the one below. The first weekly workflow run, also dated 2026-10-03, later overwrote `data/runs/2026-10-03.md` and `.json` with an 8-week report; the graded run three's report and dataset are at commit 7a646aa (`git show 7a646aa:data/runs/2026-10-03.md`). Spend fell by half once the dataset existed, since the extraction model only re-reads pages and curation judges only what changed.
 
 ## 1. Found and would propose
 
