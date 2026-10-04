@@ -194,6 +194,15 @@ finish() {
 TOTAL_STAGES=4
 WORKFLOW=weekly-research.yml
 
+# bare VALUE prints VALUE without a trailing CR or one pair of surrounding quotes. The CLI reads .env
+# with Node's loader, which drops both, but the library's re-run default is the raw line: a quoted
+# key would reach GitHub with its quotes and fail every run with a 401.
+bare() {
+  local v="${1%$'\r'}"
+  if [[ "$v" =~ ^\"(.*)\"$ || "$v" =~ ^\'(.*)\'$ ]]; then v="${BASH_REMATCH[1]}"; fi
+  printf '%s' "$v"
+}
+
 banner "KC Events: weekly workflow setup"
 
 # ── Stage 1: GitHub CLI ────────────────────────────────────────────────────
@@ -213,6 +222,7 @@ stage "Actions secret: OPENROUTER_API_KEY"
 say "The weekly run pays for model calls with the same OpenRouter key as the hand runs."
 note "Enter keeps the key already in $ENV_FILE. To make a new one: https://openrouter.ai/settings/keys"
 ask_secret OPENROUTER_API_KEY "OpenRouter key:"
+OPENROUTER_API_KEY=$(bare "${OPENROUTER_API_KEY:-}")
 if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
   warn "no key given; every weekly run will fail until the secret is set"
   SKIPPED+=("GitHub secret OPENROUTER_API_KEY (no key given)")
@@ -226,6 +236,7 @@ stage "Actions secret: TAVILY_API_KEY"
 say "The discovery lane searches with Tavily; without this key every weekly run fails at the start."
 note "Enter keeps the key already in $ENV_FILE. To make a new one: https://app.tavily.com/home"
 ask_secret TAVILY_API_KEY "Tavily key:"
+TAVILY_API_KEY=$(bare "${TAVILY_API_KEY:-}")
 if [[ -z "${TAVILY_API_KEY:-}" ]]; then
   warn "no key given; every weekly run will fail until the secret is set"
   SKIPPED+=("GitHub secret TAVILY_API_KEY (no key given)")
