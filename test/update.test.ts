@@ -175,9 +175,21 @@ describe("re-verification and expiry", () => {
   it("an event whose source failed this run takes a strike without its page being fetched twice", async () => {
     const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
 
-    const second = await runAt(WEEK_2, first.dataset, { pages: { [CALENDAR_URL]: new Error("connect ECONNREFUSED") }, completions: [] });
+    // Another source still answers: a run in which every source fails stops instead (see the run tests).
+    const elsewhere = source("Elsewhere");
+    const fakes = fakePorts(WEEK_2, {
+      pages: { [CALENDAR_URL]: new Error("connect ECONNREFUSED"), [elsewhere.urls[0]!]: PAGE },
+      completions: [reply()],
+    });
+    const second = await run({
+      config: testConfig(),
+      prompts: testPrompts(),
+      dataset: first.dataset,
+      registry: { sources: [knuckleheads, elsewhere] },
+      ports: fakes.ports,
+    });
 
-    expect(second.calls).toEqual(["fetch:https://knuckleheads.test/calendar"]);
+    expect(fakes.calls.filter((c) => c.includes("knuckleheads"))).toEqual(["fetch:https://knuckleheads.test/calendar"]);
     expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], verificationFailures: 1 }]);
   });
 

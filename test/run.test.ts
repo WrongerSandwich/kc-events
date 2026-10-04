@@ -135,7 +135,9 @@ describe("registry lane fetching", () => {
       pages: {
         "https://third.test/": { status: 500, body: "" },
         "https://second.test/": { status: 503, body: "" },
+        "https://open.test/": { status: 200, body: "<html>calendar</html>" },
       },
+      completions: [NO_EVENTS],
     });
 
     const { dataset, report } = await run({
@@ -145,12 +147,34 @@ describe("registry lane fetching", () => {
         ...emptyDataset(),
         sourceState: { "Third Strike": { consecutiveFailures: 2 }, "Second Strike": { consecutiveFailures: 1 } },
       },
-      registry: { sources: [source("Third Strike", ["https://third.test/"]), source("Second Strike", ["https://second.test/"])] },
+      registry: {
+        sources: [source("Third Strike", ["https://third.test/"]), source("Second Strike", ["https://second.test/"]), source("Open Venue", ["https://open.test/"])],
+      },
       ports,
     });
 
     expect(dataset.sourceState["Third Strike"]).toEqual({ consecutiveFailures: 3 });
     expect(report.failingSources).toEqual(["Third Strike"]);
+  });
+
+  it("a run in which no active source can be fetched fails before any model call, so the dataset is not struck", async () => {
+    const { ports, calls } = fakePorts(WEEK_1, {
+      pages: {
+        "https://down.test/": new Error("connect ECONNREFUSED"),
+        "https://walled.test/": { status: 403, body: "blocked" },
+      },
+    });
+
+    await expect(
+      run({
+        config: testConfig(),
+        prompts: testPrompts(),
+        dataset: emptyDataset(),
+        registry: { sources: [source("Down Venue", ["https://down.test/"]), source("Walled Venue", ["https://walled.test/"])] },
+        ports,
+      }),
+    ).rejects.toThrow("none of the 2 active registry sources could be fetched");
+    expect(calls.filter((c) => c.startsWith("model:"))).toEqual([]);
   });
 
   it("an excluded source is skipped with its reason shown and its state left alone", async () => {
@@ -174,14 +198,19 @@ describe("registry lane fetching", () => {
 
   it("a source with one blocked URL and one failed URL counts as failed and shows both", async () => {
     const { ports } = fakePorts(WEEK_1, {
-      pages: { "https://mixed.test/blocked": "robots-blocked", "https://mixed.test/feed": { status: 500, body: "" } },
+      pages: {
+        "https://mixed.test/blocked": "robots-blocked",
+        "https://mixed.test/feed": { status: 500, body: "" },
+        "https://open.test/": { status: 200, body: "<html>calendar</html>" },
+      },
+      completions: [NO_EVENTS],
     });
 
     const { dataset, report } = await run({
       config: testConfig(),
       prompts: testPrompts(),
       dataset: emptyDataset(),
-      registry: { sources: [source("Mixed Venue", ["https://mixed.test/blocked", "https://mixed.test/feed"])] },
+      registry: { sources: [source("Mixed Venue", ["https://mixed.test/blocked", "https://mixed.test/feed"]), source("Open Venue", ["https://open.test/"])] },
       ports,
     });
 
@@ -193,6 +222,7 @@ describe("registry lane fetching", () => {
         extracted: 0,
         detail: "https://mixed.test/feed: HTTP 500; robots.txt disallows https://mixed.test/blocked",
       },
+      { name: "Open Venue", result: "fetched", extracted: 0 },
     ]);
   });
 });

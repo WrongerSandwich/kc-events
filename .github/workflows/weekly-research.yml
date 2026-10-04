@@ -1,0 +1,79 @@
+# The weekly research run: runs the CLI and commits the dataset (source state lives inside it) and
+# the run's report back to the branch it ran on. A failed run commits nothing, so the last committed
+# dataset stands, and the job goes red with the error in the "Research run" step's log.
+#
+# Secrets OPENROUTER_API_KEY and TAVILY_API_KEY are set by scripts/weekly-workflow-setup.sh.
+# The weekly commit is also the repo activity that keeps GitHub from disabling this schedule after
+# 60 quiet days.
+name: Weekly research
+
+on:
+  schedule:
+    # Mondays at 11:17 UTC: 6:17 a.m. Central in summer, 5:17 in winter. Early in the week, ahead of
+    # the Tuesday-morning push, and off the top of the hour, when scheduled jobs queue longest.
+    - cron: "17 11 * * 1"
+  workflow_dispatch:
+    inputs:
+      no-discovery:
+        description: Turn the discovery lane off for this run (pnpm research --no-discovery)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+# Two runs at once would race to commit the same files; the second waits for the first.
+concurrency:
+  group: weekly-research
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash # -eo pipefail, so a failed CLI fails its step even through tee
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6 # version from packageManager in package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Research run
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          NO_DISCOVERY: ${{ inputs.no-discovery }}
+        run: |
+          args=()
+          if [[ "$NO_DISCOVERY" == "true" ]]; then args+=(--no-discovery); fi
+          pnpm research "${args[@]}"
+
+      - name: Commit the run
+        env:
+          TRIGGER: ${{ github.event_name }}
+        run: |
+          git add data/events.json data/runs
+          # The report written this run names the run date the CLI used, which is the one to commit under.
+          run_date=$(git diff --cached --name-only -- data/runs | sed -n 's|^data/runs/\(.*\)\.json$|\1|p' | head -n1)
+          if [[ -z "$run_date" ]]; then
+            echo "::error::the run finished but wrote no report under data/runs"
+            exit 1
+          fi
+          message="Weekly research run $run_date"
+          if [[ "$TRIGGER" == "workflow_dispatch" ]]; then message="$message (manual run)"; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --quiet -m "$message"
+          # Someone may have pushed while the run was going; the run touches only data files, so rebase onto them.
+          git pull --quiet --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
+          cat "data/runs/$run_date.md" >> "$GITHUB_STEP_SUMMARY"

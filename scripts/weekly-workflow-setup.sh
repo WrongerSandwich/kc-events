@@ -180,102 +180,89 @@ finish() {
 }
 
 # ──────────────────────────────────────────────────────────────────────────
-# STAGES: the human steps of the milestone-one hand run (#11).
+# STAGES: the human steps that switch on the weekly research workflow (#12).
 #
-# The research job needs two keys in a gitignored .env, and the OpenRouter key
-# needs a monthly limit of its own: the second of the two spend layers, so a
-# bug in the per-run cap (spendCapUsd in research.config.yaml) cannot cost
-# more than that ceiling. Re-running is safe: saved values are offered back.
+# The workflow (.github/workflows/weekly-research.yml) reads two Actions secrets, OPENROUTER_API_KEY
+# and TAVILY_API_KEY. This wizard sets both from the keys in the gitignored .env (Enter keeps them),
+# then offers to start a first run and watch it. Re-running is safe: secrets are overwritten.
 #
-#   bash scripts/hand-run-setup.sh
+#   bash scripts/weekly-workflow-setup.sh
+#
+# The OpenRouter key's monthly limit, the second spend layer, is set by scripts/hand-run-setup.sh.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=3
+TOTAL_STAGES=4
+WORKFLOW=weekly-research.yml
 
-# Weekly runs at the 5 USD per-run cap could legitimately spend 52/12 * 5 ≈ 22 USD a month, so a
-# ceiling below that would cut honest runs short. 25 USD leaves that room and still bounds a bug.
-SUGGESTED_MONTHLY_LIMIT_USD=25
+banner "KC Events: weekly workflow setup"
 
-banner "KC Events: hand-run setup"
+# ── Stage 1: GitHub CLI ────────────────────────────────────────────────────
+stage "GitHub CLI: signed in to this repo"
+say "The secrets are set with the gh CLI, signed in as someone who can administer this repo."
+until gh auth status >/dev/null 2>&1; do
+  warn "gh is not signed in (or not installed)"
+  step "In another terminal, run: gh auth login"
+  pause "Press Enter once gh auth status succeeds."
+done
+REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
+say "Secrets will go to ${BOLD}${REPO}${RESET}."
+confirm "Is that the right repo?" || { warn "run this from a clone of the right repo"; exit 1; }
 
-# ── Stage 1: OpenRouter key ────────────────────────────────────────────────
-stage "OpenRouter: API key"
-say "The research job pays for its model calls through one OpenRouter key."
-open_url "https://openrouter.ai/settings/keys"
-step "Sign in if asked, then click 'Create API Key' (or reuse the key you made for this job)."
-step "Name it something you will recognize in the dashboard, e.g. kc-events."
-step "Leave the credit limit for the next stage, or set it now if the form offers one."
-step "Copy the key: OpenRouter shows it once, right after creating it."
-ask_secret OPENROUTER_API_KEY "Paste the OpenRouter key:"
+# ── Stage 2: OpenRouter key → Actions secret ───────────────────────────────
+stage "Actions secret: OPENROUTER_API_KEY"
+say "The weekly run pays for model calls with the same OpenRouter key as the hand runs."
+note "Enter keeps the key already in $ENV_FILE. To make a new one: https://openrouter.ai/settings/keys"
+ask_secret OPENROUTER_API_KEY "OpenRouter key:"
 if [[ -z "${OPENROUTER_API_KEY:-}" ]]; then
-  warn "no key given; the research job cannot run without one"
+  warn "no key given; every weekly run will fail until the secret is set"
+  SKIPPED+=("GitHub secret OPENROUTER_API_KEY (no key given)")
 else
   write_env OPENROUTER_API_KEY "$OPENROUTER_API_KEY"
+  set_secret OPENROUTER_API_KEY "$OPENROUTER_API_KEY"
 fi
 
-# ── Stage 2: monthly limit on that key ─────────────────────────────────────
-stage "OpenRouter: monthly limit on the key"
-say "This is the second spend layer. The first, spendCapUsd in research.config.yaml, stops model"
-say "calls inside a run; this one lives on the key itself, so a bug in the first cannot spend past it."
-say "Suggested ceiling: ${SUGGESTED_MONTHLY_LIMIT_USD} USD a month (weekly runs at the 5 USD cap come to about 22)."
-open_url "https://openrouter.ai/settings/keys"
-step "Find the kc-events key in the list and open its edit menu."
-step "Set its credit limit to ${SUGGESTED_MONTHLY_LIMIT_USD} (USD), and set the limit to reset monthly."
-note "OpenRouter's key API calls these 'limit' and 'limit_reset' (daily / weekly / monthly). If the"
-note "dashboard offers a credit limit but no reset period, set the limit anyway: it then caps the key's"
-note "lifetime spend, which still bounds a bug; raise it by hand when it runs down."
-step "Save the key."
-pause "Press Enter once the limit is saved, and this wizard will read it back from OpenRouter."
-if [[ -n "${OPENROUTER_API_KEY:-}" ]] && command -v curl >/dev/null 2>&1; then
-  KEY_INFO=$(curl -sS --max-time 15 https://openrouter.ai/api/v1/key -H "Authorization: Bearer ${OPENROUTER_API_KEY}" 2>/dev/null || true)
-  if [[ -z "$KEY_INFO" ]]; then
-    warn "could not reach OpenRouter to read the key back; check the limit in the dashboard"
-    SKIPPED+=("confirm the OpenRouter key's monthly limit in the dashboard")
-  else
-    say "OpenRouter reports for this key:"
-    if command -v jq >/dev/null 2>&1; then
-      printf '%s' "$KEY_INFO" | jq -r '.data | "    label: \(.label // "?")\n    limit: \(.limit // "none") USD\n    limit resets: \(.limit_reset // "never")\n    used so far: \(.usage // 0) USD"' 2>/dev/null || printf '    %s\n' "$KEY_INFO"
-    else
-      printf '    %s\n' "$KEY_INFO"
-      note "(install jq for a tidier readout)"
-    fi
-    if command -v jq >/dev/null 2>&1; then
-      KEY_LIMIT=$(printf '%s' "$KEY_INFO" | jq -r '.data.limit // "null"' 2>/dev/null || echo "?")
-      KEY_RESET=$(printf '%s' "$KEY_INFO" | jq -r '.data.limit_reset // "null"' 2>/dev/null || echo "?")
-    else
-      KEY_LIMIT=$(printf '%s' "$KEY_INFO" | grep -oE '"limit"[[:space:]]*:[[:space:]]*[^,}]+' | head -n1 | sed -E 's/.*:[[:space:]]*//; s/"//g')
-      KEY_RESET=$(printf '%s' "$KEY_INFO" | grep -oE '"limit_reset"[[:space:]]*:[[:space:]]*[^,}]+' | head -n1 | sed -E 's/.*:[[:space:]]*//; s/"//g')
-    fi
-    if [[ -z "$KEY_LIMIT" || "$KEY_LIMIT" == "null" ]]; then
-      warn "the key has no limit yet"
-      SKIPPED+=("set the monthly limit on the OpenRouter key (it reads back as none)")
-    elif [[ "$KEY_RESET" != "monthly" ]]; then
-      warn "the key has a limit but it does not reset monthly; it caps lifetime spend instead"
-      SKIPPED+=("make the OpenRouter key's limit reset monthly, or remember to raise it when it runs down")
-    fi
-    confirm "Does the limit above look right?" || SKIPPED+=("fix the OpenRouter key limit in the dashboard")
-  fi
-else
-  SKIPPED+=("confirm the OpenRouter key's monthly limit in the dashboard")
-fi
-
-# ── Stage 3: Tavily key ───────────────────────────────────────────────────
-stage "Tavily: API key"
-say "The discovery lane searches with Tavily. Basic searches cost one credit each; the free tier's"
-say "1,000 credits a month cover the job's few dozen searches a week."
-open_url "https://app.tavily.com/home"
-step "Sign in, then find the API keys section on the home page."
-step "Copy the default key, or create one named kc-events."
-ask_secret TAVILY_API_KEY "Paste the Tavily key:"
+# ── Stage 3: Tavily key → Actions secret ───────────────────────────────────
+stage "Actions secret: TAVILY_API_KEY"
+say "The discovery lane searches with Tavily; without this key every weekly run fails at the start."
+note "Enter keeps the key already in $ENV_FILE. To make a new one: https://app.tavily.com/home"
+ask_secret TAVILY_API_KEY "Tavily key:"
 if [[ -z "${TAVILY_API_KEY:-}" ]]; then
-  warn "no key given; run with --no-discovery until there is one"
+  warn "no key given; every weekly run will fail until the secret is set"
+  SKIPPED+=("GitHub secret TAVILY_API_KEY (no key given)")
 else
   write_env TAVILY_API_KEY "$TAVILY_API_KEY"
+  set_secret TAVILY_API_KEY "$TAVILY_API_KEY"
+fi
+say "GitHub now lists these Actions secrets:"
+gh secret list 2>/dev/null | sed 's/^/    /' || warn "could not list the secrets"
+
+# ── Stage 4: a first run ───────────────────────────────────────────────────
+stage "First run"
+say "The schedule fires on Mondays at 11:17 UTC. A run started now checks that everything works:"
+say "it spends real model money (up to the 5 USD per-run cap) and commits its results to main."
+open_url "https://github.com/${REPO}/actions/workflows/${WORKFLOW}"
+if confirm "Start a run now and watch it here?"; then
+  gh workflow run "$WORKFLOW" >/dev/null || warn "gh could not start the run; start it from the Actions page"
+  note "waiting for GitHub to queue it..."
+  RUN_ID=""
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 3
+    RUN_ID=$(gh run list --workflow "$WORKFLOW" --event workflow_dispatch --limit 1 --json databaseId,status \
+      --jq '.[] | select(.status != "completed") | .databaseId' 2>/dev/null || true)
+    [[ -n "$RUN_ID" ]] && break
+  done
+  if [[ -z "$RUN_ID" ]]; then
+    warn "could not find the run; watch it on the Actions page instead"
+    SKIPPED+=("watch the first run on the Actions page")
+  elif gh run watch "$RUN_ID" --exit-status; then
+    say "The run passed and committed. Pull it with: git pull"
+  else
+    warn "the run failed; its log is at https://github.com/${REPO}/actions/runs/${RUN_ID}"
+    SKIPPED+=("read the failed run's log and fix what it names, then re-run from the Actions page")
+  fi
+else
+  SKIPPED+=("start a first run from the Actions page (Run workflow), or wait for Monday")
 fi
 # ──────────────────────────────────────────────────────────────────────────
 
 finish
-say "Next: a hand run, or the weekly workflow's secrets."
-say "  pnpm research                          # horizon and 5 USD cap come from research.config.yaml"
-say "  bash scripts/weekly-workflow-setup.sh  # the same keys as GitHub Actions secrets"
-printf '\n'

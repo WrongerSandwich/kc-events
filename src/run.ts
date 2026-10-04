@@ -56,6 +56,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   // Every model call goes through the cap, whatever stage makes it.
   const model = capSpend(ports.model, config.spendCapUsd);
   const registryLane = await checkRegistry(registry, dataset.sourceState, ports.fetcher);
+  assertSomethingFetched(registryLane.sourceReports);
   // An aggregator page is never a primary page, so nothing can be cited to one even if the registry fetched it.
   const fetchedUrls = new Set(
     registryLane.pages
@@ -139,6 +140,19 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     },
     report,
   };
+}
+
+/**
+ * A run in which every active registry source failed is a broken network (a runner whose address
+ * the venues block, an outage), not news about the sources: carried on, it would strike every
+ * active event and empty the site in two runs. It fails instead, before any model call, so the
+ * CLI writes nothing and the last committed dataset stands. A partial outage is a normal run.
+ */
+function assertSomethingFetched(sourceReports: SourceReport[]): void {
+  const checked = sourceReports.filter((r) => r.result !== "excluded");
+  if (checked.length === 0 || checked.some((r) => r.result !== "failed")) return;
+  const details = checked.map((r) => `  ${r.name}: ${r.detail ?? "failed"}`).join("\n");
+  throw new Error(`none of the ${checked.length} active registry sources could be fetched; the run stops so no event is struck:\n${details}`);
 }
 
 /** A page fetched from a registry source this run, ready for extraction. */
