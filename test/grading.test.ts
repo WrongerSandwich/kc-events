@@ -10,7 +10,7 @@ function report(overrides: Partial<RunReport> = {}): RunReport {
     startedAt: "2026-10-03T16:00:00-05:00",
     finishedAt: "2026-10-03T16:04:00-05:00",
     horizonWeeks: 3,
-    counts: { found: 40, new: 40, updated: 0, reverified: 0, heldUnverified: 2, outsideGeography: 1, expired: { past: 0, "two-strike": 0, cancelled: 0 } },
+    counts: { found: 40, new: 40, updated: 0, reverified: 0, heldUnverified: 2, heldThroughOutage: 0, unverifiedByOutageLimit: 0, outsideGeography: 1, expired: { past: 0, "two-strike": 0, cancelled: 0 } },
     spend: { totalUsd: 0.9, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 } },
     discovery: { enabled: true, queries: 10, aggregatorPages: 4, pagesExtracted: 12, problems: [] },
     curation: { calls: 2, judged: 38, flagged: 5, problems: [] },
@@ -18,6 +18,7 @@ function report(overrides: Partial<RunReport> = {}): RunReport {
     failingSources: [],
     unmappableNeighborhoods: [],
     promotionSuggestions: [],
+    outageLimited: [],
     ...overrides,
   };
 }
@@ -38,6 +39,7 @@ function active(overrides: Partial<Event> = {}): Event {
     lastChanged: "2026-10-03T16:00:00-05:00",
     status: "active",
     verificationFailures: 0,
+    consecutiveOutages: 0,
     lead: { lane: "registry", source: "recordBar" },
     evidence: { date: "Sat, Oct 17 · Doors 7:00 PM · Show 8:00 PM", venue: "recordBar, 1520 Grand Blvd" },
     ...overrides,

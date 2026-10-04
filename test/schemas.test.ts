@@ -78,6 +78,7 @@ describe("dataset", () => {
     lastVerified: "2026-10-02T22:15:00-05:00",
     status: "active",
     verificationFailures: 0,
+    consecutiveOutages: 0,
     lead: { lane: "registry", source: "Knuckleheads" },
     evidence: { date: "Sat Oct 10, show 8pm", venue: "Knuckleheads Saloon" },
   };
@@ -86,6 +87,15 @@ describe("dataset", () => {
     expect(parseDataset(emptyDataset())).toEqual(emptyDataset());
     const withEvent = { ...emptyDataset(), events: [event], sourceState: { Knuckleheads: { consecutiveFailures: 0 } } };
     expect(parseDataset(withEvent)).toEqual(withEvent);
+  });
+
+  it("loads an event written before the outage counter existed with no outages", () => {
+    const { consecutiveOutages: _, ...older } = event;
+    expect(parseDataset({ ...emptyDataset(), events: [older] }).events[0]).toEqual(event);
+  });
+
+  it("rejects a negative outage count", () => {
+    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, consecutiveOutages: -1 }] })).toThrow();
   });
 
   it("rejects an unknown schema version, unknown top-level fields, and unknown event fields", () => {

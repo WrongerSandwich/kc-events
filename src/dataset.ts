@@ -45,6 +45,8 @@ const eventFields = z.strictObject({
   status: z.enum(EVENT_STATUSES),
   expiryReason: z.enum(EXPIRY_REASONS).optional(),
   verificationFailures: z.number().int().nonnegative(),
+  /** Consecutive runs in which the event's primary page could not be loaded; absent in datasets older than the field. */
+  consecutiveOutages: z.number().int().nonnegative().default(0),
   lead: leadSchema,
   evidence: z.strictObject({
     date: z.string().min(1).optional(),

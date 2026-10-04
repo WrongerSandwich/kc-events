@@ -16,6 +16,7 @@ const event: Event = {
   lastVerified: "2026-10-02T22:15:00-05:00",
   status: "active",
   verificationFailures: 0,
+  consecutiveOutages: 0,
   lead: { lane: "registry", source: "Knuckleheads" },
   evidence: { date: "Sat, Oct 10", venue: "Knuckleheads Saloon" },
 };

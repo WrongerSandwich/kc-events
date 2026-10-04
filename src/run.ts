@@ -1,6 +1,6 @@
 import type { RunConfig } from "./config.js";
 import type { Dataset, Event, ExpiryReason, SourceState } from "./dataset.js";
-import { expire, expirePast, isPast, strike } from "./expiry.js";
+import { expire, expirePast, hiddenByOutage, isPast, outage, strike } from "./expiry.js";
 import {
   buildExtractionRequest,
   candidateToSighting,
@@ -83,6 +83,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const laneOutcome = {
     touched: merged.touched,
     triedUrls: new Set([...registryLane.triedUrls, ...discovery.triedUrls]),
+    outageUrls: new Set([...registryLane.outageUrls, ...discovery.outageUrls]),
     unreadUrls: new Set([...extraction.unreadUrls, ...discovery.unreadUrls]),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
@@ -111,6 +112,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       updated: merged.counts.updated,
       reverified: reverified.reverified,
       heldUnverified: merged.counts.heldUnverified,
+      heldThroughOutage: reverified.heldThroughOutage,
+      unverifiedByOutageLimit: reverified.outageLimited.length,
       outsideGeography: extraction.outsideGeography + discovery.outsideGeography + reverified.outsideGeography,
       expired: countExpired(dataset.events, events),
     },
@@ -127,6 +130,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     failingSources: registryLane.failingSources,
     unmappableNeighborhoods: unmappableNeighborhoods([...extraction.sightings, ...discovery.sightings, ...reverified.sightings]),
     promotionSuggestions: promotion.promotionSuggestions,
+    outageLimited: reverified.outageLimited.map((e) => ({ title: e.title, primaryUrl: e.primaryUrl })),
   };
 
   return {
@@ -144,8 +148,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
 
 /**
  * A run in which every active registry source failed is a broken network (a runner whose address
- * the venues block, an outage), not news about the sources: carried on, it would strike every
- * active event and empty the site in two runs. It fails instead, before any model call, so the
+ * the venues block), not news about the sources: carried on, it would count an outage against
+ * every active event and hide them all in three runs. It fails instead, before any model call, so the
  * CLI writes nothing and the last committed dataset stands. A partial outage is a normal run.
  */
 function assertSomethingFetched(sourceReports: SourceReport[]): void {
@@ -170,6 +174,7 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
   const sourceReports: SourceReport[] = [];
   const pages: SourcePage[] = [];
   const triedUrls = new Set<string>();
+  const outageUrls = new Set<string>();
   const sourceState = { ...previous };
   const failuresOf = (name: string) => sourceState[name]?.consecutiveFailures ?? 0;
 
@@ -180,6 +185,7 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
     }
     const checked = await checkSource(source, fetcher);
     for (const url of [...source.urls, ...checked.pages.map((p) => p.finalUrl)]) triedUrls.add(normalizeUrl(url, url));
+    for (const url of checked.outages) outageUrls.add(normalizeUrl(url, url));
     sourceReports.push(checked.report);
     pages.push(...checked.pages.map((page) => ({ source, page })));
     if (checked.report.result === "fetched") sourceState[source.name] = { consecutiveFailures: 0 };
@@ -189,7 +195,7 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
   const failingSources = registry.sources
     .filter((s) => s.status === "active" && failuresOf(s.name) >= FAILING_SOURCE_THRESHOLD)
     .map((s) => s.name);
-  return { sourceReports, sourceState, failingSources, pages, triedUrls };
+  return { sourceReports, sourceState, failingSources, pages, triedUrls, outageUrls };
 }
 
 /**
@@ -197,30 +203,27 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
  * Any failed URL marks the source failed, so it can still reach the failing-source flag;
  * otherwise a URL blocked by robots.txt marks it blocked, so Evan decides what to do.
  * The detail names every failed and blocked URL either way. Pages that did come back are
- * returned for extraction whatever the source's overall result.
+ * returned for extraction whatever the source's overall result, and URLs that failed as an outage
+ * are returned so re-verification does not strike the events on them.
  */
-async function checkSource(source: Source, fetcher: FetchPort): Promise<{ report: SourceReport; pages: FetchResult[] }> {
+async function checkSource(source: Source, fetcher: FetchPort): Promise<{ report: SourceReport; pages: FetchResult[]; outages: string[] }> {
   const blocked: string[] = [];
   const failed: string[] = [];
+  const outages: string[] = [];
   const pages: FetchResult[] = [];
   for (const url of source.urls) {
-    let page: FetchResult;
-    try {
-      page = await fetcher.fetch(url);
-    } catch (error) {
-      failed.push(`${url}: ${error instanceof Error ? error.message : String(error)}`);
-      continue;
-    }
-    if (!page.robotsAllowed) blocked.push(url);
-    else if (page.status < 200 || page.status >= 300) failed.push(`${url}: HTTP ${page.status}`);
-    else pages.push(page);
+    const fetched = await fetchReadable(url, fetcher);
+    if ("page" in fetched) pages.push(fetched.page);
+    else if (fetched.failure === "disallowed") blocked.push(url);
+    else failed.push(fetched.problem);
+    if ("failure" in fetched && fetched.failure === "outage") outages.push(url);
   }
 
   const report: SourceReport = { name: source.name, result: "fetched", extracted: 0 };
   const problems = [...failed, ...(blocked.length > 0 ? [`robots.txt disallows ${blocked.join(", ")}`] : [])];
-  if (failed.length > 0) return { report: { ...report, result: "failed", detail: problems.join("; ") }, pages };
-  if (blocked.length > 0) return { report: { ...report, result: "blocked", detail: problems.join("; ") }, pages };
-  return { report, pages };
+  if (failed.length > 0) return { report: { ...report, result: "failed", detail: problems.join("; ") }, pages, outages };
+  if (blocked.length > 0) return { report: { ...report, result: "blocked", detail: problems.join("; ") }, pages, outages };
+  return { report, pages, outages };
 }
 
 /** What extraction made of one source's pages this run. */
@@ -356,12 +359,13 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string)
  * What a sighting of a known event does to it: a page saying cancelled expires it (an event
  * already expired keeps its reason); a verified reading refreshes it; a reading with nothing
  * citable leaves it as it was, except that the page still lists it, so it is not missing and
- * any strike is cleared.
+ * any strike and any run of outages is cleared.
  */
 function applySighting(known: Event, { event, cancelled }: Sighting): { event: Event; refreshed: boolean } {
   if (cancelled) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false };
   if (event.status === "active") return { event: refresh(known, event), refreshed: true };
-  return { event: known.verificationFailures === 0 ? known : { ...known, verificationFailures: 0 }, refreshed: false };
+  const cleared = known.verificationFailures === 0 && known.consecutiveOutages === 0;
+  return { event: cleared ? known : { ...known, verificationFailures: 0, consecutiveOutages: 0 }, refreshed: false };
 }
 
 /**
@@ -383,15 +387,18 @@ function refresh(known: Event, sighting: Event): Event {
 }
 
 /**
- * Re-verification: every active event neither lane sighted is checked against its primary page.
- * A primary page on an aggregator is never fetched or read; that is a strike. A page either lane
- * already tried this run is not fetched again: if it was
- * read, the event is missing from it; if it failed, it failed. Either way that is a strike, as
- * is a re-fetch that fails or a page that no longer lists the event. A page that does list it
- * applies the sighting as in the registry lane. When the model's reply about a page could not be
- * read, nothing is known either way and the event is left alone: a bad reply is not a dead page.
- * Once the spend cap is reached, pages still to check are not fetched and their events are left
- * alone too, counted as not re-verified.
+ * Re-verification: every active event neither lane sighted is checked against its primary page,
+ * and so is every event outages hid (ADR 0008), each run until it is past. A primary page on an
+ * aggregator is never fetched or read; that is a strike. A page either lane already tried this run
+ * is not fetched again; it counts as that attempt ended. A page that loaded and no longer lists the
+ * event is a strike, as is one that is gone (404, 410) or that robots.txt now disallows. A page
+ * that could not be loaded (a network error, robots.txt unreachable, 403, 429, 5xx or any other
+ * failure) is an outage: it holds an active event as it was, up to the outage limit. A page that
+ * does list the event applies the sighting as in the registry lane, which revives a hidden event
+ * whose reading is verified. When the model's reply about a page could not be read, nothing is
+ * known either way and the event is left alone: a bad reply is not a dead page. Once the spend cap
+ * is reached, pages still to check are not fetched and their events are left alone too, counted
+ * as not re-verified.
  */
 async function reverify(
   events: Event[],
@@ -400,15 +407,26 @@ async function reverify(
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
 ) {
-  const pending = events.filter((e) => e.status === "active" && !lane.touched.has(e.id) && !lane.unreadUrls.has(e.primaryUrl));
+  const pending = events.filter(
+    (e) => (e.status === "active" || hiddenByOutage(e)) && !lane.touched.has(e.id) && !lane.unreadUrls.has(e.primaryUrl),
+  );
   const sightingsAt = new Map<string, Sighting[]>();
+  const down = new Set<string>();
   const refreshed = new Set<string>();
   let outsideGeography = 0;
   let notReverified = 0;
 
   for (const url of new Set(pending.map((e) => e.primaryUrl))) {
     // An aggregator page is never read, so it can never again show the event: a strike.
-    if (lane.triedUrls.has(url) || onHost(url, context.config.discovery.aggregatorHosts)) {
+    if (onHost(url, context.config.discovery.aggregatorHosts)) {
+      sightingsAt.set(url, []);
+      continue;
+    }
+    if (lane.outageUrls.has(url)) {
+      down.add(url);
+      continue;
+    }
+    if (lane.triedUrls.has(url)) {
       sightingsAt.set(url, []);
       continue;
     }
@@ -416,11 +434,13 @@ async function reverify(
       notReverified += pending.filter((e) => e.primaryUrl === url).length;
       continue;
     }
-    const page = await fetchPage(url, ports.fetcher);
-    if (!page) {
-      sightingsAt.set(url, []);
+    const fetched = await fetchReadable(url, ports.fetcher);
+    if (!("page" in fetched)) {
+      if (fetched.failure === "outage") down.add(url);
+      else sightingsAt.set(url, []);
       continue;
     }
+    const { page } = fetched;
     const event = pending.find((e) => e.primaryUrl === url)!;
     const pageUrls = new Set([url, normalizeUrl(page.finalUrl, url)]);
     const read = await extractPage(page, originFor(event, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
@@ -428,16 +448,33 @@ async function reverify(
     if (read.sightings) sightingsAt.set(url, read.sightings);
   }
 
+  let heldThroughOutage = 0;
+  const outageLimited: Event[] = [];
   const checked = events.map((event) => {
+    if (!pending.includes(event)) return event;
+    if (down.has(event.primaryUrl)) {
+      const held = outage(event);
+      if (event.status === "active" && held.status === "active") heldThroughOutage++;
+      if (event.status === "active" && held.status === "unverified") outageLimited.push(held);
+      return held;
+    }
     const sightings = sightingsAt.get(event.primaryUrl);
-    if (!pending.includes(event) || !sightings) return event;
+    if (!sightings) return event;
     const sighting = sightings.find((s) => findMatch(s.event, [event]));
     if (!sighting) return strike(event);
     const applied = applySighting(event, sighting);
     if (applied.refreshed) refreshed.add(event.id);
     return applied.event;
   });
-  return { events: checked, reverified: refreshed.size, notReverified, outsideGeography, sightings: [...sightingsAt.values()].flat() };
+  return {
+    events: checked,
+    reverified: refreshed.size,
+    notReverified,
+    outsideGeography,
+    heldThroughOutage,
+    outageLimited,
+    sightings: [...sightingsAt.values()].flat(),
+  };
 }
 
 /** What the two lanes leave for re-verification: which events they sighted and which pages they tried. */
@@ -445,24 +482,31 @@ interface LaneOutcome {
   touched: Set<string>;
   /** Every URL either lane requested or was redirected to, normalized, whether or not it came back. */
   triedUrls: Set<string>;
+  /** Of those, the ones that could not be loaded: an outage, not a reading. */
+  outageUrls: Set<string>;
   /** Pages that came back but whose extraction reply could not be read. */
   unreadUrls: Set<string>;
 }
 
-/** A page that came back readable, or nothing: a network error, a non-2xx status, or a robots.txt block. */
-async function fetchPage(url: string, fetcher: FetchPort): Promise<FetchResult | undefined> {
-  const fetched = await fetchReadable(url, fetcher);
-  return "page" in fetched ? fetched.page : undefined;
-}
+/** HTTP statuses that say a page is gone, which is a reading of it; any other failure is an outage. */
+const GONE_STATUSES = new Set([404, 410]);
 
-/** A page that came back readable, or the problem with it. */
-async function fetchReadable(url: string, fetcher: FetchPort): Promise<{ page: FetchResult } | { problem: string }> {
+/**
+ * A page that came back readable, or the problem with it and what kind of failure it was: an
+ * outage (it could not be loaded: a thrown network error, which includes a robots.txt that could
+ * not be reached, or a failing status), gone (404, 410), or disallowed by robots.txt.
+ */
+async function fetchReadable(
+  url: string,
+  fetcher: FetchPort,
+): Promise<{ page: FetchResult } | { problem: string; failure: "outage" | "gone" | "disallowed" }> {
   try {
     const page = await fetcher.fetch(url);
-    if (!page.robotsAllowed) return { problem: `robots.txt disallows ${url}` };
-    return page.status >= 200 && page.status < 300 ? { page } : { problem: `${url}: HTTP ${page.status}` };
+    if (!page.robotsAllowed) return { problem: `robots.txt disallows ${url}`, failure: "disallowed" };
+    if (page.status >= 200 && page.status < 300) return { page };
+    return { problem: `${url}: HTTP ${page.status}`, failure: GONE_STATUSES.has(page.status) ? "gone" : "outage" };
   } catch (error) {
-    return { problem: `${url}: ${error instanceof Error ? error.message : String(error)}` };
+    return { problem: `${url}: ${error instanceof Error ? error.message : String(error)}`, failure: "outage" };
   }
 }
 
@@ -471,6 +515,8 @@ interface DiscoveryLaneOutcome {
   sightings: Sighting[];
   /** Every primary page the lane requested or was redirected to, normalized; never an aggregator page read as an index. */
   triedUrls: Set<string>;
+  /** Of those, the ones that could not be loaded. */
+  outageUrls: Set<string>;
   /** Pages that came back but were not read: an unreadable reply, or the spend cap. */
   unreadUrls: Set<string>;
   /** Host to an example page, for every host whose page yielded an active event this run. */
@@ -496,6 +542,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
   const outcome: DiscoveryLaneOutcome = {
     sightings: [],
     triedUrls: new Set(),
+    outageUrls: new Set(),
     unreadUrls: new Set(),
     hosts: new Map(),
     report: { enabled: config.discovery.enabled, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [] },
@@ -517,6 +564,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     }
     const fetched = await fetchReadable(url, ports.fetcher);
     if ("page" in fetched) return fetched.page;
+    if (fetched.failure === "outage") outcome.outageUrls.add(url);
     report.problems.push(fetched.problem);
     return undefined;
   };

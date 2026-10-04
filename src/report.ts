@@ -25,6 +25,10 @@ export interface RunReport {
     updated: number;
     reverified: number;
     heldUnverified: number;
+    /** Active events whose primary page could not be loaded this run, held as they were. */
+    heldThroughOutage: number;
+    /** Active events made unverified this run by their third consecutive outage. */
+    unverifiedByOutageLimit: number;
     /** Candidates dropped because their page placed them outside the geography. */
     outsideGeography: number;
     expired: Record<ExpiryReason, number>;
@@ -76,6 +80,8 @@ export interface RunReport {
    * for promotion into the registry; never added to it automatically.
    */
   promotionSuggestions: { host: string; runsSeen: number; exampleUrl: string }[];
+  /** The events unverified by the outage limit this run; re-checked each run until their page lists them again. */
+  outageLimited: { title: string; primaryUrl: string }[];
 }
 
 export function renderReportMarkdown(report: RunReport): string {
@@ -93,6 +99,8 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Updated | ${counts.updated} |
 | Re-verified | ${counts.reverified} |
 | Held unverified | ${counts.heldUnverified} |
+| Held through an outage | ${counts.heldThroughOutage} |
+| Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Dropped: outside geography | ${counts.outsideGeography} |
 | Expired: past | ${counts.expired.past} |
 | Expired: two-strike | ${counts.expired["two-strike"]} |
@@ -141,6 +149,10 @@ ${markdownList(
     (c) => `${c.eventTitle} at ${c.venue ?? "an unnamed venue"}: ${c.proposed !== undefined ? `the extractor proposed "${c.proposed}"` : "no neighborhood proposed"}`,
   ),
 )}
+
+## Unverified by outage limit
+
+${markdownList(report.outageLimited.map((e) => `${e.title}: ${e.primaryUrl}`))}
 
 ## Promotion suggestions
 

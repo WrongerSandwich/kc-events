@@ -38,6 +38,7 @@ describe("extraction over the registry lane", () => {
         lastJudged: WEEK_1_ISO,
         status: "active",
         verificationFailures: 0,
+        consecutiveOutages: 0,
         lead: { lane: "registry", source: "Knuckleheads" },
         evidence: { date: "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM", venue: "Knuckleheads, 1 Main St" },
       },

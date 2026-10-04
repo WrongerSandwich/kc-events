@@ -233,6 +233,25 @@ describe("discovery lane", () => {
     expect(after.events[0]).toMatchObject({ status: "active", verificationFailures: 1 });
   });
 
+  it.each<[string, CannedPage, object]>([
+    ["could not be loaded holds the event through an outage", { status: 403, body: "Forbidden" }, { verificationFailures: 0, consecutiveOutages: 1 }],
+    ["is gone strikes the event", { status: 404, body: "Not Found" }, { verificationFailures: 1, consecutiveOutages: 0 }],
+  ])("an active event's primary page that a discovery lead tried this run and %s, without fetching it again", async (_, page, counters) => {
+    const known = (await discoverAt(WEEK_1, emptyDataset(), {
+      searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
+      pages: { [PROMOTER_PAGE]: PAGE },
+      completions: [costing(0.01, candidateAt(PROMOTER))],
+    })).dataset;
+
+    const { calls, dataset: after } = await discoverAt(WEEK_2, known, {
+      searches: { [QUERY]: [lead(PROMOTER_PAGE)], [LATER_QUERY]: [lead(PROMOTER_PAGE)] },
+      pages: { [PROMOTER_PAGE]: page },
+    });
+
+    expect(calls.filter((c) => c === `fetch:${PROMOTER_PAGE}`)).toHaveLength(1);
+    expect(after.events).toEqual([{ ...known.events[0], ...counters }]);
+  });
+
   it("a lead robots.txt disallows is not extracted, and the report says why", async () => {
     const { calls, dataset, report } = await discoverAt(WEEK_1, emptyDataset(), {
       searches: { [QUERY]: [lead(PROMOTER_PAGE)] },

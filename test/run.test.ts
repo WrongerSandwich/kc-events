@@ -42,6 +42,8 @@ describe("run", () => {
       updated: 0,
       reverified: 0,
       heldUnverified: 0,
+      heldThroughOutage: 0,
+      unverifiedByOutageLimit: 0,
       outsideGeography: 0,
       expired: { past: 0, "two-strike": 0, cancelled: 0 },
     });
@@ -52,6 +54,7 @@ describe("run", () => {
     expect(report.discovery).toEqual({ enabled: false, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [] });
     expect(report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, problems: [] });
     expect(report.promotionSuggestions).toEqual([]);
+    expect(report.outageLimited).toEqual([]);
   });
 });
 

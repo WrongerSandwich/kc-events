@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { parseConfig } from "../src/config.js";
+import { parseDataset } from "../src/dataset.js";
 import { onHost } from "../src/discovery.js";
 import { parseRegistry } from "../src/registry.js";
 
@@ -10,6 +11,11 @@ describe("committed config and registry", () => {
   const read = (path: string) => parse(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"));
   const config = parseConfig(read("research.config.yaml"));
   const registry = parseRegistry(read("data/registry.yaml"));
+
+  it("loads the committed dataset", () => {
+    const raw = JSON.parse(readFileSync(new URL("../data/events.json", import.meta.url), "utf8"));
+    expect(() => parseDataset(raw)).not.toThrow();
+  });
 
   it("gives every source a kind from the taxonomy", () => {
     const offList = registry.sources.filter((s) => !config.kinds.includes(s.kind)).map((s) => `${s.name}: ${s.kind}`);

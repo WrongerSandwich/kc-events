@@ -204,6 +204,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     ...(verified ? { lastVerified: context.nowIso } : {}),
     status: verified ? "active" : "unverified",
     verificationFailures: 0,
+    consecutiveOutages: 0,
     lead: origin.lane === "registry" ? { lane: "registry", source: origin.source.name } : { lane: "discovery", query: origin.query },
     evidence: {
       ...(dateEvidence !== undefined ? { date: dateEvidence } : {}),

@@ -13,8 +13,11 @@ function nothingFlagged(request: CompletionRequest): CompletionResult {
   return { value: { judgments: events.map(({ id }) => ({ id, dontMiss: false, why: "" })) }, costUsd: 0 };
 }
 
-/** A canned response: a page with a status, a robots.txt block, or a network failure. */
-export type CannedPage = { status: number; body: string } | "robots-blocked" | Error;
+/**
+ * A canned response: a page with a status, a robots.txt block, a robots.txt that cannot be reached
+ * (thrown, as the real fetcher does), or a network failure.
+ */
+export type CannedPage = { status: number; body: string } | "robots-blocked" | "robots-unreachable" | Error;
 
 export interface FakePortOptions {
   pages?: Record<string, CannedPage>;
@@ -57,6 +60,10 @@ export function fakePorts(now: Date, { pages = {}, completions = [], curations =
         if (page === "robots-blocked") {
           calls.push(`robots-blocked:${url}`);
           return { url, finalUrl: url, status: 0, body: "", robotsAllowed: false };
+        }
+        if (page === "robots-unreachable") {
+          calls.push(`robots-unreachable:${url}`);
+          throw new Error("robots.txt unreachable (HTTP 503)");
         }
         calls.push(`fetch:${url}`);
         if (page === undefined) throw new Error(`fake fetcher has no canned page for ${url}`);
