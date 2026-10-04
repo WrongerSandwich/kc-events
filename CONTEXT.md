@@ -46,7 +46,7 @@ The category of an event, from a fixed taxonomy.
 _Avoid_: type, category, genre
 
 **Status**:
-Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, or `cancelled`. A postponement with a new date is a date change, not an expiry.
+Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, or `index-page` (its primary page was an index page). A postponement with a new date is a date change, not an expiry.
 
 **Last-verified**:
 The date of the most recent run that read the event's date and venue from its primary page. Shown on every published event.
@@ -124,6 +124,10 @@ The part of a run that uses web search to find events outside the registry.
 
 **Aggregator**:
 A third-party events listing site. Read only as an index of leads, never as a source of published text or facts.
+
+**Index page**:
+A page read only for its links to events, never as a primary page: every page on an aggregator, and a ticketing platform's listing pages (search, browse, and category listings), whose individual event pages are primary pages. An event whose primary page turns out to be an index page is expired, not struck.
+_Avoid_: listing page, directory page (when meaning this)
 
 **Cite-or-drop**:
 The rule that an event publishes only if its date and venue were read from its fetched primary page. Anything less is held as `unverified` and never rendered.
