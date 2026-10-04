@@ -1,10 +1,13 @@
 /**
  * Expiry: how an event stops being publishable. It stays in the dataset as expired, with the
  * reason: past (its last date is behind us), two-strike (two consecutive strikes), cancelled
- * (its page says so), or index-page (its primary page is an index page, which is never read). A postponement is a date change, not this. An outage never expires an event;
- * enough of them in a row make it unverified.
+ * (its page says so), or index-page (its primary page is an index page, which is never read). A
+ * postponement is a date change, not this. An outage never expires an event; enough of them in a
+ * row make it unverified.
  */
+import type { RunConfig } from "./config.js";
 import type { Event, ExpiryReason } from "./dataset.js";
+import { isIndexPage } from "./discovery.js";
 
 /** Consecutive strikes after which an event expires. */
 const STRIKES_TO_EXPIRE = 2;
@@ -25,6 +28,15 @@ export function isPast(event: Event, today: string): boolean {
 /** Expires a past event; an event already expired keeps its reason. */
 export function expirePast(event: Event, today: string): Event {
   return event.status !== "expired" && isPast(event, today) ? expire(event, "past") : event;
+}
+
+/**
+ * Expires an event citing an index page as its primary page: the page is never read, so it can
+ * never verify the event. That covers events read before the page counted as one, such as when a
+ * host is added to the aggregator list. An event already expired keeps its reason.
+ */
+export function expireIndexCited(event: Event, config: RunConfig): Event {
+  return event.status !== "expired" && isIndexPage(event.primaryUrl, config) ? expire(event, "index-page") : event;
 }
 
 /**

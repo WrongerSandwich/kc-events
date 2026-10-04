@@ -1,4 +1,4 @@
-import type { ExpiryReason } from "./dataset.js";
+import { EXPIRY_REASONS, type ExpiryReason } from "./dataset.js";
 import { markdownList, plural, tableCell } from "./markdown.js";
 
 export type SourceResult = "fetched" | "failed" | "blocked" | "excluded";
@@ -113,10 +113,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
 | Dropped: outside geography | ${counts.outsideGeography} |
-| Expired: past | ${counts.expired.past} |
-| Expired: two-strike | ${counts.expired["two-strike"]} |
-| Expired: cancelled | ${counts.expired.cancelled} |
-| Expired: index-page | ${counts.expired["index-page"]} |
+${EXPIRY_REASONS.map((reason) => `| Expired: ${reason} | ${counts.expired[reason]} |`).join("\n")}
 
 ## Spend
 

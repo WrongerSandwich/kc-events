@@ -1,6 +1,6 @@
 import type { RunConfig } from "./config.js";
-import type { Dataset, Event, ExpiryReason, SourceState } from "./dataset.js";
-import { expire, expirePast, hiddenSinceVerified, isPast, outage, strike } from "./expiry.js";
+import { EXPIRY_REASONS, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
+import { expire, expireIndexCited, expirePast, hiddenSinceVerified, isPast, outage, strike } from "./expiry.js";
 import {
   buildExtractionRequest,
   candidateToSighting,
@@ -334,7 +334,8 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
  * event (ADR 0007) is applied to it, unless the event was already read verified this run; an
  * unmatched one is new, unless it is cancelled or already past: nothing
  * to publish. Matching includes expired events, so a page listing one again revives it under
- * its old id rather than starting a duplicate.
+ * its old id rather than starting a duplicate; all but those expired as index-page, which were
+ * never read from an event's own page, so a reading of the real page starts a new event.
  */
 function mergeSightings(existing: Event[], sightings: Sighting[], today: string) {
   const events = [...existing];
@@ -345,7 +346,7 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string)
   const uncitable = new Set<string>();
 
   for (const { event, cancelled } of sightings) {
-    const known = findMatch(event, events);
+    const known = findMatch(event, events.filter((e) => e.expiryReason !== "index-page"));
     if (!known) {
       if (cancelled || isPast(event, today)) continue;
       events.push(event);
@@ -747,19 +748,10 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
   return { events: events.map((e) => judged.get(e.id) ?? e), report, notCurated };
 }
 
-/**
- * Expires an event citing an index page as its primary page: the page is never read, so it can
- * never verify the event. That covers events read before the page counted as one, such as when a
- * host is added to the aggregator list. An event already expired keeps its reason.
- */
-function expireIndexCited(event: Event, config: RunConfig): Event {
-  return event.status !== "expired" && isIndexPage(event.primaryUrl, config) ? expire(event, "index-page") : event;
-}
-
 /** How many events became expired this run, by reason. */
 function countExpired(previous: Event[], events: Event[]): Record<ExpiryReason, number> {
   const wasExpired = new Set(previous.filter((e) => e.status === "expired").map((e) => e.id));
-  const counts: Record<ExpiryReason, number> = { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0 };
+  const counts = Object.fromEntries(EXPIRY_REASONS.map((reason) => [reason, 0])) as Record<ExpiryReason, number>;
   for (const e of events) if (e.status === "expired" && e.expiryReason && !wasExpired.has(e.id)) counts[e.expiryReason]++;
   return counts;
 }

@@ -353,6 +353,29 @@ describe("discovery lane", () => {
       expect(report.counts.expired["index-page"]).toBe(1);
       expect(renderReportMarkdown(report)).toContain("| Expired: index-page | 1 |");
     });
+
+    it("an event expired as index-page stays expired when its real event page turns up; that page's event is new", async () => {
+      const listing = "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=x";
+      const known = (await discoverAt(WEEK_1, emptyDataset(), {
+        searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
+        pages: { [PROMOTER_PAGE]: PAGE },
+        completions: [costing(0.01, candidateAt(PROMOTER, { title: "Big Show", venue: "The Truman" }))],
+      })).dataset;
+      const expired = (await discoverAt(WEEK_2, { ...known, events: known.events.map((e) => ({ ...e, primaryUrl: listing })) }, {})).dataset;
+
+      const { dataset, report } = await discoverAt(WEEK_2, expired, {
+        searches: { [LATER_QUERY]: [lead(TM_SHOW)] },
+        pages: { [TM_SHOW]: PAGE },
+        completions: [costing(0.01, candidateAt(atTm, { title: "Big Show" }))],
+      });
+
+      expect(dataset.events.map((e) => [e.primaryUrl, e.status, e.expiryReason])).toEqual([
+        [listing, "expired", "index-page"],
+        [TM_SHOW, "active", undefined],
+      ]);
+      expect(dataset.events[1]!.id).not.toBe(dataset.events[0]!.id);
+      expect(report.counts).toMatchObject({ new: 1, updated: 0 });
+    });
   });
 
   it.each<[string, CannedPage, object]>([
