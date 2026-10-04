@@ -1,30 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { run } from "../src/run.js";
-import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
+import { emptyDataset, type Dataset } from "../src/dataset.js";
 import type { CompletionResult } from "../src/ports.js";
-import { fakePorts, type CannedPage } from "./fakes/ports.js";
-import { testConfig, testPrompts } from "./fakes/config.js";
-import { candidateAt, costing, PAGE, source, WEEK_1, WEEK_1_ISO, WEEK_2, WEEK_2_ISO, WEEK_3, WEEK_3_ISO } from "./fakes/fixtures.js";
+import type { Source } from "../src/registry.js";
+import type { CannedPage } from "./fakes/ports.js";
+import { runWith } from "./fakes/run.js";
+import { candidateAt, knuckleheads, PAGE, reply, source, WEEK_1, WEEK_1_ISO, WEEK_2, WEEK_2_ISO, WEEK_3, WEEK_3_ISO } from "./fakes/fixtures.js";
 
-const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms" });
 const CALENDAR_URL = knuckleheads.urls[0]!;
 const candidate = (overrides: Record<string, unknown> = {}) => candidateAt(knuckleheads, overrides);
-const reply = (...candidates: unknown[]) => costing(0.01, ...candidates);
 
 /** One run over the Knuckleheads calendar (or the given sources) with the given canned pages and model replies. */
-async function runAt(
+function runAt(
   now: Date,
   dataset: Dataset,
-  {
-    pages = { [CALENDAR_URL]: PAGE },
-    completions,
-    sources = [knuckleheads],
-  }: { pages?: Record<string, CannedPage>; completions: CompletionResult[]; sources?: (typeof knuckleheads)[] },
+  { pages = { [CALENDAR_URL]: PAGE }, completions, sources = [knuckleheads] }: { pages?: Record<string, CannedPage>; completions: CompletionResult[]; sources?: Source[] },
 ) {
-  const fakes = fakePorts(now, { pages, completions });
-  const result = await run({ config: testConfig(), prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports });
-  expect(parseDataset(result.dataset)).toEqual(result.dataset);
-  return { ...result, calls: fakes.calls };
+  return runWith(now, dataset, { sources, pages, completions });
 }
 
 describe("incremental update", () => {

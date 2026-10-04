@@ -18,6 +18,9 @@ export function source(name: string, overrides: Partial<Omit<Source, "name" | "s
   return { name, urls: [`https://${host}.test/calendar`], kind: "music", neighborhood: "Westport", status: "active", ...overrides };
 }
 
+/** The registry source most run tests read: Knuckleheads' calendar page in the East Bottoms. */
+export const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms" });
+
 /**
  * What the extraction model says about one candidate on a source's calendar page; fields default
  * to a fully cited single-night show at the source's own venue, a few weeks out.
@@ -46,6 +49,11 @@ export function candidateAt(at: Source, overrides: Record<string, unknown> = {})
 /** A scripted extraction reply listing these candidates, at a per-call cost. */
 export function costing(costUsd: number, ...candidates: unknown[]): CompletionResult {
   return { value: { events: candidates }, costUsd };
+}
+
+/** A scripted extraction reply listing these candidates, at a cent a call. */
+export function reply(...candidates: unknown[]): CompletionResult {
+  return costing(0.01, ...candidates);
 }
 
 /** A scripted curation reply carrying these judgments, at a per-call cost. */

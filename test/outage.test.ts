@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { run } from "../src/run.js";
-import { emptyDataset, parseDataset, type Dataset, type Event } from "../src/dataset.js";
+import { emptyDataset, type Dataset, type Event } from "../src/dataset.js";
 import type { CompletionResult } from "../src/ports.js";
-import { fakePorts, type CannedPage } from "./fakes/ports.js";
-import { testConfig, testPrompts } from "./fakes/config.js";
+import type { Source } from "../src/registry.js";
 import { renderReportMarkdown } from "../src/report.js";
 import { toLocalIso } from "../src/time.js";
-import { candidateAt, costing, PAGE, source, WEEK_1 } from "./fakes/fixtures.js";
+import type { CannedPage } from "./fakes/ports.js";
+import { runWith } from "./fakes/run.js";
+import { candidateAt, knuckleheads, PAGE, reply, source, WEEK_1 } from "./fakes/fixtures.js";
 
-const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms" });
 const CALENDAR_URL = knuckleheads.urls[0]!;
+// The venue moved its calendar; an event read from the old page keeps it as its primary page.
+const moved = { ...knuckleheads, urls: ["https://knuckleheads.test/shows"] };
 // Another source that always answers: a run in which every source fails stops instead (see the run tests).
 const elsewhere = source("Elsewhere");
 // A show far enough out that it is not past for any run here.
@@ -18,23 +19,19 @@ const candidate = (overrides: Record<string, unknown> = {}) =>
 /** The weekly run n weeks after the first: week(1) is WEEK_1. */
 const week = (n: number) => new Date(WEEK_1.getTime() + (n - 1) * 7 * 24 * 60 * 60 * 1000);
 const weekIso = (n: number) => toLocalIso(week(n), "America/Chicago");
-const reply = (...candidates: unknown[]) => costing(0.01, ...candidates);
 
-/** One run over Knuckleheads and Elsewhere; Elsewhere's page lists nothing. */
-async function runAt(now: Date, dataset: Dataset, knuckleheadsPage: CannedPage, completions: CompletionResult[] = []) {
-  const fakes = fakePorts(now, { pages: { [CALENDAR_URL]: knuckleheadsPage, [elsewhere.urls[0]!]: PAGE }, completions });
-  const result = await run({ config: testConfig(), prompts: testPrompts(), dataset, registry: { sources: [knuckleheads, elsewhere] }, ports: fakes.ports });
-  expect(parseDataset(result.dataset)).toEqual(result.dataset);
-  return { ...result, calls: fakes.calls };
+/** One run over Knuckleheads (moved, if given) and Elsewhere; Elsewhere's page lists nothing. */
+function runAt(now: Date, dataset: Dataset, pages: Record<string, CannedPage>, completions: CompletionResult[], knuckleheadsSource: Source = knuckleheads) {
+  return runWith(now, dataset, { sources: [knuckleheadsSource, elsewhere], pages: { ...pages, [elsewhere.urls[0]!]: PAGE }, completions });
 }
 
 /** A run in which Knuckleheads lists the Big Show, verified; the first run when no dataset is given. */
-const seen = (now = WEEK_1, dataset = emptyDataset()) => runAt(now, dataset, PAGE, [reply(candidate()), reply()]);
+const seen = (now = WEEK_1, dataset = emptyDataset()) => runAt(now, dataset, { [CALENDAR_URL]: PAGE }, [reply(candidate()), reply()]);
 /** A run in which Knuckleheads' page loads and no longer lists the Big Show. */
-const missing = (now: Date, dataset: Dataset) => runAt(now, dataset, PAGE, [reply(), reply()]);
+const missing = (now: Date, dataset: Dataset) => runAt(now, dataset, { [CALENDAR_URL]: PAGE }, [reply(), reply()]);
 const FORBIDDEN: CannedPage = { status: 403, body: "Forbidden" };
 /** A run in which Knuckleheads' page cannot be loaded (a 403 unless given). */
-const down = (now: Date, dataset: Dataset, page: CannedPage = FORBIDDEN) => runAt(now, dataset, page, [reply()]);
+const down = (now: Date, dataset: Dataset, page: CannedPage = FORBIDDEN) => runAt(now, dataset, { [CALENDAR_URL]: page }, [reply()]);
 
 /** Runs the steps in order from the given dataset, one week apart starting at week `from`. */
 async function weeks(from: number, dataset: Dataset, ...steps: ((now: Date, dataset: Dataset) => ReturnType<typeof runAt>)[]) {
@@ -76,18 +73,15 @@ describe("outages", () => {
 
   it("a registry source that 403s holds the events read from it even when re-verification re-fetches a separate page that also fails", async () => {
     const first = await seen();
-    // The venue moved its calendar; the event's primary page is still the old one.
-    const moved = { ...knuckleheads, urls: ["https://knuckleheads.test/shows"] };
-    const fakes = fakePorts(week(2), { pages: { [moved.urls[0]!]: FORBIDDEN, [CALENDAR_URL]: FORBIDDEN, [elsewhere.urls[0]!]: PAGE }, completions: [reply()] });
 
-    const second = await run({ config: testConfig(), prompts: testPrompts(), dataset: first.dataset, registry: { sources: [moved, elsewhere] }, ports: fakes.ports });
+    const second = await runAt(week(2), first.dataset, { [moved.urls[0]!]: FORBIDDEN, [CALENDAR_URL]: FORBIDDEN }, [reply()], moved);
 
-    expect(fakes.calls).toContain(`fetch:${CALENDAR_URL}`);
+    expect(second.calls).toContain(`fetch:${CALENDAR_URL}`);
     expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], consecutiveOutages: 1 }]);
   });
 
   it("the third consecutive outage makes an active event unverified, never expired, keeping its reading and curation", async () => {
-    const first = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(candidate()), reply()]);
+    const first = await runAt(WEEK_1, emptyDataset(), { [CALENDAR_URL]: PAGE }, [reply(candidate()), reply()]);
     const flagged = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, dontMiss: true, whyLine: "The one show this fall." })) };
 
     const second = await down(week(2), flagged);
@@ -118,14 +112,8 @@ describe("outages", () => {
   it("an event at the outage limit whose page is re-fetched and lists it is active again", async () => {
     const first = await seen();
     const hidden = await weeks(2, first.dataset, down, down, down);
-    // The venue moved its calendar, so only re-verification reads the old page.
-    const moved = { ...knuckleheads, urls: ["https://knuckleheads.test/shows"] };
-    const fakes = fakePorts(week(5), {
-      pages: { [moved.urls[0]!]: PAGE, [CALENDAR_URL]: PAGE, [elsewhere.urls[0]!]: PAGE },
-      completions: [reply(), reply(), reply(candidate())],
-    });
-
-    const back = await run({ config: testConfig(), prompts: testPrompts(), dataset: hidden.dataset, registry: { sources: [moved, elsewhere] }, ports: fakes.ports });
+    // Only re-verification reads the old page now.
+    const back = await runAt(week(5), hidden.dataset, { [moved.urls[0]!]: PAGE, [CALENDAR_URL]: PAGE }, [reply(), reply(), reply(candidate())], moved);
 
     expect(only(back.dataset)).toMatchObject({ id: first.dataset.events[0]!.id, status: "active", consecutiveOutages: 0, lastVerified: weekIso(5) });
     expect(back.report.counts.reverified).toBe(1);
@@ -190,15 +178,12 @@ describe("outages", () => {
 
   it("an unverified event that never met cite-or-drop is not re-fetched", async () => {
     // The page names no venue, so the event is held unverified from the start.
-    const first = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(candidate({ venue: null, venueEvidence: null })), reply()]);
+    const first = await runAt(WEEK_1, emptyDataset(), { [CALENDAR_URL]: PAGE }, [reply(candidate({ venue: null, venueEvidence: null })), reply()]);
     expect(only(first.dataset)).toMatchObject({ status: "unverified" });
-    // The venue moved its calendar; the event's page is the old one, which nothing reads now.
-    const moved = { ...knuckleheads, urls: ["https://knuckleheads.test/shows"] };
-    const fakes = fakePorts(week(2), { pages: { [moved.urls[0]!]: PAGE, [elsewhere.urls[0]!]: PAGE }, completions: [reply(), reply()] });
+    // The event's page is the old one, which no lane reads now.
+    const second = await runAt(week(2), first.dataset, { [moved.urls[0]!]: PAGE }, [reply(), reply()], moved);
 
-    const second = await run({ config: testConfig(), prompts: testPrompts(), dataset: first.dataset, registry: { sources: [moved, elsewhere] }, ports: fakes.ports });
-
-    expect(fakes.calls).not.toContain(`fetch:${CALENDAR_URL}`);
+    expect(second.calls).not.toContain(`fetch:${CALENDAR_URL}`);
     expect(second.dataset.events).toEqual(first.dataset.events);
   });
 });

@@ -75,16 +75,14 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const extraction = await extractFromPages(registryLane.pages, model, extractionContext);
   const sourceReports = registryLane.sourceReports.map((report) => withExtraction(report, extraction.bySource.get(report.name)));
   // Discovery runs after the registry lane, so a page the registry already read is not read again.
-  const discovery = await discover({ ...ports, model }, extractionContext, registryLane.triedUrls);
+  const discovery = await discover({ ...ports, model }, extractionContext, registryLane.attempts.tried);
   // Registry sightings merge first: an event both lanes found keeps its registry lead.
   const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], today);
   // Past events expire before re-verification, so nothing is fetched to check a date already gone.
   const current = merged.events.map((e) => expirePast(e, today));
   const laneOutcome = {
     touched: merged.touched,
-    triedUrls: new Set([...registryLane.triedUrls, ...discovery.triedUrls]),
-    outageUrls: new Set([...registryLane.outageUrls, ...discovery.outageUrls]),
-    unreadUrls: new Set([...extraction.unreadUrls, ...discovery.unreadUrls]),
+    attempts: combineAttempts({ ...registryLane.attempts, unread: extraction.unreadUrls }, discovery.attempts),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
   const changed = markChanged(dataset.events, reverified.events, startedIso);
@@ -173,8 +171,7 @@ interface SourcePage {
 async function checkRegistry(registry: Registry, previous: Record<string, SourceState>, fetcher: FetchPort) {
   const sourceReports: SourceReport[] = [];
   const pages: SourcePage[] = [];
-  const triedUrls = new Set<string>();
-  const outageUrls = new Set<string>();
+  const attempts = noAttempts();
   const sourceState = { ...previous };
   const failuresOf = (name: string) => sourceState[name]?.consecutiveFailures ?? 0;
 
@@ -184,8 +181,8 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
       continue;
     }
     const checked = await checkSource(source, fetcher);
-    for (const url of [...source.urls, ...checked.pages.map((p) => p.finalUrl)]) triedUrls.add(normalizeUrl(url, url));
-    for (const url of checked.outages) outageUrls.add(normalizeUrl(url, url));
+    for (const url of [...source.urls, ...checked.pages.map((p) => p.finalUrl)]) attempts.tried.add(normalizeUrl(url, url));
+    for (const url of checked.outages) attempts.outages.add(normalizeUrl(url, url));
     sourceReports.push(checked.report);
     pages.push(...checked.pages.map((page) => ({ source, page })));
     if (checked.report.result === "fetched") sourceState[source.name] = { consecutiveFailures: 0 };
@@ -195,7 +192,8 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
   const failingSources = registry.sources
     .filter((s) => s.status === "active" && failuresOf(s.name) >= FAILING_SOURCE_THRESHOLD)
     .map((s) => s.name);
-  return { sourceReports, sourceState, failingSources, pages, triedUrls, outageUrls };
+  // Extraction, not fetching, finds the unread pages; the run fills them in.
+  return { sourceReports, sourceState, failingSources, pages, attempts };
 }
 
 /**
@@ -410,7 +408,7 @@ async function reverify(
   context: ExtractionContext,
 ) {
   const pending = events.filter(
-    (e) => (e.status === "active" || hiddenByOutage(e)) && !lane.touched.has(e.id) && !lane.unreadUrls.has(e.primaryUrl),
+    (e) => (e.status === "active" || hiddenByOutage(e)) && !lane.touched.has(e.id) && !lane.attempts.unread.has(e.primaryUrl),
   );
   const sightingsAt = new Map<string, Sighting[]>();
   const outageAt = new Set<string>();
@@ -424,11 +422,11 @@ async function reverify(
       sightingsAt.set(url, []);
       continue;
     }
-    if (lane.outageUrls.has(url)) {
+    if (lane.attempts.outages.has(url)) {
       outageAt.add(url);
       continue;
     }
-    if (lane.triedUrls.has(url)) {
+    if (lane.attempts.tried.has(url)) {
       sightingsAt.set(url, []);
       continue;
     }
@@ -482,12 +480,29 @@ async function reverify(
 /** What the two lanes leave for re-verification: which events they sighted and which pages they tried. */
 interface LaneOutcome {
   touched: Set<string>;
-  /** Every URL either lane requested or was redirected to, normalized, whether or not it came back. */
-  triedUrls: Set<string>;
-  /** Of those, the ones that could not be loaded: an outage, not a reading. */
-  outageUrls: Set<string>;
-  /** Pages that came back but whose extraction reply could not be read. */
-  unreadUrls: Set<string>;
+  attempts: PageAttempts;
+}
+
+/** The pages a lane tried this run and how each attempt ended, all as normalized URLs. */
+interface PageAttempts {
+  /** Every URL requested or redirected to, whether or not it came back. */
+  tried: Set<string>;
+  /** URLs that could not be loaded: an outage, not a reading. */
+  outages: Set<string>;
+  /** Pages that came back but were not read: an unreadable reply, or the spend cap. */
+  unread: Set<string>;
+}
+
+function noAttempts(): PageAttempts {
+  return { tried: new Set(), outages: new Set(), unread: new Set() };
+}
+
+function combineAttempts(...all: PageAttempts[]): PageAttempts {
+  return {
+    tried: new Set(all.flatMap((a) => [...a.tried])),
+    outages: new Set(all.flatMap((a) => [...a.outages])),
+    unread: new Set(all.flatMap((a) => [...a.unread])),
+  };
 }
 
 /** HTTP statuses that say a page is gone, which is a reading of it; any other failure is an outage. */
@@ -515,12 +530,8 @@ async function fetchReadable(
 /** What the discovery lane found, and what it leaves for merging, re-verification, and the report. */
 interface DiscoveryLaneOutcome {
   sightings: Sighting[];
-  /** Every primary page the lane requested or was redirected to, normalized; never an aggregator page read as an index. */
-  triedUrls: Set<string>;
-  /** Of those, the ones that could not be loaded. */
-  outageUrls: Set<string>;
-  /** Pages that came back but were not read: an unreadable reply, or the spend cap. */
-  unreadUrls: Set<string>;
+  /** The primary pages the lane tried; never an aggregator page read as an index. */
+  attempts: PageAttempts;
   /** Host to an example page, for every host whose page yielded an active event this run. */
   hosts: Map<string, string>;
   report: RunReport["discovery"];
@@ -543,9 +554,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
   const { config } = context;
   const outcome: DiscoveryLaneOutcome = {
     sightings: [],
-    triedUrls: new Set(),
-    outageUrls: new Set(),
-    unreadUrls: new Set(),
+    attempts: noAttempts(),
     hosts: new Map(),
     report: { enabled: config.discovery.enabled, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [] },
     outsideGeography: 0,
@@ -553,7 +562,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     queriesNotSearched: 0,
     leadsNotFollowed: 0,
   };
-  const { report } = outcome;
+  const { report, attempts } = outcome;
   const followed = new Set<string>();
 
   /** The page behind a lead not yet followed this run, or nothing: already followed, the cap, or a problem fetching it. */
@@ -566,13 +575,13 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     }
     const fetched = await fetchReadable(url, ports.fetcher);
     if ("page" in fetched) return fetched.page;
-    if (fetched.failure === "outage") outcome.outageUrls.add(url);
+    if (fetched.failure === "outage") attempts.outages.add(url);
     report.problems.push(fetched.problem);
     return undefined;
   };
 
   const readPrimaryPage = async (url: string, query: string) => {
-    if (!followed.has(url) && !registryTried.has(url)) outcome.triedUrls.add(url);
+    if (!followed.has(url) && !registryTried.has(url)) attempts.tried.add(url);
     const page = await follow(url);
     if (!page) return;
     const pageUrls = [url, normalizeUrl(page.finalUrl, url)];
@@ -580,21 +589,21 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
       report.problems.push(`${url} led to an aggregator page and was not extracted`);
       return;
     }
-    for (const u of pageUrls) outcome.triedUrls.add(u);
+    for (const u of pageUrls) attempts.tried.add(u);
     let read: Awaited<ReturnType<typeof extractPage>>;
     try {
       read = await extractPage(page, { lane: "discovery", query }, ports.model, { ...context, fetchedUrls: new Set([...context.fetchedUrls, ...pageUrls]) });
     } catch (error) {
       if (!(error instanceof SpendCapReached)) throw error;
       outcome.pagesNotExtracted++;
-      for (const u of pageUrls) outcome.unreadUrls.add(u);
+      for (const u of pageUrls) attempts.unread.add(u);
       return;
     }
     report.pagesExtracted++;
     outcome.outsideGeography += read.outsideGeography;
     report.problems.push(...read.problems);
     if (!read.sightings) {
-      for (const u of pageUrls) outcome.unreadUrls.add(u);
+      for (const u of pageUrls) attempts.unread.add(u);
       return;
     }
     outcome.sightings.push(...read.sightings);
