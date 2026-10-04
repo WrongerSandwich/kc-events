@@ -3,10 +3,9 @@ import { emptyDataset, type Dataset, type Event } from "../src/dataset.js";
 import type { CompletionResult } from "../src/ports.js";
 import type { Source } from "../src/registry.js";
 import { renderReportMarkdown } from "../src/report.js";
-import { toLocalIso } from "../src/time.js";
 import type { CannedPage } from "./fakes/ports.js";
 import { runWith } from "./fakes/run.js";
-import { candidateAt, knuckleheads, PAGE, reply, source, WEEK_1 } from "./fakes/fixtures.js";
+import { candidateAt, knuckleheads, PAGE, reply, source, week, WEEK_1, weekIso } from "./fakes/fixtures.js";
 
 const CALENDAR_URL = knuckleheads.urls[0]!;
 // The venue moved its calendar; an event read from the old page keeps it as its primary page.
@@ -14,9 +13,6 @@ const moved = { ...knuckleheads, urls: ["https://knuckleheads.test/shows"] };
 // A show far enough out that it is not past for any run here.
 const candidate = (overrides: Record<string, unknown> = {}) =>
   candidateAt(knuckleheads, { startDate: "2026-12-12", dateEvidence: "Sat, Dec 12 · Show 8:00 PM", ...overrides });
-/** The weekly run n weeks after the first: week(1) is WEEK_1. */
-const week = (n: number) => new Date(WEEK_1.getTime() + (n - 1) * 7 * 24 * 60 * 60 * 1000);
-const weekIso = (n: number) => toLocalIso(week(n), "America/Chicago");
 
 function runAt(now: Date, dataset: Dataset, pages: Record<string, CannedPage>, completions: CompletionResult[], source: Source = knuckleheads) {
   return runWith(now, dataset, { sources: [source], pages, completions });
@@ -69,7 +65,7 @@ describe("an uncitable re-reading", () => {
 
     const hidden = await uncitable(week(2), first.dataset);
 
-    expect(hidden.report.counts).toMatchObject({ unverifiedByUncitableReading: 1, heldUnverified: 1 });
+    expect(hidden.report.counts).toMatchObject({ unverifiedByUncitableReading: 1, heldUnverified: 0 });
     expect(hidden.report.uncitableReadings).toEqual([{ title: "Big Show", primaryUrl: CALENDAR_URL }]);
     const markdown = renderReportMarkdown(hidden.report);
     expect(markdown).toContain("| Unverified by an uncitable re-reading | 1 |");
@@ -114,5 +110,21 @@ describe("an uncitable re-reading", () => {
 
     expect(only(both.dataset)).toMatchObject({ status: "active", lastVerified: weekIso(2) });
     expect(both.report.counts.unverifiedByUncitableReading).toBe(0);
+  });
+  it("an event whose own page is its primary page, listed by a calendar this run, is re-read from its own page and stays active", async () => {
+    const EVENT_URL = "https://knuckleheads.test/shows/big-show";
+    const first = await seen();
+    const ownPage = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, primaryUrl: EVENT_URL })) };
+
+    // The calendar names the event's own page, which the lane did not fetch, so its reading there cites nothing.
+    const second = await runAt(week(2), ownPage, { [CALENDAR_URL]: PAGE, [EVENT_URL]: PAGE }, [
+      reply(candidate({ primaryUrl: EVENT_URL })),
+      reply(candidate({ primaryUrl: EVENT_URL })),
+      reply(),
+    ]);
+
+    expect(second.calls).toContain(`fetch:${EVENT_URL}`);
+    expect(only(second.dataset)).toMatchObject({ status: "active", lastVerified: weekIso(2) });
+    expect(second.report.counts).toMatchObject({ reverified: 1, unverifiedByUncitableReading: 0 });
   });
 });

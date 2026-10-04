@@ -1,5 +1,6 @@
 import type { CompletionResult } from "../../src/ports.js";
 import type { Source } from "../../src/registry.js";
+import { toLocalIso } from "../../src/time.js";
 
 // Weekly runs at 22:15 Kansas City time: Oct 2, Oct 9, Oct 16 (CDT, UTC-5).
 export const WEEK_1 = new Date("2026-10-03T03:15:00Z");
@@ -8,6 +9,11 @@ export const WEEK_3 = new Date("2026-10-17T03:15:00Z");
 export const WEEK_1_ISO = "2026-10-02T22:15:00-05:00";
 export const WEEK_2_ISO = "2026-10-09T22:15:00-05:00";
 export const WEEK_3_ISO = "2026-10-16T22:15:00-05:00";
+
+/** The weekly run n weeks after the first: week(1) is WEEK_1. */
+export const week = (n: number) => new Date(WEEK_1.getTime() + (n - 1) * 7 * 24 * 60 * 60 * 1000);
+/** That run's local start time, as the dataset records it. */
+export const weekIso = (n: number) => toLocalIso(week(n), "America/Chicago");
 
 /** A calendar page that came back fine; what is on it is up to the scripted model reply. */
 export const PAGE = { status: 200, body: "<html><body>calendar</body></html>" };

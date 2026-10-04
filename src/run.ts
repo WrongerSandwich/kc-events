@@ -1,6 +1,6 @@
 import type { RunConfig } from "./config.js";
 import type { Dataset, Event, ExpiryReason, SourceState } from "./dataset.js";
-import { expire, expirePast, onceVerified, isPast, outage, strike } from "./expiry.js";
+import { expire, expirePast, hiddenSinceVerified, isPast, outage, strike } from "./expiry.js";
 import {
   buildExtractionRequest,
   candidateToSighting,
@@ -15,7 +15,7 @@ import { discoveryQueries, hostOf, isLead, onHost, outboundLinks, trackDiscovery
 import { findMatch, normalizeName, sameName } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
-import type { RunReport, SourceReport } from "./report.js";
+import type { EventRef, RunReport, SourceReport } from "./report.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList } from "./taxonomy.js";
 import { toLocalDate, toLocalIso } from "./time.js";
@@ -85,8 +85,9 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     attempts: combineAttempts({ ...registryLane.attempts, unread: extraction.unreadUrls }, discovery.attempts),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
-  // Made unverified by an uncitable reading and still so: a later verified reading this run brought it back, and a past one expired.
-  const uncited = reverified.events.filter((e) => (merged.uncited.has(e.id) || reverified.uncited.has(e.id)) && e.status === "unverified");
+  // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
+  const madeUncitable = new Set([...merged.uncitable, ...reverified.uncitable]);
+  const uncitable = reverified.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
   const changed = markChanged(dataset.events, reverified.events, startedIso);
   const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
   const events = curation.events;
@@ -114,7 +115,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       heldUnverified: merged.counts.heldUnverified,
       heldThroughOutage: reverified.heldThroughOutage,
       unverifiedByOutageLimit: reverified.outageLimited.length,
-      unverifiedByUncitableReading: uncited.length,
+      unverifiedByUncitableReading: uncitable.length,
       outsideGeography: extraction.outsideGeography + discovery.outsideGeography + reverified.outsideGeography,
       expired: countExpired(dataset.events, events),
     },
@@ -132,7 +133,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     unmappableNeighborhoods: unmappableNeighborhoods([...extraction.sightings, ...discovery.sightings, ...reverified.sightings]),
     promotionSuggestions: promotion.promotionSuggestions,
     outageLimited: reverified.outageLimited.map(titleAndUrl),
-    uncitableReadings: uncited.map(titleAndUrl),
+    uncitableReadings: uncitable.map(titleAndUrl),
   };
 
   return {
@@ -148,7 +149,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   };
 }
 
-function titleAndUrl(event: Event): { title: string; primaryUrl: string } {
+function titleAndUrl(event: Event): EventRef {
   return { title: event.title, primaryUrl: event.primaryUrl };
 }
 
@@ -340,7 +341,7 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string)
   const refreshed = new Set<string>();
   const created = new Set<string>();
   const readVerified = new Set<string>();
-  const uncited = new Set<string>();
+  const uncitable = new Set<string>();
 
   for (const { event, cancelled } of sightings) {
     const known = findMatch(event, events);
@@ -359,11 +360,12 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string)
     const applied = applySighting(known, { event, cancelled });
     events[events.indexOf(known)] = applied.event;
     if (applied.refreshed && !created.has(known.id)) refreshed.add(known.id);
-    if (applied.uncited) uncited.add(known.id);
+    if (applied.uncitable) uncitable.add(known.id);
   }
 
-  const heldUnverified = events.filter((e) => touched.has(e.id) && e.status === "unverified").length;
-  return { events, touched, uncited, counts: { found: touched.size, new: created.size, updated: refreshed.size, heldUnverified } };
+  // Events this run made unverified are counted on their own, not as held.
+  const heldUnverified = events.filter((e) => touched.has(e.id) && !uncitable.has(e.id) && e.status === "unverified").length;
+  return { events, touched, uncitable, counts: { found: touched.size, new: created.size, updated: refreshed.size, heldUnverified } };
 }
 
 /**
@@ -373,16 +375,13 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string)
  * no longer support publishing it, and leaves any other event's status alone. Either way the page
  * still lists the event, so it is not missing and any strike and any run of outages is cleared.
  */
-function applySighting(known: Event, { event, cancelled }: Sighting): { event: Event; refreshed: boolean; uncited: boolean } {
-  if (cancelled) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncited: false };
-  if (event.status === "active") return { event: refresh(known, event), refreshed: true, uncited: false };
-  const uncited = known.status === "active";
-  const unchanged = !uncited && known.verificationFailures === 0 && known.consecutiveOutages === 0;
-  return {
-    event: unchanged ? known : { ...known, status: uncited ? "unverified" : known.status, verificationFailures: 0, consecutiveOutages: 0 },
-    refreshed: false,
-    uncited,
-  };
+function applySighting(known: Event, { event, cancelled }: Sighting): { event: Event; refreshed: boolean; uncitable: boolean } {
+  if (cancelled) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
+  if (event.status === "active") return { event: refresh(known, event), refreshed: true, uncitable: false };
+  const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
+  if (known.status === "active") return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
+  const cleared = known.verificationFailures === 0 && known.consecutiveOutages === 0;
+  return { event: cleared ? known : listed, refreshed: false, uncitable: false };
 }
 
 /**
@@ -405,17 +404,19 @@ function refresh(known: Event, sighting: Event): Event {
 
 /**
  * Re-verification: every active event neither lane sighted is checked against its primary page,
- * and so is every once-verified event since hidden, by outages (ADR 0008) or an uncitable re-reading,
- * each run until it is past. A primary page on an
- * aggregator is never fetched or read; that is a strike. A page either lane already tried this run
- * is not fetched again; it counts as that attempt ended. A page that loaded and no longer lists the
- * event is a strike, as is one that is gone or that robots.txt now disallows. A page that could not
- * be loaded is an outage (see fetchReadable): it holds an active event as it was, up to the outage limit. A page that
- * does list the event applies the sighting as in the registry lane, which revives a hidden event
- * whose reading is verified, and makes an active one unverified when its reading is not. When the model's reply about a page could not be read, nothing is
- * known either way and the event is left alone: a bad reply is not a dead page. Once the spend cap
- * is reached, pages still to check are not fetched and their events are left alone too, counted
- * as not re-verified.
+ * and so is every event hidden since it was verified (by outages, ADR 0008, or an uncitable
+ * re-reading), each run until it is past. A hidden event a lane sighted is checked too when the
+ * lanes did not try its primary page: a calendar that lists an event under its own page cites
+ * nothing for it, and only that page can bring it back. A primary page on an aggregator is never
+ * fetched or read; that is a strike. A page either lane already tried this run is not fetched
+ * again; it counts as that attempt ended. A page that loaded and no longer lists the event is a
+ * strike, as is one that is gone or that robots.txt now disallows. A page that could not be loaded
+ * is an outage (see fetchReadable): it holds an active event as it was, up to the outage limit. A
+ * page that does list the event applies the sighting as in the registry lane, which revives a
+ * hidden event whose reading is verified and hides an active one whose reading is not. When the
+ * model's reply about a page could not be read, nothing is known either way and the event is left
+ * alone: a bad reply is not a dead page. Once the spend cap is reached, pages still to check are
+ * not fetched and their events are left alone too, counted as not re-verified.
  */
 async function reverify(
   events: Event[],
@@ -424,9 +425,12 @@ async function reverify(
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
 ) {
-  const pending = events.filter(
-    (e) => (e.status === "active" || onceVerified(e)) && !lane.touched.has(e.id) && !lane.attempts.unread.has(e.primaryUrl),
-  );
+  const sighted = (e: Event) => lane.touched.has(e.id);
+  const pending = events.filter((e) => {
+    if (lane.attempts.unread.has(e.primaryUrl)) return false;
+    if (e.status === "active") return !sighted(e);
+    return hiddenSinceVerified(e) && !(sighted(e) && lane.attempts.tried.has(e.primaryUrl));
+  });
   const sightingsAt = new Map<string, Sighting[]>();
   const outageAt = new Set<string>();
   const refreshed = new Set<string>();
@@ -467,7 +471,7 @@ async function reverify(
 
   let heldThroughOutage = 0;
   const outageLimited: Event[] = [];
-  const uncited = new Set<string>();
+  const uncitable = new Set<string>();
   const checked = events.map((event) => {
     if (!pending.includes(event)) return event;
     if (outageAt.has(event.primaryUrl)) {
@@ -482,7 +486,7 @@ async function reverify(
     if (!sighting) return strike(event);
     const applied = applySighting(event, sighting);
     if (applied.refreshed) refreshed.add(event.id);
-    if (applied.uncited) uncited.add(event.id);
+    if (applied.uncitable) uncitable.add(event.id);
     return applied.event;
   });
   return {
@@ -492,7 +496,7 @@ async function reverify(
     outsideGeography,
     heldThroughOutage,
     outageLimited,
-    uncited,
+    uncitable,
     sightings: [...sightingsAt.values()].flat(),
   };
 }

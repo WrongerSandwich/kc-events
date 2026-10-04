@@ -3,10 +3,9 @@ import { emptyDataset, type Dataset, type Event } from "../src/dataset.js";
 import type { CompletionResult } from "../src/ports.js";
 import type { Source } from "../src/registry.js";
 import { renderReportMarkdown } from "../src/report.js";
-import { toLocalIso } from "../src/time.js";
 import type { CannedPage } from "./fakes/ports.js";
 import { runWith } from "./fakes/run.js";
-import { candidateAt, knuckleheads, PAGE, reply, source, WEEK_1 } from "./fakes/fixtures.js";
+import { candidateAt, knuckleheads, PAGE, reply, source, week, WEEK_1, weekIso } from "./fakes/fixtures.js";
 
 const CALENDAR_URL = knuckleheads.urls[0]!;
 // The venue moved its calendar; an event read from the old page keeps it as its primary page.
@@ -16,9 +15,6 @@ const elsewhere = source("Elsewhere");
 // A show far enough out that it is not past for any run here.
 const candidate = (overrides: Record<string, unknown> = {}) =>
   candidateAt(knuckleheads, { startDate: "2026-12-12", dateEvidence: "Sat, Dec 12 · Show 8:00 PM", ...overrides });
-/** The weekly run n weeks after the first: week(1) is WEEK_1. */
-const week = (n: number) => new Date(WEEK_1.getTime() + (n - 1) * 7 * 24 * 60 * 60 * 1000);
-const weekIso = (n: number) => toLocalIso(week(n), "America/Chicago");
 
 /** One run over Knuckleheads (moved, if given) and Elsewhere; Elsewhere's page lists nothing. */
 function runAt(now: Date, dataset: Dataset, pages: Record<string, CannedPage>, completions: CompletionResult[], knuckleheadsSource: Source = knuckleheads) {

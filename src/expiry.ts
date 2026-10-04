@@ -48,12 +48,12 @@ export function outage(event: Event): Event {
 }
 
 /**
- * Whether an event was once verified and has since been hidden: the outage limit (ADR 0008) or an
+ * Whether an event was verified once and has been hidden since: the outage limit (ADR 0008) or an
  * uncitable re-reading of a page that still lists it made it unverified, not a reading that never
  * met cite-or-drop. Those are the only paths from active to unverified, so it is the unverified
  * event with a last-verified date; a strike since, which zeroes the outage count, does not change it.
  * Re-verification re-checks these each run, so the event can come back.
  */
-export function onceVerified(event: Event): boolean {
+export function hiddenSinceVerified(event: Event): boolean {
   return event.status === "unverified" && event.lastVerified !== undefined;
 }

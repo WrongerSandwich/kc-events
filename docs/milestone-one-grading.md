@@ -526,7 +526,7 @@ Found in run two and fixed before run three (commit 1270528):
 
 Remaining cases in the committed dataset (run three), all documented rather than zero:
 
-- **The Wizard of Oz at "Kansas City Ballet"** (kccrossroads.org) and **PBR Outlaw Days Festival at "Kansas City Power & Light"**: the corrected re-readings could cite no venue, and a page that still lists an event clears its strike and keeps the old reading (a #5 decision). The wrong venue therefore stays published. Issue #19 asks whether an uncitable re-reading should count as a strike.
+- **The Wizard of Oz at "Kansas City Ballet"** (kccrossroads.org) and **PBR Outlaw Days Festival at "Kansas City Power & Light"**: the corrected re-readings could cite no venue, and a page that still lists an event clears its strike and keeps the old reading (a #5 decision). The wrong venue therefore stays published. Issue #19 asks whether an uncitable re-reading should count as a strike. (Decided in #19: such a re-reading makes the event `unverified` at once, so it is no longer published.)
 - **Seven Eventbrite directory events** dated from relative words: same mechanism; their dates are almost certainly right, their citation is not. Issue #19, and #15 for platform directory pages being read as primary pages.
 - **"The Cathedral of the Immaculate Concepti"** (Gretchaninoff: Passion Week): the Chorale's own concert card cuts the name short, and the rules forbid completing a name the page does not give. A faithful reading that looks like a typo; noted in #17 for the registry.
 - **Dates past the horizon** (Phantom of the Opera Dec 2, Brew Fest Feb 21, HUMP! Nov 12): correct dates the extractor listed although the rules ask for the horizon only. Not wrong, just early.

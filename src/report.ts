@@ -12,6 +12,12 @@ export interface SourceReport {
   detail?: string;
 }
 
+/** An event as the report names it: by title and primary page. */
+export interface EventRef {
+  title: string;
+  primaryUrl: string;
+}
+
 /** The record of one run, committed as Markdown with a JSON twin. */
 export interface RunReport {
   /** Local calendar date of the run; reports are named by it. */
@@ -83,9 +89,9 @@ export interface RunReport {
    */
   promotionSuggestions: { host: string; runsSeen: number; exampleUrl: string }[];
   /** The events unverified by the outage limit this run; re-checked each run until their page lists them again. */
-  outageLimited: { title: string; primaryUrl: string }[];
+  outageLimited: EventRef[];
   /** The events unverified by an uncitable re-reading this run; a model wobble shows up here. Re-checked each run until a reading is verified again. */
-  uncitableReadings: { title: string; primaryUrl: string }[];
+  uncitableReadings: EventRef[];
 }
 
 export function renderReportMarkdown(report: RunReport): string {
@@ -157,14 +163,18 @@ ${markdownList(
 
 ## Unverified by outage limit
 
-${markdownList(report.outageLimited.map((e) => `${e.title}: ${e.primaryUrl}`))}
+${eventList(report.outageLimited)}
 
 ## Unverified by an uncitable re-reading
 
-${markdownList(report.uncitableReadings.map((e) => `${e.title}: ${e.primaryUrl}`))}
+${eventList(report.uncitableReadings)}
 
 ## Promotion suggestions
 
 ${markdownList(report.promotionSuggestions.map((p) => `${p.host}: events found in ${p.runsSeen} runs, e.g. ${p.exampleUrl}`))}
 `;
+}
+
+function eventList(events: EventRef[]): string {
+  return markdownList(events.map((e) => `${e.title}: ${e.primaryUrl}`));
 }
