@@ -197,4 +197,19 @@ describe("folding duplicates", () => {
     expect(dataset.events).toEqual([expect.objectContaining({ id: listed.id, status: "active", primaryUrl: KAUFFMAN })]);
     expect(report.counts.unverifiedByUncitableReading).toBe(0);
   });
+
+  it("does not cancel an active event when another page lists it as cancelled with no venue", async () => {
+    const listed = event("Interstellar Live", "Helzberg Hall", KAUFFMAN, "2026-10-23");
+    const symphony = source("Kansas City Symphony", { urls: [SYMPHONY] });
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([listed]), {
+      sources: [symphony],
+      pages: { [SYMPHONY]: PAGE },
+      completions: [reply(candidateAt(symphony, { title: "Interstellar Live", startDate: "2026-10-23", startTime: null, venue: null, venueEvidence: null, notice: "cancelled" }))],
+      config,
+    });
+
+    expect(dataset.events).toEqual([expect.objectContaining({ id: listed.id, status: "active" })]);
+    expect(report.counts.expired.cancelled).toBe(0);
+  });
 });

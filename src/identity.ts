@@ -5,6 +5,8 @@
  * are opaque and fixed at first-seen; matching never looks at them.
  */
 
+import type { EventStatus } from "./dataset.js";
+
 /** How far apart two dates can be and still be the same event under the fuzzy match. */
 const FUZZY_DATE_WINDOW_DAYS = 3;
 const DAY_MS = 86_400_000;
@@ -36,7 +38,7 @@ export interface EventIdentity {
   /** ISO date or date-time; its local calendar date is what the fuzzy match compares. */
   start?: string;
   /** An expired known event is no candidate when a venue-less sighting needs exactly one. */
-  status?: string;
+  status?: EventStatus;
 }
 
 /**
@@ -44,7 +46,7 @@ export interface EventIdentity {
  * then the fuzzy match on title, venue, and nearby date, then for a sighting with no venue the one
  * known event, not expired, with its title on its date.
  */
-export function findMatch<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases = {}): T | undefined {
+export function findMatch<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases): T | undefined {
   return (
     known.find((k) => sameEventExactly(sighting, k)) ??
     known.find((k) => sameEventFuzzily(sighting, k, aliases)) ??
@@ -80,7 +82,7 @@ export function sameVenue(a: string, b: string, aliases: VenueAliases): boolean 
 }
 
 function sameOrContained(a: string, b: string): boolean {
-  const [shorter, longer] = [a, b].sort((x, y) => x.length - y.length) as [string, string];
+  const [shorter, longer] = byLength(a, b);
   return shorter !== "" && ` ${longer} `.includes(` ${shorter} `);
 }
 
@@ -93,15 +95,24 @@ function sameEventExactly(a: EventIdentity, b: EventIdentity): boolean {
  * event in full one week ("A / Orchestra and Choirs") and give only its lead title the next.
  */
 function sameOrShortenedTitle(a: string, b: string): boolean {
-  const [shorter, longer] = [normalizeName(a), normalizeName(b)].sort((x, y) => x.length - y.length) as [string, string];
+  const [shorter, longer] = byLength(normalizeName(a), normalizeName(b));
   return shorter !== "" && (longer === shorter || longer.startsWith(`${shorter} `));
+}
+
+function byLength(a: string, b: string): [string, string] {
+  return a.length <= b.length ? [a, b] : [b, a];
+}
+
+/** The local calendar date of an ISO date or date-time, as read. */
+function calendarDate(iso: string | undefined): string | undefined {
+  return iso?.slice(0, 10);
 }
 
 /** Dates are compared first, as the cheapest test: folding compares every pair of records. */
 function sameEventFuzzily(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
   if (a.venue === undefined || b.venue === undefined || a.start === undefined || b.start === undefined) return false;
   return (
-    Math.abs(Date.parse(a.start.slice(0, 10)) - Date.parse(b.start.slice(0, 10))) <= FUZZY_DATE_WINDOW_DAYS * DAY_MS &&
+    Math.abs(Date.parse(calendarDate(a.start)!) - Date.parse(calendarDate(b.start)!)) <= FUZZY_DATE_WINDOW_DAYS * DAY_MS &&
     sameOrShortenedTitle(a.title, b.title) &&
     sameVenue(a.venue, b.venue, aliases)
   );
@@ -114,8 +125,8 @@ function sameEventFuzzily(a: EventIdentity, b: EventIdentity, aliases: VenueAlia
  * the known, is no candidate either.
  */
 function onlyCandidateForVenueless<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[]): T | undefined {
-  const date = sighting.start?.slice(0, 10);
+  const date = calendarDate(sighting.start);
   if (sighting.venue !== undefined || date === undefined) return undefined;
-  const candidates = known.filter((k) => k !== sighting && k.status !== "expired" && k.start?.slice(0, 10) === date && sameOrShortenedTitle(sighting.title, k.title));
+  const candidates = known.filter((k) => k !== sighting && k.status !== "expired" && calendarDate(k.start) === date && sameOrShortenedTitle(sighting.title, k.title));
   return candidates.length === 1 ? candidates[0] : undefined;
 }

@@ -12,6 +12,7 @@ export const EVENT_STATUSES = ["active", "unverified", "expired"] as const;
 export const EXPIRY_REASONS = ["past", "two-strike", "cancelled", "index-page", "duplicate"] as const;
 
 export type RecurrenceClass = (typeof RECURRENCE_CLASSES)[number];
+export type EventStatus = (typeof EVENT_STATUSES)[number];
 export type ExpiryReason = (typeof EXPIRY_REASONS)[number];
 
 export const leadSchema = z.discriminatedUnion("lane", [

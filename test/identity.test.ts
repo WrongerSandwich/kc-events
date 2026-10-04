@@ -18,36 +18,36 @@ describe("event identity", () => {
 
   it("the same primary URL and title match, even when the date moved", () => {
     const moved = { ...known, title: "big show.", start: "2026-11-20T20:00:00-06:00" };
-    expect(findMatch(moved, [known])).toBe(known);
+    expect(findMatch(moved, [known], {})).toBe(known);
   });
 
   it("a shared calendar URL with a different title is a new event", () => {
-    expect(findMatch({ ...known, title: "Other Band" }, [known])).toBeUndefined();
+    expect(findMatch({ ...known, title: "Other Band" }, [known], {})).toBeUndefined();
   });
 
   it("the same title and venue with a date two days off match from a different page", () => {
     const elsewhere = { primaryUrl: "https://promoter.test/big-show", title: "BIG SHOW", venue: "knuckleheads saloon", start: "2026-10-12" };
-    expect(findMatch(elsewhere, [known])).toBe(known);
+    expect(findMatch(elsewhere, [known], {})).toBe(known);
   });
 
   it("the same title and venue more than a few days apart, or at a different venue, do not match from a different page", () => {
     const elsewhere = { primaryUrl: "https://promoter.test/big-show", title: "Big Show", venue: "Knuckleheads Saloon" };
-    expect(findMatch({ ...elsewhere, start: "2026-10-17" }, [known])).toBeUndefined();
-    expect(findMatch({ ...elsewhere, venue: "recordBar", start: "2026-10-10" }, [known])).toBeUndefined();
-    expect(findMatch({ ...elsewhere }, [known])).toBeUndefined();
+    expect(findMatch({ ...elsewhere, start: "2026-10-17" }, [known], {})).toBeUndefined();
+    expect(findMatch({ ...elsewhere, venue: "recordBar", start: "2026-10-10" }, [known], {})).toBeUndefined();
+    expect(findMatch({ ...elsewhere }, [known], {})).toBeUndefined();
   });
 
   it("a title the page gives in full one week and cut short the next matches at the same venue and date", () => {
     const full = { ...known, title: "“At the Heart of Kansas City” / UMKC Conservatory Symphony Orchestra and Choirs" };
     const short = { ...known, title: "“At the Heart of Kansas City”" };
-    expect(findMatch(short, [full])).toBe(full);
-    expect(findMatch(full, [short])).toBe(short);
-    expect(findMatch({ ...short, title: "At the Heart" + "land" }, [full])).toBeUndefined();
+    expect(findMatch(short, [full], {})).toBe(full);
+    expect(findMatch(full, [short], {})).toBe(short);
+    expect(findMatch({ ...short, title: "At the Heart" + "land" }, [full], {})).toBeUndefined();
   });
 
   it("an exact match wins over an earlier fuzzy one", () => {
     const fuzzy = { ...known, primaryUrl: "https://promoter.test/big-show" };
-    expect(findMatch(known, [fuzzy, known])).toBe(known);
+    expect(findMatch(known, [fuzzy, known], {})).toBe(known);
   });
 
   it("an exact match wins over a fuzzy one through a venue alias", () => {
@@ -68,7 +68,7 @@ describe("the same venue", () => {
     const room = { primaryUrl: "https://www.kauffmancenter.org/events/", title: "Wizard of Oz", venue: "Muriel Kauffman Theatre", start: "2026-10-16" };
     const building = { primaryUrl: "https://kcballet.org/", title: "Wizard of Oz", venue: "Kauffman Center for the Performing Arts", start: "2026-10-16" };
     expect(findMatch(building, [room], ALIASES)).toBe(room);
-    expect(findMatch(building, [room])).toBeUndefined();
+    expect(findMatch(building, [room], {})).toBeUndefined();
     expect(sameVenue("Tivoli Cinema", "Atkins Auditorium", ALIASES)).toBe(true);
     expect(sameVenue("Tivoli Cinema", "Helzberg Hall", ALIASES)).toBe(false);
   });
@@ -76,7 +76,7 @@ describe("the same venue", () => {
   it("is a name contained in the other at word boundaries, with no alias needed", () => {
     const listed = { primaryUrl: "https://www.midlandkc.com/events", title: "Taking Back Sunday", venue: "The Midland", start: "2026-10-04T19:00:00-05:00" };
     const elsewhere = { ...listed, primaryUrl: "https://promoter.test/tbs", venue: "The Midland Theatre - MO" };
-    expect(findMatch(elsewhere, [listed])).toBe(listed);
+    expect(findMatch(elsewhere, [listed], {})).toBe(listed);
     expect(sameVenue("recordBar", "record", {})).toBe(false);
     expect(sameVenue("Midlands Pub", "The Midland", {})).toBe(false);
   });
@@ -98,24 +98,24 @@ describe("a sighting with no venue", () => {
   const venueless = { primaryUrl: "https://www.kcsymphony.org/upcoming-events/", title: "Interstellar Live", start: "2026-10-23" };
 
   it("matches the one known event with that title on that calendar date", () => {
-    expect(findMatch(venueless, [kauffman])).toBe(kauffman);
-    expect(findMatch({ ...venueless, start: "2026-10-23T19:00:00-05:00" }, [kauffman])).toBe(kauffman);
-    expect(findMatch({ ...venueless, start: "2026-10-24" }, [kauffman])).toBeUndefined();
+    expect(findMatch(venueless, [kauffman], {})).toBe(kauffman);
+    expect(findMatch({ ...venueless, start: "2026-10-23T19:00:00-05:00" }, [kauffman], {})).toBe(kauffman);
+    expect(findMatch({ ...venueless, start: "2026-10-24" }, [kauffman], {})).toBeUndefined();
   });
 
   it("matches none when two known events qualify", () => {
     const other = { ...kauffman, primaryUrl: "https://other.test/", venue: "Starlight Theatre" };
-    expect(findMatch(venueless, [kauffman, other])).toBeUndefined();
+    expect(findMatch(venueless, [kauffman, other], {})).toBeUndefined();
   });
 
   it("counts only events not expired as candidates", () => {
     const expired = { ...kauffman, primaryUrl: "https://other.test/", venue: "Starlight Theatre", status: "expired" as const };
-    expect(findMatch(venueless, [expired, kauffman])).toBe(kauffman);
-    expect(findMatch(venueless, [expired])).toBeUndefined();
+    expect(findMatch(venueless, [expired, kauffman], {})).toBe(kauffman);
+    expect(findMatch(venueless, [expired], {})).toBeUndefined();
   });
 
   it("never matches a recurring event, which has no date", () => {
     const recurring = { primaryUrl: "https://bar.test/", title: "Trivia Night", venue: "Bar A" };
-    expect(findMatch({ primaryUrl: "https://elsewhere.test/", title: "Trivia Night" }, [recurring])).toBeUndefined();
+    expect(findMatch({ primaryUrl: "https://elsewhere.test/", title: "Trivia Night" }, [recurring], {})).toBeUndefined();
   });
 });

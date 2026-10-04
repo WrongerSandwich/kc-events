@@ -390,15 +390,16 @@ function matchable(event: Event): boolean {
  * primary page with nothing citable makes an active event unverified, keeping its old reading and
  * curation, since the rules no longer support publishing it, and leaves any other event's status
  * alone. Another page with nothing citable, such as one that names no venue, cannot speak for the
- * reading the event's own page gave. Either way the page still lists the event, so it is not missing
- * and any strike and any run of outages is cleared.
+ * event, to cancel it or to hide it: it was matched on title and date alone. Short of a cancellation,
+ * the page still lists the event, so it is not missing and any strike and any run of outages is cleared.
  */
 function applySighting(
   known: Event,
   { event, cancelled }: Sighting,
   fromOwnPage: boolean,
 ): { event: Event; refreshed: boolean; uncitable: boolean } {
-  if (cancelled) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
+  const speaksForEvent = fromOwnPage || event.status === "active";
+  if (cancelled && speaksForEvent) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
   if (event.status === "active") return { event: refresh(known, event), refreshed: true, uncitable: false };
   const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
   if (known.status === "active" && fromOwnPage) return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
@@ -418,26 +419,25 @@ function applySighting(
 function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event[]; foldedInto: Map<string, string> } {
   const byId = new Map(events.map((e) => [e.id, e]));
   const foldedInto = new Map<string, string>();
-  let live = events
+  for (let pair = firstMatchingPair([...byId.values()], aliases); pair; pair = firstMatchingPair([...byId.values()], aliases)) {
+    const [kept, duplicate] = pair;
+    byId.set(kept.id, kept.status !== "active" && duplicate.status === "active" ? refresh(kept, duplicate) : kept);
+    byId.set(duplicate.id, expire(duplicate, "duplicate"));
+    foldedInto.set(duplicate.id, kept.id);
+  }
+  return { events: [...byId.values()], foldedInto };
+}
+
+/** The first two records, in order seen (ties in dataset order), that are the same event: the one to keep, then its duplicate. */
+function firstMatchingPair(events: Event[], aliases: VenueAliases): [Event, Event] | undefined {
+  const live = events
     .filter((e) => e.status !== "expired" && e.recurrence !== "recurring")
     .sort((a, b) => Date.parse(a.firstSeen) - Date.parse(b.firstSeen));
-  for (let changed = true; changed; ) {
-    changed = false;
-    for (let j = 1; j < live.length; j++) {
-      const later = live[j]!;
-      const i = live.slice(0, j).findIndex((earlier) => sameEvent(earlier, later, live, aliases));
-      if (i === -1) continue;
-      const kept = live[i]!;
-      const merged = kept.status !== "active" && later.status === "active" ? refresh(kept, later) : kept;
-      byId.set(kept.id, merged);
-      byId.set(later.id, expire(later, "duplicate"));
-      foldedInto.set(later.id, kept.id);
-      live = live.filter((e) => e !== later).map((e) => (e === kept ? merged : e));
-      j--;
-      changed = true;
-    }
+  for (const [j, later] of live.entries()) {
+    const kept = live.slice(0, j).find((earlier) => sameEvent(earlier, later, live, aliases));
+    if (kept) return [kept, later];
   }
-  return { events: events.map((e) => byId.get(e.id)!), foldedInto };
+  return undefined;
 }
 
 /**
