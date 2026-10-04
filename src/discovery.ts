@@ -15,6 +15,15 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 /** Runs a discovery host must have been seen in before it is suggested for promotion. */
 const PROMOTION_THRESHOLD = 2;
 
+/** A URL path ending in one of these is a stylesheet, script, font, image or file, never an event page. */
+const STATIC_ASSET_PATH = /\.(css|m?js|woff2?|ttf|otf|eot|png|jpe?g|gif|svg|webp|ico|avif|pdf|xml|json|zip|mp3|mp4)$/i;
+
+/**
+ * An anchor's href, read attribute by attribute so a quoted value holding ">" or "href=" cannot
+ * mislead it. The value is in group 1, 2 or 3 as it was double-quoted, single-quoted or bare.
+ */
+const ANCHOR_HREF = /<a(?:\s+(?!href\b)[^\s<>"'=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s<>"']+))?)*\s+href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))/gi;
+
 /**
  * The run's search queries: one per kind but the "other" escape hatch, each naming the place and
  * the months the horizon covers, e.g. "music events in Kansas City, October to November 2026".
@@ -60,9 +69,6 @@ export function isLead(url: string, config: RunConfig): boolean {
   return /^https?:/i.test(url) && !onHost(url, config.discovery.ignoredHosts);
 }
 
-/** A URL path ending in one of these is a stylesheet, script, font, image or file, never an event page. */
-const STATIC_ASSET_PATH = /\.(css|m?js|woff2?|ttf|otf|eot|png|jpe?g|gif|svg|webp|ico|avif|pdf|xml|json|zip|mp3|mp4)$/i;
-
 /**
  * An aggregator page read as an index: the anchors on it a person could click that leave the
  * aggregator for a followable host and are not a static asset, in page order, each once, up to the
@@ -70,10 +76,12 @@ const STATIC_ASSET_PATH = /\.(css|m?js|woff2?|ttf|otf|eot|png|jpe?g|gif|svg|webp
  */
 export function outboundLinks(page: FetchResult, config: RunConfig): string[] {
   const links: string[] = [];
-  for (const [, href] of page.body.matchAll(/<a\s(?:[^>]*?\s)?href\s*=\s*["']([^"']+)["']/gi)) {
+  for (const [, doubleQuoted, singleQuoted, bare] of page.body.matchAll(ANCHOR_HREF)) {
+    const href = doubleQuoted || singleQuoted || bare;
+    if (!href) continue;
     let url: URL;
     try {
-      url = new URL(href!.replace(/&amp;/g, "&"), page.finalUrl);
+      url = new URL(href.replace(/&amp;/g, "&"), page.finalUrl);
     } catch {
       continue;
     }

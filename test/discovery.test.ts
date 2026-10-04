@@ -16,29 +16,26 @@ const QUERY = "music events in Kansas City, October to November 2026";
 const LATER_QUERY = "music events in Kansas City, October to December 2026";
 
 const PROMOTER_PAGE = "https://promoter.test/shows/big-show";
+/** An aggregator page a search can land on. */
+const LISTING = "https://www.listings.test/kc/this-week";
 /** A source standing in for the promoter's page, so candidateAt cites it. */
 const PROMOTER = source("Promoter", { urls: [PROMOTER_PAGE], neighborhood: "Westport" });
 
 const lead = (url: string, title = "A lead"): SearchResult => ({ url, title, snippet: "Something on in Kansas City" });
 
+interface DiscoverOptions {
+  sources?: Source[];
+  pages?: Record<string, CannedPage>;
+  completions?: CompletionResult[];
+  searches?: Record<string, SearchResult[] | Error>;
+  discovery?: Partial<RunConfig["discovery"]>;
+  spendCapUsd?: number;
+}
+
 async function discoverAt(
   now: Date,
   dataset: Dataset,
-  {
-    sources = [],
-    pages = {},
-    completions = [],
-    searches = {},
-    discovery = {},
-    spendCapUsd = 5,
-  }: {
-    sources?: Source[];
-    pages?: Record<string, CannedPage>;
-    completions?: CompletionResult[];
-    searches?: Record<string, SearchResult[] | Error>;
-    discovery?: Partial<RunConfig["discovery"]>;
-    spendCapUsd?: number;
-  },
+  { sources = [], pages = {}, completions = [], searches = {}, discovery = {}, spendCapUsd = 5 }: DiscoverOptions,
 ) {
   const fakes = fakePorts(now, { pages, completions, searches });
   const config = testConfig({ spendCapUsd });
@@ -76,7 +73,7 @@ describe("discovery lane", () => {
   });
 
   it("an aggregator result yields no event from its own page; its outbound links are followed instead", async () => {
-    const listing = "https://www.listings.test/kc/this-week";
+    const listing = LISTING;
     const { dataset, report, requests, calls } = await discoverAt(WEEK_1, emptyDataset(), {
       searches: { [QUERY]: [lead(listing)] },
       pages: {
@@ -104,20 +101,19 @@ describe("discovery lane", () => {
   });
 
   describe("an aggregator page's leads are the anchors a person could click", () => {
-    const listing = "https://www.listings.test/kc/this-week";
-    /** One aggregator lead, the listing page, and the promoter page with one extracted event. */
     const bigShow = costing(0.01, candidateAt(PROMOTER, { title: "Big Show", venue: "The Truman" }));
+    /** A search landing on the listing page with this body; the promoter page yields one event. */
     const discoverFromListing = (
       body: string,
-      { pages = {}, completions = [bigShow], discovery = {} }: { pages?: Record<string, CannedPage>; completions?: CompletionResult[]; discovery?: Partial<RunConfig["discovery"]> } = {},
+      { pages = {}, completions = [bigShow], discovery = {} }: Pick<DiscoverOptions, "pages" | "completions" | "discovery"> = {},
     ) =>
       discoverAt(WEEK_1, emptyDataset(), {
-        searches: { [QUERY]: [lead(listing)] },
-        pages: { [listing]: { status: 200, body }, [PROMOTER_PAGE]: PAGE, ...pages },
+        searches: { [QUERY]: [lead(LISTING)] },
+        pages: { [LISTING]: { status: 200, body }, [PROMOTER_PAGE]: PAGE, ...pages },
         completions,
         discovery,
       });
-    const fetched = (calls: string[]) => calls.filter((c) => c.startsWith("fetch:") && c !== `fetch:${listing}`);
+    const fetched = (calls: string[]) => calls.filter((c) => c.startsWith("fetch:") && c !== `fetch:${LISTING}`);
 
     it("stylesheet, script and document links are not followed; the event page is", async () => {
       const { calls, report } = await discoverFromListing(`<html><head>
@@ -146,10 +142,18 @@ describe("discovery lane", () => {
       expect(fetched(calls)).toEqual([`fetch:${PROMOTER_PAGE}`, `fetch:${second}`]);
     });
 
-    it("an anchor with its attributes in another order and single quotes is still followed", async () => {
-      const { calls } = await discoverFromListing(`<body><a class="x" data-id='7' href='${PROMOTER_PAGE}'>Big Show</a></body>`);
+    it("an anchor's href is read whatever the attribute order or quoting", async () => {
+      const [second, third] = ["https://promoter.test/shows/second-show", "https://promoter.test/shows/third-show"];
+      const { calls } = await discoverFromListing(
+        `<body>
+          <a class="x" data-id='7' href='${PROMOTER_PAGE}'>Big Show</a>
+          <a title="Fri > Sat" data-href="https://venue.test/not-this" href="${second}">Second</a>
+          <a href=${third}>Third</a>
+        </body>`,
+        { pages: { [second]: PAGE, [third]: PAGE }, completions: [bigShow, costing(0.01), costing(0.01)] },
+      );
 
-      expect(fetched(calls)).toEqual([`fetch:${PROMOTER_PAGE}`]);
+      expect(fetched(calls)).toEqual([`fetch:${PROMOTER_PAGE}`, `fetch:${second}`, `fetch:${third}`]);
     });
 
     it("an event URL whose query string mentions a script is still followed", async () => {
@@ -159,7 +163,7 @@ describe("discovery lane", () => {
       expect(fetched(calls)).toEqual([`fetch:${page}`]);
     });
 
-    it("href on a base or area element is not a lead", async () => {
+    it("an href on anything but an anchor is not a lead", async () => {
       const { calls } = await discoverFromListing(
         `<head><base href="https://cdn.venue.test/"></head><body><map><area href="https://venue.test/map-region"></map><abbr href="https://venue.test/x">x</abbr><a href="${PROMOTER_PAGE}">Big Show</a></body>`,
       );
