@@ -1,7 +1,8 @@
 /**
- * Fails the build when a page's compressed transfer (HTML + every CSS and JS file it loads, transitively) exceeds
- * its budget (spec section 9). Font files are not counted: they are the same for every page and woff2 is already
- * compressed; the budget is about markup, styles, script, and the event data the script carries.
+ * Run as `pnpm size` after a build, in CI only (not in `pnpm build`, the deploy build): exits non-zero when a page's
+ * compressed transfer (HTML + every CSS and JS file it loads, transitively) exceeds its budget (spec section 9). Font
+ * files are not counted: they are the same for every page and woff2 is already compressed; the budget is about markup,
+ * styles, script, and the event data the script carries.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
