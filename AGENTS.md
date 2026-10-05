@@ -20,6 +20,7 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, created lazil
 
 - `pnpm test`: the full vitest suite. `pnpm vitest run <file>` for one file.
 - `pnpm typecheck`: `tsc --noEmit`.
+- The public site is the `kc-events-site` package in `site/`: `pnpm --filter kc-events-site dev | build | size | test | test:e2e`. `pnpm -r test` and `pnpm -r typecheck` run both packages. `.github/workflows/site-ci.yml` runs typecheck, build, size, tests, and e2e on pull requests and `main`.
 - `pnpm research [--horizon-weeks N] [--no-discovery]`: one run; `--no-discovery` turns the discovery lane off for it. Reads `research.config.yaml`, `prompts/extraction-rules.md`, `data/registry.yaml`, and `data/events.json`; writes `data/events.json` and `data/runs/<run date>.md` plus `.json`. Secrets come from env or a gitignored `.env` (`OPENROUTER_API_KEY`, needed as soon as the registry has an active source; `TAVILY_API_KEY`, needed unless discovery is off). Spend has two layers: `spendCapUsd` in the config stops model calls within a run (`src/spend.ts` wraps the model port), and a monthly limit on the OpenRouter key itself, set by hand through `scripts/hand-run-setup.sh`, backstops a bug in the first.
 
 - `pnpm grade [--run YYYY-MM-DD]`: fills counts three and four of `docs/milestone-one-grading.md` from a run report (latest by default) and `data/events.json`, keeping whatever is hand-written around the marked blocks. Refuses a report whose horizon or cap is not the milestone's (3 weeks, 5 USD).
