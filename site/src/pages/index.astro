@@ -26,8 +26,7 @@ const count = events.length;
       {alwaysThere.map((e) => (
         <li>
           <a href={`/e/${e.id}`}>{e.title}</a>
-          <span class="when">{e.schedule}</span>
-          <span class="where">{e.venue}</span>
+          <span class="detail">{e.schedule} · {e.venue}</span>
         </li>
       ))}
     </ul>
@@ -40,19 +39,12 @@ const count = events.length;
   h1 { margin-top: var(--space-8); }
   .lede { color: var(--fg-muted); margin-top: var(--space-2); max-width: 36rem; }
   .note { color: var(--fg-muted); margin-top: var(--space-1); }
-  .always { list-style: none; padding: 0; margin: var(--space-3) 0 0; }
-  .always li {
-    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0 var(--space-4); align-items: baseline;
-    padding-block: var(--space-2); border-bottom: 1px solid var(--rule);
-  }
+  .always { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
+  /* Two lines a row: the name, then when and where. Schedules run long ("Saturdays & Sundays, April–November; …"),
+     so they get the full width rather than a narrow right-hand column. */
+  .always li { display: grid; padding-block: var(--space-2); border-bottom: 1px solid var(--rule); }
   .always li:last-child { border-bottom: 0; }
   .always a { color: var(--fg); font-weight: var(--weight-strong); }
-  .always .when { font-size: var(--text-sm); color: var(--fg-muted); text-align: right; max-width: 18rem; }
-  .always .where { grid-column: 1 / -1; font-size: var(--text-sm); color: var(--fg-muted); }
-  /* Narrow screens: one column, so a long schedule phrase never squeezes the title. */
-  @media (max-width: 34rem) {
-    .always li { grid-template-columns: minmax(0, 1fr); }
-    .always .when { text-align: left; max-width: none; }
-  }
+  .always .detail { font-size: var(--text-sm); color: var(--fg-muted); }
   .explore { margin-block: var(--space-12); font-size: var(--text-lg); font-weight: var(--weight-strong); }
 </style>

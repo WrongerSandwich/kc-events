@@ -31,7 +31,7 @@
   .save:hover { color: var(--fg); border-color: var(--fg-faint); }
   .save:active { transform: translateY(1px); }
   .save[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); }
-  .large { min-height: 2.75rem; min-width: 4.5rem; padding-inline: var(--space-3); font-size: var(--text-sm); }
+  .large { min-height: var(--tap); min-width: 4.5rem; padding-inline: var(--space-3); font-size: var(--text-sm); }
   .tick { margin-right: 0.3em; }
   @media (prefers-reduced-motion: reduce) {
     .save { transition: none; }

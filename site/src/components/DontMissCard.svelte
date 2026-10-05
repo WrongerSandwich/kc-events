@@ -34,7 +34,7 @@
   /* Date and title on the left, Save beside them on the right; the why-line and the details run full width beneath. */
   .card {
     display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "date save" "title save" "why why" "meta meta";
-    column-gap: var(--space-4); margin-block: var(--space-8);
+    column-gap: var(--space-4); margin-top: var(--space-4);
   }
   .date { grid-area: date; font-size: var(--text-sm); color: var(--fg-muted); }
   h3 { grid-area: title; font-family: var(--font-voice); font-size: var(--text-xl); letter-spacing: var(--tracking-heading); line-height: var(--leading-tight); text-wrap: pretty; }

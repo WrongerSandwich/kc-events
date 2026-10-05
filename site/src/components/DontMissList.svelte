@@ -58,20 +58,29 @@
 {/if}
 
 <style>
-  .empty { color: var(--fg-muted); margin-block: var(--space-3) var(--space-8); }
+  /* Cards in a run are parted by a hairline, the same one the one-line lists use. Set here, not in the card: a
+     component's scoped styles cannot see its own siblings. */
+  section :global(.card + .card) { border-top: 1px solid var(--rule); margin-top: var(--space-6); padding-top: var(--space-6); }
+  .empty { color: var(--fg-muted); margin-top: var(--space-3); }
   /* The later picks: one line each, date in a fixed column so titles align; the venue drops under on a phone. */
-  .later { list-style: none; padding: 0; margin: var(--space-3) 0 0; }
+  .later { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
+  /* The venue column takes only what it needs up to 12rem, then wraps, so a long hall name never squeezes the title. */
   .later li {
-    display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) auto; gap: 0 var(--space-4); align-items: baseline;
+    display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) minmax(0, max-content); gap: 0 var(--space-4); align-items: baseline;
     padding-block: var(--space-2); border-bottom: 1px solid var(--rule);
   }
   .later li:last-child { border-bottom: 0; }
   .later .when { font-size: var(--text-sm); color: var(--fg-muted); }
   .later a { color: var(--fg); font-weight: var(--weight-strong); }
-  .later .where { font-size: var(--text-sm); color: var(--fg-muted); text-align: right; }
+  .later .where { font-size: var(--text-sm); color: var(--fg-muted); text-align: right; max-width: 12rem; text-wrap: balance; }
   @media (max-width: 34rem) {
-    .later li { grid-template-columns: 6.25rem minmax(0, 1fr); }
-    .later .where { grid-column: 2; text-align: left; }
+    .later li { grid-template-columns: 5.5rem minmax(0, 1fr); }
+    .later .where { grid-column: 2; text-align: left; max-width: none; }
+  }
+  /* The narrowest phones: date over title, so the title gets the whole line. */
+  @media (max-width: 24rem) {
+    .later li { grid-template-columns: minmax(0, 1fr); }
+    .later .where { grid-column: 1; }
   }
   .more { margin-top: var(--space-3); }
 </style>
