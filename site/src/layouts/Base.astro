@@ -34,8 +34,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, "\\u003c")} />}
   </head>
   <body>
-    <Header wide={wide} />
-    <StalenessBanner client:load />
+    <Header wide={wide}><StalenessBanner client:load /></Header>
     <main id="main" class={wide ? "wide" : "measure"}>
       <slot />
     </main>

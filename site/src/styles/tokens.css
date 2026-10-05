@@ -12,6 +12,8 @@
   --fg-muted: #5f5b53;
   --fg-faint: #736e64;
   --rule: #e4e0d8;
+  --rule-strong: #b9b3a8;       /* underlines under quiet links */
+  --control-border: #8f897e;    /* a control's edge: 3:1 against both surfaces (WCAG 1.4.11) */
   --accent: #b5471f;            /* links, the don't-miss mark */
   --accent-fg: #ffffff;
   --focus: #1f5fb5;
@@ -36,10 +38,13 @@
   --measure: 42rem;
   --gutter: 1rem;
   --radius: 4px;
+  /* Motion and stacking */
+  --ease-out: cubic-bezier(0.25, 1, 0.5, 1); /* ease-out-quart */
+  --z-sticky: 1; --z-bar: 2; --z-skip: 10;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #161513; --bg-raised: #1f1e1b; --fg: #ece8df; --fg-muted: #b3ada0; --fg-faint: #8f897c; --rule: #2e2c28;
+    --bg: #161513; --bg-raised: #1f1e1b; --fg: #ece8df; --fg-muted: #b3ada0; --fg-faint: #8f897c; --rule: #2e2c28; --rule-strong: #5a564e; --control-border: #7a756b;
     --accent: #e8794a; --accent-fg: #161513; --focus: #7fb0ff;
     --kind-music: #c58ad4; --kind-theater-dance: #ec8aa0; --kind-comedy: #e0b23a; --kind-art-exhibitions: #6cb4cf;
     --kind-festivals-markets: #7bc47f; --kind-food-drink: #b8c25e; --kind-sports: #7fb0ff; --kind-film: #a3a3e0;

@@ -23,7 +23,7 @@ describe("StalenessBanner", () => {
     vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") }); // 10 days
     render(StalenessBanner);
     await tick();
-    expect(screen.getByRole("status")).toHaveTextContent("This list was last researched on Oct 5 and may have missed changes since.");
+    expect(screen.getByRole("status")).toHaveTextContent("This list was last researched on Oct 5 and may have missed changes since. Check the event's own page before you go.");
     vi.useRealTimers();
   });
 });

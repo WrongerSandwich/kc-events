@@ -1,4 +1,4 @@
-import { addDays, comingSunday, formatDay, formatRange, formatShort, weekday } from "./dates";
+import { addDays, comingSunday, formatDay, formatRange, formatShort, isDateOnly, weekday } from "./dates";
 import { firstDay, isDated, isPast, isUnderway, lastDay } from "./events";
 import type { PublishedEvent } from "./types";
 
@@ -10,15 +10,20 @@ export function horizonBounds(today: string): { sunday: string; twoWeeks: string
   return { sunday: comingSunday(today), twoWeeks: addDays(today, 14) };
 }
 
-/** A one-off is placed by its start; a limited run by its close, because the regret is in missing the close. */
-export function anchorDate(e: PublishedEvent): string | undefined {
+/**
+ * A one-off is placed by its start. A limited run is placed by when you can first go: its opening, or today once
+ * it is open, so a run that is on now sits under "This week" whatever its close. The date line carries the close.
+ */
+export function anchorDate(e: PublishedEvent, today: string): string | undefined {
   if (!isDated(e)) return undefined;
-  return e.recurrence === "limited-run" ? lastDay(e) : (firstDay(e) ?? lastDay(e));
+  if (e.recurrence !== "limited-run") return firstDay(e) ?? lastDay(e);
+  const opens = firstDay(e);
+  return opens === undefined || opens < today ? today : opens;
 }
 
 /** Total over every non-past dated event: each lands in exactly one bucket. */
 export function horizon(e: PublishedEvent, today: string): Horizon | undefined {
-  const anchor = anchorDate(e);
+  const anchor = anchorDate(e, today);
   if (anchor === undefined) return undefined;
   const { sunday, twoWeeks } = horizonBounds(today);
   if (anchor <= sunday) return "through-sunday";
@@ -37,11 +42,11 @@ export function horizonHeading(h: Horizon, today: string): string {
     case "next-two-weeks":
       return `Next two weeks, through ${formatShort(twoWeeks)}`;
     case "further-out":
-      return "Further out";
+      return `Later, after ${formatShort(twoWeeks)}`;
   }
 }
 
-/** The don't-miss events by bucket, each sorted by anchor then title; every bucket present. */
+/** The don't-miss events by bucket, each sorted by anchor, then start time, then title; every bucket present. */
 export function bucketDontMiss(events: PublishedEvent[], today: string): Record<Horizon, PublishedEvent[]> {
   const out: Record<Horizon, PublishedEvent[]> = { "through-sunday": [], "next-two-weeks": [], "further-out": [] };
   for (const e of events) {
@@ -49,7 +54,7 @@ export function bucketDontMiss(events: PublishedEvent[], today: string): Record<
     const h = horizon(e, today);
     if (h !== undefined) out[h].push(e);
   }
-  for (const h of HORIZONS) out[h].sort((a, b) => anchorDate(a)!.localeCompare(anchorDate(b)!) || a.title.localeCompare(b.title));
+  for (const h of HORIZONS) out[h].sort((a, b) => anchorDate(a, today)!.localeCompare(anchorDate(b, today)!) || startTime(a) - startTime(b) || a.title.localeCompare(b.title));
   return out;
 }
 
@@ -61,4 +66,9 @@ export function closingLine(e: PublishedEvent, today: string): string {
     return isUnderway(e, today) ? `On now, closes ${formatDay(last)}` : `Opens ${formatDay(first!)}, runs through ${formatDay(last)}`;
   }
   return isUnderway(e, today) ? `On now, through ${formatDay(last)}` : `${formatDay(first!)}–${formatDay(last)}`;
+}
+
+/** An event's start instant for ordering within a day; a date-only or missing start sorts first, as "all day". */
+function startTime(e: PublishedEvent): number {
+  return e.start === undefined || isDateOnly(e.start) ? 0 : Date.parse(e.start);
 }

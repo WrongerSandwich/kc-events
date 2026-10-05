@@ -29,10 +29,10 @@ describe("DontMissList", () => {
     // Svelte's mount renders synchronously but runs no effects (onMount included) until a flush, so this is
     // the first render: it must equal what the server rendered at build, or hydration would mismatch.
     const component = mount(DontMissList, { target });
-    expect(labels()).toEqual(["This week, Oct 5–11", "Next two weeks, through Oct 19", "Further out"]);
+    expect(labels()).toEqual(["This week, Oct 5–11", "Next two weeks, through Oct 19", "Later, after Oct 19"]);
     expect(target.textContent).toContain("Tuesday show");
     flushSync(); // onMount: the visitor's date
-    expect(labels()).toEqual(["This week, Oct 12–18", "Next two weeks, through Oct 26", "Further out"]);
+    expect(labels()).toEqual(["This week, Oct 12–18", "Next two weeks, through Oct 26", "Later, after Oct 26"]);
     expect(target.textContent).not.toContain("Tuesday show");
     unmount(component);
     target.remove();
@@ -44,13 +44,13 @@ describe("DontMissList", () => {
     render(DontMissList);
     await tick();
     const sections = screen.getAllByRole("region");
-    expect(sections.map((s) => s.getAttribute("aria-label"))).toEqual(["This week, Oct 5–11", "Next two weeks, through Oct 19", "Further out"]);
+    expect(sections.map((s) => s.getAttribute("aria-label"))).toEqual(["This week, Oct 5–11", "Next two weeks, through Oct 19", "Later, after Oct 19"]);
     const first = within(sections[0]!).getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
-    expect(first).toEqual(["Tuesday show", "Closing run"]);
+    expect(first).toEqual(["Closing run", "Tuesday show"]); // the run is on now, so it sorts as today
     expect(within(sections[0]!).getByText("Why A.")).toBeInTheDocument();
     expect(within(sections[0]!).getByText("On now, closes Sun Oct 11")).toBeInTheDocument();
     expect(within(sections[1]!).getByText("Later show")).toBeInTheDocument();
-    expect(within(sections[2]!).getByText(/Nothing flagged yet/)).toBeInTheDocument();
+    expect(within(sections[2]!).getByText("Nothing picked further out yet.")).toBeInTheDocument();
     expect(screen.queryByText("Plain show")).toBeNull();
     vi.useRealTimers();
   });

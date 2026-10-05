@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { meta } from "../generated/meta";
   import { formatDay, formatShort, formatTime, isDateOnly, localDate } from "../lib/dates";
   import { firstDay, hostOf, isMultiDay } from "../lib/events";
   import { closingLine } from "../lib/horizon";
@@ -10,27 +11,43 @@
   let dateLine = $derived(
     isMultiDay(event) ? closingLine(event, today) : `${formatDay(firstDay(event)!)}${isDateOnly(event.start!) ? "" : `, ${formatTime(event.start!)}`}`,
   );
+  // Every event the last run reached was verified that day, which the header already says; a card speaks up only
+  // when its own check is older than that.
+  const runDay = localDate(meta.lastSuccessfulRun);
+  let checked = $derived(localDate(event.lastVerified));
 </script>
 
-<article class="card" style={`--hue: var(--kind-${slugify(event.kind)})`}>
+<article class="card">
   <p class="date">{dateLine}</p>
   <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>
+  <div class="save"><SaveButton id={event.id} title={event.title} large /></div>
   <p class="why">{event.whyLine}</p>
   <p class="meta">
-    <span>{event.venue} · {event.neighborhood}</span>
-    <span class="chip">{event.kind}</span>
+    <span>{event.venue}, {event.neighborhood}</span>
+    <span class="chip" style={`--hue: var(--kind-${slugify(event.kind)})`}>{event.kind}</span>
     <a class="primary" href={event.primaryUrl} rel="noopener">{hostOf(event.primaryUrl)}</a>
-    <SaveButton id={event.id} title={event.title} />
-    <span class="verified">Verified {formatShort(localDate(event.lastVerified))}</span>
+    {#if checked < runDay}<span class="verified">Verified {formatShort(checked)}</span>{/if}
   </p>
 </article>
 
 <style>
-  .card { border-left: 3px solid var(--hue); padding: var(--space-2) 0 var(--space-2) var(--space-4); margin-block: var(--space-4); }
-  .date { margin: 0; font-size: var(--text-sm); color: var(--fg-muted); }
-  h3 { margin: 0; font-size: var(--text-xl); line-height: var(--leading-tight); }
-  h3 a { color: inherit; text-decoration: none; }
-  h3 a:hover { text-decoration: underline; }
-  .why { margin: var(--space-1) 0 var(--space-2); font-size: var(--text-lg); }
-  .meta { margin: 0; display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: center; font-size: var(--text-xs); color: var(--fg-faint); }
+  /* Date and title on the left, Save beside them on the right; the why-line and the details run full width beneath. */
+  .card {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "date save" "title save" "why why" "meta meta";
+    column-gap: var(--space-4); margin-block: var(--space-8);
+  }
+  .date { grid-area: date; font-size: var(--text-sm); color: var(--fg-muted); }
+  h3 { grid-area: title; font-size: var(--text-xl); line-height: var(--leading-tight); text-wrap: pretty; }
+  h3 a { color: inherit; }
+  /* The save slot keeps its width before the button mounts, so the title never re-wraps when it appears. */
+  .save { grid-area: save; align-self: start; min-width: 4.5rem; display: flex; justify-content: flex-end; }
+  .why { grid-area: why; margin-top: var(--space-2); font-size: var(--text-lg); max-width: 38rem; }
+  .meta {
+    grid-area: meta; margin-top: var(--space-2);
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3);
+    font-size: var(--text-sm); color: var(--fg-muted);
+  }
+  .primary { color: var(--fg-muted); text-decoration: underline; text-decoration-color: var(--rule-strong); }
+  .primary:hover { color: var(--accent); text-decoration-color: currentColor; }
+  .verified { color: var(--fg-faint); }
 </style>
