@@ -80,6 +80,25 @@ describe("Explorer", () => {
     expect(film).toHaveTextContent("Sat Oct 10 · all day");
   });
 
+  it("closes the filter sheet on phones after mount, and reopens it when the window widens past the phone layout", () => {
+    const listeners = new Set<(e: { matches: boolean }) => void>();
+    const mq = { matches: true, addEventListener: (_: string, l: (e: { matches: boolean }) => void) => listeners.add(l), removeEventListener: (_: string, l: (e: { matches: boolean }) => void) => listeners.delete(l) };
+    vi.stubGlobal("matchMedia", vi.fn(() => mq));
+    try {
+      const { container, unmount: done } = render(Explorer);
+      const sheet = container.querySelector("details")!;
+      expect(sheet.open).toBe(false);
+      mq.matches = false;
+      listeners.forEach((l) => l({ matches: false }));
+      flushSync();
+      expect(sheet.open).toBe(true);
+      done();
+      expect(listeners.size).toBe(0);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("shows a shared custom range in the date inputs", () => {
     history.replaceState(null, "", "/explore?when=2026-10-09..2026-10-10");
     render(Explorer);

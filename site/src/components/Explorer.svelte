@@ -21,8 +21,14 @@
   onMount(() => {
     today = todayIn(meta.timeZone, new Date());
     filters = parseQuery(new URLSearchParams(location.search), known);
-    if (typeof matchMedia === "function" && matchMedia("(max-width: 800px)").matches) sheetOpen = false;
-    return saves().subscribe((ids) => { saved = ids; });
+    // The summary that reopens the sheet exists only in the phone layout, so the sheet follows the layout: closed when
+    // a window becomes phone-sized, open again when it widens (a rotated tablet, a resized window).
+    const phone = typeof matchMedia === "function" ? matchMedia("(max-width: 800px)") : undefined;
+    const follow = (e: { matches: boolean }) => { sheetOpen = !e.matches; };
+    if (phone?.matches) sheetOpen = false;
+    phone?.addEventListener("change", follow);
+    const unsubscribe = saves().subscribe((ids) => { saved = ids; });
+    return () => { unsubscribe(); phone?.removeEventListener("change", follow); };
   });
 
   function change(next: Filters) {
@@ -67,7 +73,8 @@
 </div>
 
 <style>
-  .explorer { display: grid; grid-template-columns: 16rem 1fr; gap: var(--space-8); align-items: start; }
+  /* A narrow rail, so result rows keep room for their titles. */
+  .explorer { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: var(--space-6); align-items: start; }
   /* Sticky beside the results, scrolling on its own when it is taller than the window (a 768 px laptop). */
   .rail { position: sticky; top: var(--space-4); max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto; padding: var(--space-1); margin: calc(-1 * var(--space-1)); }
   /* (The padding keeps focus rings on the rail's edge from being clipped by the scroll box.) */

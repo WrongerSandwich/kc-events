@@ -15,6 +15,7 @@ const onNow = event({ id: "onNow", title: "Exhibition", recurrence: "limited-run
 const onNowSooner = event({ id: "sooner", title: "Closing run", recurrence: "limited-run", start: undefined, end: "2026-10-11", venue: "Spencer" });
 const opensLater = event({ id: "later", title: "Opens later", recurrence: "limited-run", start: "2026-10-20", end: "2026-11-14", venue: "Folly" });
 const festLater = event({ id: "fest", title: "Festival", start: "2026-10-29", end: "2026-10-31", venue: "Park" });
+const festNow = event({ id: "festNow", title: "Fair", start: "2026-10-03", end: "2026-10-07", venue: "Fairground" });
 const trivia = event({ id: "trivia", title: "Pub trivia", recurrence: "recurring", start: undefined, schedule: "Tuesdays", kind: "food/drink", venue: "A bar" });
 const all = [fri7, fri5, friAll, tue, onNow, onNowSooner, opensLater, trivia];
 
@@ -52,7 +53,9 @@ describe("rowDateLine", () => {
   it("writes the time, all day, a span, or a schedule", () => {
     expect(rowDateLine(fri7, today)).toBe("7:00 pm");
     expect(rowDateLine(friAll, today)).toBe("All day");
-    expect(rowDateLine(onNow, today)).toBe("On now, closes Tue Oct 20");
+    expect(rowDateLine(onNow, today)).toBe("Closes Tue Oct 20");
+    expect(rowDateLine(onNowSooner, today)).toBe("Closes Sun Oct 11");
+    expect(rowDateLine(festNow, today)).toBe("Through Wed Oct 7");
     expect(rowDateLine(opensLater, today)).toBe("Runs through Sat Nov 14");
     expect(rowDateLine(festLater, today)).toBe("Runs through Sat Oct 31");
     expect(rowDateLine(trivia, today)).toBe("Tuesdays");
@@ -61,8 +64,9 @@ describe("rowDateLine", () => {
   it("puts the day first when there are no day headings (the venue sort)", () => {
     expect(rowDateLine(fri7, today, true)).toBe("Fri Oct 9 · 7:00 pm");
     expect(rowDateLine(friAll, today, true)).toBe("Fri Oct 9 · all day");
-    expect(rowDateLine(onNow, today, true)).toBe("On now, closes Tue Oct 20");
-    expect(rowDateLine(onNowSooner, today, true)).toBe("On now, closes Sun Oct 11");
+    expect(rowDateLine(onNow, today, true)).toBe("Closes Tue Oct 20");
+    expect(rowDateLine(onNowSooner, today, true)).toBe("Closes Sun Oct 11");
+    expect(rowDateLine(festNow, today, true)).toBe("Through Wed Oct 7");
     expect(rowDateLine(opensLater, today, true)).toBe("Tue Oct 20–Sat Nov 14");
     expect(rowDateLine(festLater, today, true)).toBe("Thu Oct 29–Sat Oct 31");
     expect(rowDateLine(trivia, today, true)).toBe("Tuesdays");

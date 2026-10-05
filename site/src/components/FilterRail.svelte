@@ -69,7 +69,7 @@
   .segments, .chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
   button { font: inherit; font-size: var(--text-xs); background: none; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: var(--space-1) var(--space-2); cursor: pointer; }
   button[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); }
-  .range { display: flex; gap: var(--space-2); margin-top: var(--space-2); } .range label { display: flex; flex-direction: column; font-size: var(--text-xs); }
+  .range { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); } .range label { display: flex; flex-direction: column; font-size: var(--text-xs); }
   input, select { font: inherit; }
   .search input { width: 100%; padding: var(--space-1) var(--space-2); }
 </style>
