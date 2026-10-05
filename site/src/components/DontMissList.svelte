@@ -3,9 +3,10 @@
   // dont-miss, not events: the front page ships only the flagged events (its budget is 50 KB; the full list is about 26).
   import { dontMiss } from "../generated/dont-miss";
   import { meta } from "../generated/meta";
-  import { formatDay, formatShort, todayIn } from "../lib/dates";
+  import { addDays, formatDay, formatShort, todayIn } from "../lib/dates";
   import { firstDay, isMultiDay, lastDay } from "../lib/events";
-  import { bucketDontMiss, horizonHeading, HORIZONS } from "../lib/horizon";
+  import { bucketDontMiss, horizonBounds, horizonHeading, HORIZONS, type Horizon } from "../lib/horizon";
+  import { slugify } from "../lib/slugs";
   import type { PublishedEvent } from "../lib/types";
   import DontMissCard from "./DontMissCard.svelte";
 
@@ -19,6 +20,17 @@
   onMount(() => { today = todayIn(meta.timeZone, new Date()); });
   let buckets = $derived(bucketDontMiss(dontMiss, today));
   let total = $derived(HORIZONS.reduce((n, h) => n + buckets[h].length, 0));
+
+  /** A section's picks counted by kind, most first, each linking to the explorer showing just those picks. */
+  function kindCounts(h: Horizon, events: PublishedEvent[]): { kind: string; n: number; href: string }[] {
+    const { sunday, twoWeeks } = horizonBounds(today);
+    const when = h === "through-sunday" ? "weekend" : `${addDays(sunday, 1)}..${twoWeeks}`;
+    const counts = new Map<string, number>();
+    for (const e of events) counts.set(e.kind, (counts.get(e.kind) ?? 0) + 1);
+    return [...counts]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([kind, n]) => ({ kind, n, href: `/explore?when=${when}&kind=${slugify(kind)}&dontmiss=1` }));
+  }
 
   /** The later list's one-line date: everything there starts after the next two weeks, so nothing is on now. */
   function shortWhen(e: PublishedEvent): string {
@@ -40,15 +52,20 @@
       {:else if h === "further-out"}
         <ul class="later">
           {#each buckets[h] as event (event.id)}
-            <li>
+            <li class={`kind-${slugify(event.kind)}`}>
               <span class="when">{shortWhen(event)}</span>
-              <a href={`/e/${event.id}`}>{event.title}</a>
+              <a href={`/e/${event.id}`}><span class="dot" aria-hidden="true"></span>{event.title}<span class="visually-hidden">, {event.kind}</span></a>
               <span class="where">{event.venue}</span>
             </li>
           {/each}
         </ul>
         <p class="more"><a href="/explore?dontmiss=1">All the picks, with why, in the explorer</a></p>
       {:else}
+        <ul class="kinds" aria-label="Picks by kind">
+          {#each kindCounts(h, buckets[h]) as k (k.kind)}
+            <li><a class={`chip kind-${slugify(k.kind)}`} href={k.href}>{k.n} {k.kind}</a></li>
+          {/each}
+        </ul>
         {#each buckets[h] as event (event.id)}
           <DontMissCard {event} {today} />
         {/each}
@@ -71,7 +88,7 @@
   }
   .later li:last-child { border-bottom: 0; }
   .later .when { font-size: var(--text-sm); color: var(--fg-muted); }
-  .later a { color: var(--fg); font-weight: var(--weight-strong); }
+  .later a { color: var(--fg); font-weight: var(--weight-medium); }
   .later .where { font-size: var(--text-sm); color: var(--fg-muted); text-align: right; max-width: 12rem; text-wrap: balance; }
   @media (max-width: 34rem) {
     .later li { grid-template-columns: 5.5rem minmax(0, 1fr); }
@@ -83,4 +100,11 @@
     .later .where { grid-column: 1; }
   }
   .more { margin-top: var(--space-3); }
+  /* What kind of week it is, at a glance; each chip filters the explorer to those picks. */
+  .kinds { list-style: none; padding: 0; margin: var(--space-3) 0 var(--space-2); display: flex; flex-wrap: wrap; gap: var(--space-2); }
+  .kinds a { font-size: var(--text-sm); padding: var(--space-1) var(--space-3); text-decoration: none; transition: filter 150ms var(--ease-out); }
+  .kinds a:hover { filter: brightness(0.96) saturate(1.2); }
+  /* A kind's dot before a title in the one-line list. */
+  .dot { display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: var(--space-2); border-radius: 50%; background: var(--hue); vertical-align: 0.08em; }
+  @media (prefers-reduced-motion: reduce) { .kinds a { transition: none; } }
 </style>

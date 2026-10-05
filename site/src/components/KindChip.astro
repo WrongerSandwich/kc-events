@@ -3,4 +3,4 @@ import { slugify } from "../lib/slugs";
 interface Props { kind: string }
 const { kind } = Astro.props;
 ---
-<span class="chip" style={`--hue: var(--kind-${slugify(kind)})`}>{kind}</span>
+<span class={`chip kind-${slugify(kind)}`}>{kind}</span>

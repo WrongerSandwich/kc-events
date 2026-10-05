@@ -1,48 +1,50 @@
 /*
  * The site's design tokens: every colour, size, and space a surface uses comes from here.
- * Every text and chip colour clears WCAG AA (4.5:1) against both --bg and --bg-raised in both schemes; control edges clear 3:1.
- * A kind's hue is --kind- plus slugify(kind), so "theater/dance" is --kind-theater-dance.
+ * The interface is monochrome; colour comes from the eleven kinds, each a strong shade and a tint at matched
+ * lightness and chroma, ten hues roughly evenly spaced around the wheel plus a grey for "other".
+ * Every text pairing clears WCAG AA (4.5:1) in both schemes: text on --bg and --bg-raised, and a kind's strong
+ * shade on its own tint (5.1:1 at worst). Control edges clear 3:1.
+ * A kind's colours are --kind- plus slugify(kind), so "theater/dance" is --kind-theater-dance; the .kind-<slug>
+ * classes at the bottom set --hue and --hue-tint from them for any element.
  */
 :root {
   color-scheme: light dark;
-  /* Surfaces and text: neutrals tinted a breath toward the accent's hue (45°), so the page is a near-white, not cream. */
-  --bg: oklch(0.985 0.004 45);
+  /* Surfaces and text: true greys, so only the kinds bring colour. */
+  --bg: oklch(0.985 0 0);
   --bg-raised: oklch(1 0 0);
-  --fg: oklch(0.22 0.012 45);
-  --fg-muted: oklch(0.47 0.015 45);
-  --fg-faint: oklch(0.53 0.014 45);
-  --rule: oklch(0.92 0.008 45);
-  --rule-strong: oklch(0.78 0.012 45);   /* underlines under quiet links */
-  --control-border: oklch(0.62 0.012 45); /* a control's edge: 3:1 against both surfaces (WCAG 1.4.11) */
-  --accent: #b5471f;            /* links, the don't-miss mark */
-  --accent-fg: #ffffff;
-  --focus: #1f5fb5;
-  /* Eleven kind hues: chip text and edges only, never fills behind body text */
-  --kind-music: #8a3b9c;
-  --kind-theater-dance: #b03a5b;     /* rose, not --accent: the don't-miss mark must not read as a kind */
-  --kind-comedy: #946800;
-  --kind-art-exhibitions: #1f6f8b;
-  --kind-festivals-markets: #2e7d32;
-  --kind-food-drink: #5f6b12;        /* olive, off the accent's 10-25° hue range */
-  --kind-sports: #1f5fb5;
-  --kind-film: #4a4a8a;
-  --kind-talks-readings: #6b5b3e;
-  --kind-outdoors-community: #3d7a3d;
-  --kind-other: #6a6a6a;
-  /* Type */
-  /* Two faces: Inter for facts (dates, venues, lists, controls), Literata for the voice (headings, titles, why-lines). */
-  --font: "Inter Variable", system-ui, sans-serif;
-  --font-voice: "Literata Variable", Georgia, "Times New Roman", serif;
+  --fg: oklch(0.21 0 0);
+  --fg-muted: oklch(0.46 0 0);
+  --fg-faint: oklch(0.53 0 0);
+  --rule: oklch(0.915 0 0);
+  --rule-strong: oklch(0.78 0 0);
+  --control-border: oklch(0.62 0 0);
+  /* Links, selection, and the saved state are ink, not a hue: a hue would read as one more kind. */
+  --accent: oklch(0.21 0 0);
+  --accent-fg: oklch(1 0 0);
+  --focus: oklch(0.55 0.2 260);
+  /* The kinds */
+  --kind-talks-readings: oklch(0.47 0.14 20); --kind-talks-readings-tint: oklch(0.945 0.045 20);
+  --kind-food-drink: oklch(0.47 0.14 56); --kind-food-drink-tint: oklch(0.945 0.045 56);
+  --kind-comedy: oklch(0.47 0.14 88); --kind-comedy-tint: oklch(0.945 0.045 88);
+  --kind-festivals-markets: oklch(0.47 0.14 130); --kind-festivals-markets-tint: oklch(0.945 0.045 130);
+  --kind-outdoors-community: oklch(0.47 0.14 165); --kind-outdoors-community-tint: oklch(0.945 0.045 165);
+  --kind-art-exhibitions: oklch(0.47 0.14 205); --kind-art-exhibitions-tint: oklch(0.945 0.045 205);
+  --kind-sports: oklch(0.47 0.14 245); --kind-sports-tint: oklch(0.945 0.045 245);
+  --kind-film: oklch(0.47 0.14 278); --kind-film-tint: oklch(0.945 0.045 278);
+  --kind-music: oklch(0.47 0.14 308); --kind-music-tint: oklch(0.945 0.045 308);
+  --kind-theater-dance: oklch(0.47 0.14 345); --kind-theater-dance-tint: oklch(0.945 0.045 345);
+  --kind-other: oklch(0.48 0 0); --kind-other-tint: oklch(0.94 0 0);
+  /* Type: one sans, with tabular figures where numbers line up. */
+  --font: "Geist Variable", system-ui, sans-serif;
   --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.125rem; --text-xl: 1.375rem; --text-2xl: 1.75rem; --text-3xl: 2.25rem;
-  /* Weights by role: regular text, medium controls, strong titles and headings. */
   --weight-regular: 400; --weight-medium: 500; --weight-strong: 600;
-  --tracking-display: -0.02em; --tracking-heading: -0.01em;
-  --leading-tight: 1.25; --leading: 1.5; --leading-voice: 1.55; /* the serif why-line, a touch looser */
+  --tracking-display: -0.03em; --tracking-heading: -0.02em;
+  --leading-tight: 1.25; --leading: 1.5;
   /* Space and shape */
   --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-6: 1.5rem; --space-8: 2rem; --space-12: 3rem; --space-16: 4rem;
   --measure: 42rem;
   --gutter: 1rem;
-  --radius: 4px;
+  --radius: 6px;
   --tap: 2.75rem;               /* the 44 px minimum touch target */
   /* Motion and stacking */
   --ease-out: cubic-bezier(0.25, 1, 0.5, 1); /* ease-out-quart */
@@ -50,11 +52,30 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: oklch(0.19 0.008 45); --bg-raised: oklch(0.225 0.009 45); --fg: oklch(0.93 0.012 75); --fg-muted: oklch(0.77 0.015 70);
-    --fg-faint: oklch(0.68 0.015 70); --rule: oklch(0.29 0.008 45); --rule-strong: oklch(0.43 0.012 45); --control-border: oklch(0.53 0.012 45);
-    --accent: #e8794a; --accent-fg: #161513; --focus: #7fb0ff;
-    --kind-music: #c58ad4; --kind-theater-dance: #ec8aa0; --kind-comedy: #e0b23a; --kind-art-exhibitions: #6cb4cf;
-    --kind-festivals-markets: #7bc47f; --kind-food-drink: #b8c25e; --kind-sports: #7fb0ff; --kind-film: #a3a3e0;
-    --kind-talks-readings: #c2ad86; --kind-outdoors-community: #8ccf8c; --kind-other: #a8a8a8;
+    --bg: oklch(0.17 0 0); --bg-raised: oklch(0.205 0 0); --fg: oklch(0.94 0 0); --fg-muted: oklch(0.76 0 0);
+    --fg-faint: oklch(0.67 0 0); --rule: oklch(0.28 0 0); --rule-strong: oklch(0.43 0 0); --control-border: oklch(0.53 0 0);
+    --accent: oklch(0.94 0 0); --accent-fg: oklch(0.17 0 0); --focus: oklch(0.72 0.15 260);
+    --kind-talks-readings: oklch(0.82 0.11 20); --kind-talks-readings-tint: oklch(0.31 0.06 20);
+    --kind-food-drink: oklch(0.82 0.11 56); --kind-food-drink-tint: oklch(0.31 0.06 56);
+    --kind-comedy: oklch(0.82 0.11 88); --kind-comedy-tint: oklch(0.31 0.06 88);
+    --kind-festivals-markets: oklch(0.82 0.11 130); --kind-festivals-markets-tint: oklch(0.31 0.06 130);
+    --kind-outdoors-community: oklch(0.82 0.11 165); --kind-outdoors-community-tint: oklch(0.31 0.06 165);
+    --kind-art-exhibitions: oklch(0.82 0.11 205); --kind-art-exhibitions-tint: oklch(0.31 0.06 205);
+    --kind-sports: oklch(0.82 0.11 245); --kind-sports-tint: oklch(0.31 0.06 245);
+    --kind-film: oklch(0.82 0.11 278); --kind-film-tint: oklch(0.31 0.06 278);
+    --kind-music: oklch(0.82 0.11 308); --kind-music-tint: oklch(0.31 0.06 308);
+    --kind-theater-dance: oklch(0.82 0.11 345); --kind-theater-dance-tint: oklch(0.31 0.06 345);
+    --kind-other: oklch(0.80 0 0); --kind-other-tint: oklch(0.30 0 0);
   }
 }
+.kind-talks-readings { --hue: var(--kind-talks-readings); --hue-tint: var(--kind-talks-readings-tint); }
+.kind-food-drink { --hue: var(--kind-food-drink); --hue-tint: var(--kind-food-drink-tint); }
+.kind-comedy { --hue: var(--kind-comedy); --hue-tint: var(--kind-comedy-tint); }
+.kind-festivals-markets { --hue: var(--kind-festivals-markets); --hue-tint: var(--kind-festivals-markets-tint); }
+.kind-outdoors-community { --hue: var(--kind-outdoors-community); --hue-tint: var(--kind-outdoors-community-tint); }
+.kind-art-exhibitions { --hue: var(--kind-art-exhibitions); --hue-tint: var(--kind-art-exhibitions-tint); }
+.kind-sports { --hue: var(--kind-sports); --hue-tint: var(--kind-sports-tint); }
+.kind-film { --hue: var(--kind-film); --hue-tint: var(--kind-film-tint); }
+.kind-music { --hue: var(--kind-music); --hue-tint: var(--kind-music-tint); }
+.kind-theater-dance { --hue: var(--kind-theater-dance); --hue-tint: var(--kind-theater-dance-tint); }
+.kind-other { --hue: var(--kind-other); --hue-tint: var(--kind-other-tint); }

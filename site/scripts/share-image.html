@@ -1,26 +1,21 @@
 <!doctype html>
-<!-- The 1200x630 share image. Rendered to public/og.png by share-image.ts, by hand, when the design changes. Light-scheme tokens copied inline. -->
+<!-- The 1200x630 share image. Rendered to public/og.png by share-image.ts, by hand, when the design changes. Light-scheme tokens copied inline; the swatches are the ten hued kinds. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <title>KC Events share image</title>
     <style>
       @font-face {
-        font-family: "Inter Variable";
+        font-family: "Geist Variable";
         font-weight: 100 900;
-        src: url("../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2") format("woff2-variations");
+        src: url("../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2-variations");
       }
-      @font-face {
-        font-family: "Literata Variable";
-        font-weight: 200 900;
-        src: url("../node_modules/@fontsource-variable/literata/files/literata-latin-opsz-normal.woff2") format("woff2-variations");
-      }
-      :root { --bg: oklch(0.985 0.004 45); --fg: oklch(0.22 0.012 45); --fg-muted: oklch(0.47 0.015 45); --text-2xl: 1.75rem; --text-xl: 1.375rem; }
+      :root { --bg: oklch(0.985 0 0); --fg: oklch(0.21 0 0); --fg-muted: oklch(0.46 0 0); --text-2xl: 1.75rem; --text-xl: 1.375rem; }
       html, body { margin: 0; width: 1200px; height: 630px; }
       body {
         background: var(--bg);
         color: var(--fg);
-        font-family: "Inter Variable", system-ui, sans-serif;
+        font-family: "Geist Variable", system-ui, sans-serif;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -28,12 +23,22 @@
         box-sizing: border-box;
         -webkit-font-smoothing: antialiased;
       }
-      h1 { margin: 0; font-family: "Literata Variable", Georgia, serif; font-size: calc(var(--text-2xl) * 3); font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; }
+      h1 { margin: 0; font-size: calc(var(--text-2xl) * 3); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; }
+      /* The kind palette, as a row of swatches: the site's colour is the kinds'. */
+      .kinds { display: flex; gap: 12px; margin-top: 48px; }
+      .kinds span { width: 56px; height: 16px; border-radius: 8px; }
       p { margin: 32px 0 0; max-width: 22em; font-size: calc(var(--text-xl) * 1.6); line-height: 1.35; color: var(--fg-muted); }
     </style>
   </head>
   <body>
     <h1>KC Events</h1>
     <p>A weekly researched, ad-free list of what's worth doing in Kansas City.</p>
+    <div class="kinds" aria-hidden="true">
+      <span style="background: oklch(0.47 0.14 20)"></span><span style="background: oklch(0.47 0.14 56)"></span>
+      <span style="background: oklch(0.47 0.14 88)"></span><span style="background: oklch(0.47 0.14 130)"></span>
+      <span style="background: oklch(0.47 0.14 165)"></span><span style="background: oklch(0.47 0.14 205)"></span>
+      <span style="background: oklch(0.47 0.14 245)"></span><span style="background: oklch(0.47 0.14 278)"></span>
+      <span style="background: oklch(0.47 0.14 308)"></span><span style="background: oklch(0.47 0.14 345)"></span>
+    </div>
   </body>
 </html>

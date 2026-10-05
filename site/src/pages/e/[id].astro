@@ -42,7 +42,7 @@ const jsonLd = {
     <p class="date">{line}</p>
     {/* A neighborhood that is its own region (Lawrence, Elsewhere in the metro) is named once. */}
     <p class="where">{event.venue} · {event.neighborhood}{event.region !== event.neighborhood && ` · ${event.region}`}</p>
-    {event.whyLine && <blockquote class="why">{event.whyLine}</blockquote>}
+    {event.whyLine && <p class="why">{event.whyLine}</p>}
     <p class="primary"><a href={event.primaryUrl} rel="noopener">Details and tickets at {hostOf(event.primaryUrl)}</a></p>
     <div class="actions">
       <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} />
@@ -70,7 +70,7 @@ const jsonLd = {
   h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: var(--space-2) 0; }
   .date { font-size: var(--text-lg); margin: 0; }
   .where { color: var(--fg-muted); margin: 0 0 var(--space-4); }
-  .why { margin: 0 0 var(--space-4); padding-left: var(--space-4); border-left: 3px solid var(--accent); font-size: var(--text-lg); }
+  .why { margin: 0 0 var(--space-4); font-size: var(--text-lg); color: var(--fg-muted); max-width: 38rem; }
   .primary { font-size: var(--text-lg); margin: 0 0 var(--space-4); }
   .actions { display: flex; gap: var(--space-3); align-items: center; margin-bottom: var(--space-6); }
   .verified { font-size: var(--text-xs); color: var(--fg-faint); }

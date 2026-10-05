@@ -12,13 +12,13 @@
   let verifiedOn = $derived(formatShort(localDate(event.lastVerified)));
 </script>
 
-<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} style={`--hue: var(--kind-${slugify(event.kind)})`}>
+<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"}>
   <span class="when" title={dateLine}>{dateLine}</span>
   <div class="title">
     <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="mark" role="img" aria-label="Don't miss">●</span>{/if}
   </div>
   <span class="where" title={`${event.venue} · ${event.neighborhood}`}><span class="venue">{event.venue}</span><span class="hood">{` · ${event.neighborhood}`}</span></span>
-  <span class="chip">{event.kind}</span>
+  <span class={`chip kind-${slugify(event.kind)}`}>{event.kind}</span>
   <a class="host" href={event.primaryUrl} rel="noopener" title={hostOf(event.primaryUrl)}>{hostOf(event.primaryUrl)}</a>
   <span class="verified"><span aria-hidden="true">✓ {verifiedOn}</span><span class="visually-hidden">Verified {verifiedOn}</span></span>
   <SaveButton id={event.id} title={event.title} />
@@ -37,7 +37,6 @@
   .mark { color: var(--accent); margin-left: var(--space-1); font-size: var(--text-xs); }
   .where, .host, .verified { font-size: var(--text-xs); color: var(--fg-faint); }
   .why { flex-basis: 100%; margin: 0; font-size: var(--text-sm); color: var(--fg); }
-  .flagged { border-left: 3px solid var(--accent); padding-left: var(--space-2); }
   /* The save button is slimmer in a row than on a card; button.save outranks SaveButton's own .save rule. */
   .row :global(button.save) { padding-block: 0; }
 

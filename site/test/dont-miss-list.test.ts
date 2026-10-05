@@ -48,7 +48,9 @@ describe("DontMissList", () => {
     const first = within(sections[0]!).getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(first).toEqual(["Closing run", "Tuesday show"]); // the run is on now, so it sorts as today
     expect(within(sections[0]!).getByText("Why A.")).toBeInTheDocument();
-    expect(within(sections[0]!).getByText("On now, closes Sun Oct 11")).toBeInTheDocument();
+    // The tile is visual; the full date is in words for screen readers.
+    expect(within(sections[0]!).getByText("On now, closes Sun Oct 11.")).toBeInTheDocument();
+    expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("2 music");
     expect(within(sections[1]!).getByText("Later show")).toBeInTheDocument();
     expect(within(sections[2]!).getByText("Nothing picked further out yet.")).toBeInTheDocument();
     expect(screen.queryByText("Plain show")).toBeNull();

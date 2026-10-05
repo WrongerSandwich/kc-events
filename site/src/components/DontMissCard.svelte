@@ -1,54 +1,75 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
-  import { formatDay, formatShort, formatTime, isDateOnly, localDate } from "../lib/dates";
-  import { firstDay, hostOf, isMultiDay } from "../lib/events";
-  import { closingLine } from "../lib/horizon";
+  import { formatShort, localDate } from "../lib/dates";
+  import { hostOf } from "../lib/events";
   import { slugify } from "../lib/slugs";
+  import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
   import SaveButton from "./SaveButton.svelte";
 
   let { event, today }: { event: PublishedEvent; today: string } = $props();
-  let dateLine = $derived(
-    isMultiDay(event) ? closingLine(event, today) : `${formatDay(firstDay(event)!)}${isDateOnly(event.start!) ? "" : `, ${formatTime(event.start!)}`}`,
-  );
+  let tile = $derived(dateTile(event, today));
   // Every event the last run reached was verified that day, which the header already says; a card speaks up only
   // when its own check is older than that.
   const runDay = localDate(meta.lastSuccessfulRun);
   let checked = $derived(localDate(event.lastVerified));
 </script>
 
-<article class="card">
-  <p class="date">{dateLine}</p>
-  <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>
+<!-- The kind's colour fills the date tile and the chip; everything else on the card is ink. -->
+<article class={`card kind-${slugify(event.kind)}`}>
+  <div class="tile" aria-hidden="true">
+    <span class="top">{tile.top}</span>
+    <span class="day">{tile.day}</span>
+    <span class="month">{tile.month}</span>
+  </div>
+  <div class="body">
+    <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>
+    <p class="info">
+      <span class="visually-hidden">{tile.label}.</span>
+      {#if tile.detail}<span aria-hidden="true">{tile.detail}</span><span class="sep" aria-hidden="true">·</span>{/if}
+      <span>{event.venue}, {event.neighborhood}</span>
+    </p>
+    {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
+    <p class="tags">
+      <span class="chip">{event.kind}</span>
+      <a class="primary" href={event.primaryUrl} rel="noopener">{hostOf(event.primaryUrl)}</a>
+      {#if checked < runDay}<span class="verified">Verified {formatShort(checked)}</span>{/if}
+    </p>
+  </div>
   <div class="save"><SaveButton id={event.id} title={event.title} large /></div>
-  <p class="why">{event.whyLine}</p>
-  <p class="meta">
-    <span>{event.venue}, {event.neighborhood}</span>
-    <span class="chip" style={`--hue: var(--kind-${slugify(event.kind)})`}>{event.kind}</span>
-    <a class="primary" href={event.primaryUrl} rel="noopener">{hostOf(event.primaryUrl)}</a>
-    {#if checked < runDay}<span class="verified">Verified {formatShort(checked)}</span>{/if}
-  </p>
 </article>
 
 <style>
-  /* Date and title on the left, Save beside them on the right; the why-line and the details run full width beneath. */
   .card {
-    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "date save" "title save" "why why" "meta meta";
-    column-gap: var(--space-4); margin-top: var(--space-4);
+    display: grid; grid-template-columns: 4rem minmax(0, 1fr) auto; column-gap: var(--space-4); align-items: start;
+    margin-top: var(--space-4);
   }
-  .date { grid-area: date; font-size: var(--text-sm); color: var(--fg-muted); }
-  h3 { grid-area: title; font-family: var(--font-voice); font-size: var(--text-xl); letter-spacing: var(--tracking-heading); line-height: var(--leading-tight); text-wrap: pretty; }
+  /* The calendar tile: the kind's tint, its strong shade for the figures. */
+  .tile {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding-block: var(--space-2); border-radius: var(--radius);
+    background: var(--hue-tint); color: var(--hue);
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+  }
+  .top, .month { font-size: var(--text-xs); font-weight: var(--weight-medium); }
+  .day { font-size: var(--text-2xl); font-weight: var(--weight-strong); letter-spacing: var(--tracking-heading); }
+  .body { min-width: 0; }
+  h3 { font-size: var(--text-lg); letter-spacing: -0.01em; line-height: var(--leading-tight); text-wrap: pretty; }
   h3 a { color: inherit; }
-  /* The save slot keeps its width before the button mounts, so the title never re-wraps when it appears. */
-  .save { grid-area: save; align-self: start; min-width: 4.5rem; display: flex; justify-content: flex-end; }
-  /* The why-line is the site's voice: the serif's text cut, a size under the title, the fullest colour on the card. */
-  .why { grid-area: why; margin-top: var(--space-2); font-family: var(--font-voice); font-size: var(--text-lg); line-height: var(--leading-voice); max-width: 38rem; }
-  .meta {
-    grid-area: meta; margin-top: var(--space-2);
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3);
-    font-size: var(--text-sm); color: var(--fg-muted);
-  }
+  .info { margin-top: var(--space-1); font-size: var(--text-sm); color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+  .sep { margin-inline: 0.4em; }
+  .why { margin-top: var(--space-2); color: var(--fg-muted); max-width: 38rem; }
+  .tags { margin-top: var(--space-2); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-3); font-size: var(--text-sm); }
   .primary { color: var(--fg-muted); text-decoration: underline; text-decoration-color: var(--rule-strong); }
-  .primary:hover { color: var(--accent); text-decoration-color: currentColor; }
+  .primary:hover { color: var(--fg); text-decoration-color: currentColor; }
   .verified { color: var(--fg-faint); }
+  /* The save slot keeps its width before the button mounts, so the title never re-wraps when it appears. */
+  .save { min-width: 4.5rem; display: flex; justify-content: flex-end; }
+  /* Phones: Save moves under the tile, so the title gets the width. */
+  @media (max-width: 30rem) {
+    .card { grid-template-columns: 3.5rem minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: var(--space-3); }
+    .body { grid-column: 2; grid-row: 1 / span 2; }
+    .save { grid-column: 1; grid-row: 2; min-width: 0; justify-content: stretch; margin-top: var(--space-2); }
+    .save :global(button) { width: 100%; min-width: 0; padding-inline: 0; }
+  }
 </style>
