@@ -3,9 +3,13 @@
   import { events } from "../generated/events";
   import { meta } from "../generated/meta";
   import { todayIn } from "../lib/dates";
+  import { downloadText } from "../lib/download";
+  import { isDated } from "../lib/events";
   import { groupResults } from "../lib/group";
+  import { toIcs } from "../lib/ics";
   import { DEFAULT_FILTERS, describeFilters, isDefault, parseQuery, toQuery, type Filters } from "../lib/query";
   import { saves } from "../lib/saves";
+  import { siteConfig } from "../site.config";
   import FilterRail from "./FilterRail.svelte";
   import ResultRow from "./ResultRow.svelte";
 
@@ -17,6 +21,8 @@
   // Open in the server HTML so no-JS readers see the controls; on phones it closes after hydration so the count
   // and the results are on screen on arrival.
   let sheetOpen = $state(true);
+  // Export needs the browser; the server-rendered button stays disabled until mount.
+  let mounted = $state(false);
 
   onMount(() => {
     today = todayIn(meta.timeZone, new Date());
@@ -28,6 +34,7 @@
     if (phone?.matches) sheetOpen = false;
     phone?.addEventListener("change", follow);
     const unsubscribe = saves().subscribe((ids) => { saved = ids; });
+    mounted = true;
     return () => { unsubscribe(); phone?.removeEventListener("change", follow); };
   });
 
@@ -40,6 +47,12 @@
   let groups = $derived(groupResults(events, filters, today, saved));
   let count = $derived(groups.reduce((n, g) => n + g.events.length, 0));
   let active = $derived(describeFilters(filters));
+  let exportable = $derived(groups.flatMap((g) => g.events).filter(isDated));
+
+  function exportView() {
+    // new Date() is fine here: this is a component, not lib/ (the no-clock grep covers lib only).
+    downloadText("kc-events.ics", toIcs(exportable, { siteName: siteConfig.name, stamp: new Date().toISOString() }), "text/calendar");
+  }
 </script>
 
 <div class="explorer">
@@ -53,6 +66,7 @@
   <section class="results" aria-label="Events">
     <div class="bar">
       <p role="status" aria-live="polite" class="count">{count} {count === 1 ? "event" : "events"}</p>
+      <button type="button" class="export" disabled={!mounted || exportable.length === 0} onclick={exportView}>Export this view</button>
       {#if !isDefault(filters)}<button type="button" class="clear" onclick={() => change(DEFAULT_FILTERS)}>Clear filters</button>{/if}
     </div>
 
@@ -80,8 +94,10 @@
   /* (The padding keeps focus rings on the rail's edge from being clipped by the scroll box.) */
   .sheet summary { display: none; }
   .bar { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); position: sticky; top: 0; background: var(--bg); padding: var(--space-2) 0; z-index: 2; }
-  .count { margin: 0; color: var(--fg-muted); font-size: var(--text-sm); }
+  .count { margin: 0 auto 0 0; color: var(--fg-muted); font-size: var(--text-sm); }
   .clear, .link { font: inherit; font-size: var(--text-sm); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+  .export { font: inherit; font-size: var(--text-xs); color: var(--accent); background: none; border: 1px solid var(--rule); border-radius: var(--radius); padding: var(--space-1) var(--space-2); cursor: pointer; }
+  .export[disabled] { opacity: 0.5; cursor: default; }
   /* The shared .section-heading, made sticky and smaller for day groups. */
   .day { font-size: var(--text-sm); margin: var(--space-6) 0 var(--space-1); position: sticky; top: 2.25rem; background: var(--bg); z-index: 1; }
   .empty { color: var(--fg-muted); }
