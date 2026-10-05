@@ -1,0 +1,13 @@
+---
+import Base from "../layouts/Base.astro";
+import Explorer from "../components/Explorer.svelte";
+import { events } from "../generated/events";
+const description = `Every one of ${events.length} active Kansas City events, by date, kind, and region.`;
+---
+<Base title="Explore" description={description} wide>
+  <h1>Explore</h1>
+  <Explorer client:load />
+</Base>
+<style>
+  h1 { font-size: var(--text-2xl); margin: var(--space-8) 0 var(--space-4); }
+</style>
