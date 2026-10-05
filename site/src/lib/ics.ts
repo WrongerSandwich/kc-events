@@ -56,7 +56,7 @@ function vevent(e: PublishedEvent, siteName: string, stamp: string): string[] {
   }
 
   lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.neighborhood}`)}`, `URL:${e.primaryUrl}`);
-  if (e.whyLine) notes.unshift(e.whyLine);
+  if (e.whyLine) notes.push(e.whyLine);
   notes.push(`Verified ${formatShort(localDate(e.lastVerified))} by ${siteName}; details at ${e.primaryUrl}.`);
   lines.push(`DESCRIPTION:${escapeText(notes.join("\n\n"))}`);
   return ["BEGIN:VEVENT", ...lines, "END:VEVENT"];
