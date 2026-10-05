@@ -1,0 +1,45 @@
+import { describe, expect, it } from "vitest";
+import { addDays, comingSunday, formatDay, formatLong, formatRange, formatShort, formatTime, isDateOnly, localDate, todayIn, weekday } from "../src/lib/dates";
+
+describe("dates", () => {
+  it("takes the local date off either dataset form", () => {
+    expect(localDate("2026-10-09T19:00:00-05:00")).toBe("2026-10-09");
+    expect(localDate("2026-10-09")).toBe("2026-10-09");
+  });
+
+  it("adds days across month, year, and the DST change without drift", () => {
+    expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
+    expect(addDays("2026-11-01", 1)).toBe("2026-11-02");
+    expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
+    expect(addDays("2026-10-05", 14)).toBe("2026-10-19");
+    expect(addDays("2026-10-05", -1)).toBe("2026-10-04");
+  });
+
+  it("knows the weekday and the coming Sunday", () => {
+    expect(weekday("2026-10-05")).toBe(1); // Monday
+    expect(weekday("2026-10-11")).toBe(0);
+    expect(comingSunday("2026-10-05")).toBe("2026-10-11");
+    expect(comingSunday("2026-10-08")).toBe("2026-10-11");
+    expect(comingSunday("2026-10-11")).toBe("2026-10-11"); // Sunday is its own
+  });
+
+  it("gives today in the zone from an instant", () => {
+    // 03:30 UTC on Oct 6 is 22:30 on Oct 5 in Chicago.
+    expect(todayIn("America/Chicago", new Date("2026-10-06T03:30:00Z"))).toBe("2026-10-05");
+    expect(todayIn("America/Chicago", new Date("2026-10-06T12:00:00Z"))).toBe("2026-10-06");
+  });
+
+  it("formats for headings, rows, and event pages", () => {
+    expect(formatDay("2026-10-09")).toBe("Fri Oct 9");
+    expect(formatShort("2026-10-09")).toBe("Oct 9");
+    expect(formatShort("2026-11-14")).toBe("Nov 14");
+    expect(formatLong("2026-10-09")).toBe("Friday, October 9");
+    expect(formatRange("2026-10-05", "2026-10-11")).toBe("Oct 5–11");
+    expect(formatRange("2026-10-29", "2026-11-02")).toBe("Oct 29–Nov 2");
+    expect(formatTime("2026-10-09T19:00:00-05:00")).toBe("7:00 pm");
+    expect(formatTime("2026-10-09T12:30:00-05:00")).toBe("12:30 pm");
+    expect(formatTime("2026-10-09T00:15:00-05:00")).toBe("12:15 am");
+    expect(isDateOnly("2026-10-09")).toBe(true);
+    expect(isDateOnly("2026-10-09T19:00:00-05:00")).toBe(false);
+  });
+});
