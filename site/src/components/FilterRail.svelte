@@ -70,6 +70,8 @@
   button { font: inherit; font-size: var(--text-xs); background: none; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: var(--space-1) var(--space-2); cursor: pointer; }
   button[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); }
   .range { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); } .range label { display: flex; flex-direction: column; font-size: var(--text-xs); }
+  /* The Show switches, one per line with the box beside its words. */
+  fieldset > label { display: flex; align-items: center; gap: var(--space-2); }
   input, select { font: inherit; }
   /* Chromium's dark-scheme select is grey (#6b6b6b), under 4.5:1 with --fg; the raised surface clears AA in both schemes. */
   select { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
