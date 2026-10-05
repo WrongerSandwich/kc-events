@@ -74,7 +74,7 @@
 
 <style>
   /* A narrow rail, so result rows keep room for their titles. */
-  .explorer { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+  .explorer { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: var(--space-6); align-items: start; }
   /* Sticky beside the results, scrolling on its own when it is taller than the window (a 768 px laptop). */
   .rail { position: sticky; top: var(--space-4); max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto; padding: var(--space-1); margin: calc(-1 * var(--space-1)); }
   /* (The padding keeps focus rings on the rail's edge from being clipped by the scroll box.) */
