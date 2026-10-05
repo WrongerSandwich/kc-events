@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-05T06:30:00-05:00",
+  "lastSuccessfulRun": "2026-10-05T06:30:00-05:00",
+  "events": [
+    {
+      "id": "evt_e2e000000001",
+      "title": "Fabio Frizzi plays Fulci",
+      "start": "2026-10-06T19:00:00-05:00",
+      "venue": "recordBar",
+      "neighborhood": "Crossroads",
+      "primaryUrl": "https://example.com/recordbar/frizzi",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": true,
+      "whyLine": "A rare touring occasion for a Kansas City stage.",
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "recordBar"
+      },
+      "evidence": {
+        "date": "Tue Oct 6 7:00 pm",
+        "venue": "recordBar"
+      }
+    },
+    {
+      "id": "evt_e2e000000002",
+      "title": "Saturday comedy hour",
+      "start": "2026-10-10",
+      "venue": "Westport Comedy Room",
+      "neighborhood": "Westport",
+      "primaryUrl": "https://example.com/westport/comedy",
+      "kind": "comedy",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Westport Comedy Room"
+      },
+      "evidence": {
+        "date": "Saturday, October 10",
+        "venue": "Westport Comedy Room"
+      }
+    },
+    {
+      "id": "evt_e2e000000003",
+      "title": "Friday night jazz",
+      "start": "2026-10-09T20:00:00-05:00",
+      "venue": "Olathe Jazz Hall",
+      "neighborhood": "Olathe",
+      "primaryUrl": "https://example.com/olathe/jazz",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Olathe Jazz Hall"
+      },
+      "evidence": {
+        "date": "Fri Oct 9, 8pm",
+        "venue": "Olathe Jazz Hall"
+      }
+    },
+    {
+      "id": "evt_e2e000000004",
+      "title": "Mid-month reading",
+      "start": "2026-10-17T18:00:00-05:00",
+      "venue": "Central Library",
+      "neighborhood": "Downtown",
+      "primaryUrl": "https://example.com/library/reading",
+      "kind": "talks/readings",
+      "recurrence": "one-off",
+      "dontMiss": true,
+      "whyLine": "The author's only Midwest stop.",
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Central Library"
+      },
+      "evidence": {
+        "date": "October 17, 6 p.m.",
+        "venue": "Central Library"
+      }
+    },
+    {
+      "id": "evt_e2e000000005",
+      "title": "November festival",
+      "start": "2026-11-20",
+      "end": "2026-11-22",
+      "venue": "South Park",
+      "neighborhood": "Lawrence",
+      "primaryUrl": "https://example.com/lawrence/festival",
+      "kind": "festivals/markets",
+      "recurrence": "one-off",
+      "dontMiss": true,
+      "whyLine": "Once a year.",
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "South Park"
+      },
+      "evidence": {
+        "date": "Nov 20-22",
+        "venue": "South Park"
+      }
+    },
+    {
+      "id": "evt_e2e000000006",
+      "title": "Closing exhibition",
+      "start": "2026-09-20",
+      "end": "2026-10-11",
+      "venue": "Nelson-Atkins Museum of Art",
+      "neighborhood": "Plaza & Museum District",
+      "primaryUrl": "https://example.com/nelson/exhibition",
+      "kind": "art/exhibitions",
+      "recurrence": "limited-run",
+      "dontMiss": true,
+      "whyLine": "Closes Sunday.",
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Nelson-Atkins Museum of Art"
+      },
+      "evidence": {
+        "date": "September 20 - October 11",
+        "venue": "Nelson-Atkins Museum of Art"
+      }
+    },
+    {
+      "id": "evt_e2e000000007",
+      "title": "Artboards",
+      "end": "2026-12-31",
+      "venue": "Crossroads Gallery",
+      "neighborhood": "Crossroads",
+      "primaryUrl": "https://example.com/crossroads/artboards",
+      "kind": "art/exhibitions",
+      "recurrence": "limited-run",
+      "dontMiss": false,
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Crossroads Gallery"
+      },
+      "evidence": {
+        "date": "Through December 31",
+        "venue": "Crossroads Gallery"
+      }
+    },
+    {
+      "id": "evt_e2e000000008",
+      "title": "Pub trivia",
+      "schedule": "Every Tuesday, 7pm",
+      "venue": "Midtown Pub",
+      "neighborhood": "Midtown",
+      "primaryUrl": "https://example.com/midtown/trivia",
+      "kind": "food/drink",
+      "recurrence": "recurring",
+      "dontMiss": false,
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Midtown Pub"
+      },
+      "evidence": {
+        "date": "Every Tuesday, 7pm",
+        "venue": "Midtown Pub"
+      }
+    },
+    {
+      "id": "evt_e2e000000009",
+      "title": "County fair talk",
+      "start": "2026-10-08T18:30:00-05:00",
+      "venue": "Johnson County Museum",
+      "neighborhood": "Johnson County",
+      "primaryUrl": "https://example.com/jocomuseum/talk",
+      "kind": "other",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Johnson County Museum"
+      },
+      "evidence": {
+        "date": "Oct 8, 6:30 PM",
+        "venue": "Johnson County Museum"
+      }
+    },
+    {
+      "id": "evt_e2e000000010",
+      "title": "Already happened",
+      "start": "2026-10-03T20:00:00-05:00",
+      "venue": "Midland Theatre",
+      "neighborhood": "Downtown",
+      "primaryUrl": "https://example.com/midland/past",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Midland Theatre"
+      },
+      "evidence": {
+        "date": "Sat Oct 3 8pm",
+        "venue": "Midland Theatre"
+      }
+    }
+  ],
+  "sourceState": {},
+  "discoveryState": {}
+}

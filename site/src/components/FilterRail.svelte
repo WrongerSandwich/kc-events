@@ -71,5 +71,7 @@
   button[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); }
   .range { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); } .range label { display: flex; flex-direction: column; font-size: var(--text-xs); }
   input, select { font: inherit; }
+  /* Chromium's dark-scheme select is grey (#6b6b6b), under 4.5:1 with --fg; the raised surface clears AA in both schemes. */
+  select { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
   .search input { width: 100%; padding: var(--space-1) var(--space-2); }
 </style>
