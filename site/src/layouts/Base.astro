@@ -1,0 +1,42 @@
+---
+import "@fontsource-variable/inter";
+import "../styles/tokens.css";
+import "../styles/base.css";
+import { siteConfig } from "../site.config";
+import { origin } from "../build/origin";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import StalenessBanner from "../components/StalenessBanner.svelte";
+
+interface Props { title: string; description: string; canonical?: string; jsonLd?: object; wide?: boolean }
+const { title, description, canonical, jsonLd, wide = false } = Astro.props;
+const fullTitle = title === siteConfig.name ? title : `${title} · ${siteConfig.name}`;
+const url = canonical ?? new URL(Astro.url.pathname, origin).toString();
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={url} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={siteConfig.name} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={url} />
+    <meta property="og:image" content={new URL("/og.png", origin).toString()} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="sitemap" href="/sitemap.xml" />
+    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, "\\u003c")} />}
+  </head>
+  <body>
+    <Header wide={wide} />
+    <StalenessBanner client:load />
+    <main id="main" class={wide ? "wide" : "measure"}>
+      <slot />
+    </main>
+    <Footer wide={wide} />
+  </body>
+</html>

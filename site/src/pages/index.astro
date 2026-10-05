@@ -1,8 +1,8 @@
 ---
+import Base from "../layouts/Base.astro";
 import { siteConfig } from "../site.config";
 ---
-<!doctype html>
-<html lang="en">
-  <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width" /><title>{siteConfig.name}</title></head>
-  <body><h1>What's on in Kansas City</h1><p>{siteConfig.tagline}</p></body>
-</html>
+<Base title={siteConfig.name} description={siteConfig.tagline}>
+  <h1>What's on in Kansas City</h1>
+  <p>{siteConfig.tagline}</p>
+</Base>
