@@ -47,7 +47,7 @@
             </li>
           {/each}
         </ul>
-        <p class="more"><a href="/explore?dontmiss=1">Every upcoming pick, with why, in the explorer</a></p>
+        <p class="more"><a href="/explore?dontmiss=1">All the picks, with why, in the explorer</a></p>
       {:else}
         {#each buckets[h] as event (event.id)}
           <DontMissCard {event} {today} />

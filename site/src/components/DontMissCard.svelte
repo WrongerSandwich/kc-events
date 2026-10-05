@@ -42,7 +42,7 @@
   /* The save slot keeps its width before the button mounts, so the title never re-wraps when it appears. */
   .save { grid-area: save; align-self: start; min-width: 4.5rem; display: flex; justify-content: flex-end; }
   /* The why-line is the site's voice: the serif's text cut, a size under the title, the fullest colour on the card. */
-  .why { grid-area: why; margin-top: var(--space-2); font-family: var(--font-voice); font-size: var(--text-lg); line-height: 1.55; max-width: 38rem; }
+  .why { grid-area: why; margin-top: var(--space-2); font-family: var(--font-voice); font-size: var(--text-lg); line-height: var(--leading-voice); max-width: 38rem; }
   .meta {
     grid-area: meta; margin-top: var(--space-2);
     display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3);
