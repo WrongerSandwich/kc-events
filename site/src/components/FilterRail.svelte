@@ -77,5 +77,8 @@
   /* The inputs too: Chromium's dark field is #3b3b3b, where its placeholder grey is about 2.4:1. */
   select, input[type="date"], input[type="search"] { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
   input::placeholder { color: var(--fg-faint); opacity: 1; }
+  /* Tabbing onto a date field's calendar button matches neither :focus-visible nor :focus on the field, only
+     :focus-within, so the field rings whenever focus is inside it. */
+  input[type="date"]:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
   .search input { width: 100%; padding: var(--space-1) var(--space-2); }
 </style>
