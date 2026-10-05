@@ -1,0 +1,71 @@
+import { describe, expect, it } from "vitest";
+import { dateRange, matches } from "../src/lib/filter";
+import { DEFAULT_FILTERS, type Filters } from "../src/lib/query";
+import { event } from "./fixtures/event";
+
+const today = "2026-10-05"; // a Monday
+const f = (over: Partial<Filters> = {}): Filters => ({ ...DEFAULT_FILTERS, ...over });
+const none = new Set<string>();
+
+describe("dateRange", () => {
+  it("turns presets into inclusive ranges from today", () => {
+    expect(dateRange({ preset: "all" }, today)).toBeUndefined();
+    expect(dateRange({ preset: "today" }, today)).toEqual({ from: today, to: today });
+    expect(dateRange({ preset: "weekend" }, today)).toEqual({ from: today, to: "2026-10-11" });
+    expect(dateRange({ preset: "weekend" }, "2026-10-11")).toEqual({ from: "2026-10-11", to: "2026-10-11" });
+    expect(dateRange({ preset: "7d" }, today)).toEqual({ from: today, to: "2026-10-12" });
+    expect(dateRange({ preset: "30d" }, today)).toEqual({ from: today, to: "2026-11-04" });
+    expect(dateRange({ from: "2026-10-09", to: "2026-10-11" }, today)).toEqual({ from: "2026-10-09", to: "2026-10-11" });
+  });
+});
+
+describe("matches", () => {
+  const show = event({ start: "2026-10-09T19:00:00-05:00" });
+  const run = event({ id: "run", recurrence: "limited-run", start: "2026-09-20", end: "2026-10-20", kind: "art/exhibitions", region: "Lawrence", neighborhood: "Lawrence", venue: "Spencer Museum" });
+  const runNoStart = event({ id: "nostart", recurrence: "limited-run", start: undefined, end: "2026-10-31" });
+  const trivia = event({ id: "trivia", recurrence: "recurring", start: undefined, schedule: "Tuesdays", title: "Pub trivia" });
+  const flagged = event({ id: "flag", dontMiss: true, whyLine: "A rare touring occasion for Kansas City." });
+
+  it("matches everything by default, except recurring events", () => {
+    expect(matches(show, f(), today, none)).toBe(true);
+    expect(matches(trivia, f(), today, none)).toBe(false);
+    expect(matches(trivia, f({ recurring: true }), today, none)).toBe(true);
+  });
+
+  it("intersects a span with the date range; recurring events ignore it", () => {
+    expect(matches(show, f({ when: { preset: "weekend" } }), today, none)).toBe(true);
+    expect(matches(show, f({ when: { preset: "today" } }), today, none)).toBe(false);
+    expect(matches(run, f({ when: { preset: "weekend" } }), today, none)).toBe(true);
+    expect(matches(run, f({ when: { from: "2026-10-21", to: "2026-10-31" } }), today, none)).toBe(false);
+    expect(matches(run, f({ when: { from: "2026-10-20", to: "2026-10-31" } }), today, none)).toBe(true);
+    expect(matches(runNoStart, f({ when: { preset: "today" } }), today, none)).toBe(true);
+    expect(matches(runNoStart, f({ when: { from: "2026-11-01", to: "2026-11-30" } }), today, none)).toBe(false);
+    expect(matches(trivia, f({ recurring: true, when: { preset: "today" } }), today, none)).toBe(true);
+  });
+
+  it("ORs within kind and region and ANDs across", () => {
+    expect(matches(show, f({ kinds: ["music", "film"] }), today, none)).toBe(true);
+    expect(matches(show, f({ kinds: ["film"] }), today, none)).toBe(false);
+    expect(matches(run, f({ kinds: ["art/exhibitions"], regions: ["Central KC"] }), today, none)).toBe(false);
+    expect(matches(run, f({ kinds: ["art/exhibitions"], regions: ["Central KC", "Lawrence"] }), today, none)).toBe(true);
+  });
+
+  it("filters don't-miss and saved", () => {
+    expect(matches(show, f({ dontMiss: true }), today, none)).toBe(false);
+    expect(matches(flagged, f({ dontMiss: true }), today, none)).toBe(true);
+    expect(matches(show, f({ saved: true }), today, none)).toBe(false);
+    expect(matches(show, f({ saved: true }), today, new Set([show.id]))).toBe(true);
+  });
+
+  it("searches title, venue, neighborhood, and why-line, every term somewhere", () => {
+    expect(matches(flagged, f({ q: "touring" }), today, none)).toBe(true);
+    expect(matches(flagged, f({ q: "RECORDBAR touring" }), today, none)).toBe(true);
+    expect(matches(flagged, f({ q: "crossroads" }), today, none)).toBe(true);
+    expect(matches(flagged, f({ q: "touring opera" }), today, none)).toBe(false);
+    expect(matches(show, f({ q: "" }), today, none)).toBe(true);
+  });
+
+  it("never matches a past event", () => {
+    expect(matches(show, f(), "2026-10-10", none)).toBe(false);
+  });
+});
