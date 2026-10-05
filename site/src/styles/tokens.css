@@ -1,23 +1,23 @@
 /*
  * The site's design tokens: every colour, size, and space a surface uses comes from here.
- * Every text and chip colour clears WCAG AA (4.5:1) against both --bg and --bg-raised in both schemes.
+ * Every text and chip colour clears WCAG AA (4.5:1) against both --bg and --bg-raised in both schemes; control edges clear 3:1.
  * A kind's hue is --kind- plus slugify(kind), so "theater/dance" is --kind-theater-dance.
  */
 :root {
   color-scheme: light dark;
-  /* Surfaces and text */
-  --bg: #faf8f4;
-  --bg-raised: #ffffff;
-  --fg: #1a1916;
-  --fg-muted: #5f5b53;
-  --fg-faint: #736e64;
-  --rule: #e4e0d8;
-  --rule-strong: #b9b3a8;       /* underlines under quiet links */
-  --control-border: #8f897e;    /* a control's edge: 3:1 against both surfaces (WCAG 1.4.11) */
+  /* Surfaces and text: neutrals tinted a breath toward the accent's hue (45°), so the page is a near-white, not cream. */
+  --bg: oklch(0.985 0.004 45);
+  --bg-raised: oklch(1 0 0);
+  --fg: oklch(0.22 0.012 45);
+  --fg-muted: oklch(0.47 0.015 45);
+  --fg-faint: oklch(0.53 0.014 45);
+  --rule: oklch(0.92 0.008 45);
+  --rule-strong: oklch(0.78 0.012 45);   /* underlines under quiet links */
+  --control-border: oklch(0.62 0.012 45); /* a control's edge: 3:1 against both surfaces (WCAG 1.4.11) */
   --accent: #b5471f;            /* links, the don't-miss mark */
   --accent-fg: #ffffff;
   --focus: #1f5fb5;
-  /* Eleven kind hues; chip text and left rules, never fills behind body text */
+  /* Eleven kind hues: chip text and edges only, never fills behind body text */
   --kind-music: #8a3b9c;
   --kind-theater-dance: #b03a5b;     /* rose, not --accent: the don't-miss mark must not read as a kind */
   --kind-comedy: #946800;
@@ -49,7 +49,8 @@
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #161513; --bg-raised: #1f1e1b; --fg: #ece8df; --fg-muted: #b3ada0; --fg-faint: #8f897c; --rule: #2e2c28; --rule-strong: #5a564e; --control-border: #7a756b;
+    --bg: oklch(0.19 0.008 45); --bg-raised: oklch(0.225 0.009 45); --fg: oklch(0.93 0.012 75); --fg-muted: oklch(0.77 0.015 70);
+    --fg-faint: oklch(0.68 0.015 70); --rule: oklch(0.29 0.008 45); --rule-strong: oklch(0.43 0.012 45); --control-border: oklch(0.53 0.012 45);
     --accent: #e8794a; --accent-fg: #161513; --focus: #7fb0ff;
     --kind-music: #c58ad4; --kind-theater-dance: #ec8aa0; --kind-comedy: #e0b23a; --kind-art-exhibitions: #6cb4cf;
     --kind-festivals-markets: #7bc47f; --kind-food-drink: #b8c25e; --kind-sports: #7fb0ff; --kind-film: #a3a3e0;
