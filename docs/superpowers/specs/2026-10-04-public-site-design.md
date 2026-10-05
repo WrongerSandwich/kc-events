@@ -65,15 +65,15 @@ data/events.json  (committed by the weekly run)
 
 **Build fails loudly, deploy keeps the last good site.** Any parse failure, a schema version mismatch, a dataset with `lastSuccessfulRun: null`, an id collision among active events, or a projected payload over 400 KB raw throws during `astro build`. Vercel then keeps the previous deployment live. The weekly workflow already commits nothing on a failed run, so the two failure modes compose: a bad run leaves the old data, a bad build leaves the old site.
 
-**Deploy trigger.** Vercel project settings: root directory `site`, framework Astro, "Include source files outside of the Root Directory" on, and the automatic "skip deployment when unaffected" switch for monorepos **off**: Vercel's own change detection follows declared workspace dependencies, and the site reaches the dataset by relative path, so the one commit that matters (the weekly `data/events.json` change) could be classified as unrelated and skipped, which would silently freeze the site. Instead an explicit *ignored build step* command, which runs inside `site/` and skips the build on exit 0, builds on exit 1:
+**Deploy trigger.** Vercel project settings: root directory `site`, framework Astro, "Include source files outside of the Root Directory" on, and the automatic "skip deployment when unaffected" switch for monorepos **off**: Vercel's own change detection follows declared workspace dependencies, and the site reaches the dataset by relative path, so the one commit that matters (the weekly `data/events.json` change) could be classified as unrelated and skipped, which would silently freeze the site. Instead an explicit *ignored build step* command, versioned as `ignoreCommand` in `site/vercel.json` so the dashboard needs no custom command (it uses the previous deployed SHA when Vercel provides one and falls back to `HEAD^`), runs inside `site/` and skips the build on exit 0, builds on exit 1:
 
 ```
-git diff --quiet HEAD^ HEAD -- . ../data/events.json ../src ../research.config.yaml ../pnpm-lock.yaml ../pnpm-workspace.yaml
+git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- . ../data/events.json ../src ../research.config.yaml ../pnpm-lock.yaml ../pnpm-workspace.yaml
 ```
 
 so a run-report-only or docs-only commit does not rebuild. Ticket 1's acceptance includes pushing a data-only commit to a branch and confirming a preview deploy happens, and pushing a docs-only commit and confirming one does not. `site/vercel.json` (read from the root directory) sets `cleanUrls` and the headers in section 10. No new GitHub workflow is needed for deploys.
 
-A small `site-ci.yml` workflow runs `pnpm -r typecheck`, `pnpm --filter site build` with the size check, `pnpm -r test` (after the build, because the built-output tests read `dist/`), and the end-to-end suite (built into its own `dist-e2e/`) on pull requests and on pushes to `main`. Note what it guards: GitHub does not trigger workflows from pushes made with the default `GITHUB_TOKEN`, so the weekly research commit runs no CI; on that commit the build assertions run only inside Vercel's build, which is sufficient because that build is the one that would publish bad data.
+A small `site-ci.yml` workflow runs `pnpm -r typecheck`, `pnpm --filter kc-events-site build`, a separate `pnpm --filter kc-events-site size` step, `pnpm -r test` (after the build, because the built-output tests read `dist/`), and the end-to-end suite (built into its own `dist-e2e/`) on pull requests and on pushes to `main`. Note what it guards: GitHub does not trigger workflows from pushes made with the default `GITHUB_TOKEN`, so the weekly research commit runs no CI; on that commit the build assertions run only inside Vercel's build, which is sufficient because that build is the one that would publish bad data.
 
 **Configuration.** `site/src/site.config.ts` holds the site-level values: `name` ("KC Events"), `tagline`, `repoUrl` (for the corrections link), `staleAfterDays` (9), and nothing about slugs; islands import it, so it reads no environment. The canonical origin for sitemap, JSON-LD, and share tags is build-only, in `site/src/build/origin.ts`: `SITE_ORIGIN` once a fixed production domain exists, falling back to `https://${VERCEL_PROJECT_PRODUCTION_URL}` so previews are not canonical. Slugs: kind and region slugs are derived by one `slugify` function from the config's names, with a test pinning them distinct (section 6). The time zone is `timezone` from `research.config.yaml`, not duplicated. Two environment overrides exist for reproducible builds: `SITE_TODAY=YYYY-MM-DD` fixes the build's date and `SITE_DATASET=<path>` points the build at a fixture dataset; both are used by the end-to-end suite and otherwise unset.
 
@@ -197,7 +197,7 @@ Grouped and ordered, with sticky group headings:
 
 With `sort=venue`, groups are replaced by one list sorted by venue then date; this is for "what is on at the Folly this month."
 
-Each row: title (links to `/e/<id>`), time (or "all day"), venue, neighborhood, a kind chip, a don't-miss mark with the why-line when flagged, the primary link as a small host label, a save button. Rows are dense: an unflagged row is no taller than 28 px at widths of 1024 px and up, so roughly 30 rows fit a laptop screen, the "calm density" the proposal asked for.
+Each row: title (links to `/e/<id>`), time (or "all day"), venue, neighborhood, a kind chip, a don't-miss mark with the why-line when flagged, the primary link as a small host label, a save button. Rows are dense: rows may take two lines between 1024 and 1279 px, and an unflagged row is no taller than 28 px from 1280 px up, so roughly 30 rows fit a laptop screen, the "calm density" the proposal asked for.
 
 The result count is always visible ("48 events") and announced to assistive technology through a live region after each change; a one-click "clear filters" appears whenever any filter is non-default. An empty result says which filters are active and offers to clear them.
 
@@ -264,7 +264,7 @@ The site has no imagery, so it has to be beautiful as a page of text. The direct
 
 **Accessibility.** Semantic landmarks, one `h1` per page, keyboard-operable filters with visible focus, chips as real buttons with `aria-pressed`, the live region of section 6, and contrast as above.
 
-**Performance budget**, measured as compressed transfer of HTML, CSS, and JavaScript per page (the event data arrives inside the HTML, so a JavaScript-only budget would miss it): front page under 50 KB; explorer under 100 KB; event page under 40 KB. No third-party requests of any kind. A size check after `astro build` fails CI when a budget is exceeded.
+**Performance budget**, measured as compressed transfer of HTML, CSS, and JavaScript per page (the event data arrives inside the HTML, so a JavaScript-only budget would miss it): front page under 50 KB; explorer under 100 KB; event page under 40 KB. No third-party requests of any kind. A size check after `astro build` (the separate `size` step in CI, not part of the deploy build) fails CI when a budget is exceeded.
 
 ## 10. Chatbot and search legibility
 

@@ -4196,7 +4196,7 @@ Settings, exactly:
 - Root Directory: `site`; "Include source files outside of the Root Directory in the Build Step": **on**.
 - Framework preset: Astro. Build command: `pnpm build`. Output directory: `dist`. Install command: default (Vercel detects the pnpm workspace and installs at the repo root).
 - Node.js version: 22.x (also pinned by `site/package.json` `engines`).
-- Ignored Build Step (Project Settings → Git): **Custom**, command `git diff --quiet HEAD^ HEAD -- . ../data/events.json ../src ../research.config.yaml ../pnpm-lock.yaml ../pnpm-workspace.yaml`. If the monorepo "Skip deployment when no changes are detected" switch is present, turn it **off** so the custom command is the only skip rule.
+- Ignored Build Step: the command lives in `site/vercel.json` as `ignoreCommand` (`git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- . ../data/events.json ../src ../research.config.yaml ../pnpm-lock.yaml ../pnpm-workspace.yaml`, with the previous-SHA fallback), so the dashboard needs no custom command (leave Project Settings → Git → Ignored Build Step on its default). If the monorepo "Skip deployment when no changes are detected" switch is present, turn it **off** so this command is the only skip rule.
 - Environment variables: none. (`SITE_ORIGIN` is set only after a custom domain exists.)
 
 - [ ] **Step 2: Prove the deploy triggers** (orchestrator)
