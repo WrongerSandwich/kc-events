@@ -6,7 +6,6 @@ body {
   background: var(--bg);
   color: var(--fg);
   line-height: var(--leading);
-  font-variant-numeric: tabular-nums;
   margin: 0;
   -webkit-font-smoothing: antialiased;
   overflow-wrap: break-word;
@@ -17,6 +16,9 @@ h1 { font-size: var(--text-2xl); font-weight: 700; letter-spacing: -0.015em; }
 h2 { font-size: var(--text-xl); font-weight: 650; letter-spacing: -0.01em; }
 h3 { font-size: var(--text-lg); font-weight: 600; }
 p { text-wrap: pretty; }
+/* Dates in tabular figures so they align in columns. Only dates: Inter's tnum also widens the hyphen, which spaces out
+   "ad-free" and "one-night" in running text. */
+time, .date, .when, .verified, .section-heading { font-variant-numeric: tabular-nums; }
 img, svg { display: block; max-width: 100%; }
 button, input, select, textarea { font: inherit; color: inherit; }
 
