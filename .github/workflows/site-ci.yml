@@ -2,8 +2,10 @@
 # default GITHUB_TOKEN, which does not trigger workflows, so on that commit the build assertions run
 # only inside Vercel's build; that build is the one that would publish bad data, so it is enough.
 #
-# Order matters: the real build (with the size check) runs before the tests, because the built-output
+# Order matters: the real build and its size check run before the tests, because the built-output
 # tests read dist/ and fail in CI when it is missing; the end-to-end build goes to dist-e2e/ last.
+# The size check runs here and not in `pnpm build`, which is Vercel's build command: a page going over
+# budget should fail CI, not stop the weekly data commit from deploying.
 name: Site
 
 on:
@@ -25,6 +27,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
       - run: pnpm --filter kc-events-site build
+      - run: pnpm --filter kc-events-site size
       - run: pnpm -r test
       - run: pnpm --filter kc-events-site exec playwright install --with-deps chromium
       - run: pnpm --filter kc-events-site test:e2e
@@ -32,4 +35,7 @@ jobs:
         if: failure()
         with:
           name: playwright-report
-          path: site/playwright-report
+          path: |
+            site/playwright-report
+            site/test-results
+          if-no-files-found: ignore

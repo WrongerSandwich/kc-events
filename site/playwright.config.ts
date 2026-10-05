@@ -5,6 +5,8 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "e2e",
   timeout: 30_000,
+  // In CI, also write the HTML report that the workflow uploads (with the traces in test-results/) when a run fails.
+  reporter: process.env.CI ? [["dot"], ["html", { open: "never" }]] : "list",
   use: { baseURL: "http://localhost:4321", trace: "retain-on-failure" },
   webServer: { command: "pnpm build:e2e && pnpm preview:e2e", port: 4321, reuseExistingServer: false, timeout: 180_000 },
   projects: [{ name: "chromium", use: { browserName: "chromium" } }],
