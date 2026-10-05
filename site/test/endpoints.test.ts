@@ -45,4 +45,11 @@ describe.skipIf(!matchesGenerated)("built output", () => {
     expect(html).toContain("/og.png");
     expect(html).toContain("from the page linked above");
   });
+
+  it("gives pages extensionless canonical URLs that match the sitemap", () => {
+    const canonical = (p: string) => /rel="canonical" href="([^"]+)"/.exec(read(p))![1]!;
+    expect(canonical(`e/${events[0]!.id}.html`)).toMatch(new RegExp(`/e/${events[0]!.id}$`));
+    expect(canonical("index.html")).toMatch(/\/$/);
+    expect(canonical("about.html")).toMatch(/\/about$/);
+  });
 });

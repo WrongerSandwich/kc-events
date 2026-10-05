@@ -20,8 +20,8 @@ const line = longDateLine(event, meta.buildToday);
 const description = `${line} at ${event.venue}, ${event.neighborhood}.${event.whyLine ? ` ${event.whyLine}` : ""}`;
 const reportUrl = `${siteConfig.repoUrl}/issues/new?title=${encodeURIComponent(`Wrong listing: ${event.title}`)}&body=${encodeURIComponent(`Event: ${origin}/e/${event.id}\nPrimary page: ${event.primaryUrl}\n\nWhat is wrong:\n`)}`;
 const moreLikeThis = events
-  .filter((e) => e.id !== event.id && e.kind === event.kind && isDated(e) && firstDay(e) !== undefined)
-  .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!))
+  .filter((e) => e.id !== event.id && e.kind === event.kind && isDated(e) && firstDay(e) !== undefined && firstDay(e)! >= meta.buildToday)
+  .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
   .slice(0, 5);
 // Venues span Missouri and Kansas, so no addressRegion: name and locality only (spec section 7).
 const jsonLd = {
