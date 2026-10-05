@@ -1,0 +1,16 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//KC Events//EN
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+UID:evt_000000000001@kc-events
+DTSTAMP:20261005T113000Z
+DTSTART:20261010T000000Z
+DTEND:20261010T020000Z
+SUMMARY:A show
+LOCATION:recordBar\, Crossroads
+URL:https://www.therecordbar.com/shows
+DESCRIPTION:Rare\; see it.\n\nVerified Oct 3 by KC Events\; details at http
+ s://www.therecordbar.com/shows.
+END:VEVENT
+END:VCALENDAR
