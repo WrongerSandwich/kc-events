@@ -153,7 +153,7 @@ A group of neighborhoods at the scale of a trip decision (Central KC, Johnson Co
 _Avoid_: area, zone
 
 **Horizon**:
-The time bucket a don't-miss event falls into: this weekend, next two weeks, further out.
+The time bucket a don't-miss event falls into: through Sunday (headed "This weekend" Thursday to Sunday, "This week" Monday to Wednesday), next two weeks, further out. A one-off is bucketed by its start, a limited run by its closing date.
 
 **Always there**:
 The section below the don't-miss list that lists recurring events.
@@ -162,4 +162,12 @@ The section below the don't-miss list that lists recurring events.
 The page explaining how the site is made and where to report a wrong listing.
 
 **Staleness banner**:
-The notice shown when the last run failed and the site is serving last-good data.
+The notice shown on every page when the last successful run is more than nine days old. The site cannot see a failed run (a failed run commits nothing), so age is the proxy: a weekly cadence plus two days of slack.
+
+**Explorer**:
+The page that lets a reader slice every active event by date, kind, region, don't-miss, recurrence, and search, with the filters in the URL so a view can be shared.
+_Avoid_: browse page, search page, list view
+
+**Event page**:
+The page for one active event, at `/e/<id>`: its date, venue, why-line when flagged, primary link, calendar file, last-verified stamp, and corrections link.
+_Avoid_: detail page, listing page
