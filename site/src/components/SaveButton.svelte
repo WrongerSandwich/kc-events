@@ -23,7 +23,7 @@
 
 <style>
   .save {
-    font: inherit; font-size: var(--text-xs); font-weight: 500; color: var(--fg-muted);
+    font: inherit; font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--fg-muted);
     background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: var(--radius);
     padding: var(--space-1) var(--space-2); cursor: pointer;
     transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), border-color 150ms var(--ease-out);

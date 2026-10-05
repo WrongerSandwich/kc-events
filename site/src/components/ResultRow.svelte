@@ -31,7 +31,7 @@
   .when { flex-basis: 100%; color: var(--fg-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
   /* The title gets its own line, so the details run under it rather than squeezing it into a narrow column. */
   .title { flex: 1 1 100%; min-width: 0; }
-  .title h3 { display: inline; font-size: var(--text-md); font-weight: 500; margin: 0; }
+  .title h3 { display: inline; font-size: var(--text-md); font-weight: var(--weight-medium); margin: 0; }
   .title a { color: inherit; text-decoration: none; }
   .title a:hover { text-decoration: underline; }
   .mark { color: var(--accent); margin-left: var(--space-1); font-size: var(--text-xs); }

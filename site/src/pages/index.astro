@@ -37,7 +37,7 @@ const count = events.length;
 </Base>
 
 <style>
-  h1 { font-size: var(--text-2xl); margin-top: var(--space-8); }
+  h1 { margin-top: var(--space-8); }
   .lede { color: var(--fg-muted); margin-top: var(--space-2); max-width: 36rem; }
   .note { color: var(--fg-muted); margin-top: var(--space-1); }
   .always { list-style: none; padding: 0; margin: var(--space-3) 0 0; }
@@ -46,7 +46,7 @@ const count = events.length;
     padding-block: var(--space-2); border-bottom: 1px solid var(--rule);
   }
   .always li:last-child { border-bottom: 0; }
-  .always a { color: var(--fg); font-weight: 550; }
+  .always a { color: var(--fg); font-weight: var(--weight-strong); }
   .always .when { font-size: var(--text-sm); color: var(--fg-muted); text-align: right; max-width: 18rem; }
   .always .where { grid-column: 1 / -1; font-size: var(--text-sm); color: var(--fg-muted); }
   /* Narrow screens: one column, so a long schedule phrase never squeezes the title. */
@@ -54,5 +54,5 @@ const count = events.length;
     .always li { grid-template-columns: minmax(0, 1fr); }
     .always .when { text-align: left; max-width: none; }
   }
-  .explore { margin-block: var(--space-12); font-size: var(--text-lg); font-weight: 550; }
+  .explore { margin-block: var(--space-12); font-size: var(--text-lg); font-weight: var(--weight-strong); }
 </style>

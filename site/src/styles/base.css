@@ -12,9 +12,10 @@ body {
 }
 h1, h2, h3, h4, p, ul, ol, dl, dd, figure, blockquote { margin: 0; }
 h1, h2, h3, h4 { line-height: var(--leading-tight); text-wrap: balance; }
-h1 { font-size: var(--text-2xl); font-weight: 700; letter-spacing: -0.015em; }
-h2 { font-size: var(--text-xl); font-weight: 650; letter-spacing: -0.01em; }
-h3 { font-size: var(--text-lg); font-weight: 600; }
+h1, h2 { font-family: var(--font-voice); font-weight: var(--weight-strong); }
+h1 { font-size: var(--text-3xl); letter-spacing: var(--tracking-display); }
+h2 { font-size: var(--text-xl); letter-spacing: var(--tracking-heading); }
+h3 { font-size: var(--text-lg); font-weight: var(--weight-strong); }
 p { text-wrap: pretty; }
 /* Dates in tabular figures so they align in columns. Only dates: Inter's tnum also widens the hyphen, which spaces out
    "ad-free" and "one-night" in running text. */
@@ -54,9 +55,7 @@ p a, .prose a { text-decoration: underline; }
 
 /* A section's heading: the horizon buckets, Always there, More like this, the explorer's day groups. */
 .section-heading {
-  font-size: var(--text-xl);
-  font-weight: 650;
-  letter-spacing: -0.01em;
+  font-size: var(--text-2xl);
   color: var(--fg);
   margin: var(--space-12) 0 var(--space-2);
 }

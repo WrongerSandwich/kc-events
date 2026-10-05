@@ -37,11 +37,12 @@
     column-gap: var(--space-4); margin-block: var(--space-8);
   }
   .date { grid-area: date; font-size: var(--text-sm); color: var(--fg-muted); }
-  h3 { grid-area: title; font-size: var(--text-xl); line-height: var(--leading-tight); text-wrap: pretty; }
+  h3 { grid-area: title; font-family: var(--font-voice); font-size: var(--text-xl); letter-spacing: var(--tracking-heading); line-height: var(--leading-tight); text-wrap: pretty; }
   h3 a { color: inherit; }
   /* The save slot keeps its width before the button mounts, so the title never re-wraps when it appears. */
   .save { grid-area: save; align-self: start; min-width: 4.5rem; display: flex; justify-content: flex-end; }
-  .why { grid-area: why; margin-top: var(--space-2); font-size: var(--text-lg); max-width: 38rem; }
+  /* The why-line is the site's voice: the serif's text cut, a size under the title, the fullest colour on the card. */
+  .why { grid-area: why; margin-top: var(--space-2); font-family: var(--font-voice); font-size: var(--text-lg); line-height: 1.55; max-width: 38rem; }
   .meta {
     grid-area: meta; margin-top: var(--space-2);
     display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-3);

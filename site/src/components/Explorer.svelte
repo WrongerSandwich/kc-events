@@ -100,12 +100,12 @@
   .export[disabled] { opacity: 0.5; cursor: default; }
   /* The shared .section-heading, made sticky and smaller for day groups. It sticks just under the bar (44 px: the
      export button's 28 plus the bar's padding), so the bar never covers the top of the heading. */
-  .day { font-size: var(--text-sm); margin: var(--space-6) 0 var(--space-1); position: sticky; top: 2.75rem; background: var(--bg); z-index: 1; }
+  .day { font-family: var(--font); font-size: var(--text-sm); margin: var(--space-6) 0 var(--space-1); position: sticky; top: 2.75rem; background: var(--bg); z-index: 1; }
   .empty { color: var(--fg-muted); }
   @media (max-width: 800px) {
     .explorer { grid-template-columns: 1fr; gap: var(--space-4); }
     .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; }
-    .sheet summary { display: list-item; cursor: pointer; font-weight: 500; }
+    .sheet summary { display: list-item; cursor: pointer; font-weight: var(--weight-medium); }
     .sheet:not([open]) summary { margin-bottom: var(--space-2); }
   }
 </style>

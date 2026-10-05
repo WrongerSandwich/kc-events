@@ -67,7 +67,7 @@
   }
   .later li:last-child { border-bottom: 0; }
   .later .when { font-size: var(--text-sm); color: var(--fg-muted); }
-  .later a { color: var(--fg); font-weight: 550; }
+  .later a { color: var(--fg); font-weight: var(--weight-strong); }
   .later .where { font-size: var(--text-sm); color: var(--fg-muted); text-align: right; }
   @media (max-width: 34rem) {
     .later li { grid-template-columns: 6.25rem minmax(0, 1fr); }
