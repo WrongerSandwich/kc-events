@@ -68,7 +68,7 @@ data/events.json  (committed by the weekly run)
 **Deploy trigger.** Vercel project settings: root directory `site`, framework Astro, "Include source files outside of the Root Directory" on, and the automatic "skip deployment when unaffected" switch for monorepos **off**: Vercel's own change detection follows declared workspace dependencies, and the site reaches the dataset by relative path, so the one commit that matters (the weekly `data/events.json` change) could be classified as unrelated and skipped, which would silently freeze the site. Instead an explicit *ignored build step* command, versioned as `ignoreCommand` in `site/vercel.json` so the dashboard needs no custom command (it uses the previous deployed SHA when Vercel provides one and falls back to `HEAD^`), runs inside `site/` and skips the build on exit 0, builds on exit 1:
 
 ```
-git diff --quiet ${VERCEL_GIT_PREVIOUS_SHA:-HEAD^} HEAD -- . ../data/events.json ../src ../research.config.yaml ../pnpm-lock.yaml ../pnpm-workspace.yaml
+[ -n "$VERCEL_GIT_PREVIOUS_SHA" ] && git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- . ../data/events.json ../src ../research.config.yaml ../pnpm-lock.yaml ../pnpm-workspace.yaml
 ```
 
 so a run-report-only or docs-only commit does not rebuild. Ticket 1's acceptance includes pushing a data-only commit to a branch and confirming a preview deploy happens, and pushing a docs-only commit and confirming one does not. `site/vercel.json` (read from the root directory) sets `cleanUrls` and the headers in section 10. No new GitHub workflow is needed for deploys.
