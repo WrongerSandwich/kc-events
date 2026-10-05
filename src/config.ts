@@ -6,7 +6,10 @@ const DEFAULT_MODELS = { extraction: "openai/gpt-6-luna", curation: "anthropic/c
 /** The catch-all for an address that maps to nothing on the neighborhood list; it is in no region. */
 export const ELSEWHERE_IN_THE_METRO = "Elsewhere in the metro";
 
-const DEFAULT_NEIGHBORHOODS: Record<string, string[]> = { Lawrence: ["Lawrence"] };
+/** Anywhere in Lawrence, Kansas (the extraction rules say so); some region must list it. */
+const LAWRENCE = "Lawrence";
+
+const DEFAULT_NEIGHBORHOODS: Record<string, string[]> = { Lawrence: [LAWRENCE] };
 
 export const DEFAULT_KINDS = [
   "music",
@@ -122,17 +125,18 @@ export const configSchema = z.strictObject({
   neighborhoods: z
     .record(z.string().min(1), z.array(z.string().min(1)).min(1))
     .superRefine((regions, ctx) => {
-      const regionOf = new Map<string, string>();
+      const regionByName = new Map<string, string>();
       for (const [region, neighborhoods] of Object.entries(regions)) {
         for (const neighborhood of neighborhoods) {
           const key = normalizeName(neighborhood);
           if (key === normalizeName(ELSEWHERE_IN_THE_METRO)) {
             ctx.addIssue({ code: "custom", message: `"${neighborhood}" is the catch-all and belongs to no region, but ${region} lists it` });
-          } else if (regionOf.has(key)) {
-            ctx.addIssue({ code: "custom", message: `"${neighborhood}" is listed under both ${regionOf.get(key)} and ${region}` });
-          } else regionOf.set(key, region);
+          } else if (regionByName.has(key)) {
+            ctx.addIssue({ code: "custom", message: `"${neighborhood}" is listed under both ${regionByName.get(key)} and ${region}` });
+          } else regionByName.set(key, region);
         }
       }
+      if (!regionByName.has(normalizeName(LAWRENCE))) ctx.addIssue({ code: "custom", message: `some region must list "${LAWRENCE}"` });
     })
     .default(() => structuredClone(DEFAULT_NEIGHBORHOODS)),
   discovery: discoverySchema.default(discoverySchema.parse({})),

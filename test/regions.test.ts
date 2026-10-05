@@ -71,13 +71,17 @@ describe("the neighborhoods config", () => {
   });
 
   it("rejects a neighborhood listed under two regions", () => {
-    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport"], "South KC": ["westport"] } })).toThrow(
+    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport"], "South KC": ["westport"], Lawrence: ["Lawrence"] } })).toThrow(
       /westport.*listed under both Central KC and South KC/,
     );
   });
 
   it("rejects the catch-all listed under a region", () => {
-    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport", "Elsewhere in the metro"] } })).toThrow(/catch-all/);
+    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport", "Elsewhere in the metro"], Lawrence: ["Lawrence"] } })).toThrow(/catch-all/);
+  });
+
+  it("rejects a list no region of which holds Lawrence", () => {
+    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport"] } })).toThrow(/must list .*Lawrence/);
   });
 
   it("rejects the old flat list", () => {

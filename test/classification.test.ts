@@ -107,7 +107,7 @@ describe("recurrence, kind, geography, and neighborhood", () => {
     expect(renderReportMarkdown(report)).toContain('- Suburban Show at Some Hall: the extractor proposed "Olathe"');
   });
 
-  it("the extraction request lists the neighborhoods, catch-alls included", async () => {
+  it("the extraction request lists every region's neighborhoods, then the catch-all", async () => {
     const { requests } = await runOver([candidate()]);
 
     expect(requests[0]!.messages[0]!.content).toContain("- Neighborhoods: Westport, East Bottoms, Crossroads, Lawrence, Elsewhere in the metro");
