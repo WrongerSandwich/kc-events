@@ -5,6 +5,7 @@
   import { slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
+  import KindChip from "./KindChip.svelte";
   import SaveButton from "./SaveButton.svelte";
 
   let { event, today }: { event: PublishedEvent; today: string } = $props();
@@ -31,7 +32,7 @@
     </p>
     {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
     <p class="tags">
-      <span class="chip">{event.kind}</span>
+      <KindChip kind={event.kind} />
       <a class="primary" href={event.primaryUrl} rel="noopener">{hostOf(event.primaryUrl)}</a>
       {#if checked < runDay}<span class="verified">Verified {formatShort(checked)}</span>{/if}
     </p>

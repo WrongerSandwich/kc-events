@@ -1,6 +1,7 @@
 ---
 import Base from "../layouts/Base.astro";
 import DontMissList from "../components/DontMissList.svelte";
+import KindIcon from "../components/KindIcon.svelte";
 import { events } from "../generated/events";
 import { siteConfig } from "../site.config";
 import { alwaysTherePicks } from "../always-there";
@@ -26,7 +27,7 @@ const count = events.length;
     <ul class="always">
       {alwaysThere.map((e) => (
         <li class={`kind-${slugify(e.kind)}`}>
-          <a href={`/e/${e.id}`}><span class="dot" aria-hidden="true"></span>{e.title}<span class="visually-hidden">, {e.kind}</span></a>
+          <a href={`/e/${e.id}`}><span class="icon"><KindIcon kind={e.kind} /></span>{e.title}<span class="visually-hidden">, {e.kind}</span></a>
           <span class="detail">{e.schedule} · {e.venue}</span>
         </li>
       ))}
@@ -45,8 +46,8 @@ const count = events.length;
      so they get the full width rather than a narrow right-hand column. */
   .always li { display: grid; padding-block: var(--space-2); border-bottom: 1px solid var(--rule); }
   .always li:last-child { border-bottom: 0; }
-  .always a { color: var(--fg); font-weight: var(--weight-medium); }
-  .always .detail { font-size: var(--text-sm); color: var(--fg-muted); padding-left: calc(0.55rem + var(--space-2)); }
-  .dot { display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: var(--space-2); border-radius: 50%; background: var(--hue); vertical-align: 0.08em; }
+  .always a { display: flex; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
+  .always .detail { font-size: var(--text-sm); color: var(--fg-muted); padding-left: calc(1.15em + var(--space-2)); }
+  .icon { flex: none; color: var(--hue); margin-right: var(--space-2); }
   .explore { margin-block: var(--space-12); font-size: var(--text-lg); font-weight: var(--weight-strong); }
 </style>

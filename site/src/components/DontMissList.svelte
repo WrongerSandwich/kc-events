@@ -9,6 +9,8 @@
   import { slugify } from "../lib/slugs";
   import type { PublishedEvent } from "../lib/types";
   import DontMissCard from "./DontMissCard.svelte";
+  import KindChip from "./KindChip.svelte";
+  import KindIcon from "./KindIcon.svelte";
 
   const emptyLines = {
     "through-sunday": "Nothing picked between now and Sunday.",
@@ -54,7 +56,7 @@
           {#each buckets[h] as event (event.id)}
             <li class={`kind-${slugify(event.kind)}`}>
               <span class="when">{shortWhen(event)}</span>
-              <a href={`/e/${event.id}`}><span class="dot" aria-hidden="true"></span>{event.title}<span class="visually-hidden">, {event.kind}</span></a>
+              <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {event.kind}</span></a>
               <span class="where">{event.venue}</span>
             </li>
           {/each}
@@ -63,7 +65,7 @@
       {:else}
         <ul class="kinds" aria-label="Picks by kind">
           {#each kindCounts(h, buckets[h]) as k (k.kind)}
-            <li><a class={`chip kind-${slugify(k.kind)}`} href={k.href}>{k.n} {k.kind}</a></li>
+            <li><KindChip kind={k.kind} label={`${k.n} ${k.kind}`} href={k.href} /></li>
           {/each}
         </ul>
         {#each buckets[h] as event (event.id)}
@@ -88,7 +90,8 @@
   }
   .later li:last-child { border-bottom: 0; }
   .later .when { font-size: var(--text-sm); color: var(--fg-muted); }
-  .later a { color: var(--fg); font-weight: var(--weight-medium); }
+  /* Icon, then title, with a hanging indent: a wrapped title lines up under itself, not under the icon. */
+  .later a { display: flex; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
   .later .where { font-size: var(--text-sm); color: var(--fg-muted); text-align: right; max-width: 12rem; text-wrap: balance; }
   @media (max-width: 34rem) {
     .later li { grid-template-columns: 5.5rem minmax(0, 1fr); }
@@ -102,9 +105,9 @@
   .more { margin-top: var(--space-3); }
   /* What kind of week it is, at a glance; each chip filters the explorer to those picks. */
   .kinds { list-style: none; padding: 0; margin: var(--space-3) 0 var(--space-2); display: flex; flex-wrap: wrap; gap: var(--space-2); }
-  .kinds a { font-size: var(--text-sm); padding: var(--space-1) var(--space-3); text-decoration: none; transition: filter 150ms var(--ease-out); }
-  .kinds a:hover { filter: brightness(0.96) saturate(1.2); }
-  /* A kind's dot before a title in the one-line list. */
-  .dot { display: inline-block; width: 0.55rem; height: 0.55rem; margin-right: var(--space-2); border-radius: 50%; background: var(--hue); vertical-align: 0.08em; }
-  @media (prefers-reduced-motion: reduce) { .kinds a { transition: none; } }
+  .kinds :global(a) { font-size: var(--text-sm); padding: var(--space-1) var(--space-3); text-decoration: none; transition: filter 150ms var(--ease-out); }
+  .kinds :global(a:hover) { filter: brightness(0.96) saturate(1.2); }
+  /* A kind's icon before a title in the one-line list, in the kind's colour. */
+  .icon { flex: none; color: var(--hue); margin-right: var(--space-2); }
+  @media (prefers-reduced-motion: reduce) { .kinds :global(a) { transition: none; } }
 </style>

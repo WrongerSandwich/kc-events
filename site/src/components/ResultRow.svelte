@@ -2,8 +2,8 @@
   import { formatShort, localDate } from "../lib/dates";
   import { hostOf } from "../lib/events";
   import { rowDateLine } from "../lib/group";
-  import { slugify } from "../lib/slugs";
   import type { PublishedEvent } from "../lib/types";
+  import KindChip from "./KindChip.svelte";
   import SaveButton from "./SaveButton.svelte";
 
   // withDay: the list has no day headings (the venue sort), so the date line carries the day.
@@ -18,7 +18,7 @@
     <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="mark" role="img" aria-label="Don't miss">●</span>{/if}
   </div>
   <span class="where" title={`${event.venue} · ${event.neighborhood}`}><span class="venue">{event.venue}</span><span class="hood">{` · ${event.neighborhood}`}</span></span>
-  <span class={`chip kind-${slugify(event.kind)}`}>{event.kind}</span>
+  <KindChip kind={event.kind} />
   <a class="host" href={event.primaryUrl} rel="noopener" title={hostOf(event.primaryUrl)}>{hostOf(event.primaryUrl)}</a>
   <span class="verified"><span aria-hidden="true">✓ {verifiedOn}</span><span class="visually-hidden">Verified {verifiedOn}</span></span>
   <SaveButton id={event.id} title={event.title} />

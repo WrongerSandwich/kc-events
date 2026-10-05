@@ -1,5 +1,7 @@
 <script lang="ts">
   import { WHEN_LABELS, WHEN_PRESETS, type Filters } from "../lib/query";
+  import { slugify } from "../lib/slugs";
+  import KindIcon from "./KindIcon.svelte";
 
   let { filters, onchange, kinds, regions }: { filters: Filters; onchange: (f: Filters) => void; kinds: string[]; regions: string[] } = $props();
 
@@ -36,7 +38,7 @@
     <legend>Kind</legend>
     <div class="chips">
       {#each kinds as k (k)}
-        <button type="button" aria-pressed={filters.kinds.includes(k)} onclick={() => onchange({ ...filters, kinds: toggleIn(filters.kinds, k) })}>{k}</button>
+        <button type="button" class={`kind kind-${slugify(k)}`} aria-pressed={filters.kinds.includes(k)} onclick={() => onchange({ ...filters, kinds: toggleIn(filters.kinds, k) })}><KindIcon kind={k} />{k}</button>
       {/each}
     </div>
   </fieldset>
@@ -69,6 +71,10 @@
   .segments, .chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
   button { font: inherit; font-size: var(--text-xs); background: none; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: var(--space-1) var(--space-2); cursor: pointer; }
   button[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); }
+  /* Kind buttons carry their kind: the icon in its colour, and when on, the kind's own tint and shade. */
+  .kind { display: inline-flex; align-items: center; gap: 0.3em; }
+  .kind :global(.kind-icon) { color: var(--hue); }
+  .kind[aria-pressed="true"] { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
   .range { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); } .range label { display: flex; flex-direction: column; font-size: var(--text-xs); }
   /* The Show switches, one per line with the box beside its words. */
   fieldset > label { display: flex; align-items: center; gap: var(--space-2); }
