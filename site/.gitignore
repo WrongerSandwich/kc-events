@@ -1,0 +1,7 @@
+dist/
+dist-e2e/
+.astro/
+src/generated/
+public/events.json
+test-results/
+playwright-report/

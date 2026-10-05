@@ -1,0 +1,4 @@
+packages:
+  - site
+# The root package (the research job) is a workspace member too, so `pnpm -r test` runs both suites.
+includeWorkspaceRoot: true

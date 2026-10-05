@@ -1,0 +1,36 @@
+{
+  "name": "kc-events-site",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "22.x" },
+  "scripts": {
+    "generate": "tsx src/build/generate.ts",
+    "dev": "pnpm generate && astro dev",
+    "build": "pnpm generate && astro build && tsx scripts/size-check.ts",
+    "generate-and-build": "pnpm generate && astro build",
+    "build:e2e": "SITE_TODAY=2026-10-05 SITE_DATASET=e2e/fixtures/events.json SITE_OUT_DIR=dist-e2e pnpm generate-and-build",
+    "preview": "astro preview",
+    "preview:e2e": "SITE_OUT_DIR=dist-e2e astro preview --port 4321 --ignore-lock",
+    "typecheck": "pnpm generate && astro check",
+    "test": "pnpm generate && vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@astrojs/svelte": "^9.0.1",
+    "@fontsource-variable/inter": "^5.2.0",
+    "astro": "^7.3.5",
+    "svelte": "^5.57.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "@testing-library/svelte": "^5.4.2",
+    "@testing-library/jest-dom": "^6.6.0",
+    "jsdom": "^30.1.2",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

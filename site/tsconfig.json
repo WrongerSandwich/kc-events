@@ -1,0 +1,10 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "types": ["node", "@testing-library/jest-dom"]
+  },
+  "include": [".astro/types.d.ts", "src/**/*", "test/**/*", "e2e/**/*", "scripts/**/*"],
+  "exclude": ["dist"]
+}

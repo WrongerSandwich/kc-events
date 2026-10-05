@@ -11,7 +11,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "research": "tsx src/cli.ts",
-    "grade": "tsx src/grade-cli.ts"
+    "grade": "tsx src/grade-cli.ts",
+    "test:all": "pnpm -r test",
+    "typecheck:all": "pnpm -r typecheck"
   },
   "dependencies": {
     "openai": "^7.27.0",
