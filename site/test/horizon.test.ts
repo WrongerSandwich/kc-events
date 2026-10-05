@@ -82,9 +82,17 @@ describe("horizon", () => {
     const d = event({ id: "d", dontMiss: false, start: "2026-10-06" });
     const r = event({ id: "r", recurrence: "recurring", start: undefined, schedule: "Tuesdays" });
     const buckets = bucketDontMiss([a, b, c, d, r], today);
-    expect(buckets["through-sunday"].map((e) => e.id)).toEqual(["c", "b", "a"]); // c is on now
+    expect(buckets["through-sunday"].map((e) => e.id)).toEqual(["b", "a", "c"]); // c is on now and open past Sunday
     expect(buckets["next-two-weeks"]).toEqual([]);
     expect(buckets["further-out"]).toEqual([]);
+  });
+
+  it("keeps a run closing this week in date order, ahead of the dated picks after today", () => {
+    const today = "2026-10-05";
+    const closing = event({ id: "closing", dontMiss: true, recurrence: "limited-run", start: "2026-09-01", end: "2026-10-11" });
+    const lingering = event({ id: "lingering", dontMiss: true, recurrence: "limited-run", start: "2026-09-01", end: "2026-12-13" });
+    const show = event({ id: "show", dontMiss: true, start: "2026-10-07" });
+    expect(bucketDontMiss([lingering, show, closing], today)["through-sunday"].map((e) => e.id)).toEqual(["closing", "show", "lingering"]);
   });
 
   it("orders one day's events by start time, all-day first, then title", () => {

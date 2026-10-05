@@ -46,7 +46,11 @@ export function horizonHeading(h: Horizon, today: string): string {
   }
 }
 
-/** The don't-miss events by bucket, each sorted by anchor, then start time, then title; every bucket present. */
+/**
+ * The don't-miss events by bucket, each sorted by anchor, then start time, then title; every bucket present.
+ * A run already on that stays open past the bucket's end sorts last in it: it will be there next week too, so the
+ * bucket leads with what happens on a date. A run closing inside the bucket keeps its place.
+ */
 export function bucketDontMiss(events: PublishedEvent[], today: string): Record<Horizon, PublishedEvent[]> {
   const out: Record<Horizon, PublishedEvent[]> = { "through-sunday": [], "next-two-weeks": [], "further-out": [] };
   for (const e of events) {
@@ -54,7 +58,18 @@ export function bucketDontMiss(events: PublishedEvent[], today: string): Record<
     const h = horizon(e, today);
     if (h !== undefined) out[h].push(e);
   }
-  for (const h of HORIZONS) out[h].sort((a, b) => anchorDate(a, today)!.localeCompare(anchorDate(b, today)!) || startTime(a) - startTime(b) || a.title.localeCompare(b.title));
+  const { sunday, twoWeeks } = horizonBounds(today);
+  const end: Record<Horizon, string> = { "through-sunday": sunday, "next-two-weeks": twoWeeks, "further-out": "9999-12-31" };
+  for (const h of HORIZONS) {
+    const lingers = (e: PublishedEvent) => (e.recurrence === "limited-run" && isUnderway(e, today) && lastDay(e)! > end[h] ? 1 : 0);
+    out[h].sort(
+      (a, b) =>
+        lingers(a) - lingers(b) ||
+        anchorDate(a, today)!.localeCompare(anchorDate(b, today)!) ||
+        startTime(a) - startTime(b) ||
+        a.title.localeCompare(b.title),
+    );
+  }
   return out;
 }
 
