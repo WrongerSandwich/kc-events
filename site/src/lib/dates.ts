@@ -49,7 +49,9 @@ export function comingSunday(today: string): string {
 
 /** The calendar date of an instant in the zone. */
 export function todayIn(timeZone: string, now: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  const found = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+  const part = (type: string) => found.find((p) => p.type === type)!.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
 }
 
 /** "Oct 9": headings, stamps, and calendar descriptions that need no weekday. */

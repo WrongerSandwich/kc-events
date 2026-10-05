@@ -27,6 +27,7 @@ describe("dates", () => {
     // 03:30 UTC on Oct 6 is 22:30 on Oct 5 in Chicago.
     expect(todayIn("America/Chicago", new Date("2026-10-06T03:30:00Z"))).toBe("2026-10-05");
     expect(todayIn("America/Chicago", new Date("2026-10-06T12:00:00Z"))).toBe("2026-10-06");
+    for (const iso of ["2026-01-02T08:00:00Z", "2026-12-31T23:59:00Z"]) expect(todayIn("America/Chicago", new Date(iso))).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("formats for headings, rows, and event pages", () => {
