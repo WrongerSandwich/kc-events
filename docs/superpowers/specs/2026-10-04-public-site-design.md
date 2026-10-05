@@ -65,6 +65,8 @@ data/events.json  (committed by the weekly run)
 
 **Build fails loudly, deploy keeps the last good site.** Any parse failure, a schema version mismatch, a dataset with `lastSuccessfulRun: null`, an id collision among active events, or a projected payload over 400 KB raw throws during `astro build`. Vercel then keeps the previous deployment live. The weekly workflow already commits nothing on a failed run, so the two failure modes compose: a bad run leaves the old data, a bad build leaves the old site.
 
+**Production.** The site is live at https://kc-events-lime.vercel.app (Vercel project `kc-events`, first deployed 2026-10-05 from 05345fa). Vercel Authentication is off so the production URL is public, and the monorepo "skip when no changes" switch is off so the ignored build step below is the only skip rule.
+
 **Deploy trigger.** Vercel project settings: root directory `site`, framework Astro, "Include source files outside of the Root Directory" on, and the automatic "skip deployment when unaffected" switch for monorepos **off**: Vercel's own change detection follows declared workspace dependencies, and the site reaches the dataset by relative path, so the one commit that matters (the weekly `data/events.json` change) could be classified as unrelated and skipped, which would silently freeze the site. Instead an explicit *ignored build step* command, versioned as `ignoreCommand` in `site/vercel.json` so the dashboard needs no custom command (it uses the previous deployed SHA when Vercel provides one and falls back to `HEAD^`), runs inside `site/` and skips the build on exit 0, builds on exit 1:
 
 ```
