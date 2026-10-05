@@ -2,7 +2,7 @@
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { checkSchemaVersion, loadPublished, MAX_PAYLOAD_BYTES, SITE_EXPECTS_SCHEMA_VERSION } from "../src/build/load-dataset";
 
 const configYaml = `
@@ -76,6 +76,29 @@ describe("loadPublished", () => {
       activeEvent({ id: "evt_000000000003", neighborhood: "Atlantis" }),
     ])));
     expect(p.events.map((e) => e.region)).toEqual(["Johnson County", "Elsewhere in the metro", "Elsewhere in the metro"]);
+  });
+
+  it("warns about published events that land in the catch-all by an off-list neighborhood, not about a region-named one", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      loadPublished(write(dataset([
+        activeEvent({ neighborhood: "Johnson County" }),
+        activeEvent({ id: "evt_000000000002", neighborhood: "Elsewhere in the metro" }),
+        activeEvent({ id: "evt_000000000003", neighborhood: "Atlantis" }),
+        activeEvent({ id: "evt_000000000004", neighborhood: "Narnia", start: "2026-10-04" }),
+      ])));
+      expect(warn).toHaveBeenCalledTimes(1);
+      const msg = String(warn.mock.calls[0]![0]);
+      expect(msg).toContain("Atlantis (1)");
+      expect(msg).not.toContain("Johnson County");
+      expect(msg).not.toContain("Narnia");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("refuses a duplicate id among active events even when one is past", () => {
+    expect(() => loadPublished(write(dataset([activeEvent(), activeEvent({ start: "2026-10-04" })])))).toThrow(/evt_000000000001/);
   });
 
   it("refuses a job schema version the site was not written against", () => {

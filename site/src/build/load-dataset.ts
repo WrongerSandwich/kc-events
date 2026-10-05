@@ -59,21 +59,21 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
   const today = opts.today ?? process.env.SITE_TODAY ?? toLocalDate(new Date(), config.timezone);
 
   const active = dataset.events.filter((e) => e.status === "active");
-  const events = active.map((e) => project(e, config)).filter((e) => !isPast(e, today));
-
   const seen = new Set<string>();
-  for (const e of events) {
+  for (const e of active) {
     if (seen.has(e.id)) throw new Error(`duplicate active event id ${e.id}`);
     seen.add(e.id);
   }
+  const events = active.map((e) => project(e, config)).filter((e) => !isPast(e, today));
+
   const bytes = Buffer.byteLength(JSON.stringify(events));
   if (bytes > MAX_PAYLOAD_BYTES) throw new Error(`projected payload is ${bytes} bytes, over the ${MAX_PAYLOAD_BYTES} limit`);
 
-  const unlisted = active.filter((e) => regionOf(e.neighborhood, config) === undefined && e.neighborhood !== ELSEWHERE_IN_THE_METRO);
+  const unlisted = events.filter((e) => e.region === ELSEWHERE_IN_THE_METRO && e.neighborhood !== ELSEWHERE_IN_THE_METRO);
   if (unlisted.length > 0) {
     const counts = new Map<string, number>();
     for (const e of unlisted) counts.set(e.neighborhood, (counts.get(e.neighborhood) ?? 0) + 1);
-    console.warn(`site: ${unlisted.length} active events have a neighborhood no region lists: ${[...counts].map(([n, c]) => `${n} (${c})`).join(", ")}`);
+    console.warn(`site: ${unlisted.length} published events were mapped to the catch-all because no region lists their neighborhood: ${[...counts].map(([n, c]) => `${n} (${c})`).join(", ")}`);
   }
 
   return {
