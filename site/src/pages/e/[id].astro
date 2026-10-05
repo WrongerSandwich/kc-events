@@ -40,7 +40,8 @@ const jsonLd = {
     <p class="kind"><KindChip kind={event.kind} />{event.dontMiss && <span class="mark">Don't miss</span>}</p>
     <h1>{event.title}</h1>
     <p class="date">{line}</p>
-    <p class="where">{event.venue} · {event.neighborhood} · {event.region}</p>
+    {/* A neighborhood that is its own region (Lawrence, Elsewhere in the metro) is named once. */}
+    <p class="where">{event.venue} · {event.neighborhood}{event.region !== event.neighborhood && ` · ${event.region}`}</p>
     {event.whyLine && <blockquote class="why">{event.whyLine}</blockquote>}
     <p class="primary"><a href={event.primaryUrl} rel="noopener">Details and tickets at {hostOf(event.primaryUrl)}</a></p>
     <div class="actions">
