@@ -46,7 +46,10 @@ export function createSaves(storage: StorageLike | undefined): Saves {
     },
     subscribe(fn) {
       const fresh = read(storage);
-      if (fresh !== undefined) ids = new Set(fresh);
+      if (fresh !== undefined && (fresh.length !== ids.size || fresh.some((id) => !ids.has(id)))) {
+        ids = new Set(fresh);
+        for (const other of subscribers) other(ids); // keep every button on the page in step
+      }
       subscribers.add(fn);
       fn(ids);
       return () => void subscribers.delete(fn);

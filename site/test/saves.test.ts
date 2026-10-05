@@ -54,4 +54,14 @@ describe("saves", () => {
     expect([...fn.mock.calls[0]![0]]).toEqual(["z"]);
     expect(s.has("z")).toBe(true);
   });
+
+  it("tells existing subscribers when a later subscriber's re-read finds outside changes", () => {
+    const store = memory(JSON.stringify([]));
+    const s = createSaves(store);
+    const fn1 = vi.fn();
+    s.subscribe(fn1);
+    store.map.set(STORAGE_KEY, JSON.stringify(["z"]));
+    s.subscribe(vi.fn());
+    expect([...fn1.mock.calls.at(-1)![0]]).toEqual(["z"]);
+  });
 });
