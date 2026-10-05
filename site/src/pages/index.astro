@@ -6,7 +6,7 @@ import { siteConfig } from "../site.config";
 import { hostOf, isDated } from "../lib/events";
 
 const alwaysThere = events.filter((e) => !isDated(e)).sort((a, b) => a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title));
-const count = events.length;
+const count = events.filter(isDated).length;
 ---
 <Base title={siteConfig.name} description={siteConfig.tagline}>
   <h1>What's on in Kansas City</h1>

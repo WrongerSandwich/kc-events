@@ -15,7 +15,7 @@ test("the front page buckets the fixture's don't-miss events", async ({ page }) 
   await expect(sections.nth(1).getByRole("heading", { level: 3 })).toHaveText(["Mid-month reading"]);
   await expect(sections.nth(2).getByRole("heading", { level: 3 })).toHaveText(["November festival"]);
   await expect(page.getByText("Pub trivia")).toBeVisible();
-  await expect(page.getByText("Browse all 9 events")).toBeVisible();
+  await expect(page.getByText("Browse all 8 events")).toBeVisible();
 });
 
 test("the explorer honors the URL and writes it back", async ({ page }) => {
