@@ -26,10 +26,11 @@
 </article>
 
 <style>
-  /* Phones and tablets: the row wraps; the date line on top, the why-line at the bottom. */
+  /* Phones and tablets: the row wraps; the date line, the title, the details, then the why-line. */
   .row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); padding: var(--space-1) 0; border-bottom: 1px solid var(--rule); font-size: var(--text-sm); line-height: var(--leading-tight); }
   .when { flex-basis: 100%; color: var(--fg-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
-  .title { flex: 1 1 12rem; min-width: 0; }
+  /* The title gets its own line, so the details run under it rather than squeezing it into a narrow column. */
+  .title { flex: 1 1 100%; min-width: 0; }
   .title h3 { display: inline; font-size: var(--text-md); font-weight: 500; margin: 0; }
   .title a { color: inherit; text-decoration: none; }
   .title a:hover { text-decoration: underline; }
