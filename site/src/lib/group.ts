@@ -7,11 +7,22 @@ import type { PublishedEvent } from "./types";
 
 export type ResultGroup = { key: string; heading: string; events: PublishedEvent[] };
 
-/** Start time, "All day", a span's open/close line, or a recurring event's schedule phrase. */
-export function rowDateLine(e: PublishedEvent, today: string): string {
+/**
+ * A row's date line under its group heading: a start time or "All day"; for a span, "On now, closes Tue Oct 20" when
+ * underway, else "Runs through Sat Nov 14" (it sits under its opening day); a recurring event's schedule phrase.
+ * With `withDay` (the venue sort, which has no day headings), the day comes first: "Fri Oct 9 · 7:00 pm",
+ * "Fri Oct 9 · all day", "Tue Oct 20–Sat Nov 14".
+ */
+export function rowDateLine(e: PublishedEvent, today: string, withDay = false): string {
   if (!isDated(e)) return e.schedule ?? "";
-  if (isMultiDay(e)) return closingLine(e, today);
-  return isDateOnly(e.start!) ? "All day" : formatTime(e.start!);
+  if (isMultiDay(e)) {
+    if (isUnderway(e, today)) return closingLine(e, today);
+    const last = formatDay(lastDay(e)!);
+    return withDay ? `${formatDay(firstDay(e)!)}–${last}` : `Runs through ${last}`;
+  }
+  const start = e.start!;
+  if (!withDay) return isDateOnly(start) ? "All day" : formatTime(start);
+  return `${formatDay(firstDay(e)!)} · ${isDateOnly(start) ? "all day" : formatTime(start)}`;
 }
 
 function byStartThenTitle(a: PublishedEvent, b: PublishedEvent): number {

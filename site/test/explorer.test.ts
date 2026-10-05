@@ -70,6 +70,16 @@ describe("Explorer", () => {
     expect(screen.getByRole("button", { name: "Clear filters" })).toBeInTheDocument();
   });
 
+  it("puts each row's day in its date line under the venue sort, which has no day headings", () => {
+    history.replaceState(null, "", "/explore?sort=venue");
+    render(Explorer);
+    expect(screen.queryByRole("heading", { level: 2, name: "Fri Oct 9" })).toBeNull();
+    const jazz = screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Friday jazz")!;
+    expect(jazz).toHaveTextContent("Fri Oct 9 · 7:00 pm");
+    const film = screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Saturday film")!;
+    expect(film).toHaveTextContent("Sat Oct 10 · all day");
+  });
+
   it("shows a shared custom range in the date inputs", () => {
     history.replaceState(null, "", "/explore?when=2026-10-09..2026-10-10");
     render(Explorer);

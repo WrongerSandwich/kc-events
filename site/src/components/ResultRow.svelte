@@ -6,11 +6,13 @@
   import type { PublishedEvent } from "../lib/types";
   import SaveButton from "./SaveButton.svelte";
 
-  let { event, today }: { event: PublishedEvent; today: string } = $props();
+  // withDay: the list has no day headings (the venue sort), so the date line carries the day.
+  let { event, today, withDay = false }: { event: PublishedEvent; today: string; withDay?: boolean } = $props();
+  let dateLine = $derived(rowDateLine(event, today, withDay));
 </script>
 
-<article class="row" class:flagged={event.dontMiss} style={`--hue: var(--kind-${slugify(event.kind)})`}>
-  <span class="when">{rowDateLine(event, today)}</span>
+<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} style={`--hue: var(--kind-${slugify(event.kind)})`}>
+  <span class="when" title={dateLine}>{dateLine}</span>
   <div class="title">
     <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="mark" role="img" aria-label="Don't miss">●</span>{/if}
   </div>
@@ -39,8 +41,11 @@
 
   /* Wide screens: an unflagged row is a single line, 25 px tall (20 px title + 4 px padding + 1 px rule). */
   @media (min-width: 1024px) {
-    .row { display: grid; grid-template-columns: 6.5rem minmax(0, 2fr) minmax(0, 1.4fr) auto auto auto auto; align-items: center; gap: 0 var(--space-3); padding: 2px 0; }
-    .when { font-size: var(--text-sm); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row { display: grid; grid-template-columns: 12.5rem minmax(0, 2fr) minmax(0, 1.4fr) auto auto auto auto; align-items: center; gap: 0 var(--space-3); padding: 2px 0; }
+    /* Every dated line fits 12.5rem on one line (the widest, "On now, closes Wed Nov 11", measures 186 px); an always-there
+       schedule phrase may run longer, so it wraps, and those rows are exempt from the one-line rule. */
+    .when { font-size: var(--text-sm); }
+    .row:not(.always) .when { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .title, .where { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     /* base.css gives headings text-wrap: balance, which resets the inherited nowrap on the h3 itself. */
     .title h3 { white-space: nowrap; }

@@ -14,10 +14,14 @@
   let today = $state(meta.buildToday);
   let filters = $state<Filters>(DEFAULT_FILTERS);
   let saved = $state<ReadonlySet<string>>(new Set());
+  // Open in the server HTML so no-JS readers see the controls; on phones it closes after hydration so the count
+  // and the results are on screen on arrival.
+  let sheetOpen = $state(true);
 
   onMount(() => {
     today = todayIn(meta.timeZone, new Date());
     filters = parseQuery(new URLSearchParams(location.search), known);
+    if (typeof matchMedia === "function" && matchMedia("(max-width: 800px)").matches) sheetOpen = false;
     return saves().subscribe((ids) => { saved = ids; });
   });
 
@@ -34,8 +38,8 @@
 
 <div class="explorer">
   <aside class="rail" aria-label="Filters">
-    <details class="sheet" open>
-      <summary>Filters</summary>
+    <details class="sheet" bind:open={sheetOpen}>
+      <summary>Filters{#if active.length > 0}{` (${active.length})`}{/if}</summary>
       <FilterRail {filters} onchange={change} kinds={meta.kinds} regions={meta.regions} />
     </details>
   </aside>
@@ -56,7 +60,7 @@
     {#each groups as g (g.key)}
       <h2 class="section-heading day">{g.heading}</h2>
       {#each g.events as event (event.id)}
-        <ResultRow {event} {today} />
+        <ResultRow {event} {today} withDay={filters.sort === "venue"} />
       {/each}
     {/each}
   </section>
@@ -64,7 +68,9 @@
 
 <style>
   .explorer { display: grid; grid-template-columns: 16rem 1fr; gap: var(--space-8); align-items: start; }
-  .rail { position: sticky; top: var(--space-4); }
+  /* Sticky beside the results, scrolling on its own when it is taller than the window (a 768 px laptop). */
+  .rail { position: sticky; top: var(--space-4); max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto; padding: var(--space-1); margin: calc(-1 * var(--space-1)); }
+  /* (The padding keeps focus rings on the rail's edge from being clipped by the scroll box.) */
   .sheet summary { display: none; }
   .bar { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); position: sticky; top: 0; background: var(--bg); padding: var(--space-2) 0; z-index: 2; }
   .count { margin: 0; color: var(--fg-muted); font-size: var(--text-sm); }
@@ -74,7 +80,7 @@
   .empty { color: var(--fg-muted); }
   @media (max-width: 800px) {
     .explorer { grid-template-columns: 1fr; gap: var(--space-4); }
-    .rail { position: static; }
+    .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; }
     .sheet summary { display: list-item; cursor: pointer; font-weight: 500; }
     .sheet:not([open]) summary { margin-bottom: var(--space-2); }
   }
