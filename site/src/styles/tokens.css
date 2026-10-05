@@ -21,7 +21,7 @@
   --kind-comedy: #946800;
   --kind-art-exhibitions: #1f6f8b;
   --kind-festivals-markets: #2e7d32;
-  --kind-food-drink: #a0522d;
+  --kind-food-drink: #5f6b12;        /* olive, off the accent's 10-25° hue range */
   --kind-sports: #1f5fb5;
   --kind-film: #4a4a8a;
   --kind-talks-readings: #6b5b3e;
@@ -42,7 +42,7 @@
     --bg: #161513; --bg-raised: #1f1e1b; --fg: #ece8df; --fg-muted: #b3ada0; --fg-faint: #8f897c; --rule: #2e2c28;
     --accent: #e8794a; --accent-fg: #161513; --focus: #7fb0ff;
     --kind-music: #c58ad4; --kind-theater-dance: #ec8aa0; --kind-comedy: #e0b23a; --kind-art-exhibitions: #6cb4cf;
-    --kind-festivals-markets: #7bc47f; --kind-food-drink: #d49a7a; --kind-sports: #7fb0ff; --kind-film: #a3a3e0;
+    --kind-festivals-markets: #7bc47f; --kind-food-drink: #b8c25e; --kind-sports: #7fb0ff; --kind-film: #a3a3e0;
     --kind-talks-readings: #c2ad86; --kind-outdoors-community: #8ccf8c; --kind-other: #a8a8a8;
   }
 }

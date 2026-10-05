@@ -18,6 +18,7 @@ const runDay = localDate(meta.lastSuccessfulRun);
         <a href="/about">About</a>
       </nav>
     </div>
+    <p class="tagline">{siteConfig.tagline}</p>
     <p class="stamp">Researched weekly; last run <time datetime={runDay}>{formatDay(runDay)}</time></p>
   </div>
 </header>
@@ -31,6 +32,7 @@ const runDay = localDate(meta.lastSuccessfulRun);
   nav { display: flex; gap: var(--space-4); font-size: var(--text-sm); }
   nav a { color: var(--fg-muted); }
   nav a:hover { color: var(--fg); }
+  .tagline { margin-top: var(--space-1); font-size: var(--text-sm); color: var(--fg-muted); }
   .stamp { margin-top: var(--space-1); font-size: var(--text-xs); color: var(--fg-faint); }
   .skip {
     position: absolute; left: var(--gutter); top: var(--space-2); z-index: 10;

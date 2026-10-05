@@ -22,8 +22,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 a { color: var(--accent); text-decoration: none; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
 a:hover { text-decoration: underline; }
-/* Inline links in running prose are always underlined, so they never rely on colour alone. */
-p a, li a, dd a { text-decoration: underline; }
+/* Links in running prose are always underlined, so they never rely on colour alone. Lists of events are not prose. */
+p a, .prose a { text-decoration: underline; }
 
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
