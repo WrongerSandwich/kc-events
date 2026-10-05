@@ -1,7 +1,49 @@
 ---
 import Base from "../layouts/Base.astro";
+import DontMissList from "../components/DontMissList.svelte";
+import { events } from "../generated/events";
 import { siteConfig } from "../site.config";
+import { hostOf, isDated } from "../lib/events";
+
+const alwaysThere = events.filter((e) => !isDated(e)).sort((a, b) => a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title));
+const count = events.length;
 ---
 <Base title={siteConfig.name} description={siteConfig.tagline}>
   <h1>What's on in Kansas City</h1>
+  <p class="lede">The events below are the ones worth going out of your way for, with a line on why; <a href="/explore">everything else</a> is one click away.</p>
+
+  <DontMissList client:load />
+
+  <section aria-labelledby="always">
+    <h2 id="always" class="section-heading">Always there</h2>
+    <p class="note">These repeat on a schedule and are never on the list above.</p>
+    <ul class="always">
+      {alwaysThere.map((e) => (
+        <li>
+          <a href={`/e/${e.id}`}>{e.title}</a>
+          <span class="when">{e.schedule}</span>
+          <span class="where">{e.venue} · {e.neighborhood}</span>
+          <a class="primary" href={e.primaryUrl} rel="noopener">{hostOf(e.primaryUrl)}</a>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <p class="explore"><a href="/explore">Browse all {count} events</a></p>
 </Base>
+
+<style>
+  h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: var(--space-8) 0 var(--space-2); }
+  .lede { color: var(--fg-muted); margin-bottom: var(--space-6); }
+  .note { font-size: var(--text-sm); color: var(--fg-faint); margin: 0 0 var(--space-3); }
+  .always { list-style: none; padding: 0; margin: 0; }
+  .always li { display: grid; grid-template-columns: 1fr auto; gap: 0 var(--space-3); padding: var(--space-1) 0; border-bottom: 1px solid var(--rule); font-size: var(--text-sm); }
+  .always .when { color: var(--fg-muted); text-align: right; }
+  .always .where, .always .primary { font-size: var(--text-xs); color: var(--fg-faint); }
+  /* Narrow screens: one column, so a long schedule phrase never squeezes the title. */
+  @media (max-width: 30rem) {
+    .always li { grid-template-columns: 1fr; }
+    .always .when { text-align: left; }
+  }
+  .explore { margin: var(--space-12) 0; font-size: var(--text-lg); }
+</style>

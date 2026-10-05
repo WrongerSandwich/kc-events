@@ -1,0 +1,38 @@
+---
+import Base from "../layouts/Base.astro";
+import { siteConfig } from "../site.config";
+
+const reportUrl = `${siteConfig.repoUrl}/issues/new?title=${encodeURIComponent("Wrong listing: ")}`;
+const curationRules = `${siteConfig.repoUrl}/blob/main/prompts/curation-prompt.md`;
+const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rules.md`;
+---
+<Base title="About" description="How this list is made, and how to report a wrong listing.">
+  <article class="prose">
+    <h1>About</h1>
+
+    <h2>What this is</h2>
+    <p>{siteConfig.tagline} It is for anyone in or near the city who wants to know what is on without wading through sponsored posts or a feed. It is free, and it has no ads, no accounts, and no tracking: no analytics, no cookies, and no requests to anyone else's servers. Events you save stay in your own browser.</p>
+
+    <h2>How it is made</h2>
+    <p>Once a week a research job reads venue and organizer pages directly. A date and a venue are published only when they were read from the event's own page; when the job cannot cite one, the event is held back rather than guessed at. The rules it reads pages by are <a href={extractionRules}>written down in the repository</a>.</p>
+    <p>Every event shows when it was last verified, and the stamp under the site name says when the job last ran. If {siteConfig.staleAfterDays} days pass without a run, every page says so.</p>
+
+    <h2>What don't-miss means</h2>
+    <p>A don't-miss event is a one-off or a limited run that is worth going out of your way for. It is an editorial call, made by a model under <a href={curationRules}>written rules</a> kept in the repository, and each one comes with a one-line reason. Recurring events are never flagged; they are listed under Always there instead.</p>
+
+    <h2>The data</h2>
+    <p>The full dataset is at <a href="/events.json">/events.json</a>. It is free to reuse; a link back is all that is asked. For language models and other readers, <a href="/llms.txt">/llms.txt</a> describes the site, the dataset, and how to cite it.</p>
+
+    <h2>Wrong listing?</h2>
+    <p>If a date, venue, or anything else is wrong, <a href={reportUrl}>report a wrong listing on GitHub</a>. Include the event, the page it links to, and what is wrong.</p>
+
+    <h2>The code</h2>
+    <p>The research job and this site are open source, in <a href={siteConfig.repoUrl}>one repository on GitHub</a>.</p>
+  </article>
+</Base>
+
+<style>
+  h1 { margin: var(--space-8) 0 var(--space-4); }
+  h2 { font-size: var(--text-lg); margin: var(--space-8) 0 var(--space-2); }
+  p + p { margin-top: var(--space-3); }
+</style>
