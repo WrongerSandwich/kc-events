@@ -31,34 +31,51 @@ kinds:
   - outdoors/community
   - other
 
-# Controlled list. Every registry source's neighborhood is added to it at run time, so list here
-# only the ones no source names yet. The two catch-alls are required. An address that maps to
-# nothing lands in "Elsewhere in the metro" and is flagged in the run report.
-# A neighborhood is the most specific place name people use: a district in the core, a city in the
-# suburbs. Regions group them for the site; until the config groups them (#23), the regions are:
-#   Central KC: Downtown, Crossroads, River Market, Crown Center, 18th & Vine, Westport, Midtown,
-#     Plaza & Museum District, West Bottoms, East Bottoms, Berkley Riverfront, Northeast
-#   South KC: South Kansas City, Swope Park, Truman Sports Complex
-#   Northland: Northland
-#   Kansas City, Kansas: Kansas City, Kansas; Bonner Springs
-#   Johnson County: Overland Park, Olathe, Lenexa, Prairie Village, Merriam, Leawood, Shawnee, Fairway
-#   Eastern Jackson County: Independence, Lee's Summit, Blue Springs, Raytown
-#   Lawrence: Lawrence
+# Neighborhoods, grouped by region. A neighborhood is the most specific place name people use: a
+# district in the core, a city in the suburbs. A region groups them at the scale of a trip decision,
+# for the site to browse by. The extractor picks an event's neighborhood from every region's list
+# plus "Elsewhere in the metro", the catch-all in no region: an address that maps to nothing lands
+# there and is flagged in the run report. Every registry source's neighborhood must be listed here
+# (or be the catch-all), and a neighborhood goes under one region only; the config fails otherwise.
 neighborhoods:
-  - Westport
-  - West Bottoms
-  - Kansas City, Kansas
-  - Olathe
-  - Lenexa
-  - Prairie Village
-  - Merriam
-  - Leawood
-  - Shawnee
-  - Lee's Summit
-  - Blue Springs
-  - Raytown
-  - Lawrence
-  - Elsewhere in the metro
+  Central KC:
+    - Downtown
+    - Crossroads
+    - River Market
+    - Crown Center
+    - 18th & Vine
+    - Westport
+    - Midtown
+    - Plaza & Museum District
+    - West Bottoms
+    - East Bottoms
+    - Berkley Riverfront
+    - Northeast
+  South KC:
+    - South Kansas City
+    - Swope Park
+    - Truman Sports Complex
+  Northland:
+    - Northland
+  Kansas City, Kansas:
+    - Kansas City, Kansas
+    - Bonner Springs
+  Johnson County:
+    - Overland Park
+    - Olathe
+    - Lenexa
+    - Prairie Village
+    - Merriam
+    - Leawood
+    - Shawnee
+    - Fairway
+  Eastern Jackson County:
+    - Independence
+    - Lee's Summit
+    - Blue Springs
+    - Raytown
+  Lawrence:
+    - Lawrence
 
 # The discovery lane: web searches (Tavily, basic depth, one credit each; needs TAVILY_API_KEY) for
 # events outside the registry. One query per kind but "other", naming the place and the horizon's

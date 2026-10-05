@@ -68,7 +68,7 @@ export interface ExtractionContext {
   nowIso: string;
   /** Every URL fetched this run, normalized; a candidate's primary page must be among them to verify. */
   fetchedUrls: Set<string>;
-  /** The controlled neighborhood list, seeded from the registry. */
+  /** The controlled neighborhood list: every region's neighborhoods, then the catch-all. */
   neighborhoods: string[];
 }
 

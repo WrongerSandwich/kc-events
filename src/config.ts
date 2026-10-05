@@ -1,11 +1,12 @@
 import { z } from "zod";
+import { normalizeName } from "./identity.js";
 
 const DEFAULT_MODELS = { extraction: "openai/gpt-6-luna", curation: "anthropic/claude-sonnet-5.5" };
 
-/** The catch-all for an address that maps to nothing on the neighborhood list. */
+/** The catch-all for an address that maps to nothing on the neighborhood list; it is in no region. */
 export const ELSEWHERE_IN_THE_METRO = "Elsewhere in the metro";
 
-export const NEIGHBORHOOD_CATCH_ALLS = ["Lawrence", ELSEWHERE_IN_THE_METRO] as const;
+const DEFAULT_NEIGHBORHOODS: Record<string, string[]> = { Lawrence: ["Lawrence"] };
 
 export const DEFAULT_KINDS = [
   "music",
@@ -117,12 +118,23 @@ export const configSchema = z.strictObject({
     .min(1)
     .refine((kinds) => kinds.includes("other"), { message: 'kinds must include "other" as the escape hatch' })
     .default([...DEFAULT_KINDS]),
+  /** Region to its neighborhoods; the extractor picks from all of them plus the catch-all. */
   neighborhoods: z
-    .array(z.string().min(1))
-    .refine((list) => NEIGHBORHOOD_CATCH_ALLS.every((c) => list.includes(c)), {
-      message: `neighborhoods must include the catch-alls: ${NEIGHBORHOOD_CATCH_ALLS.join(", ")}`,
+    .record(z.string().min(1), z.array(z.string().min(1)).min(1))
+    .superRefine((regions, ctx) => {
+      const regionOf = new Map<string, string>();
+      for (const [region, neighborhoods] of Object.entries(regions)) {
+        for (const neighborhood of neighborhoods) {
+          const key = normalizeName(neighborhood);
+          if (key === normalizeName(ELSEWHERE_IN_THE_METRO)) {
+            ctx.addIssue({ code: "custom", message: `"${neighborhood}" is the catch-all and belongs to no region, but ${region} lists it` });
+          } else if (regionOf.has(key)) {
+            ctx.addIssue({ code: "custom", message: `"${neighborhood}" is listed under both ${regionOf.get(key)} and ${region}` });
+          } else regionOf.set(key, region);
+        }
+      }
     })
-    .default([...NEIGHBORHOOD_CATCH_ALLS]),
+    .default(() => structuredClone(DEFAULT_NEIGHBORHOODS)),
   discovery: discoverySchema.default(discoverySchema.parse({})),
   /**
    * Venue aliases (ADR 0007): a venue's display name to the other names it goes by, a room inside it

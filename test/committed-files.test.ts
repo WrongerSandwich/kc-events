@@ -5,6 +5,7 @@ import { parseConfig } from "../src/config.js";
 import { parseDataset } from "../src/dataset.js";
 import { onHost } from "../src/discovery.js";
 import { parseRegistry } from "../src/registry.js";
+import { neighborhoodList, regionOf } from "../src/taxonomy.js";
 
 /** The hand-edited files the research job reads, as committed. A typo here fails the run, so it fails the suite first. */
 describe("committed config and registry", () => {
@@ -21,6 +22,13 @@ describe("committed config and registry", () => {
   it("gives every source a kind from the taxonomy", () => {
     const offList = registry.sources.filter((s) => !config.kinds.includes(s.kind)).map((s) => `${s.name}: ${s.kind}`);
     expect(offList).toEqual([]);
+  });
+
+  it("puts every source's neighborhood in a region, or the catch-all", () => {
+    expect(() => neighborhoodList(config, registry)).not.toThrow();
+    expect(regionOf("Olathe", config)).toBe("Johnson County");
+    expect(regionOf("Crossroads", config)).toBe("Central KC");
+    expect(regionOf("Elsewhere in the metro", config)).toBeUndefined();
   });
 
   it("names each source's pages once and only on one source", () => {

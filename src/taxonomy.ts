@@ -18,13 +18,23 @@ export function toKind(value: string | null, kinds: readonly string[]): string {
   return fromList(value, kinds) ?? "other";
 }
 
+/** The region that lists this neighborhood, in any spelling; undefined for the catch-all or anything unlisted. */
+export function regionOf(neighborhood: string, config: RunConfig): string | undefined {
+  const regions = Object.entries(config.neighborhoods);
+  return regions.find(([, neighborhoods]) => fromList(neighborhood, neighborhoods) !== undefined)?.[0];
+}
+
 /**
- * The controlled neighborhood list: the config's list, catch-alls included, plus every
- * registry source's neighborhood, so a source never names a neighborhood the list lacks.
+ * The controlled neighborhood list: every region's neighborhoods, then the catch-all. A registry
+ * source naming a neighborhood no region lists is a config error, not a new neighborhood.
  */
 export function neighborhoodList(config: RunConfig, registry: Registry): string[] {
-  const list = [...config.neighborhoods];
-  for (const { neighborhood } of registry.sources) if (fromList(neighborhood, list) === undefined) list.push(neighborhood);
+  const list = [...Object.values(config.neighborhoods).flat(), ELSEWHERE_IN_THE_METRO];
+  const offList = registry.sources.filter(({ neighborhood }) => fromList(neighborhood, list) === undefined);
+  if (offList.length > 0) {
+    const named = offList.map((s) => `${s.name} names "${s.neighborhood}"`).join("; ");
+    throw new Error(`registry sources name neighborhoods no region lists in the config: ${named}`);
+  }
   return list;
 }
 

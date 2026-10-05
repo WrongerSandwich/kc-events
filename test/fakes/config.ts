@@ -12,7 +12,7 @@ export function testConfig(overrides: Partial<RunConfig> = {}): RunConfig {
       spendCapUsd: 5,
       models: { ...TEST_MODELS },
       kinds: ["music", "other"],
-      neighborhoods: ["Westport", "Lawrence", "Elsewhere in the metro"],
+      neighborhoods: { "Central KC": ["Westport", "East Bottoms", "Crossroads"], Lawrence: ["Lawrence"] },
     }),
     ...overrides,
   };

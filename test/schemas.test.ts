@@ -22,16 +22,11 @@ describe("config", () => {
       "outdoors/community",
       "other",
     ]);
-    expect(config.neighborhoods).toEqual(["Lawrence", "Elsewhere in the metro"]);
     expect(config.geography).toMatch(/Kansas City metro.*Lawrence/);
   });
 
   it("rejects a secret written into the config file", () => {
     expect(() => parseConfig({ openRouterApiKey: "sk-or-123" })).toThrow();
-  });
-
-  it("rejects a neighborhood list missing the catch-alls", () => {
-    expect(() => parseConfig({ neighborhoods: ["Westport"] })).toThrow(/catch-alls/);
   });
 });
 

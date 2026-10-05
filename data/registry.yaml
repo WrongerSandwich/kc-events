@@ -4,7 +4,7 @@
 #   name: Knuckleheads
 #   urls: [https://example.com/calendar]   # the calendar page, not a feed (see below)
 #   kind: music                            # from the kinds taxonomy in research.config.yaml
-#   neighborhood: East Bottoms             # joins the neighborhood list if it is not already on it
+#   neighborhood: East Bottoms             # listed under a region in research.config.yaml, or the catch-all
 #   checkHints: free text passed to the extractor
 #   status: active                         # or excluded, with a reason
 #   reason: robots.txt disallows           # required when excluded

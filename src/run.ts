@@ -53,6 +53,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const startedIso = toLocalIso(startedAt, config.timezone);
 
   const today = toLocalDate(startedAt, config.timezone);
+  // Before any fetch: a registry source in no region is a config error.
+  const neighborhoods = neighborhoodList(config, registry);
   // Every model call goes through the cap, whatever stage makes it.
   const model = capSpend(ports.model, config.spendCapUsd);
   const registryLane = await checkRegistry(registry, dataset.sourceState, ports.fetcher);
@@ -70,7 +72,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     today,
     nowIso: startedIso,
     fetchedUrls,
-    neighborhoods: neighborhoodList(config, registry),
+    neighborhoods,
   };
   const extraction = await extractFromPages(registryLane.pages, model, extractionContext);
   const sourceReports = registryLane.sourceReports.map((report) => withExtraction(report, extraction.bySource.get(report.name)));

@@ -110,7 +110,7 @@ describe("recurrence, kind, geography, and neighborhood", () => {
   it("the extraction request lists the neighborhoods, catch-alls included", async () => {
     const { requests } = await runOver([candidate()]);
 
-    expect(requests[0]!.messages[0]!.content).toContain("- Neighborhoods: Westport, Lawrence, Elsewhere in the metro, Crossroads");
+    expect(requests[0]!.messages[0]!.content).toContain("- Neighborhoods: Westport, East Bottoms, Crossroads, Lawrence, Elsewhere in the metro");
   });
 
   it("an event outside the geography is dropped and counted, never recorded", async () => {
