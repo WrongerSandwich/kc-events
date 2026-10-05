@@ -74,6 +74,8 @@
   fieldset > label { display: flex; align-items: center; gap: var(--space-2); }
   input, select { font: inherit; }
   /* Chromium's dark-scheme select is grey (#6b6b6b), under 4.5:1 with --fg; the raised surface clears AA in both schemes. */
-  select { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
+  /* The inputs too: Chromium's dark field is #3b3b3b, where its placeholder grey is about 2.4:1. */
+  select, input[type="date"], input[type="search"] { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
+  input::placeholder { color: var(--fg-faint); opacity: 1; }
   .search input { width: 100%; padding: var(--space-1) var(--space-2); }
 </style>
