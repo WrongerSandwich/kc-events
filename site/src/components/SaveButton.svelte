@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { saves } from "../lib/saves";
 
-  // `large` gives the button a 44 px touch target, for cards; rows keep it compact.
+  // `large` gives the button a 44 px touch target, for cards and phone rows; a desktop row slims it back down.
   let { id, title, large = false }: { id: string; title: string; large?: boolean } = $props();
   // Saving needs the browser's storage, so the button renders only once mounted: without JavaScript there is no
   // button that does nothing. The store is read on mount so the server never touches storage.

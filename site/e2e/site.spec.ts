@@ -217,19 +217,18 @@ for (const path of EXPLORER_SORTS) {
     const rows = await page.locator("article.row").evaluateAll((els) =>
       els.map((row) => {
         const box = (sel: string) => row.querySelector<HTMLElement>(sel)!.getBoundingClientRect();
-        const shown = (sel: string) => box(sel).width > 0 && box(sel).height > 0;
+        const shown = (sel: string) => box(sel).width > 0;
         return {
           title: row.querySelector("h3")!.textContent,
-          dated: !row.classList.contains("always"),
           row: row.getBoundingClientRect(),
           when: box(".when"), heading: box(".title"), where: box(".where"), chip: box(".chip"), save: box("button.save"),
           hostShown: shown(".host"), verifiedShown: shown(".verified"),
         };
       }),
     );
-    expect(rows.length).toBe(9);
+    expect(rows.length).toBe(9); // every row is dated: the default filters leave out the always-there one
     const chipLeft = rows[0]!.chip.left;
-    for (const r of rows.filter((r) => r.dated)) {
+    for (const r of rows) {
       expect(r.when.bottom, `${r.title}: date above title`).toBeLessThanOrEqual(r.heading.top + 0.5);
       expect(r.heading.bottom, `${r.title}: title above venue`).toBeLessThanOrEqual(r.where.top + 0.5);
       expect(Math.abs(r.chip.top + r.chip.height / 2 - (r.where.top + r.where.height / 2)), `${r.title}: chip on the venue line`).toBeLessThan(2);
@@ -244,6 +243,15 @@ for (const path of EXPLORER_SORTS) {
     }
   });
 }
+
+test("from 800 px a row shows the host and the verified stamp again", async ({ page }) => {
+  await page.setViewportSize({ width: 900, height: 800 });
+  await on(page, BUILD_DAY, "/explore");
+  await openOnNow(page);
+  const row = page.locator("article.row").first();
+  await expect(row.locator(".host")).toBeVisible();
+  await expect(row.locator(".verified")).toBeVisible();
+});
 
 test("a don't-miss row keeps its why-line on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

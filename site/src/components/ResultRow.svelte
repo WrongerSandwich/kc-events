@@ -54,7 +54,7 @@
   .where { display: flex; }
   .venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .hood { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
-  /* Below about 800 px the host and the verified stamp leave the row; the event page keeps both. */
+  /* Below 800 px the host and the verified stamp leave the row; the event page keeps both. */
   .host, .verified { display: none; }
   @media (min-width: 800px) {
     .host, .verified { display: revert; }
@@ -73,7 +73,7 @@
   @media (min-width: 1024px) {
     .row {
       --when-width: 11.25rem;
-      display: grid; align-items: center; gap: 0 var(--space-2); padding: var(--space-1) 0;
+      gap: 0 var(--space-2);
       grid-template-columns: var(--when-width) minmax(0, 1fr) auto auto auto auto;
       grid-template-areas: "when title title title title title" ". where chip host verified save" ". why why why why why";
     }
@@ -85,7 +85,7 @@
     /* An always-there schedule phrase may run longer than any dated line, so it wraps, and those rows are exempt from
        the one-line rule. */
     .row:not(.always) .when { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hood { flex: none; overflow: visible; }
     /* base.css gives headings text-wrap: balance, which resets the inherited nowrap on the h3 itself. */
     .title h3 { white-space: nowrap; }
