@@ -162,7 +162,7 @@ An empty bucket is shown with its heading and one line ("Nothing flagged yet for
 
 **Explore link.** A prominent link to `/explore` with the count: "Browse all 560 events." The front page does not host filters; the explorer does.
 
-`DontMissList` is a Svelte component server-rendered at build with the build date and hydrated with the visitor's date under the hydration rule, so headings and buckets are correct on the day viewed and events that passed since the build drop out. Its JavaScript is small; the page is fully readable without it.
+`DontMissList` is a Svelte component server-rendered at build with the build date and hydrated with the visitor's date under the hydration rule, so headings and buckets are correct on the day viewed and events that passed since the build drop out. It reads the visitor's clock (in the site's zone) on mount and again whenever the tab becomes visible, never on a timer. With the clock, a card whose pick starts today reads "Today" on a tile ringed in its kind's colour, and a timed one-off whose start has passed reads "Started 7:00 pm" and dims (muted title, desaturated kind colours, still AA), staying on the page since the site knows no end times. Built HTML has no clock, so it shows neither state. Its JavaScript is small; the page is fully readable without it.
 
 ## 6. The explorer
 

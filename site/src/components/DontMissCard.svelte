@@ -10,8 +10,8 @@
   import SaveButton from "./SaveButton.svelte";
   import UiIcon from "./UiIcon.svelte";
 
-  let { event, today }: { event: PublishedEvent; today: string } = $props();
-  let tile = $derived(dateTile(event, today));
+  let { event, today, now }: { event: PublishedEvent; today: string; now?: string } = $props();
+  let tile = $derived(dateTile(event, today, now));
   // Every event the last run reached was verified that day, which the header already says; a card speaks up only
   // when its own check is older than that.
   const runDay = localDate(meta.lastSuccessfulRun);
@@ -20,7 +20,7 @@
 
 <!-- The kind's colour fills the date tile and the chip; everything else on the card is ink. The id is the week
      strip's jump target. -->
-<article class={`card kind-${slugify(event.kind)}`} id={`pick-${event.id}`}>
+<article class={`card kind-${slugify(event.kind)}`} class:started={tile.started} id={`pick-${event.id}`}>
   <DateTile {tile} id={event.id} />
   <div class="body">
     <h3 style={`view-transition-name: title-${event.id}`}><a href={`/e/${event.id}`}>{event.title}</a></h3>
@@ -70,7 +70,13 @@
     transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out);
   }
   .ics:hover { color: var(--fg); border-color: var(--fg-faint); text-decoration: none; }
-  @media (prefers-reduced-motion: reduce) { .ics { transition: none; } }
+  /* Started: dimmed, not hidden (the site knows no end times). Not by opacity, which would drop text below AA: the
+     title steps down to the muted ink, which clears 4.5:1 in both schemes, and the kind colours lose most of their
+     chroma, which keeps their lightness and so their contrast. */
+  h3 a, .card :global(.tile), .card :global(.chip) { transition: color 300ms var(--ease-out), filter 300ms var(--ease-out); }
+  .started h3 a { color: var(--fg-muted); }
+  .started :global(.tile), .started :global(.chip) { filter: saturate(0.3); }
+  @media (prefers-reduced-motion: reduce) { .ics, h3 a, .card :global(.tile), .card :global(.chip) { transition: none; } }
   /* Phones: the actions stack under the tile, so the title gets the width. */
   @media (max-width: 30rem) {
     .card { grid-template-columns: 3.5rem minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: var(--space-3); }

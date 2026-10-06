@@ -6,7 +6,7 @@
   let { tile, id, large = false }: { tile: Tile; id: string; large?: boolean } = $props();
 </script>
 
-<div class="tile" class:large style={`view-transition-name: tile-${id}`} aria-hidden="true">
+<div class="tile" class:large class:today={tile.today} style={`view-transition-name: tile-${id}`} aria-hidden="true">
   <span class="top">{tile.top}</span>
   <span class="day">{tile.day}</span>
   <span class="month">{tile.month}</span>
@@ -21,6 +21,8 @@
   }
   .top, .month { font-size: var(--text-xs); font-weight: var(--weight-medium); }
   .day { font-size: var(--text-2xl); font-weight: var(--weight-strong); letter-spacing: var(--tracking-heading); }
+  /* Today: a thin ring in the kind's strong shade, so the day stands out without a new colour. */
+  .today { box-shadow: inset 0 0 0 1.5px var(--hue); }
   .large { width: 5rem; padding-block: var(--space-3); }
   .large .top, .large .month { font-size: var(--text-sm); }
   .large .day { font-size: var(--text-3xl); }

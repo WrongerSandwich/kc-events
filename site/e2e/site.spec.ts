@@ -30,6 +30,25 @@ test("the front page buckets the fixture's don't-miss events", async ({ page }) 
   await expect(page.getByRole("link", { name: "Add Fabio Frizzi plays Fulci to your calendar" })).toHaveAttribute("href", "/e/evt_e2e000000001.ics");
 });
 
+test.describe("a visitor's browser in Tokyo", () => {
+  // Already Wednesday there; the page still goes by Kansas City time.
+  test.use({ timezoneId: "Asia/Tokyo" });
+
+  test("a pick today reads Today, and Started once its start has passed", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.clock.install({ time: new Date("2026-10-06T23:00:00Z") }); // 6:00 pm Tuesday in Chicago
+    await page.goto("/");
+    const card = page.locator("#pick-evt_e2e000000001");
+    await expect(card.locator(".tile .top")).toHaveText("Today");
+    await expect(card).not.toHaveClass(/started/);
+    await expect(card).toContainText("7:00 pm");
+    await page.clock.setFixedTime(new Date("2026-10-07T00:05:00Z")); // 7:05 pm
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    await expect(card).toHaveClass(/started/);
+    await expect(card).toContainText("Started 7:00 pm");
+  });
+});
+
 test("the explorer honors the URL and writes it back", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore?when=weekend&kind=music");
   await expect(page.getByRole("status")).toHaveText("2 events");

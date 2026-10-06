@@ -59,9 +59,19 @@ export function comingSunday(today: string): string {
 
 /** The calendar date of an instant in the zone. */
 export function todayIn(timeZone: string, now: Date): string {
-  const found = new Intl.DateTimeFormat("en-US", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+  return localDate(nowIn(timeZone, now));
+}
+
+/**
+ * The wall clock of an instant in the zone, "2026-10-09T19:30": the same form as the first sixteen characters of a
+ * dataset date-time, so the two compare as strings.
+ */
+export function nowIn(timeZone: string, now: Date): string {
+  const found = new Intl.DateTimeFormat("en-US", {
+    timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  }).formatToParts(now);
   const part = (type: string) => found.find((p) => p.type === type)!.value;
-  return `${part("year")}-${part("month")}-${part("day")}`;
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}`;
 }
 
 /** "Oct 9": headings, stamps, and calendar descriptions that need no weekday. */

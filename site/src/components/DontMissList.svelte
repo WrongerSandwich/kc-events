@@ -3,7 +3,7 @@
   // dont-miss, not events: the front page ships only the flagged events (its budget is 50 KB; the full list is about 26).
   import { dontMiss } from "../generated/dont-miss";
   import { meta } from "../generated/meta";
-  import { addDays, formatDay, formatShort, todayIn } from "../lib/dates";
+  import { addDays, formatDay, formatShort, localDate, nowIn } from "../lib/dates";
   import { firstDay, isMultiDay, lastDay } from "../lib/events";
   import { bucketDontMiss, horizonBounds, horizonHeading, HORIZONS, type Horizon } from "../lib/horizon";
   import { slugify } from "../lib/slugs";
@@ -18,9 +18,16 @@
     "next-two-weeks": "Nothing picked for the next two weeks yet.",
     "further-out": "Nothing picked further out yet.",
   } as const;
-  // Server-rendered with the build's date; the visitor's date takes over on mount (the hydration rule).
-  let today = $state(meta.buildToday);
-  onMount(() => { today = todayIn(meta.timeZone, new Date()); });
+  // Server-rendered with the build's date and no clock; the visitor's clock takes over on mount (the hydration rule)
+  // and is read again whenever the tab comes back into view, so a page left open overnight catches up. No timer.
+  let now = $state<string | undefined>(undefined);
+  let today = $derived(now === undefined ? meta.buildToday : localDate(now));
+  onMount(() => {
+    const read = () => { if (document.visibilityState === "visible") now = nowIn(meta.timeZone, new Date()); };
+    read();
+    document.addEventListener("visibilitychange", read);
+    return () => document.removeEventListener("visibilitychange", read);
+  });
   let buckets = $derived(bucketDontMiss(dontMiss, today));
   let total = $derived(HORIZONS.reduce((n, h) => n + buckets[h].length, 0));
 
@@ -75,7 +82,7 @@
           <WeekStrip picks={buckets[h]} {today} sunday={horizonBounds(today).sunday} />
         {/if}
         {#each buckets[h] as event (event.id)}
-          <DontMissCard {event} {today} />
+          <DontMissCard {event} {today} {now} />
         {/each}
       {/if}
     </section>

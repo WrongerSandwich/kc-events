@@ -37,6 +37,7 @@ describe("DontMissList", () => {
     const component = mount(DontMissList, { target });
     expect(labels()).toEqual(["This week, Oct 5–11", "Next two weeks, through Oct 19", "Later, after Oct 19"]);
     expect(target.textContent).toContain("Tuesday show");
+    expect(target.querySelector(".tile.today, .card.started")).toBeNull();
     flushSync(); // onMount: the visitor's date
     expect(labels()).toEqual(["This week, Oct 12–18", "Next two weeks, through Oct 26", "Later, after Oct 26"]);
     expect(target.textContent).not.toContain("Tuesday show");
@@ -69,6 +70,40 @@ describe("DontMissList", () => {
     expect(sections[0]).toHaveAccessibleName("This week, Oct 12–18");
     expect(within(sections[0]!).getByText("Later show")).toBeInTheDocument();
     expect(screen.queryByText("Tuesday show")).toBeNull(); // past
+  });
+
+  it("reads the clock again when the tab comes back: Today, then Started and dimmed, then the next day", async () => {
+    const tz = process.env.TZ;
+    process.env.TZ = "Asia/Tokyo"; // the visitor's machine is a zone away; the cards still go by Kansas City time
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    try {
+      vi.useFakeTimers({ now: new Date("2026-10-07T00:30:00Z") }); // 7:30 pm Tuesday in Chicago, Wednesday in Tokyo
+      render(DontMissList);
+      await tick();
+      const card = () => screen.getByRole("heading", { name: "Tuesday show" }).closest("article")!;
+      expect(card()).not.toHaveClass("started");
+      expect(card().querySelector(".tile")).toHaveClass("today");
+      expect(card().querySelector(".tile .top")).toHaveTextContent("Today");
+      expect(within(card()).getByText("Today, 8:00 pm.")).toBeInTheDocument();
+
+      vi.setSystemTime(new Date("2026-10-07T01:05:00Z")); // 8:05 pm: no timer notices
+      await tick();
+      expect(card()).not.toHaveClass("started");
+      document.dispatchEvent(new Event("visibilitychange"));
+      await tick();
+      expect(card()).toHaveClass("started");
+      expect(within(card()).getByText("Started 8:00 pm")).toBeInTheDocument();
+      expect(within(card()).getByText("Today, started 8:00 pm.")).toBeInTheDocument();
+
+      vi.setSystemTime(new Date("2026-10-07T15:00:00Z")); // Wednesday morning: the show is gone
+      document.dispatchEvent(new Event("visibilitychange"));
+      await tick();
+      expect(screen.queryByText("Tuesday show")).toBeNull();
+    } finally {
+      visibility.mockRestore();
+      if (tz === undefined) delete process.env.TZ;
+      else process.env.TZ = tz;
+    }
   });
 
   it("says so and points at the explorer when nothing is picked", async () => {
