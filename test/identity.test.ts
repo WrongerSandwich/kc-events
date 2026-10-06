@@ -130,6 +130,21 @@ describe("the same venue", () => {
     expect(sameVenue("Kauffman Center", "Helzberg Hall", ALIASES)).toBe(true);
   });
 
+  it("is the same words in another order, with no alias needed (#28)", () => {
+    const calendar = {
+      primaryUrl: "https://www.americanroyal.com/calendar/",
+      title: "127th Livestock Show",
+      venue: "New American Royal Campus",
+      start: "2026-10-08",
+      end: "2026-10-25",
+    };
+    const showPage = { ...calendar, primaryUrl: "https://www.americanroyal.com/events/fall-livestock-show/", venue: "American Royal New Campus", start: "2026-10-09" };
+    expect(findMatch(showPage, [calendar], {})).toBe(calendar);
+    expect(sameEvent(calendar, showPage, [calendar, showPage], {})).toBe(true);
+    expect(sameVenue("The Hall at Union Station", "Union Station Hall", {})).toBe(false);
+    expect(sameVenue("Royal American Campus", "American Royal New Campus", {})).toBe(false);
+  });
+
   it("is not two different bars that share nothing but a word", () => {
     const a = { primaryUrl: "https://bara.test/", title: "Open Mic", venue: "Bar A", start: "2026-10-14" };
     const b = { primaryUrl: "https://barb.test/", title: "Open Mic", venue: "Bar B", start: "2026-10-14" };

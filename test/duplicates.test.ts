@@ -85,6 +85,15 @@ function hand() {
       event("Pershing Lecture Series | The Wars Before the War: The Boer Wars", "National WWI Museum and Memorial", WWI, "2026-11-18T18:30:00-06:00"),
       event("The Wars Before the War: The Boer Wars", "National WWI Museum and Memorial", WWI, "2026-11-18T18:30:00-06:00", { firstSeen: RUN_TWO }),
     ),
+    // #28: the calendar and the show's own page word the venue in a different order, a day apart.
+    reordered: pair(
+      event("127th Livestock Show", "New American Royal Campus", "https://www.americanroyal.com/calendar/", "2026-10-08", { recurrence: "limited-run", end: "2026-10-25" }),
+      event("127th Livestock Show", "American Royal New Campus", "https://www.americanroyal.com/events/fall-livestock-show/", "2026-10-09", {
+        recurrence: "limited-run",
+        end: "2026-10-25",
+        firstSeen: RUN_TWO,
+      }),
+    ),
     venueless: pair(
       event("Baroque at 7:00: Vivaldi's Four Seasons", "Helzberg Hall", KAUFFMAN, "2026-10-14T19:00:00-05:00"),
       event("Baroque at 7:00: Vivaldi's Four Seasons", undefined, SYMPHONY, "2026-10-14"),
@@ -100,7 +109,7 @@ const withEvents = (events: Event[]): Dataset => ({ ...emptyDataset(), events })
 const byId = (dataset: Dataset) => new Map(dataset.events.map((e) => [e.id, e]));
 
 describe("folding duplicates", () => {
-  it("leaves one record per building and room, program, series, and venue-less group, the other expired as duplicate", async () => {
+  it("leaves one record per building and room, program, series, reordered venue name, and venue-less group, the other expired as duplicate", async () => {
     const groups = hand();
     const { dataset, report } = await quietRun(withEvents(Object.values(groups).flat()));
 

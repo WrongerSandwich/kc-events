@@ -70,21 +70,29 @@ export function sameEvent(a: EventIdentity, b: EventIdentity, live: readonly Eve
 
 /**
  * Two venue names are one venue when they normalize alike, when one contains the other at word
- * boundaries ("The Midland" in "The Midland Theatre - MO"), or when the alias list names both under
- * one venue, by the same two rules ("Bartle Exhibit Hall (A – E)" is "Bartle Exhibit Hall").
+ * boundaries ("The Midland" in "The Midland Theatre - MO"), when they are the same words in another
+ * order ("New American Royal Campus" is "American Royal New Campus"), or when the alias list names
+ * both under one venue, by the same three rules ("Bartle Exhibit Hall (A – E)" is "Bartle Exhibit
+ * Hall").
  */
 export function sameVenue(a: string, b: string, aliases: VenueAliases): boolean {
   const [x, y] = [normalizeName(a), normalizeName(b)];
-  if (sameOrContained(x, y)) return true;
+  if (oneVenueName(x, y)) return true;
   return Object.entries(aliases).some(([venue, names]) => {
     const group = [venue, ...names].map(normalizeName);
-    return group.some((n) => sameOrContained(x, n)) && group.some((n) => sameOrContained(y, n));
+    return group.some((n) => oneVenueName(x, n)) && group.some((n) => oneVenueName(y, n));
   });
 }
 
-function sameOrContained(a: string, b: string): boolean {
+/** Two normalized venue names: the same, one contained in the other at word boundaries, or the same words reordered. */
+function oneVenueName(a: string, b: string): boolean {
   const [shorter, longer] = byLength(a, b);
-  return shorter !== "" && ` ${longer} `.includes(` ${shorter} `);
+  if (shorter === "") return false;
+  return ` ${longer} `.includes(` ${shorter} `) || sortedWords(a) === sortedWords(b);
+}
+
+function sortedWords(name: string): string {
+  return name.split(" ").sort().join(" ");
 }
 
 function sameEventExactly(a: EventIdentity, b: EventIdentity): boolean {
