@@ -9,6 +9,7 @@ import { hiddenSinceVerified } from "./expiry.js";
 import { normalizeName } from "./identity.js";
 import { markdownTable, plural, tableCell } from "./markdown.js";
 import type { RunReport } from "./report.js";
+import { horizonEnd } from "./time.js";
 
 /** What makes a run the milestone run, and what passes count four. */
 const MILESTONE = {
@@ -20,7 +21,6 @@ const MILESTONE = {
   runsPerMonth: 52 / 12,
 } as const;
 
-const DAY_MS = 86_400_000;
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
 
 export interface GradingInput {
@@ -153,8 +153,8 @@ function auditDoubts(e: Event, report: Pick<RunReport, "runDate" | "horizonWeeks
       const mentionsMonth = dateEvidence.includes(monthName.slice(0, 3)) || new RegExp(`(^|[^0-9])0?${month}[/.-]`).test(dateEvidence);
       if (!mentionsMonth) doubts.push(`the date evidence does not mention ${monthName[0]!.toUpperCase()}${monthName.slice(1)}`);
     }
-    const horizonEnd = new Date(Date.parse(report.runDate) + report.horizonWeeks * 7 * DAY_MS).toISOString().slice(0, 10);
-    if (e.start !== undefined && e.start.slice(0, 10) > horizonEnd) doubts.push(`starts ${e.start.slice(0, 10)}, after the horizon ends on ${horizonEnd}`);
+    const lastDay = horizonEnd(report.runDate, report.horizonWeeks);
+    if (e.start !== undefined && e.start.slice(0, 10) > lastDay) doubts.push(`starts ${e.start.slice(0, 10)}, after the horizon ends on ${lastDay}`);
     const last = (e.end ?? e.start)?.slice(0, 10);
     if (e.recurrence === "one-off" && last !== undefined && last < report.runDate) doubts.push(`ended ${last}, before the run date`);
   }

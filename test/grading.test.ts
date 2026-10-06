@@ -10,7 +10,7 @@ function report(overrides: Partial<RunReport> = {}): RunReport {
     startedAt: "2026-10-03T16:00:00-05:00",
     finishedAt: "2026-10-03T16:04:00-05:00",
     horizonWeeks: 3,
-    counts: { found: 40, new: 40, updated: 0, reverified: 0, heldUnverified: 2, heldThroughOutage: 0, unverifiedByOutageLimit: 0, unverifiedByUncitableReading: 0, outsideGeography: 1, expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0 } },
+    counts: { found: 40, new: 40, updated: 0, reverified: 0, heldUnverified: 2, heldThroughOutage: 0, beyondHorizonUnstruck: 0, unverifiedByOutageLimit: 0, unverifiedByUncitableReading: 0, outsideGeography: 1, expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0 } },
     spend: { totalUsd: 0.9, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 } },
     discovery: { enabled: true, queries: 10, aggregatorPages: 4, pagesExtracted: 12, problems: [] },
     reverification: { problems: [] },

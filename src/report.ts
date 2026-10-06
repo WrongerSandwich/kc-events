@@ -33,6 +33,8 @@ export interface RunReport {
     heldUnverified: number;
     /** Active events whose primary page could not be loaded this run, held as they were. */
     heldThroughOutage: number;
+    /** Events whose primary page loaded without them, left unstruck because they start after the horizon, which extraction is not asked to read. */
+    beyondHorizonUnstruck: number;
     /** Active events made unverified this run by their third consecutive outage. */
     unverifiedByOutageLimit: number;
     /** Active events made unverified this run because their page still lists them but a re-reading cited no date or venue. */
@@ -117,6 +119,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Re-verified | ${counts.reverified} |
 | Held unverified | ${counts.heldUnverified} |
 | Held through an outage | ${counts.heldThroughOutage} |
+| Not struck: starts after the horizon | ${counts.beyondHorizonUnstruck} |
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
 | Dropped: outside geography | ${counts.outsideGeography} |

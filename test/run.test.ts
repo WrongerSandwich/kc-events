@@ -43,6 +43,7 @@ describe("run", () => {
       reverified: 0,
       heldUnverified: 0,
       heldThroughOutage: 0,
+      beyondHorizonUnstruck: 0,
       unverifiedByOutageLimit: 0,
       unverifiedByUncitableReading: 0,
       outsideGeography: 0,

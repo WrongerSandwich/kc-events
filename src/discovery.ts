@@ -8,8 +8,8 @@ import type { Dataset } from "./dataset.js";
 import type { Registry } from "./registry.js";
 import type { FetchResult } from "./ports.js";
 import type { RunReport } from "./report.js";
+import { horizonEnd } from "./time.js";
 
-const DAY_MS = 86_400_000;
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /** Runs a discovery host must have been seen in before it is suggested for promotion. */
@@ -30,7 +30,7 @@ const ANCHOR_HREF = /<a(?:\s+(?!href\b)[^\s<>"'=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[
  */
 export function discoveryQueries(config: RunConfig, today: string): string[] {
   const start = new Date(`${today}T00:00:00Z`);
-  const end = new Date(start.getTime() + config.horizonWeeks * 7 * DAY_MS);
+  const end = new Date(`${horizonEnd(today, config.horizonWeeks)}T00:00:00Z`);
   const months = monthSpan(start, end);
   return config.kinds.filter((kind) => kind !== "other").map((kind) => `${kind.replace(/\//g, " and ")} events in ${config.discovery.place}, ${months}`);
 }

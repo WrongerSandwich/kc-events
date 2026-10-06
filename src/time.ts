@@ -63,3 +63,11 @@ function offsetAt(instant: Date, timeZone: string): number {
   const sign = offset.startsWith("-") ? -1 : 1;
   return sign * (Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6)));
 }
+
+/**
+ * The last day of a run's horizon (YYYY-MM-DD): the run's local date plus the horizon's weeks.
+ * An event starting after it is beyond the horizon.
+ */
+export function horizonEnd(today: string, horizonWeeks: number): string {
+  return new Date(Date.parse(`${today}T00:00:00Z`) + horizonWeeks * 7 * 86_400_000).toISOString().slice(0, 10);
+}

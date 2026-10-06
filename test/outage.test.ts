@@ -12,9 +12,9 @@ const CALENDAR_URL = knuckleheads.urls[0]!;
 const moved = { ...knuckleheads, urls: ["https://knuckleheads.test/shows"] };
 // Another source that always answers: a run in which every source fails stops instead (see the run tests).
 const elsewhere = source("Elsewhere");
-// A show far enough out that it is not past for any run here.
+// A show far enough out that it is not past for any run here, and near enough that it is inside every run's horizon.
 const candidate = (overrides: Record<string, unknown> = {}) =>
-  candidateAt(knuckleheads, { startDate: "2026-12-12", dateEvidence: "Sat, Dec 12 · Show 8:00 PM", ...overrides });
+  candidateAt(knuckleheads, { startDate: "2026-11-21", dateEvidence: "Sat, Nov 21 · Show 8:00 PM", ...overrides });
 
 /** One run over Knuckleheads (moved, if given) and Elsewhere; Elsewhere's page lists nothing. */
 function runAt(now: Date, dataset: Dataset, pages: Record<string, CannedPage>, completions: CompletionResult[], knuckleheadsSource: Source = knuckleheads) {
