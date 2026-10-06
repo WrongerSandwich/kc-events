@@ -1,8 +1,9 @@
 /**
  * Event identity (ADR 0007): an event is its primary page plus its normalized title; failing
- * that, the same normalized title (or one cut short, or with a series name in front) at the same venue on a date within a few days,
- * or, for a sighting that names no venue, on the same date when only one known event qualifies. Ids
- * are opaque and fixed at first-seen; matching never looks at them.
+ * that, the same normalized title (or one cut short, or on the same date one with a series name in
+ * front) at the same venue on a date within a few days, or, for a sighting that names no venue, on
+ * the same date when only one known event qualifies. Ids are opaque and fixed at first-seen;
+ * matching never looks at them.
  */
 
 import type { EventStatus } from "./dataset.js";
@@ -90,26 +91,34 @@ function sameEventExactly(a: EventIdentity, b: EventIdentity): boolean {
   return a.primaryUrl === b.primaryUrl && sameName(a.title, b.title);
 }
 
-/** Where a series or program name in front of a title ends: a bar, a colon, a dash, or a hyphen with spaces round it. */
+/** Where a series name in front of a title ends: a bar, a colon, a dash, or a spaced hyphen. */
 const TITLE_SEPARATOR = /\||:|–|—|\s-\s/gu;
 
 /**
- * The same title, or one that is the other cut short at a word boundary, or with a series name in
- * front of it: a page may bill an event in full one week ("A / Orchestra and Choirs") and give only
- * its lead title the next, and one reading of a page may put the series first ("Pershing Lecture
- * Series | A") where another does not. The shorter title must be all that follows a separator in the
- * longer, so two events in one series ("Series | A", "Series | B") stay two.
+ * The same title, or one that is the other cut short at a word boundary: a page may bill an
+ * event in full one week ("A / Orchestra and Choirs") and give only its lead title the next.
  */
 function sameOrShortenedTitle(a: string, b: string): boolean {
-  const [shorter, longer] = normalizeName(a).length <= normalizeName(b).length ? [a, b] : [b, a];
-  const short = normalizeName(shorter);
-  return short !== "" && titleForms(longer).some((form) => form === short || form.startsWith(`${short} `));
+  const [shorter, longer] = byLength(normalizeName(a), normalizeName(b));
+  return shorter !== "" && sameOrCutShort(shorter, longer);
 }
 
-/** A title, normalized, then whatever follows each separator in it, normalized. */
-function titleForms(title: string): string[] {
-  const afterSeparators = [...title.matchAll(TITLE_SEPARATOR)].map((m) => normalizeName(title.slice(m.index + m[0].length)));
-  return [normalizeName(title), ...afterSeparators.filter((form) => form !== "")];
+/**
+ * The same or shortened title with a series name in front of the longer one: one reading of a page
+ * may put the series first ("Pershing Lecture Series | A") where another does not. The shorter title
+ * must start right after a separator in the longer, so two events in one series ("Series | A",
+ * "Series | B") stay two. Only the same reading of one listing differs this way, so callers ask for
+ * the same calendar date: a nearby date would fold "Open Mic" into Thursday's "Comedy Night: Open Mic".
+ */
+function sameTitleWithSeries(a: string, b: string): boolean {
+  const [x, y] = [normalizeName(a), normalizeName(b)];
+  const [short, longer] = x.length <= y.length ? [x, b] : [y, a];
+  if (short === "") return false;
+  return [...longer.matchAll(TITLE_SEPARATOR)].some((m) => sameOrCutShort(short, normalizeName(longer.slice(m.index + m[0].length))));
+}
+
+function sameOrCutShort(shorter: string, longer: string): boolean {
+  return longer === shorter || longer.startsWith(`${shorter} `);
 }
 
 function byLength(a: string, b: string): [string, string] {
@@ -121,25 +130,31 @@ function calendarDate(iso: string | undefined): string | undefined {
   return iso?.slice(0, 10);
 }
 
-/** Dates are compared first, as the cheapest test: folding compares every pair of records. */
+/**
+ * A nearby date, the same or shortened title (or, on the same date, that title with a series name in
+ * front), and the same venue. Dates are compared first, as the cheapest test: folding compares every
+ * pair of records.
+ */
 function sameEventFuzzily(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
   if (a.venue === undefined || b.venue === undefined || a.start === undefined || b.start === undefined) return false;
   return (
     Math.abs(Date.parse(calendarDate(a.start)!) - Date.parse(calendarDate(b.start)!)) <= FUZZY_DATE_WINDOW_DAYS * DAY_MS &&
-    sameOrShortenedTitle(a.title, b.title) &&
+    (sameOrShortenedTitle(a.title, b.title) || (calendarDate(a.start) === calendarDate(b.start) && sameTitleWithSeries(a.title, b.title))) &&
     sameVenue(a.venue, b.venue, aliases)
   );
 }
 
 /**
- * For a sighting that names no venue, the known event with the same or shortened title on the same
- * calendar date, when it is the only one not expired; with two or more, nothing can say which. A
+ * For a sighting that names no venue, the known event with the same or shortened title, with or
+ * without a series name in front, on the same calendar date, when it is the only one not expired; with two or more, nothing can say which. A
  * recurring event has no date, so it never qualifies; the sighting itself, when it is a record among
  * the known, is no candidate either.
  */
 function onlyCandidateForVenueless<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[]): T | undefined {
   const date = calendarDate(sighting.start);
   if (sighting.venue !== undefined || date === undefined) return undefined;
-  const candidates = known.filter((k) => k !== sighting && k.status !== "expired" && calendarDate(k.start) === date && sameOrShortenedTitle(sighting.title, k.title));
+  const candidates = known.filter(
+    (k) => k !== sighting && k.status !== "expired" && calendarDate(k.start) === date && (sameOrShortenedTitle(sighting.title, k.title) || sameTitleWithSeries(sighting.title, k.title)),
+  );
   return candidates.length === 1 ? candidates[0] : undefined;
 }

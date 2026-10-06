@@ -76,9 +76,16 @@ describe("event identity", () => {
       expect(findMatch({ ...museum, title: "Orchestra" }, [{ ...museum, title: "Jazz-Orchestra" }], {})).toBeUndefined();
     });
 
-    it("still needs the same venue and a nearby date", () => {
+    it("needs the same venue and the same calendar date, not just a nearby one", () => {
       expect(findMatch({ ...bare, venue: "Union Station" }, [prefixed], {})).toBeUndefined();
-      expect(findMatch({ ...bare, start: "2026-11-18T18:30:00-06:00", primaryUrl: "https://other.test/" }, [prefixed], {})).toBeUndefined();
+      expect(findMatch({ ...bare, start: "2026-10-23T18:30:00-05:00" }, [prefixed], {})).toBeUndefined();
+      const openMic = { ...museum, title: "Open Mic", start: "2026-10-20T19:00:00-05:00" };
+      expect(findMatch(openMic, [{ ...openMic, title: "Comedy Night: Open Mic", start: "2026-10-22T19:00:00-05:00" }], {})).toBeUndefined();
+    });
+
+    it("matches a venue-less sighting on that date too", () => {
+      const { venue: _venue, ...venueless } = bare;
+      expect(findMatch(venueless, [prefixed], {})).toBe(prefixed);
     });
   });
 
