@@ -97,7 +97,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
   // A reading places an event from its page; one no page placed this run is placed from what is stored.
-  const placed = placeOffList(reverified.events, neighborhoods);
+  const placed = placeOffList(reverified.events, neighborhoods, config, registry);
   // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
   const madeUncitable = new Set([...merged.uncitable, ...reverified.uncitable]);
   const uncitable = placed.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
@@ -131,7 +131,6 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       unverifiedByOutageLimit: reverified.outageLimited.length,
       unverifiedByUncitableReading: uncitable.length,
       outsideGeography: extraction.outsideGeography + discovery.outsideGeography + reverified.outsideGeography,
-      offListNeighborhoods: placed.count,
       expired: countExpired(dataset.events, events),
     },
     spend: {
@@ -145,6 +144,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     curation: curation.report,
     sources: sourceReports,
     failingSources: registryLane.failingSources,
+    offListNeighborhoods: placed.report,
     unmappableNeighborhoods: unmappableNeighborhoods([...extraction.sightings, ...discovery.sightings, ...reverified.sightings]),
     promotionSuggestions: promotion.promotionSuggestions,
     outageLimited: reverified.outageLimited.map(titleAndUrl),
@@ -738,21 +738,25 @@ function originFor(event: Event, url: string, registry: Registry): PageOrigin {
 }
 
 /**
- * Every event not expired whose stored neighborhood is off the list, placed again from it (see
- * placeStored), and how many there were. A config that renames or regroups neighborhoods would
- * otherwise leave the old names on every event no page re-reads, unnoticed. An expired event is left
- * as it is: a reading that revives it places it from its page.
+ * Every event not expired whose stored neighborhood is off the list, placed again (see placeStored),
+ * and for the report, each stored value, where it went, and how many events. A config that renames or
+ * regroups neighborhoods would otherwise leave the old names on every event no page re-reads,
+ * unnoticed. An expired event is left as it is: a reading that revives it places it from its page.
  */
-function placeOffList(events: Event[], list: string[]): { events: Event[]; count: number } {
-  let count = 0;
+function placeOffList(events: Event[], list: string[], config: RunConfig, registry: Registry) {
+  const report: RunReport["offListNeighborhoods"] = [];
   const placed = events.map((event) => {
     if (event.status === "expired") return event;
-    const neighborhood = placeStored(event.neighborhood, list);
+    const { lead } = event;
+    const source = lead.lane === "registry" ? registry.sources.find((s) => s.name === lead.source) : undefined;
+    const neighborhood = placeStored(event.neighborhood, list, config, source?.neighborhood);
     if (neighborhood === event.neighborhood) return event;
-    count++;
+    const line = report.find((r) => r.stored === event.neighborhood && r.placed === neighborhood);
+    if (line) line.events++;
+    else report.push({ stored: event.neighborhood, placed: neighborhood, events: 1 });
     return { ...event, neighborhood };
   });
-  return { events: placed, count };
+  return { events: placed, report };
 }
 
 /**

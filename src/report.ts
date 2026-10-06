@@ -39,8 +39,6 @@ export interface RunReport {
     unverifiedByUncitableReading: number;
     /** Candidates dropped because their page placed them outside the geography. */
     outsideGeography: number;
-    /** Events not expired whose stored neighborhood was off the list and that no reading placed this run, re-placed from it. */
-    offListNeighborhoods: number;
     expired: Record<ExpiryReason, number>;
   };
   spend: {
@@ -81,6 +79,11 @@ export interface RunReport {
   /** Registry sources at three or more consecutive failures. */
   failingSources: string[];
   /**
+   * Stored neighborhoods off the list: for events not expired that no page placed this run, each
+   * neighborhood value no longer on the list, where those events were placed again, and how many.
+   */
+  offListNeighborhoods: { stored: string; placed: string; events: number }[];
+  /**
    * Unmappable neighborhoods: events whose address landed in the elsewhere-in-the-metro catch-all,
    * with the neighborhood or city the extractor proposed instead, when it proposed one.
    */
@@ -115,7 +118,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
 | Dropped: outside geography | ${counts.outsideGeography} |
-| Stored neighborhoods off the list, re-placed | ${counts.offListNeighborhoods} |
+| Stored neighborhoods off the list, placed again | ${report.offListNeighborhoods.reduce((n, r) => n + r.events, 0)} |
 ${EXPIRY_REASONS.map((reason) => `| Expired: ${reason} | ${counts.expired[reason]} |`).join("\n")}
 
 ## Spend
@@ -161,6 +164,10 @@ ${markdownList(
     (c) => `${c.eventTitle} at ${c.venue ?? "an unnamed venue"}: ${c.proposed !== undefined ? `the extractor proposed "${c.proposed}"` : "no neighborhood proposed"}`,
   ),
 )}
+
+## Stored neighborhoods off the list
+
+${markdownList(report.offListNeighborhoods.map((r) => `"${r.stored}": ${plural(r.events, "event")} placed in ${r.placed}`))}
 
 ## Unverified by outage limit
 

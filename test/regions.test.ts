@@ -96,63 +96,88 @@ describe("stored neighborhoods off the list", () => {
   const calendar = knuckleheads.urls[0]!;
   // Always answers, so a run in which Knuckleheads is down is still a run.
   const other = source("Other", { neighborhood: "Crossroads" });
-  const show = (overrides: Record<string, unknown> = {}) =>
-    candidateAt(knuckleheads, { startDate: "2026-12-12", dateEvidence: "Sat, Dec 12 · Show 8:00 PM", ...overrides });
-  const runAt = (now: Date, dataset: Dataset, knuckleheadsPage: CannedPage, completions: CompletionResult[]) =>
-    runWith(now, dataset, { sources: [knuckleheads, other], pages: { [calendar]: knuckleheadsPage, [other.urls[0]!]: PAGE }, completions });
-  /** A dataset holding the Big Show, read verified in week one, with its stored neighborhood replaced. */
+  const show = () => candidateAt(knuckleheads, { startDate: "2026-12-12", dateEvidence: "Sat, Dec 12 · Show 8:00 PM" });
+  const withJohnsonCounty = testConfig({
+    neighborhoods: { "Central KC": ["Westport", "East Bottoms", "Crossroads"], "Johnson County": ["Olathe"], Lawrence: ["Lawrence"] },
+  });
+  const runAt = (now: Date, dataset: Dataset, knuckleheadsPage: CannedPage, completions: CompletionResult[], config = testConfig()) =>
+    runWith(now, dataset, { sources: [knuckleheads, other], pages: { [calendar]: knuckleheadsPage, [other.urls[0]!]: PAGE }, completions, config });
+  /** A dataset holding the Big Show, read verified from Knuckleheads in week one, with its stored neighborhood replaced. */
   const storedAs = async (neighborhood: string, overrides: Partial<Event> = {}) => {
     const first = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show()), reply()]);
     return { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, neighborhood, ...overrides })) };
   };
   const FORBIDDEN: CannedPage = { status: 403, body: "Forbidden" };
 
-  it("an event whose page cannot be read is re-placed in the catch-all when its stored neighborhood names a region", async () => {
+  it("an event no page reads, stored under the name of its registry source's region, is placed in the source's neighborhood", async () => {
     const second = await runAt(WEEK_2, await storedAs("Central KC"), FORBIDDEN, [reply()]);
 
-    expect(second.dataset.events[0]).toMatchObject({ neighborhood: "Elsewhere in the metro", status: "active", consecutiveOutages: 1 });
-    expect(second.report.counts.offListNeighborhoods).toBe(1);
+    expect(second.dataset.events[0]).toMatchObject({ neighborhood: "East Bottoms", status: "active", consecutiveOutages: 1 });
+    expect(second.report.offListNeighborhoods).toEqual([{ stored: "Central KC", placed: "East Bottoms", events: 1 }]);
+  });
+
+  it("stored under the name of another region, it is placed in the catch-all", async () => {
+    const second = await runAt(WEEK_2, await storedAs("Johnson County"), FORBIDDEN, [reply()], withJohnsonCounty);
+
+    expect(second.dataset.events[0]!.neighborhood).toBe("Elsewhere in the metro");
+    expect(second.report.offListNeighborhoods).toEqual([{ stored: "Johnson County", placed: "Elsewhere in the metro", events: 1 }]);
+  });
+
+  it("an event from a discovery lead stored under a region name is placed in the catch-all", async () => {
+    const stored = await storedAs("Central KC", { lead: { lane: "discovery", query: "music in Kansas City" } });
+
+    const second = await runAt(WEEK_2, stored, FORBIDDEN, [reply()]);
+
+    expect(second.dataset.events[0]!.neighborhood).toBe("Elsewhere in the metro");
+  });
+
+  it("stored under a name no region or neighborhood has, it is placed in the catch-all", async () => {
+    const second = await runAt(WEEK_2, await storedAs("Topeka"), FORBIDDEN, [reply()]);
+
+    expect(second.dataset.events[0]!.neighborhood).toBe("Elsewhere in the metro");
   });
 
   it("a stored neighborhood in another spelling takes the list's own", async () => {
     const second = await runAt(WEEK_2, await storedAs("east  bottoms"), FORBIDDEN, [reply()]);
 
     expect(second.dataset.events[0]!.neighborhood).toBe("East Bottoms");
-    expect(second.report.counts.offListNeighborhoods).toBe(1);
+    expect(second.report.offListNeighborhoods).toEqual([{ stored: "east  bottoms", placed: "East Bottoms", events: 1 }]);
   });
 
-  it("an unverified event is re-placed too", async () => {
+  it("an unverified event is placed again too", async () => {
     const second = await runAt(WEEK_2, await storedAs("Topeka", { status: "unverified" }), FORBIDDEN, [reply()]);
 
     expect(second.dataset.events[0]).toMatchObject({ neighborhood: "Elsewhere in the metro", status: "unverified" });
   });
 
-  it("an expired event keeps what it had: a reading that revives it places it again", async () => {
+  it("an expired event keeps what it had: a reading that revives it places it from its page", async () => {
     const second = await runAt(WEEK_2, await storedAs("Topeka", { status: "expired", expiryReason: "two-strike" }), FORBIDDEN, [reply()]);
 
     expect(second.dataset.events[0]!.neighborhood).toBe("Topeka");
-    expect(second.report.counts.offListNeighborhoods).toBe(0);
+    expect(second.report.offListNeighborhoods).toEqual([]);
   });
 
-  it("a verified re-reading places the event from its page, and it is not counted", async () => {
+  it("a verified re-reading places the event from its page, and it is not reported", async () => {
     const second = await runAt(WEEK_2, await storedAs("Central KC"), PAGE, [reply(show()), reply()]);
 
     expect(second.dataset.events[0]!.neighborhood).toBe("East Bottoms");
-    expect(second.report.counts.offListNeighborhoods).toBe(0);
+    expect(second.report.offListNeighborhoods).toEqual([]);
   });
 
-  it("an event already on the list, or in the catch-all, is left alone and not counted", async () => {
+  it("an event already on the list, or in the catch-all, is left alone and not reported", async () => {
     const onList = await runAt(WEEK_2, await storedAs("East Bottoms"), FORBIDDEN, [reply()]);
     const catchAll = await runAt(WEEK_2, await storedAs("Elsewhere in the metro"), FORBIDDEN, [reply()]);
 
     expect(onList.dataset.events[0]!.neighborhood).toBe("East Bottoms");
     expect(catchAll.dataset.events[0]!.neighborhood).toBe("Elsewhere in the metro");
-    expect(onList.report.counts.offListNeighborhoods + catchAll.report.counts.offListNeighborhoods).toBe(0);
+    expect([...onList.report.offListNeighborhoods, ...catchAll.report.offListNeighborhoods]).toEqual([]);
   });
 
-  it("the run report shows the count", async () => {
+  it("the run report counts the events and names each stored value and where it went", async () => {
     const second = await runAt(WEEK_2, await storedAs("Central KC"), FORBIDDEN, [reply()]);
+    const markdown = renderReportMarkdown(second.report);
 
-    expect(renderReportMarkdown(second.report)).toContain("| Stored neighborhoods off the list, re-placed | 1 |");
+    expect(markdown).toContain("| Stored neighborhoods off the list, placed again | 1 |");
+    expect(markdown).toContain('- "Central KC": 1 event placed in East Bottoms');
   });
 });

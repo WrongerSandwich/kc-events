@@ -53,9 +53,18 @@ export function toNeighborhood(proposed: string | null, list: readonly string[])
 }
 
 /**
- * A stored neighborhood placed against today's list: the list's own spelling, or the catch-all for
- * anything off it, such as a region name written before neighborhoods were grouped under regions.
+ * A stored neighborhood placed again against today's list, for an event no page placed this run: the
+ * list's own spelling; for the name of a region (written before neighborhoods were grouped under
+ * regions), the event's registry source's neighborhood when that region lists it, so the event keeps
+ * its region; anything else, the catch-all. Not flagged as unmappable: that flag reports what an
+ * extractor proposed, and nothing was proposed here.
  */
-export function placeStored(neighborhood: string, list: readonly string[]): string {
-  return fromList(neighborhood, list) ?? ELSEWHERE_IN_THE_METRO;
+export function placeStored(stored: string, list: readonly string[], config: RunConfig, sourceNeighborhood?: string): string {
+  const listed = fromList(stored, list);
+  if (listed !== undefined) return listed;
+  const region = fromList(stored, Object.keys(config.neighborhoods));
+  if (region !== undefined && sourceNeighborhood !== undefined && regionOf(sourceNeighborhood, config) === region) {
+    return fromList(sourceNeighborhood, list)!;
+  }
+  return ELSEWHERE_IN_THE_METRO;
 }
