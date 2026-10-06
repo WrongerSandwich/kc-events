@@ -32,7 +32,9 @@ describe("dateTile", () => {
       expect(dateTile(event({ start: "2026-10-05T19:00:00-05:00" }), today, now)).toEqual({
         top: "Today", day: "5", month: "Oct", detail: "7:00 pm", label: "Today, 7:00 pm", today: true,
       });
-      expect(dateTile(event({ start: "2026-10-05", end: "2026-10-07" }), today, now)).toMatchObject({ top: "Today", today: true, detail: "On now, through Wed Oct 7" });
+      expect(dateTile(event({ start: "2026-10-05", end: "2026-10-07" }), today, now)).toMatchObject({
+        top: "Today", today: true, detail: "On now, through Wed Oct 7", label: "Today through Wed Oct 7",
+      });
     });
 
     it("keeps the weekday for a pick on another day", () => {

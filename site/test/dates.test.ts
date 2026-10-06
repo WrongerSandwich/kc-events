@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isValidDate, addDays, comingSunday, formatDay, formatLong, formatRange, formatShort, formatTime, isDateOnly, localDate, nowIn, todayIn, weekday } from "../src/lib/dates";
+import { inTimeZone } from "./fixtures/time-zone";
 
 describe("dates", () => {
   it("takes the local date off either dataset form", () => {
@@ -30,17 +31,12 @@ describe("dates", () => {
     for (const iso of ["2026-01-02T08:00:00Z", "2026-12-31T23:59:00Z"]) expect(todayIn("America/Chicago", new Date(iso))).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it("reads an instant as the zone's wall clock, whatever zone the visitor's machine is in", () => {
-    const tz = process.env.TZ;
-    process.env.TZ = "Asia/Tokyo"; // the visitor's clock: already Tuesday morning there
-    try {
+  it("reads an instant as the zone's wall clock, whatever zone the visitor's machine is in", () =>
+    // Already Tuesday morning in Tokyo.
+    inTimeZone("Asia/Tokyo", () => {
       expect(nowIn("America/Chicago", new Date("2026-10-06T00:30:00Z"))).toBe("2026-10-05T19:30");
       expect(nowIn("America/Chicago", new Date("2026-10-06T05:05:00Z"))).toBe("2026-10-06T00:05"); // midnight is 00, not 24
-    } finally {
-      if (tz === undefined) delete process.env.TZ;
-      else process.env.TZ = tz;
-    }
-  });
+    }));
 
   it("refuses a time of a date-only value rather than inventing midnight", () => {
     expect(() => formatTime("2026-10-09")).toThrow(/date-only/);

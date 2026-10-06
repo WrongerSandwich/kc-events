@@ -26,16 +26,20 @@ export function dateTile(e: PublishedEvent, today: string, now?: string): Tile {
     }
     return { top: "Opens", ...parts(first), detail: `Through ${formatDay(last)}`, label: closingLine(e, today) };
   }
-  const isToday = now !== undefined && first === localDate(now);
-  const top = isToday ? "Today" : formatDay(first!).split(" ")[0]!;
-  const mark = isToday ? { today: true as const } : {};
-  if (isMultiDay(e)) return { top, ...parts(first!), detail: closingLine(e, today), label: closingLine(e, today), ...mark };
+  if (now !== undefined && first === localDate(now)) return todayTile(e, today, now);
+  const weekday = formatDay(first!).split(" ")[0]!;
+  if (isMultiDay(e)) return { top: weekday, ...parts(first!), detail: closingLine(e, today), label: closingLine(e, today) };
   const time = isDateOnly(e.start!) ? undefined : formatTime(e.start!);
-  const when = isToday ? "Today" : formatDay(first!);
-  if (!time) return { top, ...parts(first!), detail: undefined, label: when, ...mark };
+  return { top: weekday, ...parts(first!), detail: time, label: time ? `${formatDay(first!)}, ${time}` : formatDay(first!) };
+}
+
+/** A one-off whose first day is the visitor's today. */
+function todayTile(e: PublishedEvent, today: string, now: string): Tile {
+  const tile = { top: "Today", ...parts(firstDay(e)!), today: true as const };
+  if (isMultiDay(e)) return { ...tile, detail: closingLine(e, today), label: `Today through ${formatDay(lastDay(e)!)}` };
+  if (isDateOnly(e.start!)) return { ...tile, detail: undefined, label: "Today" };
+  const time = formatTime(e.start!);
   // Both are wall time in the site's zone, so the strings compare; the dataset's offset is not needed.
-  if (isToday && now >= e.start!.slice(0, 16)) {
-    return { top, ...parts(first!), detail: `Started ${time}`, label: `${when}, started ${time}`, today: true, started: true };
-  }
-  return { top, ...parts(first!), detail: time, label: `${when}, ${time}`, ...mark };
+  if (now < e.start!.slice(0, 16)) return { ...tile, detail: time, label: `Today, ${time}` };
+  return { ...tile, detail: `Started ${time}`, label: `Today, started ${time}`, started: true };
 }

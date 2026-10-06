@@ -23,7 +23,7 @@
   let now = $state<string | undefined>(undefined);
   let today = $derived(now === undefined ? meta.buildToday : localDate(now));
   onMount(() => {
-    const read = () => { if (document.visibilityState === "visible") now = nowIn(meta.timeZone, new Date()); };
+    const read = () => { now = nowIn(meta.timeZone, new Date()); };
     read();
     document.addEventListener("visibilitychange", read);
     return () => document.removeEventListener("visibilitychange", read);

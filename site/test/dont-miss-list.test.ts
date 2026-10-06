@@ -21,6 +21,7 @@ vi.mock("../src/generated/meta", () => ({
 }));
 
 import DontMissList from "../src/components/DontMissList.svelte";
+import { inTimeZone } from "./fixtures/time-zone";
 
 describe("DontMissList", () => {
   afterEach(() => {
@@ -73,10 +74,8 @@ describe("DontMissList", () => {
   });
 
   it("reads the clock again when the tab comes back: Today, then Started and dimmed, then the next day", async () => {
-    const tz = process.env.TZ;
-    process.env.TZ = "Asia/Tokyo"; // the visitor's machine is a zone away; the cards still go by Kansas City time
-    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
-    try {
+    // The visitor's machine is a zone away; the cards still go by Kansas City time.
+    await inTimeZone("Asia/Tokyo", async () => {
       vi.useFakeTimers({ now: new Date("2026-10-07T00:30:00Z") }); // 7:30 pm Tuesday in Chicago, Wednesday in Tokyo
       render(DontMissList);
       await tick();
@@ -99,11 +98,7 @@ describe("DontMissList", () => {
       document.dispatchEvent(new Event("visibilitychange"));
       await tick();
       expect(screen.queryByText("Tuesday show")).toBeNull();
-    } finally {
-      visibility.mockRestore();
-      if (tz === undefined) delete process.env.TZ;
-      else process.env.TZ = tz;
-    }
+    });
   });
 
   it("says so and points at the explorer when nothing is picked", async () => {

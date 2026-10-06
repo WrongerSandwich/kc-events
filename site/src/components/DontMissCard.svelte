@@ -70,13 +70,13 @@
     transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out);
   }
   .ics:hover { color: var(--fg); border-color: var(--fg-faint); text-decoration: none; }
-  /* Started: dimmed, not hidden (the site knows no end times). Not by opacity, which would drop text below AA: the
-     title steps down to the muted ink, which clears 4.5:1 in both schemes, and the kind colours lose most of their
-     chroma, which keeps their lightness and so their contrast. */
-  h3 a, .card :global(.tile), .card :global(.chip) { transition: color 300ms var(--ease-out), filter 300ms var(--ease-out); }
+  @media (prefers-reduced-motion: reduce) { .ics { transition: none; } }
+  /* Started: dimmed, not hidden (the site knows no end times). Not by opacity or a filter, which would take text
+     below AA and which axe cannot measure: the title steps down to the muted ink, and the tile and chip take the grey
+     "other" kind's shades, both pairings tokens.css holds at AA in each scheme. No transition: the change lands
+     while the tab is away. */
+  .started, .started :global(.chip) { --hue: var(--kind-other); --hue-tint: var(--kind-other-tint); }
   .started h3 a { color: var(--fg-muted); }
-  .started :global(.tile), .started :global(.chip) { filter: saturate(0.3); }
-  @media (prefers-reduced-motion: reduce) { .ics, h3 a, .card :global(.tile), .card :global(.chip) { transition: none; } }
   /* Phones: the actions stack under the tile, so the title gets the width. */
   @media (max-width: 30rem) {
     .card { grid-template-columns: 3.5rem minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: var(--space-3); }
