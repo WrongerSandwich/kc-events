@@ -24,6 +24,11 @@ describe("toIcs", () => {
     expect(toIcs([event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" })], opts)).toBe(fixture("last-day"));
   });
 
+  it("escapes a lone carriage return as a newline", () => {
+    const out = toIcs([event({ title: "One\rTwo\r\nThree\nFour" })], opts);
+    expect(out).toContain("SUMMARY:One\\nTwo\\nThree\\nFour\r\n");
+  });
+
   it("puts Last day. before the why-line in a start-less run", () => {
     const out = toIcs([event({ recurrence: "limited-run", start: undefined, end: "2026-10-31", whyLine: "Rare; see it." })], opts);
     expect(out).toContain("DESCRIPTION:Last day.\\n\\nRare\\; see it.\\n\\nVerified");

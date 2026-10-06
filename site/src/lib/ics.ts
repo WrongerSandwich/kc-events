@@ -4,7 +4,7 @@ import type { PublishedEvent } from "./types";
 
 /** RFC 5545 TEXT escaping: backslash first, then semicolon, comma, and newline. */
 function escapeText(s: string): string {
-  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r\n?|\n/g, "\\n");
 }
 
 const encoder = new TextEncoder();

@@ -24,7 +24,7 @@ describe("horizon", () => {
     expect(horizonHeading("through-sunday", "2026-10-10")).toBe("This weekend, Oct 10–11"); // Sat
     expect(horizonHeading("through-sunday", "2026-10-11")).toBe("This weekend, Oct 11"); // Sun
     expect(horizonHeading("through-sunday", "2026-11-01")).toBe("This weekend, Nov 1"); // the DST Sunday
-    expect(horizonHeading("through-sunday", "2026-12-30")).toBe("This week, Dec 30–Jan 3"); // across the year
+    expect(horizonHeading("through-sunday", "2026-12-30")).toBe("This week, Dec 30, 2026–Jan 3, 2027"); // across the year, which formatRange now names
     expect(horizonHeading("next-two-weeks", "2026-10-05")).toBe("Next two weeks, through Oct 19");
     expect(horizonHeading("next-two-weeks", "2026-11-01")).toBe("Next two weeks, through Nov 15");
     expect(horizonHeading("further-out", "2026-10-05")).toBe("Later, after Oct 19");
@@ -137,6 +137,7 @@ describe("horizon", () => {
     expect(closingLine(event({ recurrence: "limited-run", start: "2026-09-20", end: "2026-10-11" }), today)).toBe("On now, closes Sun Oct 11");
     expect(closingLine(event({ recurrence: "limited-run", start: "2026-10-20", end: "2026-11-14" }), today)).toBe("Opens Tue Oct 20, runs through Sat Nov 14");
     expect(closingLine(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }), today)).toBe("On now, closes Sat Oct 31");
+    expect(closingLine(event({ recurrence: "limited-run", start: undefined, end: "2026-10-03" }), today)).toBe("Closed Sat Oct 3");
     expect(closingLine(event({ start: "2026-10-09", end: "2026-10-11" }), today)).toBe("Fri Oct 9–Sun Oct 11");
     expect(closingLine(event({ start: "2026-10-09", end: "2026-10-11" }), "2026-10-10")).toBe("On now, through Sun Oct 11");
   });

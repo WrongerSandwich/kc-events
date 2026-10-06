@@ -10,6 +10,7 @@ import { origin } from "../../build/origin";
 import { events } from "../../generated/events";
 import { meta } from "../../generated/meta";
 import { formatDay, formatShort, localDate } from "../../lib/dates";
+import { eventDescription, eventJsonLd } from "../../lib/event-meta";
 import { longDateLine } from "../../lib/date-line";
 import { firstDay, hostOf, isDated, lastDay } from "../../lib/events";
 import { siteConfig } from "../../site.config";
@@ -21,23 +22,13 @@ export function getStaticPaths() {
 const { event } = Astro.props as { event: PublishedEvent };
 
 const line = longDateLine(event, meta.buildToday);
-const description = `${line} at ${event.venue}, ${event.neighborhood}.${event.whyLine ? ` ${event.whyLine}` : ""}`;
+const description = eventDescription(event, meta.buildToday);
 const reportUrl = `${siteConfig.repoUrl}/issues/new?title=${encodeURIComponent(`Wrong listing: ${event.title}`)}&body=${encodeURIComponent(`Event: ${origin}/e/${event.id}\nPrimary page: ${event.primaryUrl}\n\nWhat is wrong:\n`)}`;
 const moreLikeThis = events
   .filter((e) => e.id !== event.id && e.kind === event.kind && isDated(e) && firstDay(e) !== undefined && firstDay(e)! >= meta.buildToday)
   .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
   .slice(0, 5);
-// Venues span Missouri and Kansas, so no addressRegion: name and locality only (spec section 7).
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Event",
-  name: event.title,
-  ...(event.start && { startDate: event.start }),
-  ...(event.end && { endDate: event.end }),
-  location: { "@type": "Place", name: event.venue, address: { "@type": "PostalAddress", addressLocality: event.neighborhood } },
-  url: event.primaryUrl,
-  ...(event.whyLine && { description: event.whyLine }),
-};
+const jsonLd = eventJsonLd(event);
 ---
 <Base title={event.title} description={description} jsonLd={jsonLd}>
   <article class={`event kind-${slugify(event.kind)}`}>
@@ -53,7 +44,7 @@ const jsonLd = {
       </div>
     </header>
     {event.whyLine && <p class="why">{event.whyLine}</p>}
-    <p class="primary"><a href={event.primaryUrl} rel="noopener">Details and tickets at {hostOf(event.primaryUrl)}</a></p>
+    <p class="primary"><a href={event.primaryUrl}>Details and tickets at {hostOf(event.primaryUrl)}</a></p>
     <div class="actions">
       <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} />
       {isDated(event) && <a class="ics" href={`/e/${event.id}.ics`} download><UiIcon name="calendar-plus" />Add to calendar</a>}

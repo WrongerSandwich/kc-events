@@ -54,6 +54,18 @@ describe("saves", () => {
     expect(createSaves(memory(JSON.stringify(["a", 2, null]))).list()).toEqual(["a"]);
   });
 
+  it("keeps notifying the other subscribers, and keeps toggle from throwing, when one subscriber throws", () => {
+    const saves = createSaves(memory());
+    const seen: string[][] = [];
+    let armed = false;
+    saves.subscribe(() => { if (armed) throw new Error("bad subscriber"); });
+    saves.subscribe((ids) => seen.push([...ids]));
+    armed = true;
+    expect(() => saves.toggle("a")).not.toThrow();
+    expect(seen.at(-1)).toEqual(["a"]);
+    expect(saves.has("a")).toBe(true);
+  });
+
   it("re-reads storage when a new subscriber arrives, so a later mount sees outside changes", () => {
     const store = memory(JSON.stringify([]));
     const s = createSaves(store);

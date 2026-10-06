@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, comingSunday, formatDay, formatLong, formatRange, formatShort, formatTime, isDateOnly, localDate, todayIn, weekday } from "../src/lib/dates";
+import { isValidDate, addDays, comingSunday, formatDay, formatLong, formatRange, formatShort, formatTime, isDateOnly, localDate, todayIn, weekday } from "../src/lib/dates";
 
 describe("dates", () => {
   it("takes the local date off either dataset form", () => {
@@ -30,6 +30,20 @@ describe("dates", () => {
     for (const iso of ["2026-01-02T08:00:00Z", "2026-12-31T23:59:00Z"]) expect(todayIn("America/Chicago", new Date(iso))).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
+  it("refuses a time of a date-only value rather than inventing midnight", () => {
+    expect(() => formatTime("2026-10-09")).toThrow(/date-only/);
+  });
+
+  it("validates a calendar date: shape and a real day", () => {
+    expect(isValidDate("2026-10-09")).toBe(true);
+    expect(isValidDate("2028-02-29")).toBe(true);
+    expect(isValidDate("2026-02-29")).toBe(false);
+    expect(isValidDate("2026-13-01")).toBe(false);
+    expect(isValidDate("2026-1-9")).toBe(false);
+    expect(isValidDate("2026-10-09T19:00:00-05:00")).toBe(false);
+    expect(isValidDate("")).toBe(false);
+  });
+
   it("formats for headings, rows, and event pages", () => {
     expect(formatDay("2026-10-09")).toBe("Fri Oct 9");
     expect(formatShort("2026-10-09")).toBe("Oct 9");
@@ -37,6 +51,8 @@ describe("dates", () => {
     expect(formatLong("2026-10-09")).toBe("Friday, October 9");
     expect(formatRange("2026-10-05", "2026-10-11")).toBe("Oct 5–11");
     expect(formatRange("2026-10-29", "2026-11-02")).toBe("Oct 29–Nov 2");
+    expect(formatRange("2026-10-05", "2027-10-03")).toBe("Oct 5, 2026–Oct 3, 2027");
+    expect(formatRange("2026-12-29", "2027-01-03")).toBe("Dec 29, 2026–Jan 3, 2027");
     expect(formatTime("2026-10-09T19:00:00-05:00")).toBe("7:00 pm");
     expect(formatTime("2026-10-09T12:30:00-05:00")).toBe("12:30 pm");
     expect(formatTime("2026-10-09T00:15:00-05:00")).toBe("12:15 am");

@@ -1,5 +1,5 @@
-import { formatRange, formatShort } from "./dates";
-import { slugTable } from "./slugs";
+import { formatRange, formatShort, isValidDate } from "./dates";
+import { slugify, slugTable } from "./slugs";
 
 export const WHEN_PRESETS = ["today", "weekend", "7d", "30d", "all"] as const;
 export type WhenPreset = (typeof WHEN_PRESETS)[number];
@@ -23,20 +23,11 @@ export const DEFAULT_FILTERS: Filters = { when: { preset: "all" }, kinds: [], re
 
 export type Known = { kinds: readonly string[]; regions: readonly string[] };
 
-const DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-function validDate(s: string): boolean {
-  if (!DATE.test(s)) return false;
-  const [y, m, d] = s.split("-").map(Number);
-  const t = new Date(Date.UTC(y!, m! - 1, d!));
-  return t.getUTCFullYear() === y && t.getUTCMonth() === m! - 1 && t.getUTCDate() === d;
-}
-
 function parseWhen(raw: string | null): When {
   if (raw === null) return { preset: "all" };
   if ((WHEN_PRESETS as readonly string[]).includes(raw)) return { preset: raw as WhenPreset };
   const [from, to, ...rest] = raw.split("..");
-  if (rest.length > 0 || from === undefined || to === undefined || !validDate(from) || !validDate(to)) return { preset: "all" };
+  if (rest.length > 0 || from === undefined || to === undefined || !isValidDate(from) || !isValidDate(to)) return { preset: "all" };
   return from <= to ? { from, to } : { from: to, to: from };
 }
 
@@ -60,14 +51,12 @@ export function parseQuery(params: URLSearchParams, known: Known): Filters {
 }
 
 /** The query string without "?", defaults omitted; "" when everything is default. */
-export function toQuery(f: Filters, known: Known): string {
-  const kinds = slugTable(known.kinds);
-  const regions = slugTable(known.regions);
+export function toQuery(f: Filters): string {
   const p = new URLSearchParams();
   if ("from" in f.when) p.set("when", `${f.when.from}..${f.when.to}`);
   else if (f.when.preset !== "all") p.set("when", f.when.preset);
-  for (const k of f.kinds) p.append("kind", kinds.toSlug(k));
-  for (const r of f.regions) p.append("region", regions.toSlug(r));
+  for (const k of f.kinds) p.append("kind", slugify(k));
+  for (const r of f.regions) p.append("region", slugify(r));
   if (f.dontMiss) p.set("dontmiss", "1");
   if (f.recurring) p.set("recurring", "1");
   if (f.saved) p.set("saved", "1");
@@ -77,7 +66,7 @@ export function toQuery(f: Filters, known: Known): string {
 }
 
 export function isDefault(f: Filters): boolean {
-  return toQuery(f, { kinds: f.kinds, regions: f.regions }) === "";
+  return toQuery(f) === "";
 }
 
 /** The filters that narrow the results, in words ("Through Sunday", "music", "“jazz”"); sort narrows nothing and is left out. */

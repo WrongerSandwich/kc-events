@@ -19,6 +19,16 @@ export function isDateOnly(iso: string): boolean {
   return iso.length === 10;
 }
 
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** A YYYY-MM-DD that names a real calendar day (not "2026-02-30"); the one validator for the site's date inputs. */
+export function isValidDate(s: string): boolean {
+  if (!DATE.test(s)) return false;
+  const [y, m, d] = parts(s);
+  const t = new Date(Date.UTC(y, m - 1, d));
+  return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
+}
+
 function parts(date: string): [number, number, number] {
   const [y, m, d] = date.split("-").map(Number);
   return [y!, m!, d!];
@@ -71,15 +81,17 @@ export function formatLong(date: string): string {
   return `${LONG_DAYS[weekday(date)]}, ${LONG_MONTHS[m - 1]} ${d}`;
 }
 
-/** "Oct 5–11", or "Oct 29–Nov 2" across a month. */
+/** "Oct 5–11", or "Oct 29–Nov 2" across a month, or "Dec 29, 2026–Jan 3, 2027" across a year. */
 export function formatRange(from: string, to: string): string {
-  const [, fm, fd] = parts(from);
-  const [, tm, td] = parts(to);
+  const [fy, fm, fd] = parts(from);
+  const [ty, tm, td] = parts(to);
+  if (fy !== ty) return `${formatShort(from)}, ${fy}–${formatShort(to)}, ${ty}`;
   return fm === tm ? `${SHORT_MONTHS[fm - 1]} ${fd}–${td}` : `${SHORT_MONTHS[fm - 1]} ${fd}–${SHORT_MONTHS[tm - 1]} ${td}`;
 }
 
 /** "7:00 pm" from the local wall time in a date-time; the offset is ignored because the time is already local. */
 export function formatTime(iso: string): string {
+  if (isDateOnly(iso)) throw new Error(`formatTime needs a date-time, got the date-only ${iso}; check isDateOnly first`);
   const h = Number(iso.slice(11, 13));
   const mm = iso.slice(14, 16);
   const suffix = h < 12 ? "am" : "pm";

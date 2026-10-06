@@ -64,7 +64,23 @@ describe("groupResults", () => {
   });
 });
 
+describe("venue sort", () => {
+  it("orders two shows at one venue on one day by start time, then title", () => {
+    const late = event({ id: "late", title: "A late show", start: "2026-10-09T21:00:00-05:00", venue: "recordBar" });
+    const early = event({ id: "early", title: "Z early show", start: "2026-10-09T18:00:00-05:00", venue: "recordBar" });
+    const groups = groupResults([late, early], f({ sort: "venue" }), today, none);
+    expect(groups[0]!.events.map((e) => e.id)).toEqual(["early", "late"]);
+  });
+});
+
 describe("rowDateLine", () => {
+  it("keeps the start time of a timed multi-day one-off on its opening day", () => {
+    const timed = event({ id: "timed", title: "Festival", start: "2026-10-29T18:00:00-05:00", end: "2026-10-31T22:00:00-05:00" });
+    expect(rowDateLine(timed, today)).toBe("6:00 pm, runs through Sat Oct 31");
+    expect(rowDateLine(timed, today, true)).toBe("Thu Oct 29, 6:00 pm–Sat Oct 31");
+    expect(rowDateLine(event({ ...timed, start: "2026-10-03T18:00:00-05:00", end: "2026-10-07T22:00:00-05:00" }), today)).toBe("Through Wed Oct 7");
+  });
+
   it("writes the time, all day, a span, or a schedule", () => {
     expect(rowDateLine(fri7, today)).toBe("7:00 pm");
     expect(rowDateLine(friAll, today)).toBe("All day");

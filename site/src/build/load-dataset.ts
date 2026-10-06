@@ -8,6 +8,7 @@ import { ELSEWHERE_IN_THE_METRO, parseConfig, type RunConfig } from "../../../sr
 import { DATASET_SCHEMA_VERSION, parseDataset, type Event } from "../../../src/dataset.ts";
 import { regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
+import { isValidDate } from "../lib/dates";
 import { isPast } from "../lib/events";
 import type { Published, PublishedEvent } from "../lib/types";
 
@@ -35,7 +36,7 @@ function project(e: Event, config: RunConfig): PublishedEvent {
   const out: PublishedEvent = {
     id: e.id,
     title: e.title,
-    venue: e.venue!,
+    venue: e.venue!, // the job schema's refine (src/dataset.ts) guarantees venue and lastVerified on every active event
     neighborhood: e.neighborhood,
     region: regionFor(e.neighborhood, config),
     primaryUrl: e.primaryUrl,
@@ -57,6 +58,7 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
   const dataset = parseDataset(JSON.parse(readFileSync(opts.datasetPath, "utf8")));
   if (dataset.lastSuccessfulRun === null) throw new Error("the dataset records no successful run; nothing to publish");
   const today = opts.today ?? process.env.SITE_TODAY ?? toLocalDate(new Date(), config.timezone);
+  if (!isValidDate(today)) throw new Error(`the build's today must be a real YYYY-MM-DD date, got "${today}" (from ${opts.today !== undefined ? "the today option" : "SITE_TODAY"})`);
 
   const active = dataset.events.filter((e) => e.status === "active");
   const seen = new Set<string>();

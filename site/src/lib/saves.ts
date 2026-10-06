@@ -23,6 +23,17 @@ function read(storage: StorageLike | undefined): string[] | undefined {
   }
 }
 
+/** Calls every subscriber; one that throws must not stop the rest or the toggle that caused the change. */
+function notify(subscribers: Set<(ids: ReadonlySet<string>) => void>, ids: ReadonlySet<string>): void {
+  for (const fn of subscribers) {
+    try {
+      fn(ids);
+    } catch (err) {
+      console.error("saves: a subscriber threw", err);
+    }
+  }
+}
+
 /** Browser-local saves. A storage that is missing, blocked, full, or corrupt degrades to nothing saved and never throws. */
 export function createSaves(storage: StorageLike | undefined): Saves {
   let ids = new Set(read(storage) ?? []);
@@ -33,7 +44,7 @@ export function createSaves(storage: StorageLike | undefined): Saves {
     } catch {
       // Keep the in-memory state for this page's life; nothing else to do.
     }
-    for (const fn of subscribers) fn(ids);
+    notify(subscribers, ids);
   };
   return {
     list: () => [...ids],
@@ -48,7 +59,7 @@ export function createSaves(storage: StorageLike | undefined): Saves {
       const fresh = read(storage);
       if (fresh !== undefined && (fresh.length !== ids.size || fresh.some((id) => !ids.has(id)))) {
         ids = new Set(fresh);
-        for (const other of subscribers) other(ids); // keep every button on the page in step
+        notify(subscribers, ids); // keep every button on the page in step
       }
       subscribers.add(fn);
       fn(ids);

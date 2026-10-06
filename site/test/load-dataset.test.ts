@@ -78,6 +78,19 @@ describe("loadPublished", () => {
   describe("the build's date", () => {
     const { today: _today, ...files } = write(dataset([activeEvent()]));
 
+    it("refuses a malformed SITE_TODAY or explicit today rather than skewing the past filter", () => {
+      try {
+        for (const bad of ["tomorrow", "2026-10-5", "2026-02-30", "20261005", ""]) {
+          vi.stubEnv("SITE_TODAY", bad);
+          expect(() => loadPublished(files), bad).toThrow(/SITE_TODAY|today/i);
+        }
+        vi.stubEnv("SITE_TODAY", undefined);
+        expect(() => loadPublished({ ...files, today: "soon" })).toThrow(/today/i);
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+
     it("is an explicit today first, then SITE_TODAY, then the clock in the configured zone", () => {
       vi.useFakeTimers({ now: new Date("2026-10-20T03:30:00Z") }); // still Oct 19 in Chicago
       try {

@@ -8,7 +8,7 @@ describe("query state", () => {
   it("parses nothing to the defaults", () => {
     expect(parse("")).toEqual(DEFAULT_FILTERS);
     expect(isDefault(parse(""))).toBe(true);
-    expect(toQuery(DEFAULT_FILTERS, known)).toBe("");
+    expect(toQuery(DEFAULT_FILTERS)).toBe("");
   });
 
   it("parses every filter, with repeated keys for multi-values", () => {
@@ -44,11 +44,11 @@ describe("query state", () => {
 
   it("serializes without defaults and round-trips", () => {
     const f = parse("when=7d&kind=film&region=central-kc&q=x");
-    expect(toQuery(f, known)).toBe("when=7d&kind=film&region=central-kc&q=x");
-    expect(parse(toQuery(f, known))).toEqual(f);
+    expect(toQuery(f)).toBe("when=7d&kind=film&region=central-kc&q=x");
+    expect(parse(toQuery(f))).toEqual(f);
     const r = parse("when=2026-10-09..2026-10-11&sort=venue");
-    expect(toQuery(r, known)).toBe("when=2026-10-09..2026-10-11&sort=venue");
-    expect(parse(toQuery(r, known))).toEqual(r);
+    expect(toQuery(r)).toBe("when=2026-10-09..2026-10-11&sort=venue");
+    expect(parse(toQuery(r))).toEqual(r);
   });
 
   it("keeps the first of a repeated when only if it is valid", () => {
@@ -68,9 +68,9 @@ describe("query state", () => {
     ];
     for (const s of dirty) {
       const f = parse(s);
-      const q = toQuery(f, known);
+      const q = toQuery(f);
       expect(parse(q), s).toEqual(f);
-      expect(toQuery(parse(q), known), s).toBe(q);
+      expect(toQuery(parse(q)), s).toBe(q);
     }
   });
 
@@ -85,7 +85,12 @@ describe("query state", () => {
 
   it("trims and drops a blank search", () => {
     expect(parse("q=%20%20").q).toBe("");
-    expect(toQuery({ ...DEFAULT_FILTERS, q: "  " }, known)).toBe("");
+    expect(toQuery({ ...DEFAULT_FILTERS, q: "  " })).toBe("");
+  });
+
+  it("exports the date validator the query parser uses", () => {
+    expect(parse("when=2026-02-30..2026-03-01").when).toEqual({ preset: "all" });
+    expect(parse("when=2026-02-27..2026-03-01").when).toEqual({ from: "2026-02-27", to: "2026-03-01" });
   });
 
   it("describes the active filters in words, for the empty state", () => {

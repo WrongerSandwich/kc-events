@@ -77,6 +77,7 @@ export function bucketDontMiss(events: PublishedEvent[], today: string): Record<
 export function closingLine(e: PublishedEvent, today: string): string {
   const first = firstDay(e);
   const last = lastDay(e)!;
+  if (first === undefined && !isUnderway(e, today)) return `Closed ${formatDay(last)}`;
   if (e.recurrence === "limited-run") {
     return isUnderway(e, today) ? `On now, closes ${formatDay(last)}` : `Opens ${formatDay(first!)}, runs through ${formatDay(last)}`;
   }

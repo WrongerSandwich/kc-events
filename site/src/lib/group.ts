@@ -19,11 +19,18 @@ export function rowDateLine(e: PublishedEvent, today: string, withDay = false): 
   if (isMultiDay(e)) {
     const last = formatDay(lastDay(e)!);
     if (isUnderway(e, today)) return e.recurrence === "limited-run" ? `Closes ${last}` : `Through ${last}`;
-    return withDay ? `${formatDay(firstDay(e)!)}–${last}` : `Runs through ${last}`;
+    const time = isDateOnly(e.start!) ? undefined : formatTime(e.start!);
+    if (withDay) return `${formatDay(firstDay(e)!)}${time ? `, ${time}` : ""}–${last}`;
+    return time ? `${time}, runs through ${last}` : `Runs through ${last}`;
   }
   const start = e.start!;
   if (!withDay) return isDateOnly(start) ? "All day" : formatTime(start);
   return `${formatDay(firstDay(e)!)} · ${isDateOnly(start) ? "all day" : formatTime(start)}`;
+}
+
+/** The full start (date-only before timed on one day); a start-less run sorts by its last day, a recurring event first. */
+function sortStart(e: PublishedEvent): string {
+  return e.start ?? lastDay(e) ?? "";
 }
 
 function byStartThenTitle(a: PublishedEvent, b: PublishedEvent): number {
@@ -36,7 +43,7 @@ export function groupResults(events: PublishedEvent[], f: Filters, today: string
   const hits = events.filter((e) => matches(e, f, today, saved));
 
   if (f.sort === "venue") {
-    const sorted = [...hits].sort((a, b) => a.venue.localeCompare(b.venue) || (firstDay(a) ?? lastDay(a) ?? "").localeCompare(firstDay(b) ?? lastDay(b) ?? "") || a.title.localeCompare(b.title));
+    const sorted = [...hits].sort((a, b) => a.venue.localeCompare(b.venue) || sortStart(a).localeCompare(sortStart(b)) || a.title.localeCompare(b.title));
     return sorted.length === 0 ? [] : [{ key: "venue", heading: "By venue", events: sorted }];
   }
 

@@ -40,7 +40,7 @@
 
   function change(next: Filters) {
     filters = next;
-    const q = toQuery(next, known);
+    const q = toQuery(next);
     history.replaceState(null, "", q === "" ? location.pathname : `${location.pathname}?${q}`);
   }
 
