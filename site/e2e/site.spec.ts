@@ -20,6 +20,13 @@ test("the front page buckets the fixture's don't-miss events", async ({ page }) 
   // No hand-kept Always there pick matches the fixture, so the section is left out rather than shown empty.
   await expect(page.getByRole("heading", { name: "Always there" })).toHaveCount(0);
   await expect(page.getByText("Browse all 9 events")).toBeVisible();
+  // On a Monday the week strip runs today through Sunday; a day with a pick jumps to its card.
+  const week = page.getByRole("navigation", { name: "This week by day" });
+  await expect(week.locator(".day")).toHaveCount(7);
+  await week.getByRole("link", { name: "Tue 6: 1 pick" }).click();
+  await expect(page).toHaveURL(/#pick-evt_e2e000000001$/);
+  // Each card can go straight to a calendar.
+  await expect(page.getByRole("link", { name: "Add Fabio Frizzi plays Fulci to your calendar" })).toHaveAttribute("href", "/e/evt_e2e000000001.ics");
 });
 
 test("the explorer honors the URL and writes it back", async ({ page }) => {

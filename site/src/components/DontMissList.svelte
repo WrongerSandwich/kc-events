@@ -11,6 +11,7 @@
   import DontMissCard from "./DontMissCard.svelte";
   import KindChip from "./KindChip.svelte";
   import KindIcon from "./KindIcon.svelte";
+  import WeekStrip from "./WeekStrip.svelte";
 
   const emptyLines = {
     "through-sunday": "Nothing picked between now and Sunday.",
@@ -68,6 +69,10 @@
             <li><KindChip kind={k.kind} label={`${k.n} ${k.kind}`} href={k.href} /></li>
           {/each}
         </ul>
+        {#if h === "through-sunday" && horizonBounds(today).sunday >= addDays(today, 2)}
+          <!-- Three days or more left in the week: enough for a strip to say something. -->
+          <WeekStrip picks={buckets[h]} {today} sunday={horizonBounds(today).sunday} />
+        {/if}
         {#each buckets[h] as event (event.id)}
           <DontMissCard {event} {today} />
         {/each}

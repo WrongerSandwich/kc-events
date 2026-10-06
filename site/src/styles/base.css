@@ -1,6 +1,7 @@
 /* A short reset, the page's defaults, and the two styles every surface shares (.chip, .section-heading). */
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -66,4 +67,13 @@ p a, .prose a { text-decoration: underline; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* Page-to-page: a card's date tile and title glide into the event page's, and back; the rest cross-fades. The
+   browser does it (cross-document view transitions, no JavaScript); browsers without support just navigate. */
+@view-transition { navigation: auto; }
+::view-transition-group(*) { animation-duration: 260ms; animation-timing-function: var(--ease-out); }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 180ms; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }
