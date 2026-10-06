@@ -13,7 +13,7 @@
 </script>
 
 <article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"}>
-  <span class="when" title={dateLine}>{dateLine}</span>
+  <span class="when">{dateLine}</span>
   <div class="title">
     <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="mark" role="img" aria-label="Don't miss">●</span>{/if}
   </div>

@@ -59,8 +59,7 @@
   .tags { margin-top: var(--space-2); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); font-size: var(--text-sm); }
   /* Like the always-there host links: plain until hovered (base.css underlines links in a <p>). */
   .primary { color: var(--fg-muted); text-decoration: none; }
-  .primary:hover { text-decoration: underline; }
-  .primary:hover { color: var(--fg); }
+  .primary:hover { color: var(--fg); text-decoration: underline; }
   .verified { color: var(--fg-faint); }
   /* Save, then add to calendar; the slot keeps its width before Save mounts, so nothing re-wraps when it appears. */
   .actions { display: flex; gap: var(--space-2); min-width: calc(4.5rem + var(--tap) + var(--space-2)); justify-content: flex-end; }
