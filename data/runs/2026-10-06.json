@@ -1,28 +1,28 @@
 {
   "runDate": "2026-10-06",
-  "startedAt": "2026-10-06T10:11:38-05:00",
-  "finishedAt": "2026-10-06T10:37:56-05:00",
+  "startedAt": "2026-10-06T10:41:01-05:00",
+  "finishedAt": "2026-10-06T11:08:56-05:00",
   "horizonWeeks": 8,
   "counts": {
-    "found": 418,
-    "new": 17,
+    "found": 441,
+    "new": 47,
     "updated": 361,
-    "reverified": 33,
-    "heldUnverified": 34,
+    "reverified": 37,
+    "heldUnverified": 32,
     "heldThroughOutage": 0,
-    "unverifiedByOutageLimit": 28,
-    "unverifiedByUncitableReading": 11,
-    "outsideGeography": 3,
+    "unverifiedByOutageLimit": 0,
+    "unverifiedByUncitableReading": 1,
+    "outsideGeography": 4,
     "expired": {
-      "past": 5,
-      "two-strike": 8,
+      "past": 0,
+      "two-strike": 75,
       "cancelled": 0,
       "index-page": 0,
-      "duplicate": 15
+      "duplicate": 1
     }
   },
   "spend": {
-    "totalUsd": 0.15183299,
+    "totalUsd": 0.15484956499999997,
     "capUsd": 5,
     "capHit": false,
     "shortfall": {
@@ -37,31 +37,36 @@
     "enabled": true,
     "queries": 10,
     "aggregatorPages": 9,
-    "pagesExtracted": 47,
+    "pagesExtracted": 51,
     "problems": [
       "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7nJ: HTTP 403",
+      "https://www.kcirishparade.com/: HTTP 403",
       "https://kcparks.org/: HTTP 403",
       "http://www.kansasspeedway.com/: HTTP 403",
       "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7na&classificationId=KnvZfZ7vAe1: HTTP 403",
       "https://seatgeek.com/cities/kansas-city/comedy: HTTP 403",
-      "https://www.applebaumkc.com/blog/11-fall-festivals-around-kansas-city-you-can-still-catch-in-2026: HTTP 403",
-      "https://kcur.secureallegiance.com/kcur/WebModule/Donate.aspx?P=KCG0226&PAGETYPE=PLG&CHECK=%2b5g%2fQkV05qm4ViHtxJWDB%2bzWDeZ%2beA1M: HTTP 403",
+      "https://artskcgo.com/: HTTP 403",
       "https://gonorthkc.com/events: HTTP 403",
-      "https://www.kcfilmoffice.com/: HTTP 403",
-      "https://mindtrip.ai/: HTTP 403",
+      "robots.txt disallows https://www.eventbrite.com/signin/signup/?referrer=%2Fmytickets",
+      "robots.txt disallows https://www.eventbrite.com/signin/?referrer=%2Fb%2Fmo--kansas-city%2Ffood-and-drink%2F",
+      "robots.txt disallows https://www.eventbrite.com/signin/signup/?referrer=%2Fb%2Fmo--kansas-city%2Ffood-and-drink%2F",
       "https://kcoktoberfest.com/: HTTP 403",
       "https://www.kcrunningcompany.com/oktoberfest5k: HTTP 404",
       "https://www.eventbrite.com/e/oktoberfest-in-the-woods-tickets-1004691067027: HTTP 404",
+      "https://www.kcfilmoffice.com/: HTTP 403",
+      "https://mindtrip.ai/: HTTP 403",
       "https://seatgeek.com/cities/kansas-city/sports: HTTP 403",
       "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7nE: HTTP 403",
+      "https://artskcgo.com/categories/film: HTTP 403",
       "https://kcconvention.com/event/boozy-book-fest-2026: HTTP 404",
-      "robots.txt disallows https://tickets.kauffmancenter.org/"
+      "robots.txt disallows https://www.kckpl.org/events/month/2026/10?cerkl_id=22973830&cerkl_ue=ho9yfKAqYiJvBziAEACsrIUwZ8aN0ZTvm7P8vxPFiH8%3D&page=10",
+      "robots.txt disallows https://tickets.kauffmancenter.org/events"
     ]
   },
   "curation": {
-    "calls": 2,
-    "judged": 39,
-    "flagged": 1,
+    "calls": 3,
+    "judged": 69,
+    "flagged": 3,
     "problems": []
   },
   "sources": [
@@ -73,7 +78,7 @@
     {
       "name": "Kansas City Symphony",
       "result": "fetched",
-      "extracted": 9
+      "extracted": 11
     },
     {
       "name": "recordBar",
@@ -146,7 +151,7 @@
     {
       "name": "Replay Lounge",
       "result": "fetched",
-      "extracted": 22
+      "extracted": 23
     },
     {
       "name": "Lied Center of Kansas",
@@ -272,7 +277,7 @@
     {
       "name": "National WWI Museum and Memorial",
       "result": "fetched",
-      "extracted": 14
+      "extracted": 15
     },
     {
       "name": "GEHA Field at Arrowhead Stadium",
@@ -287,12 +292,12 @@
     {
       "name": "Power & Light District",
       "result": "fetched",
-      "extracted": 13
+      "extracted": 11
     },
     {
       "name": "Kansas City Convention Center",
       "result": "fetched",
-      "extracted": 18
+      "extracted": 12
     },
     {
       "name": "City Market",
@@ -399,13 +404,7 @@
     "Crossroads Arts District",
     "KC Parks and Recreation"
   ],
-  "offListNeighborhoods": [
-    {
-      "stored": "Johnson County",
-      "placed": "Overland Park",
-      "events": 9
-    }
-  ],
+  "offListNeighborhoods": [],
   "unmappableNeighborhoods": [
     {
       "eventTitle": "Dancing in the Street: Music of Motown"
@@ -426,8 +425,11 @@
       "eventTitle": "The Music of Studio Ghibli"
     },
     {
+      "eventTitle": "Brahms’ German Requiem"
+    },
+    {
       "eventTitle": "Frizzi 2 Fulci : Fabio Frizzi and the F2F Band",
-      "venue": "the Grand Temple"
+      "venue": "Grand Temple"
     },
     {
       "eventTitle": "Matinees for Schools"
@@ -445,18 +447,6 @@
       "eventTitle": "Prelude Conversation Series"
     },
     {
-      "eventTitle": "Loving Vincent",
-      "venue": "Tivoli Cinema"
-    },
-    {
-      "eventTitle": "Coco",
-      "venue": "Tivoli Cinema"
-    },
-    {
-      "eventTitle": "Cinema Paradiso",
-      "venue": "Tivoli Cinema"
-    },
-    {
       "eventTitle": "2026 Gala: Rodeo Nouveau"
     },
     {
@@ -469,10 +459,10 @@
       "eventTitle": "Beyond the Black Crack: 50th Anniversary Celebration"
     },
     {
-      "eventTitle": "Rooms We Carry Opening Reception"
+      "eventTitle": "Artist Market @ Rooms We Carry Opening Reception"
     },
     {
-      "eventTitle": "Artist Market @ Rooms We Carry Opening Reception"
+      "eventTitle": "Rooms We Carry Opening Reception"
     },
     {
       "eventTitle": "FrankenWines"
@@ -508,16 +498,14 @@
       "venue": "Powell Gardens"
     },
     {
-      "eventTitle": "The Planets"
+      "eventTitle": "Chris Stapleton's All-American Road Show",
+      "venue": "Morton Amphitheater",
+      "proposed": "Riverside"
     },
     {
-      "eventTitle": "Baroque at 7:00: Vivaldi's Four Seasons"
-    },
-    {
-      "eventTitle": "Silent Film + Live Organ: Dr. Jekyll & Mr. Hyde"
-    },
-    {
-      "eventTitle": "Buckets N Boards"
+      "eventTitle": "Thomas Rhett: The Soundtrack to Life Tour",
+      "venue": "Morton Amphitheater",
+      "proposed": "Riverside"
     },
     {
       "eventTitle": "The Wizard of Oz"
@@ -534,16 +522,13 @@
       "eventTitle": "The Billy Joel Legacy"
     },
     {
-      "eventTitle": "Goldenberg Duo (at JCCC)"
-    },
-    {
       "eventTitle": "Calvin Arsenia"
     },
     {
       "eventTitle": "The Who's Tommy"
     },
     {
-      "eventTitle": "The Kansas City Symphony Presents Baroque at 7:00: Vivaldi's Four Seasons"
+      "eventTitle": "Baroque at 7:00: Vivaldi's Four Seasons"
     },
     {
       "eventTitle": "Electric Poe"
@@ -553,9 +538,6 @@
     },
     {
       "eventTitle": "Dancing in the Street: Music of Motown with The Kansas City Symphony"
-    },
-    {
-      "eventTitle": "Kansas City Ballet Presents “The Wizard of Oz”"
     },
     {
       "eventTitle": "Kansas City Symphony’s Mobile Music Box at Union Cemetery",
@@ -581,20 +563,11 @@
       "eventTitle": "Ryan & Ryan 'Kickin' the Clouds Away'"
     },
     {
-      "eventTitle": "The Kansas City Symphony Presents: Prokofiev's Sixth and Barber's Violin Concerto with Stella Chen"
+      "eventTitle": "Prokofiev's Sixth and Barber's Violin Concerto with Stella Chen"
     },
     {
       "eventTitle": "Fall Festival",
       "venue": "KC Pumpkin Patch"
-    },
-    {
-      "eventTitle": "Live Bluegrass Music",
-      "venue": "Louisburg Cider Mill & Country Store",
-      "proposed": "Louisburg"
-    },
-    {
-      "eventTitle": "DR. JEKYLL & MR. HYDE",
-      "venue": "Helzberg Hall"
     },
     {
       "eventTitle": "Fun Farm 2026 Fall Festival",
@@ -602,192 +575,71 @@
       "proposed": "Kearney"
     },
     {
+      "eventTitle": "The Planets"
+    },
+    {
+      "eventTitle": "Silent Film + Live Organ: Dr. Jekyll & Mr. Hyde"
+    },
+    {
+      "eventTitle": "Prokofiev’s Sixth & Barber’s Violin Concerto"
+    },
+    {
+      "eventTitle": "Buckets N Boards"
+    },
+    {
       "eventTitle": "Crown Center District Homeschool Event"
     },
     {
       "eventTitle": "The Pigeon Gets a Big Time Holiday Extravaganza!"
+    },
+    {
+      "eventTitle": "Winterland: A Holiday Cirque Experience"
+    },
+    {
+      "eventTitle": "Ride the Drive: Cliff Drive by Pedicab"
+    },
+    {
+      "eventTitle": "13th Annual Día de los Muertos Celebration"
+    },
+    {
+      "eventTitle": "Create Your Own Ofrenda Items with Mattie Rhodes"
+    },
+    {
+      "eventTitle": "The Stanza Room featuring Jennifer Maritza McCauley"
     }
   ],
   "promotionSuggestions": [
     {
       "host": "kclivearts.org",
-      "runsSeen": 2,
+      "runsSeen": 3,
       "exampleUrl": "https://kclivearts.org/"
     },
     {
-      "host": "smalterart.com",
-      "runsSeen": 2,
-      "exampleUrl": "https://www.smalterart.com/event"
+      "host": "thecitymarketkc.org",
+      "runsSeen": 3,
+      "exampleUrl": "https://thecitymarketkc.org/events/"
     },
     {
       "host": "kcwineco.com",
-      "runsSeen": 3,
+      "runsSeen": 4,
       "exampleUrl": "https://www.kcwineco.com/events/upcoming-events"
     },
     {
+      "host": "btt.boldtypetickets.com",
+      "runsSeen": 4,
+      "exampleUrl": "https://btt.boldtypetickets.com/events/185466137/2026-hump-film-festival-fall-season-kansas-city-mo?ref=home"
+    },
+    {
       "host": "kc.kidsoutandabout.com",
-      "runsSeen": 2,
+      "runsSeen": 3,
       "exampleUrl": "https://kc.kidsoutandabout.com/"
     }
   ],
-  "outageLimited": [
-    {
-      "title": "Happy Hour",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "First Friday",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "The Berlin Wall. A World Divided. Exhibition at Union Station",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "Body Forth: incarnation, embodiment, and the Christian imagination",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "Cerbera Gallery presents: “BE, AND KNOW” with photographic works by David K. Pugh",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "Jones Gallery October Art Show",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "Ongoing Exhibition: “Resquache”, Maria Vasquez Boyd",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "This Might Hurt A Little",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "Crossroads Flea is Back at Mildred’s",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "Science City After Hours 21+",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "The Wizard of Oz",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "Neighborhood Garden Party",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "The Secret Show",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "VISUAL VOICE: Moments of Abstraction Exhibit",
-      "primaryUrl": "https://kcparks.org/events/"
-    },
-    {
-      "title": "Mobile Music Box Concert: MLK Park",
-      "primaryUrl": "https://kcparks.org/events/"
-    },
-    {
-      "title": "Brush Creek Art Walk Awards Reception",
-      "primaryUrl": "https://kcparks.org/events/"
-    },
-    {
-      "title": "Puzzle Exchange Night",
-      "primaryUrl": "https://kcparks.org/events/"
-    },
-    {
-      "title": "Garden Work Day",
-      "primaryUrl": "https://kcparks.org/events/"
-    },
-    {
-      "title": "Paint & Garden",
-      "primaryUrl": "https://kcparks.org/events/"
-    },
-    {
-      "title": "Cafecítón: A Latin Brunch Club",
-      "primaryUrl": "https://kccrossroads.org/"
-    },
-    {
-      "title": "Walktober 2026: Kemper Outdoor Education Center",
-      "primaryUrl": "https://kcparks.org/event/walktober-kemper/"
-    },
-    {
-      "title": "Maronde Professional Recital Series - Fall 2026",
-      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
-    },
-    {
-      "title": "Add More Arts to Your Classroom: Virtual Professional Development",
-      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
-    },
-    {
-      "title": "What if Puppets presents 'How to Snag a Sea Monster'",
-      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
-    },
-    {
-      "title": "Our Shared Future (Re)Shaped by AI",
-      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
-    },
-    {
-      "title": "Kansas City Civic Orchestra: Sounds of a New World",
-      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
-    },
-    {
-      "title": "Don't Say It… SING IT! The Power of Music Education in the Elementary Classroom with Aaron Fowler",
-      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
-    },
-    {
-      "title": "INfusion 2026 by Seva Dance",
-      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
-    }
-  ],
+  "outageLimited": [],
   "uncitableReadings": [
     {
-      "title": "2026 Gala: Rodeo Nouveau",
-      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
-    },
-    {
-      "title": "Crossroads Artboards: Caroline Honas / Arin Yoon",
-      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
-    },
-    {
-      "title": "FrankenWines",
-      "primaryUrl": "https://kclibrary.org/events"
-    },
-    {
-      "title": "PBR OUTLAW DAYS FESTIVAL",
-      "primaryUrl": "https://powerandlightdistrict.com/events-and-entertainment"
-    },
-    {
-      "title": "Petite Performances: Halloween Spooktacular",
-      "primaryUrl": "https://www.kcsymphony.org/"
-    },
-    {
-      "title": "EMAS Presents",
-      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
-    },
-    {
-      "title": "Artist Market @ Rooms We Carry Opening Reception",
-      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
-    },
-    {
-      "title": "Rooms We Carry Opening Reception",
-      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
-    },
-    {
-      "title": "An Evening with Joyce Carol Oates",
-      "primaryUrl": "https://kclibrary.org/events"
-    },
-    {
-      "title": "Prokofiev’s Sixth and Barber’s Violin Concerto",
-      "primaryUrl": "https://www.kcsymphony.org/"
-    },
-    {
-      "title": "Goldenberg Duo (at JCCC)",
-      "primaryUrl": "https://kclivearts.org/"
+      "title": "Winterland: A Holiday Cirque Experience",
+      "primaryUrl": "https://www.crowncenter.com/events"
     }
   ]
 }
