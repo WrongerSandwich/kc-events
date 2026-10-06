@@ -1,3 +1,5 @@
+const DAY_MS = 86_400_000;
+
 /** Formats an instant as ISO 8601 with the given IANA timezone's offset, e.g. 2026-10-02T22:15:00-05:00. */
 export function toLocalIso(instant: Date, timeZone: string): string {
   const parts = Object.fromEntries(
@@ -69,5 +71,5 @@ function offsetAt(instant: Date, timeZone: string): number {
  * An event starting after it is beyond the horizon.
  */
 export function horizonEnd(today: string, horizonWeeks: number): string {
-  return new Date(Date.parse(`${today}T00:00:00Z`) + horizonWeeks * 7 * 86_400_000).toISOString().slice(0, 10);
+  return new Date(Date.parse(`${today}T00:00:00Z`) + horizonWeeks * 7 * DAY_MS).toISOString().slice(0, 10);
 }

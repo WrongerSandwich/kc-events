@@ -745,7 +745,8 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     }
     const fetched = await fetchReadable(url, ports.fetcher);
     if ("page" in fetched) return fetched.page;
-    (fetched.failure === "outage" ? attempts.outages : attempts.gone).add(url);
+    if (fetched.failure === "outage") attempts.outages.add(url);
+    else attempts.gone.add(url);
     report.problems.push(fetched.problem);
     return undefined;
   };

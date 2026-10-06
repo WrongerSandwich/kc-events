@@ -53,7 +53,8 @@ export function strike(event: Event): Event {
 /**
  * Whether a page that loaded and does not list an event says nothing about it: the event starts
  * after the last day of the horizon, and extraction is asked only for events within it. A recurring
- * event and an undated one are always asked for; a run that opens inside the horizon is too.
+ * event and an undated one are always asked for, and so is a limited run that opens inside the
+ * horizon, however long after it closes.
  */
 export function startsAfterHorizon(event: Event, lastDay: string): boolean {
   return event.recurrence !== "recurring" && event.start !== undefined && event.start.slice(0, 10) > lastDay;

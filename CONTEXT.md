@@ -102,7 +102,7 @@ A candidate after cite-or-drop has made it an active or unverified event, togeth
 _Avoid_: match, hit
 
 **Strike**:
-One run in which an active event's primary page loaded and no longer listed it, or told the job it is gone (not found) or may not be read (its `robots.txt` now disallows it). A page that loaded without an event starting after the run's horizon is not a strike: extraction is asked only for events within the horizon, so leaving it out says nothing. Any run that lists the event clears its strikes; the second consecutive strike is two-strike expiry.
+One run in which an active event's primary page loaded and no longer listed it, or told the job it is gone (not found) or may not be read (its `robots.txt` now disallows it). A page that loaded without an event starting after the weeks the run researches (`horizonWeeks` in the config, not the site's horizon buckets) is not a strike: extraction is asked only for events within those weeks, so leaving it out says nothing. Any run that lists the event clears its strikes; the second consecutive strike is two-strike expiry.
 
 **Outage**:
 One run in which an event's primary page could not be loaded: the connection failed, the site refused the job, or it errored. An outage says nothing about the event, so it is not a strike. An event is held as it was through a few consecutive outages, then becomes `unverified` until its page loads and lists it again.

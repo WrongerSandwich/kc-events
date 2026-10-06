@@ -224,6 +224,28 @@ describe("discovery lane", () => {
     expect(renderReportMarkdown(second.report)).toContain(`promoter.test: events found in 2 runs, e.g. ${otherShow}`);
   });
 
+  it.each<[string, CannedPage, number]>([
+    ["loads without it, is left unstruck", PAGE, 0],
+    ["is gone, is struck", { status: 404, body: "Not Found" }, 1],
+    ["robots.txt disallows, is struck", "robots-blocked", 1],
+  ])("an event starting after the horizon whose page the lane leads to again, and which %s", async (_, page, strikes) => {
+    const newYear = { title: "New Year Show", startDate: "2026-12-31", dateEvidence: "Thu, Dec 31 · Show 9:00 PM" };
+    const first = await discoverAt(WEEK_1, emptyDataset(), {
+      searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
+      pages: { [PROMOTER_PAGE]: PAGE },
+      completions: [costing(0.01, candidateAt(PROMOTER, newYear))],
+    });
+
+    // The lane tried the page this run, so re-verification does not fetch it again.
+    const second = await discoverAt(WEEK_2, first.dataset, {
+      searches: { [LATER_QUERY]: [lead(PROMOTER_PAGE)] },
+      pages: { [PROMOTER_PAGE]: page },
+      completions: [costing(0.01)],
+    });
+
+    expect(second.dataset.events[0]).toMatchObject({ status: "active", verificationFailures: strikes });
+  });
+
   it("a host seen twice in one run is not yet a promotion suggestion", async () => {
     const otherShow = "https://promoter.test/shows/other-show";
     const { report } = await discoverAt(WEEK_1, emptyDataset(), {
