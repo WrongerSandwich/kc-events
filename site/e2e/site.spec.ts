@@ -131,8 +131,11 @@ test("the region fallback places a region-named neighborhood", async ({ page }) 
   await expect(page.getByRole("article").getByRole("heading")).toHaveText(["County fair talk", "Friday night jazz"]);
 });
 
+// The explorer's two row layouts: under day headings, and with the day first (the venue sort).
+const EXPLORER_SORTS = ["/explore", "/explore?sort=venue"];
+
 for (const width of [1280, 1440]) {
-  for (const path of ["/explore", "/explore?sort=venue"]) {
+  for (const path of EXPLORER_SORTS) {
     test(`an unflagged explorer row is one line, at most 28 px tall, at ${width} px on ${path}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await on(page, BUILD_DAY, path);
@@ -146,10 +149,10 @@ for (const width of [1280, 1440]) {
   }
 }
 
-// The fixture's haunted house has the widest date lines: "10:00 am–Wed Nov 18", and "Wed Oct 28, 10:00 am–Wed Nov 18"
-// in the venue sort.
+// The fixture's haunted house opens later with a start time, so it carries both: "10:00 am–Wed Nov 18" under its day,
+// and the widest line in the venue sort, "Wed Oct 28, 10:00 am–Wed Nov 18".
 for (const width of [1024, 1280, 1440]) {
-  for (const path of ["/explore", "/explore?sort=venue"]) {
+  for (const path of EXPLORER_SORTS) {
     test(`no explorer row truncates its date, and every row shows its neighborhood, at ${width} px on ${path}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await on(page, BUILD_DAY, path);

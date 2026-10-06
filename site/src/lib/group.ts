@@ -12,7 +12,7 @@ export type ResultGroup = { key: string; heading: string; events: PublishedEvent
  * 14" under its opening day, or "7:00 pm–Sat Nov 14" when it has a start time; a recurring event's schedule phrase.
  * Kept short so the explorer's date column stays narrow; the front page's cards say more (closingLine).
  * With `withDay` (the venue sort, which has no day headings), the day comes first: "Fri Oct 9 · 7:00 pm",
- * "Fri Oct 9 · all day", "Tue Oct 20–Sat Nov 14".
+ * "Fri Oct 9 · all day", "Tue Oct 20–Sat Nov 14", "Thu Oct 29, 6:00 pm–Sat Oct 31".
  */
 export function rowDateLine(e: PublishedEvent, today: string, withDay = false): string {
   if (!isDated(e)) return e.schedule ?? "";

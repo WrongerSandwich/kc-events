@@ -45,13 +45,13 @@
      day first (the venue sort), "Mon May 20, 10:00 am–Mon May 20", 239 px. Every row of a list has the same flag, so
      the column stays aligned. */
   @media (min-width: 1024px) {
-    .row { --when-width: 11.25rem; }
-    .row.with-day { --when-width: 15.5rem; }
     .row {
+      --when-width: 11.25rem;
       display: grid; align-items: center; gap: 0 var(--space-2); padding: var(--space-1) 0;
       grid-template-columns: var(--when-width) minmax(0, 1fr) auto auto auto auto;
       grid-template-areas: "when title title title title title" ". where chip host verified save" ". why why why why why";
     }
+    .row.with-day { --when-width: 15.5rem; }
     .when { grid-area: when; font-size: var(--text-sm); }
     .title { grid-area: title; }
     .where { grid-area: where; }
@@ -79,13 +79,13 @@
      first. */
   @media (min-width: 1280px) {
     .when { font-size: var(--text-xs); }
-    .row { --when-width: 9.75rem; }
-    .row.with-day { --when-width: 13.5rem; }
     .row {
+      --when-width: 9.75rem;
       padding: 2px 0;
       grid-template-columns: var(--when-width) fit-content(18rem) minmax(12rem, 1fr) auto auto auto auto;
       grid-template-areas: "when title where chip host verified save" ". why why why why why why";
     }
+    .row.with-day { --when-width: 13.5rem; }
   }
   /* 1440 px and up the container is wider (base.css), so the title can take more. */
   @media (min-width: 1440px) {
