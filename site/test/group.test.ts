@@ -31,6 +31,21 @@ describe("groupResults", () => {
     ]);
   });
 
+  it("lists a multi-day one-off under On now while underway, and under its opening day before", () => {
+    const groups = groupResults([festNow, festLater], f(), today, none);
+    expect(groups.map((g) => [g.key, g.events.map((e) => e.id)])).toEqual([
+      ["on-now", ["festNow"]],
+      ["2026-10-29", ["fest"]],
+    ]);
+  });
+
+  it("sorts the always-there group by kind, then title", () => {
+    const rec = (id: string, title: string, kind: string) => event({ id, title, kind, recurrence: "recurring", start: undefined, schedule: "Weekly" });
+    const groups = groupResults([rec("1", "Zumba", "music"), rec("2", "Bingo", "food/drink"), rec("3", "Anthem", "music"), rec("4", "Trivia", "food/drink")], f({ recurring: true }), today, none);
+    expect(groups.map((g) => g.key)).toEqual(["always-there"]);
+    expect(groups[0]!.events.map((e) => e.title)).toEqual(["Bingo", "Trivia", "Anthem", "Zumba"]);
+  });
+
   it("omits empty groups and the recurring group by default", () => {
     const groups = groupResults([fri7, tue], f(), today, none);
     expect(groups.map((g) => g.key)).toEqual(["2026-10-06", "2026-10-09"]);

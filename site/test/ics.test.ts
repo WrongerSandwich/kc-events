@@ -40,6 +40,29 @@ describe("toIcs", () => {
     expect(out).toContain("\r\n xxx"); // a folded continuation
   });
 
+  it("folds a multi-byte title at 75 octets without splitting a character, and unfolds intact", () => {
+    const title = "Fête des ténèbres — 夜の音楽祭 🎷 ".repeat(6).trim();
+    const out = toIcs([event({ title })], opts);
+    const lines = out.split("\r\n");
+    for (const line of lines) expect(Buffer.byteLength(line)).toBeLessThanOrEqual(75);
+    expect(lines.some((l) => l.startsWith(" "))).toBe(true);
+    const unfolded = out.replace(/\r\n /g, "");
+    expect(unfolded).toContain(`SUMMARY:${title}`);
+    expect(unfolded).not.toContain("\uFFFD");
+  });
+
+  it("writes a timed start with a timed end as both instants in UTC", () => {
+    const out = toIcs([event({ start: "2026-10-09T19:00:00-05:00", end: "2026-10-09T22:30:00-05:00" })], opts);
+    expect(out).toContain("DTSTART:20261010T000000Z");
+    expect(out).toContain("DTEND:20261010T033000Z");
+  });
+
+  it("writes a date-only start with a timed end as all-day, ending after the end's local day", () => {
+    const out = toIcs([event({ start: "2026-10-09", end: "2026-10-11T15:00:00-05:00" })], opts);
+    expect(out).toContain("DTSTART;VALUE=DATE:20261009");
+    expect(out).toContain("DTEND;VALUE=DATE:20261012");
+  });
+
   it("converts the winter offset too", () => {
     expect(toIcs([event({ start: "2026-11-20T19:00:00-06:00" })], opts)).toContain("DTSTART:20261121T010000Z");
   });

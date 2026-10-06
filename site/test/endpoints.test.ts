@@ -46,6 +46,21 @@ describe.skipIf(!matchesGenerated)("built output", () => {
     expect(html).toContain("from the page linked above");
   });
 
+  it("gives a recurring event's page no Add to calendar link, and a dated one's page has it", () => {
+    const recurring = events.find((e) => e.recurrence === "recurring");
+    expect(recurring, "the committed dataset has a recurring event").toBeDefined();
+    expect(read(`e/${recurring!.id}.html`)).not.toContain("Add to calendar");
+    const dated = events.find((e) => e.recurrence === "one-off")!;
+    expect(read(`e/${dated.id}.html`)).toContain(`href="/e/${dated.id}.ics"`);
+  });
+
+  it("names Lawrence once in a Lawrence event's location line", () => {
+    const lawrence = events.find((e) => e.region === "Lawrence" && e.neighborhood === "Lawrence");
+    expect(lawrence, "the committed dataset has an event whose neighborhood is Lawrence").toBeDefined();
+    const where = /<p class="where"[^>]*>([^<]*)<\/p>/.exec(read(`e/${lawrence!.id}.html`))![1]!;
+    expect(where).toBe(`${lawrence!.venue} · Lawrence`);
+  });
+
   it("gives pages extensionless canonical URLs that match the sitemap", () => {
     const canonical = (p: string) => /rel="canonical" href="([^"]+)"/.exec(read(p))![1]!;
     expect(canonical(`e/${events[0]!.id}.html`)).toMatch(new RegExp(`/e/${events[0]!.id}$`));

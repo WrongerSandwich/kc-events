@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { flushSync, mount, tick, unmount } from "svelte";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { downloadText } from "../src/lib/download";
 
 // vitest hoists vi.mock above every import and declaration, so the factory builds its own fixture.
@@ -25,6 +26,8 @@ describe("export this view", () => {
     vi.mocked(downloadText).mockClear();
   });
 
+  afterEach(() => vi.useRealTimers());
+
   it("downloads the current results as a calendar", async () => {
     history.replaceState(null, "", "/explore?recurring=1"); // the recurring event is in the view but has no date to export
     render(Explorer);
@@ -35,6 +38,25 @@ describe("export this view", () => {
     expect(mime).toBe("text/calendar");
     expect(text).toContain("SUMMARY:Friday jazz");
     expect(text).not.toContain("Trivia");
+  });
+
+  it("is disabled when the view holds only recurring events, though the count shows events", async () => {
+    history.replaceState(null, "", "/explore?recurring=1&q=trivia");
+    render(Explorer);
+    await tick();
+    expect(screen.getByRole("status")).toHaveTextContent("1 event");
+    expect(screen.getByRole("button", { name: "Export this view" })).toBeDisabled();
+  });
+
+  it("is disabled before mount, even with events to export", () => {
+    const target = document.body.appendChild(document.createElement("div"));
+    // mount renders synchronously and runs no effects, so this is the server-rendered state.
+    const component = mount(Explorer, { target });
+    expect(target.querySelector("button.export")).toBeDisabled();
+    flushSync(); // onMount
+    expect(target.querySelector("button.export")).not.toBeDisabled();
+    unmount(component);
+    target.remove();
   });
 
   it("is disabled with nothing to export", () => {

@@ -1,19 +1,20 @@
 import { render, screen, within } from "@testing-library/svelte";
 import { flushSync, mount, tick, unmount } from "svelte";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // vitest hoists vi.mock above every import and declaration, so a factory cannot use a module-level
 // variable or a static import: it builds its fixture itself, importing the helper dynamically.
+const { state } = vi.hoisted(() => ({ state: { empty: false } }));
 vi.mock("../src/generated/dont-miss", async () => {
   const { event } = await import("./fixtures/event");
-  return {
-    dontMiss: [
-      event({ id: "a", title: "Tuesday show", dontMiss: true, whyLine: "Why A.", start: "2026-10-06T20:00:00-05:00" }),
-      event({ id: "b", title: "Closing run", dontMiss: true, whyLine: "Why B.", recurrence: "limited-run", start: "2026-09-01", end: "2026-10-11" }),
-      event({ id: "c", title: "Later show", dontMiss: true, whyLine: "Why C.", start: "2026-10-17" }),
-      event({ id: "d", title: "Plain show", dontMiss: false, start: "2026-10-06" }),
-    ],
-  };
+  const picks = [
+    event({ id: "a", title: "Tuesday show", dontMiss: true, whyLine: "Why A.", start: "2026-10-06T20:00:00-05:00" }),
+    event({ id: "b", title: "Closing run", dontMiss: true, whyLine: "Why B.", recurrence: "limited-run", start: "2026-09-01", end: "2026-10-11" }),
+    event({ id: "c", title: "Later show", dontMiss: true, whyLine: "Why C.", start: "2026-10-17" }),
+    event({ id: "d", title: "Plain show", dontMiss: false, start: "2026-10-06" }),
+  ];
+  // A getter, so one test can switch to no picks at all.
+  return { get dontMiss() { return state.empty ? [] : picks; } };
 });
 vi.mock("../src/generated/meta", () => ({
   meta: { kinds: ["music"], regions: ["Central KC"], lastSuccessfulRun: "2026-10-05T06:30:00-05:00", buildToday: "2026-10-05", timeZone: "America/Chicago" },
@@ -22,6 +23,11 @@ vi.mock("../src/generated/meta", () => ({
 import DontMissList from "../src/components/DontMissList.svelte";
 
 describe("DontMissList", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    state.empty = false;
+  });
+
   it("hydrates with the build's state, then takes the visitor's date on mount", () => {
     vi.useFakeTimers({ now: new Date("2026-10-12T12:00:00Z") }); // a week after the build
     const target = document.body.appendChild(document.createElement("div"));
@@ -36,7 +42,6 @@ describe("DontMissList", () => {
     expect(target.textContent).not.toContain("Tuesday show");
     unmount(component);
     target.remove();
-    vi.useRealTimers();
   });
 
   it("renders every bucket with its heading, cards in order, and the empty line", async () => {
@@ -54,7 +59,6 @@ describe("DontMissList", () => {
     expect(within(sections[1]!).getByText("Later show")).toBeInTheDocument();
     expect(within(sections[2]!).getByText("Nothing picked further out yet.")).toBeInTheDocument();
     expect(screen.queryByText("Plain show")).toBeNull();
-    vi.useRealTimers();
   });
 
   it("re-buckets on the visitor's date", async () => {
@@ -65,6 +69,15 @@ describe("DontMissList", () => {
     expect(sections[0]).toHaveAttribute("aria-label", "This week, Oct 12–18");
     expect(within(sections[0]!).getByText("Later show")).toBeInTheDocument();
     expect(screen.queryByText("Tuesday show")).toBeNull(); // past
-    vi.useRealTimers();
+  });
+
+  it("says so and points at the explorer when nothing is picked", async () => {
+    state.empty = true;
+    vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") });
+    render(DontMissList);
+    await tick();
+    expect(screen.getByText(/Nothing is picked right now/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Browse everything" })).toHaveAttribute("href", "/explore");
+    expect(screen.queryAllByRole("region")).toEqual([]);
   });
 });

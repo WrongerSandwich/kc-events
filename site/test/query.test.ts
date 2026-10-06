@@ -51,6 +51,29 @@ describe("query state", () => {
     expect(parse(toQuery(r, known))).toEqual(r);
   });
 
+  it("keeps the first of a repeated when only if it is valid", () => {
+    expect(parse("when=7d&when=today").when).toEqual({ preset: "7d" });
+    expect(parse("when=soon&when=today").when).toEqual({ preset: "all" });
+  });
+
+  it("serializes dirty input to a stable query that parses back to the same filters", () => {
+    const dirty = [
+      "region=Central%20KC,Lawrence&kind=music",
+      "kind=opera&region=mars&when=soon",
+      "when=2026-10-11..2026-10-09",
+      "when=2026-13-45..2026-10-11&q=%20jazz%20",
+      "when=7d&when=today&when=30d",
+      "kind=music&kind=music&region=central-kc&region=central-kc",
+      "when=2026-10-09..2026-10-10..2026-10-11&sort=price&dontmiss=yes",
+    ];
+    for (const s of dirty) {
+      const f = parse(s);
+      const q = toQuery(f, known);
+      expect(parse(q), s).toEqual(f);
+      expect(toQuery(parse(q), known), s).toBe(q);
+    }
+  });
+
   it("trims and drops a blank search", () => {
     expect(parse("q=%20%20").q).toBe("");
     expect(toQuery({ ...DEFAULT_FILTERS, q: "  " }, known)).toBe("");

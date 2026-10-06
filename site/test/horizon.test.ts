@@ -64,13 +64,42 @@ describe("horizon", () => {
     expect(horizon(event({ recurrence: "recurring", start: undefined, schedule: "Tuesdays" }), today)).toBeUndefined();
   });
 
+  it("puts a limited run closing exactly this Sunday in the first bucket", () => {
+    const run = event({ recurrence: "limited-run", start: "2026-09-01", end: "2026-10-11" });
+    expect(horizon(run, "2026-10-05")).toBe("through-sunday");
+    expect(anchorDate(run, "2026-10-05")).toBe("2026-10-05");
+  });
+
+  it("buckets a fixed event the same way whichever day of the week is today", () => {
+    // Monday 2026-10-05 through Sunday 2026-10-11: the coming Sunday is always 10-11, and today plus fourteen is 10-19 to 10-25.
+    for (let i = 0; i < 7; i++) {
+      const today = addDays("2026-10-05", i);
+      expect(horizon(event({ start: "2026-10-11T19:00:00-05:00" }), today), `Sunday on ${today}`).toBe("through-sunday");
+      expect(horizon(event({ start: "2026-10-12" }), today), `next Monday on ${today}`).toBe("next-two-weeks");
+      expect(horizon(event({ start: "2026-10-19" }), today), `the 19th on ${today}`).toBe("next-two-weeks");
+      expect(horizon(event({ start: "2026-10-26" }), today), `the 26th on ${today}`).toBe("further-out");
+    }
+  });
+
+  it("buckets across the year boundary", () => {
+    const today = "2026-12-30"; // the coming Sunday is Jan 3
+    expect(horizon(event({ start: "2027-01-03" }), today)).toBe("through-sunday");
+    expect(horizon(event({ start: "2027-01-04" }), today)).toBe("next-two-weeks");
+    expect(horizon(event({ start: "2027-01-13" }), today)).toBe("next-two-weeks");
+    expect(horizon(event({ start: "2027-01-14" }), today)).toBe("further-out");
+  });
+
   it("is total over every non-past dated event in the committed dataset for a week of todays", () => {
     for (let i = 0; i < 7; i++) {
       const today = addDays(meta.buildToday, i);
+      let checked = 0;
       for (const e of events) {
         if (!isDated(e) || isPast(e, today)) continue;
         expect(HORIZONS).toContain(horizon(e, today));
+        checked++;
       }
+      // A dataset gone stale would otherwise pass this test having checked nothing.
+      expect(checked, `events checked for ${today}`).toBeGreaterThan(0);
     }
   });
 

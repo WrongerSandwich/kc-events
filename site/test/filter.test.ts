@@ -43,6 +43,14 @@ describe("matches", () => {
     expect(matches(trivia, f({ recurring: true, when: { preset: "today" } }), today, none)).toBe(true);
   });
 
+  it("matches the weekend preset on a Sunday only for today", () => {
+    const sunday = "2026-10-11";
+    const weekend = f({ when: { preset: "weekend" } });
+    expect(matches(event({ id: "sun", start: "2026-10-11T19:00:00-05:00" }), weekend, sunday, none)).toBe(true);
+    expect(matches(event({ id: "mon", start: "2026-10-12T19:00:00-05:00" }), weekend, sunday, none)).toBe(false);
+    expect(matches(event({ id: "sat", start: "2026-10-10T19:00:00-05:00" }), weekend, sunday, none)).toBe(false); // past
+  });
+
   it("ORs within kind and region and ANDs across", () => {
     expect(matches(show, f({ kinds: ["music", "film"] }), today, none)).toBe(true);
     expect(matches(show, f({ kinds: ["film"] }), today, none)).toBe(false);

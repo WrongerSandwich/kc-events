@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Page } from "@playwright/test";
 
 const BUILD_DAY = new Date("2026-10-05T17:00:00Z"); // noon Monday in Chicago
@@ -91,7 +92,9 @@ test("explorer rows read their dates relative to the day headings and the sort",
   await expect(row("Closing exhibition")).toHaveText("Closes Sun Oct 11");
   await expect(row("Artboards")).toHaveText("Closes Thu Dec 31");
   await expect(row("November festival")).toHaveText("Runs through Sun Nov 22");
-  await expect(page.locator("article.row", { has: page.getByRole("heading", { name: "Fabio Frizzi plays Fulci" }) }).locator(".verified")).toHaveText("✓ Oct 3Verified Oct 3");
+  const verified = page.locator("article.row", { has: page.getByRole("heading", { name: "Fabio Frizzi plays Fulci" }) }).locator(".verified");
+  await expect(verified.locator('[aria-hidden="true"]')).toHaveText("✓ Oct 3");
+  await expect(verified.locator(".visually-hidden")).toHaveText("Verified Oct 3");
   await on(page, BUILD_DAY, "/explore?sort=venue");
   await expect(row("Friday night jazz")).toHaveText("Fri Oct 9 · 8:00 pm");
 });
@@ -104,7 +107,11 @@ test("an event page exists, downloads a calendar, and knows when it has passed",
   expect(await page.locator('script[type="application/ld+json"]').textContent()).toContain('"@type":"Event"');
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Add to calendar" }).click();
-  expect((await download).suggestedFilename()).toBe("evt_e2e000000001.ics");
+  const file = await download;
+  expect(file.suggestedFilename()).toBe("evt_e2e000000001.ics");
+  const ics = readFileSync((await file.path())!, "utf8");
+  expect(ics).toContain("BEGIN:VEVENT");
+  expect(ics).toContain("SUMMARY:Fabio Frizzi plays Fulci");
   await expect(page.getByRole("status")).toHaveCount(0);
   await on(page, new Date("2026-10-12T17:00:00Z"), "/e/evt_e2e000000001");
   await expect(page.getByRole("status")).toContainText("This has already happened");

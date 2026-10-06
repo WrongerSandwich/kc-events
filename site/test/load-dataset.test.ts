@@ -1,50 +1,7 @@
 // @vitest-environment node
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { checkSchemaVersion, loadPublished, MAX_PAYLOAD_BYTES, SITE_EXPECTS_SCHEMA_VERSION } from "../src/build/load-dataset";
-
-const configYaml = `
-neighborhoods:
-  Central KC: [Crossroads, Downtown]
-  Johnson County: [Olathe]
-  Lawrence: [Lawrence]
-`;
-
-function activeEvent(over: Record<string, unknown> = {}) {
-  return {
-    id: "evt_000000000001",
-    title: "A show",
-    start: "2026-10-09T19:00:00-05:00",
-    venue: "recordBar",
-    neighborhood: "Crossroads",
-    primaryUrl: "https://www.therecordbar.com/shows",
-    kind: "music",
-    recurrence: "one-off",
-    dontMiss: false,
-    firstSeen: "2026-10-03T16:05:31-05:00",
-    lastVerified: "2026-10-03T21:47:36-05:00",
-    status: "active",
-    verificationFailures: 0,
-    lead: { lane: "registry", source: "recordBar" },
-    evidence: { date: "Oct 09 7:00 pm", venue: "recordBar presents" },
-    ...over,
-  };
-}
-
-function dataset(events: unknown[], over: Record<string, unknown> = {}) {
-  return { schemaVersion: 1, generatedAt: "2026-10-05T06:30:00-05:00", lastSuccessfulRun: "2026-10-05T06:30:00-05:00", events, sourceState: {}, discoveryState: {}, ...over };
-}
-
-function write(ds: unknown, config = configYaml) {
-  const dir = mkdtempSync(join(tmpdir(), "kc-site-"));
-  const datasetPath = join(dir, "events.json");
-  const configPath = join(dir, "research.config.yaml");
-  writeFileSync(datasetPath, JSON.stringify(ds));
-  writeFileSync(configPath, config);
-  return { datasetPath, configPath, today: "2026-10-05" };
-}
+import { activeEvent, dataset, write } from "./fixtures/dataset";
 
 describe("loadPublished", () => {
   it("keeps active, non-past events and projects them with a region", () => {
@@ -116,5 +73,24 @@ describe("loadPublished", () => {
     expect(() => loadPublished(write(dataset([activeEvent(), activeEvent()])))).toThrow(/evt_000000000001/);
     const big = Array.from({ length: Math.ceil(MAX_PAYLOAD_BYTES / 200) + 1 }, (_, i) => activeEvent({ id: `evt_${String(i).padStart(12, "0")}`, title: "x".repeat(150) }));
     expect(() => loadPublished(write(dataset(big)))).toThrow(/payload/i);
+  });
+
+  describe("the build's date", () => {
+    const { today: _today, ...files } = write(dataset([activeEvent()]));
+
+    it("is an explicit today first, then SITE_TODAY, then the clock in the configured zone", () => {
+      vi.useFakeTimers({ now: new Date("2026-10-20T03:30:00Z") }); // still Oct 19 in Chicago
+      try {
+        vi.stubEnv("SITE_TODAY", "2026-10-12");
+        expect(loadPublished({ ...files, today: "2026-10-05" }).buildToday).toBe("2026-10-05");
+        expect(loadPublished(files).buildToday).toBe("2026-10-12");
+        vi.stubEnv("SITE_TODAY", "");
+        delete process.env.SITE_TODAY;
+        expect(loadPublished(files).buildToday).toBe("2026-10-19");
+      } finally {
+        vi.unstubAllEnvs();
+        vi.useRealTimers();
+      }
+    });
   });
 });

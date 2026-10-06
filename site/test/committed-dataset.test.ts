@@ -1,11 +1,12 @@
 // @vitest-environment node
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { loadPublished } from "../src/build/load-dataset";
 
 describe("the committed dataset through the site's loader", () => {
   const p = loadPublished({
-    datasetPath: new URL("../../data/events.json", import.meta.url).pathname,
-    configPath: new URL("../../research.config.yaml", import.meta.url).pathname,
+    datasetPath: fileURLToPath(new URL("../../data/events.json", import.meta.url)),
+    configPath: fileURLToPath(new URL("../../research.config.yaml", import.meta.url)),
     today: "2026-10-05",
   });
 

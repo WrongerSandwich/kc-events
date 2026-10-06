@@ -19,6 +19,15 @@ describe("saves", () => {
     expect(s.list()).toEqual(["b"]);
   });
 
+  it("keeps ids of events that are no longer active through a toggle", () => {
+    const store = memory(JSON.stringify(["gone", "here"]));
+    const s = createSaves(store);
+    s.toggle("here");
+    expect(s.list()).toEqual(["gone"]);
+    s.toggle("new");
+    expect(JSON.parse(store.map.get(STORAGE_KEY)!)).toEqual(["gone", "new"]);
+  });
+
   it("notifies subscribers immediately and on change, and stops after unsubscribe", () => {
     const s = createSaves(memory());
     const fn = vi.fn();
