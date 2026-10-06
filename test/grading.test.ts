@@ -13,6 +13,7 @@ function report(overrides: Partial<RunReport> = {}): RunReport {
     counts: { found: 40, new: 40, updated: 0, reverified: 0, heldUnverified: 2, heldThroughOutage: 0, unverifiedByOutageLimit: 0, unverifiedByUncitableReading: 0, outsideGeography: 1, expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0 } },
     spend: { totalUsd: 0.9, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 } },
     discovery: { enabled: true, queries: 10, aggregatorPages: 4, pagesExtracted: 12, problems: [] },
+    reverification: { problems: [] },
     curation: { calls: 2, judged: 38, flagged: 5, problems: [] },
     sources: [],
     failingSources: [],

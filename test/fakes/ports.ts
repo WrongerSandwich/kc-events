@@ -19,12 +19,15 @@ function nothingFlagged(request: CompletionRequest): CompletionResult {
  */
 export type CannedPage = { status: number; body: string } | "robots-blocked" | "robots-unreachable" | Error;
 
+/** A scripted model reply, or an Error the call throws, as a connection reset partway through would. */
+export type ScriptedReply = CompletionResult | Error;
+
 export interface FakePortOptions {
   pages?: Record<string, CannedPage>;
-  /** Scripted extraction replies, consumed in call order; running out is an error. */
-  completions?: CompletionResult[];
-  /** Scripted curation replies, consumed in call order; running out flags nothing. */
-  curations?: CompletionResult[];
+  /** Scripted extraction replies, consumed in call order; running out is an error, and an Error is thrown. */
+  completions?: ScriptedReply[];
+  /** Scripted curation replies, consumed in call order; running out flags nothing, and an Error is thrown. */
+  curations?: ScriptedReply[];
   /** Search results by query; a query not listed returns nothing, an Error is thrown. */
   searches?: Record<string, SearchResult[] | Error>;
 }
@@ -40,9 +43,9 @@ export function fakePorts(now: Date, { pages = {}, completions = [], curations =
       async complete(request) {
         calls.push(`model:${request.model}`);
         requests.push(request);
-        if (request.model === TEST_MODELS.curation) return judgments.shift() ?? nothingFlagged(request);
-        const reply = replies.shift();
+        const reply = request.model === TEST_MODELS.curation ? (judgments.shift() ?? nothingFlagged(request)) : replies.shift();
         if (!reply) throw new Error("fake model has no scripted extraction response left");
+        if (reply instanceof Error) throw reply;
         return reply;
       },
     },

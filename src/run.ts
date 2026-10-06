@@ -15,6 +15,7 @@ import { discoveryQueries, hostOf, isIndexPage, isLead, outboundLinks, trackDisc
 import { findMatch, normalizeName, sameEvent, sameName, type VenueAliases } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
+import { plural } from "./markdown.js";
 import type { EventRef, RunReport, SourceReport } from "./report.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList, placeStored } from "./taxonomy.js";
@@ -55,8 +56,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const today = toLocalDate(startedAt, config.timezone);
   // Before any fetch: a registry source in no region is a config error.
   const neighborhoods = neighborhoodList(config, registry);
-  // Every model call goes through the cap, whatever stage makes it.
-  const model = capSpend(ports.model, config.spendCapUsd);
+  // Every model call goes through the cap, whatever stage makes it, and is counted for the fuse.
+  const model = countOutcomes(capSpend(ports.model, config.spendCapUsd));
   const registryLane = await checkRegistry(registry, dataset.sourceState, ports.fetcher);
   assertSomethingFetched(registryLane.sourceReports);
   // An index page is never a primary page, so nothing can be cited to one even if the registry fetched it.
@@ -103,6 +104,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const uncitable = placed.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
   const changed = markChanged(dataset.events, placed.events, startedIso);
   const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
+  assertModelReached(model);
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = curation.events.map(cleanStoredWhyLine);
   const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso);
@@ -141,6 +143,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       shortfall,
     },
     discovery: discovery.report,
+    reverification: { problems: reverified.problems },
     curation: curation.report,
     sources: sourceReports,
     failingSources: registryLane.failingSources,
@@ -179,6 +182,60 @@ function assertSomethingFetched(sourceReports: SourceReport[]): void {
   if (checked.length === 0 || !checked.every((r) => r.result === "failed")) return;
   const details = checked.map((r) => `  ${r.name}: ${r.detail ?? "failed"}`).join("\n");
   throw new Error(`none of the ${checked.length} active registry sources could be fetched; the run stops so no event is struck:\n${details}`);
+}
+
+/** A capped model that also counts how its calls ended, for the fuse. */
+interface CountedModel extends CappedModel {
+  outcomes(): { succeeded: number; failed: number; lastError?: string };
+}
+
+/**
+ * Counts the calls that came back and the calls that threw. A call the spend cap refused was never
+ * made, so it counts as neither.
+ */
+function countOutcomes(model: CappedModel): CountedModel {
+  let succeeded = 0;
+  let failed = 0;
+  let lastError: string | undefined;
+  return {
+    async complete(request) {
+      try {
+        const result = await model.complete(request);
+        succeeded++;
+        return result;
+      } catch (error) {
+        if (!(error instanceof SpendCapReached)) {
+          failed++;
+          lastError = errorMessage(error);
+        }
+        throw error;
+      }
+    },
+    exhausted: model.exhausted,
+    totalUsd: model.totalUsd,
+    outcomes: () => ({ succeeded, failed, ...(lastError !== undefined ? { lastError } : {}) }),
+  };
+}
+
+/**
+ * The fuse: a model call that throws costs one page or one batch, but a run in which calls were
+ * made and none came back read nothing, and its dataset and report would say so for every event.
+ * It fails instead, so the CLI writes nothing and the last committed dataset stands. A run that
+ * made no model call, or whose calls the cap refused, is a normal run.
+ */
+function assertModelReached(model: CountedModel): void {
+  const { succeeded, failed, lastError } = model.outcomes();
+  if (failed === 0 || succeeded > 0) return;
+  throw new Error(`no model call succeeded: all ${plural(failed, "call")} failed, the last with "${lastError}"; the run stops so nothing is written`);
+}
+
+/** What a thrown model call did to a page: it was not read, and the report says why. */
+function modelFailed(error: unknown): string {
+  return `the model call failed (${errorMessage(error)})`;
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /** A page fetched from a registry source this run, ready for extraction. */
@@ -259,9 +316,9 @@ interface SourceExtraction {
 
 /**
  * Hands every fetched page to the extraction model with the rules document and turns the
- * candidates into sightings under cite-or-drop. A reply that fails validation yields nothing
- * from that page. Once the spend cap refuses a call, every page left is counted as not extracted;
- * like an unreadable reply, that tells nothing about the events on it.
+ * candidates into sightings under cite-or-drop. A reply that fails validation, or a call that
+ * throws, yields nothing from that page. Once the spend cap refuses a call, every page left is counted
+ * as not extracted; like an unreadable reply, that tells nothing about the events on it.
  */
 async function extractFromPages(pages: SourcePage[], model: ModelPort, context: ExtractionContext) {
   const sightings: Sighting[] = [];
@@ -284,10 +341,9 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     try {
       read = await extractPage(page, { lane: "registry", source }, model, context);
     } catch (error) {
-      if (!(error instanceof SpendCapReached)) throw error;
-      pagesNotExtracted++;
       markUnread(page);
-      outcome.problems.push(`${page.finalUrl} not extracted: spend cap reached`);
+      if (error instanceof SpendCapReached) pagesNotExtracted++;
+      outcome.problems.push(`${page.finalUrl} not extracted: ${error instanceof SpendCapReached ? "spend cap reached" : modelFailed(error)}`);
       continue;
     }
     outsideGeography += read.outsideGeography;
@@ -476,8 +532,8 @@ function refresh(known: Event, sighting: Event): Event {
  * is an outage (see fetchReadable): it holds an active event as it was, up to the outage limit. A
  * page that does list the event applies the sighting as in the registry lane, which revives a
  * hidden event whose reading is verified and hides an active one whose reading is not. When the
- * model's reply about a page could not be read, nothing is known either way and the event is left
- * alone: a bad reply is not a dead page. Once the spend cap is reached, pages still to check are
+ * model's reply about a page could not be read, or the call threw, nothing is known either way and
+ * the event is left alone: a bad reply is not a dead page. Once the spend cap is reached, pages still to check are
  * not fetched and their events are left alone too, counted as not re-verified.
  */
 async function reverify(
@@ -487,6 +543,7 @@ async function reverify(
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
 ) {
+  const problems: string[] = [];
   const sighted = (e: Event) => lane.touched.has(e.id);
   const pending = events.filter((e) => {
     if (lane.attempts.unread.has(e.primaryUrl)) return false;
@@ -521,7 +578,14 @@ async function reverify(
     const { page } = fetched;
     const event = pending.find((e) => e.primaryUrl === url)!;
     const pageUrls = new Set([url, normalizeUrl(page.finalUrl, url)]);
-    const read = await extractPage(page, originFor(event, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
+    let read: Awaited<ReturnType<typeof extractPage>>;
+    try {
+      read = await extractPage(page, originFor(event, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
+    } catch (error) {
+      if (error instanceof SpendCapReached) throw error;
+      problems.push(`${url} not re-read: ${modelFailed(error)}; ${plural(pending.filter((e) => e.primaryUrl === url).length, "event")} left unchanged`);
+      continue;
+    }
     outsideGeography += read.outsideGeography;
     if (read.sightings) sightingsAt.set(url, read.sightings);
   }
@@ -556,6 +620,7 @@ async function reverify(
     outageLimited,
     uncitable,
     sightings: [...sightingsAt.values()].flat(),
+    problems,
   };
 }
 
@@ -605,7 +670,7 @@ async function fetchReadable(
     if (page.status >= 200 && page.status < 300) return { page };
     return { problem: `${url}: HTTP ${page.status}`, failure: GONE_STATUSES.has(page.status) ? "gone" : "outage" };
   } catch (error) {
-    return { problem: `${url}: ${error instanceof Error ? error.message : String(error)}`, failure: "outage" };
+    return { problem: `${url}: ${errorMessage(error)}`, failure: "outage" };
   }
 }
 
@@ -676,9 +741,9 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     try {
       read = await extractPage(page, { lane: "discovery", query }, ports.model, { ...context, fetchedUrls: new Set([...context.fetchedUrls, ...pageUrls]) });
     } catch (error) {
-      if (!(error instanceof SpendCapReached)) throw error;
-      outcome.pagesNotExtracted++;
       for (const u of pageUrls) attempts.unread.add(u);
+      if (error instanceof SpendCapReached) outcome.pagesNotExtracted++;
+      else report.problems.push(`${url} not extracted: ${modelFailed(error)}`);
       return;
     }
     report.pagesExtracted++;
@@ -709,7 +774,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     try {
       results = await ports.search.search(query);
     } catch (error) {
-      report.problems.push(`search "${query}" failed: ${error instanceof Error ? error.message : String(error)}`);
+      report.problems.push(`search "${query}" failed: ${errorMessage(error)}`);
       continue;
     }
     report.queries++;
@@ -783,7 +848,7 @@ function markChanged(previous: Event[], events: Event[], nowIso: string): Event[
  * Curation: every event due for it (active, not recurring, new or changed since last judged) goes
  * to the curation model in batches with the curation prompt. A judgment is applied to the event it
  * names; an event the reply does not name, or names with a flag but no why-line, is left unjudged
- * and comes up again next run (the second losing any flag it had, since a flag with no why-line is no flag), and a judgment naming no event in the batch is reported. A reply that cannot be read leaves its whole batch unjudged. Once
+ * and comes up again next run (the second losing any flag it had, since a flag with no why-line is no flag), and a judgment naming no event in the batch is reported. A reply that cannot be read, or a call that throws, leaves its whole batch unjudged. Once
  * the spend cap is reached, events still to judge are not sent and are counted as not curated.
  */
 async function curate(events: Event[], model: CappedModel, context: CurationContext, nowIso: string) {
@@ -799,7 +864,15 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
       notCurated += batch.length;
       continue;
     }
-    const reply = await model.complete(buildCurationRequest(batch, context));
+    let reply: Awaited<ReturnType<CappedModel["complete"]>>;
+    try {
+      reply = await model.complete(buildCurationRequest(batch, context));
+    } catch (error) {
+      if (error instanceof SpendCapReached) throw error;
+      report.calls++;
+      report.problems.push(`a curation call failed (${errorMessage(error)}); ${batch.length} event(s) left unjudged`);
+      continue;
+    }
     report.calls++;
     const parsed = curationReplySchema.safeParse(reply.value);
     if (!parsed.success) {

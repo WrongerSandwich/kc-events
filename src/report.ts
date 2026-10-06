@@ -64,6 +64,8 @@ export interface RunReport {
     /** Leads that could not be fetched, searches that failed, and replies that could not be read. */
     problems: string[];
   };
+  /** Re-verification this run: pages re-fetched and not re-read because the model call threw, leaving their events as they were. */
+  reverification: { problems: string[] };
   /** Don't-miss curation this run: only events new or changed since last judged are sent, so a quiet run makes no calls. */
   curation: {
     /** Curation model calls made; events go in batches. */
@@ -146,6 +148,10 @@ ${
       }`
     : "_Disabled._"
 }
+
+## Re-verification
+
+${markdownList(report.reverification.problems)}
 
 ## Curation
 
