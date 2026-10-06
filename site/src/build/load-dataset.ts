@@ -32,11 +32,12 @@ export function regionFor(neighborhood: string, config: RunConfig): string {
   return named ?? ELSEWHERE_IN_THE_METRO;
 }
 
+/** The non-null assertions on venue and lastVerified hold because the job schema's refine (src/dataset.ts) requires both on every active event. */
 function project(e: Event, config: RunConfig): PublishedEvent {
   const out: PublishedEvent = {
     id: e.id,
     title: e.title,
-    venue: e.venue!, // the job schema's refine (src/dataset.ts) guarantees venue and lastVerified on every active event
+    venue: e.venue!,
     neighborhood: e.neighborhood,
     region: regionFor(e.neighborhood, config),
     primaryUrl: e.primaryUrl,
@@ -58,7 +59,10 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
   const dataset = parseDataset(JSON.parse(readFileSync(opts.datasetPath, "utf8")));
   if (dataset.lastSuccessfulRun === null) throw new Error("the dataset records no successful run; nothing to publish");
   const today = opts.today ?? process.env.SITE_TODAY ?? toLocalDate(new Date(), config.timezone);
-  if (!isValidDate(today)) throw new Error(`the build's today must be a real YYYY-MM-DD date, got "${today}" (from ${opts.today !== undefined ? "the today option" : "SITE_TODAY"})`);
+  if (!isValidDate(today)) {
+    const source = opts.today !== undefined ? "the today option" : "SITE_TODAY";
+    throw new Error(`the build's today must be a real YYYY-MM-DD date, got "${today}" (from ${source})`);
+  }
 
   const active = dataset.events.filter((e) => e.status === "active");
   const seen = new Set<string>();
