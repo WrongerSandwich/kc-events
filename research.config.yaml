@@ -35,7 +35,9 @@ kinds:
 # district in the core, a city in the suburbs. A region groups them at the scale of a trip decision,
 # for the site to browse by. The extractor picks an event's neighborhood from every region's list
 # plus "Elsewhere in the metro", the catch-all in no region: an address that maps to nothing lands
-# there and is flagged in the run report. Every registry source's neighborhood must be listed here
+# there and is flagged in the run report. An event stored under a neighborhood no longer listed here
+# is placed again each run that no page re-reads it (the catch-all, unless only the spelling
+# differs), and the run report counts them. Every registry source's neighborhood must be listed here
 # (or be the catch-all), a neighborhood goes under one region only, and some region must list
 # "Lawrence" (the extraction rules use it for anywhere in Lawrence); the config fails otherwise.
 neighborhoods:

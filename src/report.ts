@@ -39,6 +39,8 @@ export interface RunReport {
     unverifiedByUncitableReading: number;
     /** Candidates dropped because their page placed them outside the geography. */
     outsideGeography: number;
+    /** Events not expired whose stored neighborhood was off the list and that no reading placed this run, re-placed from it. */
+    offListNeighborhoods: number;
     expired: Record<ExpiryReason, number>;
   };
   spend: {
@@ -113,6 +115,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
 | Dropped: outside geography | ${counts.outsideGeography} |
+| Stored neighborhoods off the list, re-placed | ${counts.offListNeighborhoods} |
 ${EXPIRY_REASONS.map((reason) => `| Expired: ${reason} | ${counts.expired[reason]} |`).join("\n")}
 
 ## Spend

@@ -69,7 +69,7 @@ The place an event happens. A venue is not the same as a source, even when the v
 _Avoid_: location, room (when meaning the venue as a whole)
 
 **Neighborhood**:
-The part of the metro a venue is in, from a controlled list, shown on the site in place of a street address: the most specific place name people use, a district in the core ("Crossroads") or a city in the suburbs ("Olathe"). The list is the config's, grouped by region, plus the catch-all "elsewhere in the metro", which is in no region; an address that maps to nothing lands there and is flagged as unmappable in the run report. A registry source's neighborhood must be on the list.
+The part of the metro a venue is in, from a controlled list, shown on the site in place of a street address: the most specific place name people use, a district in the core ("Crossroads") or a city in the suburbs ("Olathe"). The list is the config's, grouped by region, plus the catch-all "elsewhere in the metro", which is in no region; an address that maps to nothing lands there and is flagged as unmappable in the run report. A stored neighborhood the list no longer holds (a region name from before regions, a renamed neighborhood) is placed again each run, in the list's spelling or the catch-all, unless a reading placed the event from its page; the run report counts them. A registry source's neighborhood must be on the list.
 
 ### Research
 

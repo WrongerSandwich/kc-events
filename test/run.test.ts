@@ -46,6 +46,7 @@ describe("run", () => {
       unverifiedByOutageLimit: 0,
       unverifiedByUncitableReading: 0,
       outsideGeography: 0,
+      offListNeighborhoods: 0,
       expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0 },
     });
     expect(report.spend).toEqual({ totalUsd: 0, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 } });

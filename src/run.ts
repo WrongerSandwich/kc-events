@@ -17,7 +17,7 @@ import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
 import type { EventRef, RunReport, SourceReport } from "./report.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
-import { neighborhoodList } from "./taxonomy.js";
+import { neighborhoodList, placeStored } from "./taxonomy.js";
 import { toLocalDate, toLocalIso } from "./time.js";
 
 /** Consecutive failed runs after which a source is flagged in the report. */
@@ -96,10 +96,12 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     attempts: combineAttempts({ ...registryLane.attempts, unread: extraction.unreadUrls }, discovery.attempts),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
+  // A reading places an event from its page; one no page placed this run is placed from what is stored.
+  const placed = placeOffList(reverified.events, neighborhoods);
   // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
   const madeUncitable = new Set([...merged.uncitable, ...reverified.uncitable]);
-  const uncitable = reverified.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
-  const changed = markChanged(dataset.events, reverified.events, startedIso);
+  const uncitable = placed.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
+  const changed = markChanged(dataset.events, placed.events, startedIso);
   const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = curation.events.map(cleanStoredWhyLine);
@@ -129,6 +131,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       unverifiedByOutageLimit: reverified.outageLimited.length,
       unverifiedByUncitableReading: uncitable.length,
       outsideGeography: extraction.outsideGeography + discovery.outsideGeography + reverified.outsideGeography,
+      offListNeighborhoods: placed.count,
       expired: countExpired(dataset.events, events),
     },
     spend: {
@@ -732,6 +735,24 @@ function originFor(event: Event, url: string, registry: Registry): PageOrigin {
     lane: "registry",
     source: registered ?? { name: lead.source, urls: [url], kind: event.kind, neighborhood: event.neighborhood, status: "active" },
   };
+}
+
+/**
+ * Every event not expired whose stored neighborhood is off the list, placed again from it (see
+ * placeStored), and how many there were. A config that renames or regroups neighborhoods would
+ * otherwise leave the old names on every event no page re-reads, unnoticed. An expired event is left
+ * as it is: a reading that revives it places it from its page.
+ */
+function placeOffList(events: Event[], list: string[]): { events: Event[]; count: number } {
+  let count = 0;
+  const placed = events.map((event) => {
+    if (event.status === "expired") return event;
+    const neighborhood = placeStored(event.neighborhood, list);
+    if (neighborhood === event.neighborhood) return event;
+    count++;
+    return { ...event, neighborhood };
+  });
+  return { events: placed, count };
 }
 
 /**

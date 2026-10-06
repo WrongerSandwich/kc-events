@@ -51,3 +51,11 @@ export function toNeighborhood(proposed: string | null, list: readonly string[])
   const offList = proposed !== null && listed === undefined && normalizeName(proposed) !== "";
   return { neighborhood: ELSEWHERE_IN_THE_METRO, unmappable: offList ? { proposed: proposed.trim() } : {} };
 }
+
+/**
+ * A stored neighborhood placed against today's list: the list's own spelling, or the catch-all for
+ * anything off it, such as a region name written before neighborhoods were grouped under regions.
+ */
+export function placeStored(neighborhood: string, list: readonly string[]): string {
+  return fromList(neighborhood, list) ?? ELSEWHERE_IN_THE_METRO;
+}
