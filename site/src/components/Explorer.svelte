@@ -79,11 +79,22 @@
         <p class="empty">No events to show right now.</p>
       {/if}
     {/if}
-    {#each groups as g (g.key)}
-      <h2 class="section-heading day">{g.heading}</h2>
-      {#each g.events as event (event.id)}
+    {#snippet rows(events: typeof groups[number]["events"])}
+      {#each events as event (event.id)}
         <ResultRow {event} {today} withDay={filters.sort === "venue"} />
       {/each}
+    {/snippet}
+    {#each groups as g (g.key)}
+      {#if g.collapsed}
+        <!-- A native disclosure, so it opens without JS and announces its state; closed, it is one line. -->
+        <details class="collapsed">
+          <summary><h2 class="heading">{g.heading}</h2> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
+          {@render rows(g.events)}
+        </details>
+      {:else}
+        <h2 class="section-heading day">{g.heading}</h2>
+        {@render rows(g.events)}
+      {/if}
     {/each}
   </section>
 </div>
@@ -101,6 +112,24 @@
   .export { font: inherit; font-size: var(--text-xs); color: var(--accent); background: none; border: 1px solid var(--rule); border-radius: var(--radius); padding: var(--space-1) var(--space-2); cursor: pointer; }
   .export[disabled] { opacity: 0.5; cursor: default; }
   .empty { color: var(--fg-muted); }
+  /* A collapsed group (On now with no when-filter): one raised line, a full tap target, with a chevron that turns
+     when it opens. Open, its line sticks under the result bar like a day heading, so it can be closed from anywhere. */
+  .collapsed { margin-top: var(--space-2); }
+  .collapsed summary {
+    display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0 var(--space-3);
+    background: var(--bg-raised); border: 1px solid var(--rule); border-radius: var(--radius);
+    color: var(--fg-muted); font-size: var(--text-sm); cursor: pointer; list-style: none;
+  }
+  .collapsed summary::-webkit-details-marker { display: none; }
+  .collapsed summary::before {
+    content: ""; width: 0.4em; height: 0.4em; margin-right: var(--space-1);
+    border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+    transform: rotate(-45deg); transition: transform 150ms var(--ease-out);
+  }
+  .collapsed summary:hover { border-color: var(--rule-strong); }
+  .collapsed .heading { display: inline; font-size: inherit; font-weight: var(--weight-medium); color: var(--fg); margin: 0; }
+  .collapsed[open] summary::before { transform: rotate(45deg); }
+  .collapsed[open] summary { position: sticky; top: var(--bar-height, var(--tap)); z-index: var(--z-sticky); margin-bottom: var(--space-1); }
   @media (max-width: 800px) {
     .explorer { grid-template-columns: 1fr; gap: var(--space-4); }
     .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; }

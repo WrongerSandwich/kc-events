@@ -17,6 +17,16 @@ describe("dateRange", () => {
     expect(dateRange({ preset: "30d" }, today)).toEqual({ from: today, to: "2026-11-04" });
     expect(dateRange({ from: "2026-10-09", to: "2026-10-11" }, today)).toEqual({ from: "2026-10-09", to: "2026-10-11" });
   });
+
+  it("turns This weekend into the coming Friday to Sunday, or today to Sunday once the weekend has begun", () => {
+    const weekend = { preset: "fri-sun" } as const;
+    expect(dateRange(weekend, "2026-10-05")).toEqual({ from: "2026-10-09", to: "2026-10-11" }); // Mon
+    expect(dateRange(weekend, "2026-10-08")).toEqual({ from: "2026-10-09", to: "2026-10-11" }); // Thu
+    expect(dateRange(weekend, "2026-10-09")).toEqual({ from: "2026-10-09", to: "2026-10-11" }); // Fri
+    expect(dateRange(weekend, "2026-10-10")).toEqual({ from: "2026-10-10", to: "2026-10-11" }); // Sat
+    expect(dateRange(weekend, "2026-10-11")).toEqual({ from: "2026-10-11", to: "2026-10-11" }); // Sun
+    expect(dateRange(weekend, "2026-10-28")).toEqual({ from: "2026-10-30", to: "2026-11-01" }); // Wed, into the DST Sunday
+  });
 });
 
 describe("matches", () => {

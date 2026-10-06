@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FILTERS, describeFilters, isDefault, parseQuery, toQuery, type Filters } from "../src/lib/query";
+import { DEFAULT_FILTERS, WHEN_LABELS, describeFilters, isDefault, parseQuery, toQuery, type Filters } from "../src/lib/query";
 
 const known = { kinds: ["music", "film", "theater/dance"], regions: ["Central KC", "Kansas City, Kansas", "Elsewhere in the metro"] };
 const parse = (s: string) => parseQuery(new URLSearchParams(s), known);
@@ -49,6 +49,15 @@ describe("query state", () => {
     const r = parse("when=2026-10-09..2026-10-11&sort=venue");
     expect(toQuery(r)).toBe("when=2026-10-09..2026-10-11&sort=venue");
     expect(parse(toQuery(r))).toEqual(r);
+  });
+
+  it("round-trips This weekend under its own key, leaving weekend as Through Sunday", () => {
+    expect(parse("when=fri-sun").when).toEqual({ preset: "fri-sun" });
+    expect(toQuery(parse("when=fri-sun"))).toBe("when=fri-sun");
+    expect(parse("when=weekend").when).toEqual({ preset: "weekend" });
+    expect(WHEN_LABELS["fri-sun"]).toBe("This weekend");
+    expect(WHEN_LABELS.weekend).toBe("Through Sunday");
+    expect(describeFilters({ ...DEFAULT_FILTERS, when: { preset: "fri-sun" } })).toEqual(["This weekend"]);
   });
 
   it("keeps the first of a repeated when only if it is valid", () => {

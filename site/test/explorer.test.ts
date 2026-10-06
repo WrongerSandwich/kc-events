@@ -54,6 +54,34 @@ describe("Explorer", () => {
     expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
   });
 
+  it("leads with dated days: On now is one closed line with its count, a native disclosure that opens to its rows", async () => {
+    render(Explorer);
+    const onNow = screen.getByRole("heading", { level: 2, name: "On now" }).closest("details")!;
+    expect(onNow).not.toHaveAttribute("open");
+    const summary = onNow.querySelector("summary")!;
+    expect(summary).toHaveTextContent("On now · 1 event");
+    expect(within(onNow).getByRole("article")).toHaveTextContent("Exhibition");
+    // Nothing but the disclosure comes before the first day's heading.
+    expect(onNow.compareDocumentPosition(screen.getByRole("heading", { level: 2, name: "Fri Oct 9" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await fireEvent.click(summary);
+    expect(onNow).toHaveAttribute("open");
+  });
+
+  it("keeps On now as an open day group under a when-filter", () => {
+    history.replaceState(null, "", "/explore?when=30d");
+    render(Explorer);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["On now", "Fri Oct 9", "Sat Oct 10", "Tue Oct 20"]);
+    expect(document.querySelector(".results details")).toBeNull();
+  });
+
+  it("offers This weekend, Friday to Sunday, beside Through Sunday", async () => {
+    render(Explorer);
+    await fireEvent.click(screen.getByRole("button", { name: "This weekend" }));
+    expect(location.search).toBe("?when=fri-sun");
+    expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film"]);
+    expect(screen.getByRole("button", { name: "Through Sunday" })).toHaveAttribute("aria-pressed", "false");
+  });
+
   it("filters by kind chip and writes the URL", async () => {
     render(Explorer);
     await fireEvent.click(screen.getByRole("button", { name: "film" }));

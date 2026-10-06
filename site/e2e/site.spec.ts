@@ -134,11 +134,35 @@ test("the region fallback places a region-named neighborhood", async ({ page }) 
 // The explorer's two row layouts: under day headings, and with the day first (the venue sort).
 const EXPLORER_SORTS = ["/explore", "/explore?sort=venue"];
 
+/** Opens the collapsed On now line, if there is one, so its rows are measured with the rest. */
+async function openOnNow(page: Page) {
+  const closed = page.locator(".results details:not([open]) > summary");
+  if ((await closed.count()) > 0) await closed.click();
+}
+
+for (const js of [true, false]) {
+  test(`bare /explore leads with a dated day, On now one closed line that opens, ${js ? "with" : "without"} JS`, async ({ browser }) => {
+    const context = await browser.newContext({ javaScriptEnabled: js });
+    const page = await context.newPage();
+    await on(page, BUILD_DAY, "/explore");
+    const results = page.getByRole("region", { name: "Events" });
+    // On now keeps its heading inside the closed line; the first heading outside it is a day.
+    await expect(results.locator(":scope > h2").first()).toHaveText("Tue Oct 6");
+    const summary = results.locator("details > summary");
+    await expect(summary).toHaveText("On now · 2 events");
+    await expect(results.getByRole("heading", { name: "Closing exhibition" })).toBeHidden();
+    await summary.click();
+    await expect(results.getByRole("heading", { name: "Closing exhibition" })).toBeVisible();
+    await context.close();
+  });
+}
+
 for (const width of [1280, 1440]) {
   for (const path of EXPLORER_SORTS) {
     test(`an unflagged explorer row is one line, at most 28 px tall, at ${width} px on ${path}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await on(page, BUILD_DAY, path);
+      await openOnNow(page);
       const rows = page.locator("article.row:not(.flagged)");
       await expect(rows.first()).toBeVisible();
       for (const row of await rows.all()) {
@@ -156,6 +180,7 @@ for (const width of [1024, 1280, 1440]) {
     test(`no explorer row truncates its date, and every row shows its neighborhood, at ${width} px on ${path}`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
       await on(page, BUILD_DAY, path);
+      await openOnNow(page);
       await expect(page.locator("article.row").first()).toBeVisible();
       const rows = await page.locator("article.row").evaluateAll((els) =>
         els.map((row) => {
@@ -184,6 +209,7 @@ for (const width of [1024, 1280, 1440]) {
 
 test("explorer rows read their dates relative to the day headings and the sort", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore");
+  await openOnNow(page);
   const row = (title: string) => page.locator("article.row", { has: page.getByRole("heading", { name: title }) }).locator(".when");
   await expect(row("Closing exhibition")).toHaveText("Closes Sun Oct 11");
   await expect(row("Artboards")).toHaveText("Closes Thu Dec 31");

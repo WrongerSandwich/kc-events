@@ -9,6 +9,12 @@ export function dateRange(when: When, today: string): { from: string; to: string
   switch (when.preset) {
     case "all": return undefined;
     case "today": return { from: today, to: today };
+    case "fri-sun": {
+      // Friday is two days before the coming Sunday; once it has come, the weekend runs from today.
+      const sunday = comingSunday(today);
+      const friday = addDays(sunday, -2);
+      return { from: today > friday ? today : friday, to: sunday };
+    }
     case "weekend": return { from: today, to: comingSunday(today) };
     case "7d": return { from: today, to: addDays(today, 7) };
     case "30d": return { from: today, to: addDays(today, 30) };
