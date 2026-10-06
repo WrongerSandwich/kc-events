@@ -19,7 +19,8 @@
   </div>
   <span class="where" title={`${event.venue} · ${event.neighborhood}`}><span class="venue">{event.venue}</span><span class="hood">{` · ${event.neighborhood}`}</span></span>
   <KindChip kind={event.kind} />
-  <a class="host" href={event.primaryUrl} title={hostOf(event.primaryUrl)}>{hostOf(event.primaryUrl)}</a>
+  <!-- Out of the Tab order, so a row is two stops (title, Save); the event page links the source too. -->
+  <a class="host" href={event.primaryUrl} title={hostOf(event.primaryUrl)} tabindex="-1">{hostOf(event.primaryUrl)}</a>
   <span class="verified"><span aria-hidden="true">✓ {verifiedOn}</span><span class="visually-hidden">Verified {verifiedOn}</span></span>
   <SaveButton id={event.id} title={event.title} large />
   {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}

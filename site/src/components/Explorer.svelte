@@ -18,12 +18,12 @@
   let today = $state(meta.buildToday);
   let filters = $state<Filters>(DEFAULT_FILTERS);
   let saved = $state<ReadonlySet<string>>(new Set());
-  // Open in the server HTML so no-JS readers see the controls; on phones it closes after hydration so the count
-  // and the results are on screen on arrival.
+  // Open in the server HTML so no-JS readers see the controls; on phones it closes after hydration so the results
+  // are on screen on arrival.
   let sheetOpen = $state(true);
   // Export needs the browser; the server-rendered button stays disabled until mount.
   let mounted = $state(false);
-  // The result bar's height, so the sticky day headings sit just under it even when "Clear filters" wraps it.
+  // The bar's height, so the sticky day headings sit just under it however it wraps (search takes a line on phones).
   let barHeight = $state(0);
 
   onMount(() => {
@@ -48,6 +48,17 @@
 
   let groups = $derived(groupResults(events, filters, today, saved));
   let count = $derived(groups.reduce((n, g) => n + g.events.length, 0));
+  let countText = $derived(`${count} ${count === 1 ? "event" : "events"}`);
+  // The count on screen follows every keystroke; the live region waits until input settles, so a screen reader hears
+  // one count per search, not one per letter. Every change restarts the wait, even one that leaves the count alone.
+  const SETTLE_MS = 500;
+  let announced = $state(countText);
+  $effect(() => {
+    void filters;
+    const text = countText;
+    const settle = setTimeout(() => { announced = text; }, SETTLE_MS);
+    return () => clearTimeout(settle);
+  });
   let active = $derived(describeFilters(filters));
   let exportable = $derived(groups.flatMap((g) => g.events).filter(isDated));
 
@@ -57,7 +68,18 @@
   }
 </script>
 
-<div class="explorer">
+<!-- The bar comes first so search is the explorer's first Tab stop, and its skip link the second; the grid puts the
+     filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
+<div class="explorer" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
+  <div class="bar" bind:offsetHeight={barHeight}>
+    <label class="search"><span class="visually-hidden">Search</span><input type="search" value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} placeholder="Search title, venue, neighborhood, why" /></label>
+    <a class="skip" href="#results">Skip to results</a>
+    <p class="count" aria-hidden="true">{countText}</p>
+    <p role="status" class="visually-hidden">{announced}</p>
+    <button type="button" class="export" disabled={!mounted || exportable.length === 0} onclick={exportView}>Export this view</button>
+    {#if !isDefault(filters)}<button type="button" class="clear" onclick={() => change(DEFAULT_FILTERS)}>Clear filters</button>{/if}
+  </div>
+
   <aside class="rail" aria-label="Filters">
     <details class="sheet" bind:open={sheetOpen}>
       <summary>Filters{#if active.length > 0}{` (${active.length})`}{/if}</summary>
@@ -65,13 +87,8 @@
     </details>
   </aside>
 
-  <section class="results" aria-label="Events" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
-    <div class="bar" bind:offsetHeight={barHeight}>
-      <p role="status" aria-live="polite" class="count">{count} {count === 1 ? "event" : "events"}</p>
-      <button type="button" class="export" disabled={!mounted || exportable.length === 0} onclick={exportView}>Export this view</button>
-      {#if !isDefault(filters)}<button type="button" class="clear" onclick={() => change(DEFAULT_FILTERS)}>Clear filters</button>{/if}
-    </div>
-
+  <!-- Focusable only through the skip link. -->
+  <section class="results" id="results" tabindex="-1" aria-label="Events">
     {#if count === 0}
       {#if active.length > 0}
         <p class="empty">No events match <strong>{active.join(" · ")}</strong>. <button type="button" class="link" onclick={() => change(DEFAULT_FILTERS)}>Clear them</button> to see everything.</p>
@@ -100,20 +117,39 @@
 </div>
 
 <style>
-  /* A narrow rail, so result rows keep room for their titles. */
-  .explorer { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+  /* A narrow rail, so result rows keep room for their titles. The bar sits over the results, the rail beside both. */
+  .explorer {
+    display: grid; grid-template-columns: 12rem minmax(0, 1fr); grid-template-areas: "rail bar" "rail results";
+    gap: 0 var(--space-6); align-items: start;
+  }
+  .rail { grid-area: rail; }
+  .results { grid-area: results; scroll-margin-top: var(--bar-height, var(--tap)); }
+  /* The results take focus only from the skip link; the next Tab lands on the first row, which shows the ring. */
+  .results:focus { outline: none; }
   /* Sticky beside the results, scrolling on its own when it is taller than the window (a 768 px laptop). */
   .rail { position: sticky; top: var(--space-4); max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto; padding: var(--space-1); margin: calc(-1 * var(--space-1)); }
   /* (The padding keeps focus rings on the rail's edge from being clipped by the scroll box.) */
   .sheet summary { display: none; }
-  .bar { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3); position: sticky; top: 0; background: var(--bg); padding: var(--space-2) 0; z-index: var(--z-bar); }
+  /* Sticky within the whole explorer, not just its grid row, so it stays over the results as they scroll. */
+  .bar { grid-area: bar; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); position: sticky; top: 0; background: var(--bg); padding: var(--space-2) 0; z-index: var(--z-bar); }
+  .search { flex: 1 1 14rem; max-width: 24rem; }
+  /* The raised surface, as in the rail: Chromium's dark field is #3b3b3b, where its placeholder grey is about 2.4:1. */
+  .search input { width: 100%; font-size: var(--text-sm); padding: var(--space-1) var(--space-2); background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
+  .search input::placeholder { color: var(--fg-faint); opacity: 1; }
+  /* Off screen until focused, then just under the search field. */
+  .skip {
+    position: absolute; left: 0; top: 100%; z-index: var(--z-skip); transform: translateY(-200vh);
+    background: var(--bg-raised); color: var(--fg); border: 1px solid var(--rule); border-radius: var(--radius);
+    padding: var(--space-2) var(--space-3); font-size: var(--text-sm);
+  }
+  .skip:focus { transform: none; }
   .count { margin: 0 auto 0 0; color: var(--fg-muted); font-size: var(--text-sm); }
   .clear, .link { font: inherit; font-size: var(--text-sm); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
   .export { font: inherit; font-size: var(--text-xs); color: var(--accent); background: none; border: 1px solid var(--rule); border-radius: var(--radius); padding: var(--space-1) var(--space-2); cursor: pointer; }
   .export[disabled] { opacity: 0.5; cursor: default; }
   .empty { color: var(--fg-muted); }
   /* A collapsed group (On now with no when-filter): one raised line, a full tap target, with a chevron that turns
-     when it opens. Open, its line sticks under the result bar like a day heading, so it can be closed from anywhere. */
+     when it opens. Open, its line sticks under the bar like a day heading, so it can be closed from anywhere. */
   .collapsed { margin-top: var(--space-2); }
   .collapsed summary {
     display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0 var(--space-3);
@@ -131,7 +167,9 @@
   .collapsed[open] summary::before { transform: rotate(45deg); }
   .collapsed[open] summary { position: sticky; top: var(--bar-height, var(--tap)); z-index: var(--z-sticky); margin-bottom: var(--space-1); }
   @media (max-width: 800px) {
-    .explorer { grid-template-columns: 1fr; gap: var(--space-4); }
+    .explorer { grid-template-columns: minmax(0, 1fr); grid-template-areas: "bar" "rail" "results"; gap: var(--space-2); }
+    .search { flex-basis: 100%; max-width: none; }
+    .search input { min-height: var(--tap); font-size: var(--text-md); }
     .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; }
     .sheet summary { display: list-item; cursor: pointer; font-weight: var(--weight-medium); }
     .sheet:not([open]) summary { margin-bottom: var(--space-2); }

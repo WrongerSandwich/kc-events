@@ -253,6 +253,37 @@ test("from 800 px a row shows the host and the verified stamp again", async ({ p
   await expect(row.locator(".verified")).toBeVisible();
 });
 
+// The keyboard path: past the site header, search within three presses, then a skip link over the filters to the rows.
+for (const width of [1280, 390]) {
+  test(`the explorer's keyboard path at ${width} px: search, skip to results, two stops a row`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await on(page, BUILD_DAY, "/explore");
+    await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+    const inHeader = () => page.evaluate(() => document.activeElement === document.body || !!document.activeElement?.closest("header.site-header"));
+    do await page.keyboard.press("Tab"); while (await inHeader());
+    let presses = 1;
+    while (!(await page.getByRole("searchbox", { name: "Search" }).evaluate((el) => el === document.activeElement)) && presses < 3) {
+      await page.keyboard.press("Tab");
+      presses++;
+    }
+    await expect(page.getByRole("searchbox", { name: "Search" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    const skip = page.getByRole("link", { name: "Skip to results" });
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeInViewport();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("region", { name: "Events" })).toBeFocused();
+    // From the results: On now's line, then each row's title and Save, with the host left out.
+    await page.keyboard.press("Tab");
+    await expect(page.locator(".results details > summary")).toBeFocused();
+    const first = page.locator(".results > article.row").first();
+    for (const stop of [first.locator("h3 a"), first.locator("button.save"), page.locator(".results > article.row").nth(1).locator("h3 a")]) {
+      await page.keyboard.press("Tab");
+      await expect(stop).toBeFocused();
+    }
+  });
+}
+
 test("a don't-miss row keeps its why-line on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await on(page, BUILD_DAY, "/explore");

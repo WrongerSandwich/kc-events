@@ -22,6 +22,10 @@ vi.mock("../src/generated/meta", () => ({
 import Explorer from "../src/components/Explorer.svelte";
 
 const rows = () => screen.getAllByRole("article").map((a) => within(a).getByRole("heading").textContent);
+// The live count is announced once input settles (Explorer's SETTLE_MS, 500 ms), so read it after the wait.
+const announced = () => { vi.advanceTimersByTime(500); flushSync(); return screen.getByRole("status"); };
+// What Tab reaches, in order: no tabindex="-1", nothing disabled.
+const tabStops = (root: ParentNode) => [...root.querySelectorAll<HTMLElement>("a[href], button, input, select, summary")].filter((el) => el.getAttribute("tabindex") !== "-1" && !(el as HTMLButtonElement).disabled);
 
 describe("Explorer", () => {
   beforeEach(() => {
@@ -47,7 +51,7 @@ describe("Explorer", () => {
 
   it("renders every dated event grouped by day with the count, and no recurring events", () => {
     render(Explorer);
-    expect(screen.getByRole("status")).toHaveTextContent("4 events");
+    expect(announced()).toHaveTextContent("4 events");
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["On now", "Fri Oct 9", "Sat Oct 10", "Tue Oct 20"]);
     expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film", "Later talk"]);
     expect(screen.queryByText("Trivia")).toBeNull();
@@ -88,7 +92,7 @@ describe("Explorer", () => {
     expect(rows()).toEqual(["Saturday film"]);
     expect(screen.getByRole("button", { name: "film" })).toHaveAttribute("aria-pressed", "true");
     expect(location.search).toBe("?kind=film");
-    expect(screen.getByRole("status")).toHaveTextContent("1 event");
+    expect(announced()).toHaveTextContent("1 event");
   });
 
   it("reads its state from the URL on mount", () => {
@@ -163,7 +167,7 @@ describe("Explorer", () => {
     expect(rows()).toEqual(["Saturday film"]);
     await fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(rows()).toHaveLength(4);
-    await fireEvent.click(screen.getByRole("switch", { name: "Include always-there" }));
+    await fireEvent.click(screen.getByRole("checkbox", { name: "Include always-there" }));
     expect(screen.getByText("Trivia")).toBeInTheDocument();
     expect(location.search).toBe("?recurring=1");
   });
@@ -172,7 +176,7 @@ describe("Explorer", () => {
     render(Explorer);
     await fireEvent.click(screen.getByRole("button", { name: "film" }));
     await fireEvent.input(screen.getByRole("searchbox"), { target: { value: "zzz" } });
-    expect(screen.getByRole("status")).toHaveTextContent("0 events");
+    expect(announced()).toHaveTextContent("0 events");
     const empty = screen.getByText(/No events match/);
     expect(empty).toHaveTextContent("No events match film · “zzz”.");
     await fireEvent.click(within(empty).getByRole("button", { name: "Clear them" }));
@@ -183,7 +187,52 @@ describe("Explorer", () => {
   it("shows only saved events when asked", async () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(["c"]));
     render(Explorer);
-    await fireEvent.click(screen.getByRole("switch", { name: "Saved only" }));
+    await fireEvent.click(screen.getByRole("checkbox", { name: "Saved only" }));
     expect(rows()).toEqual(["Later talk"]);
+  });
+
+  it("leads with search, then a link that skips the filters to the results", () => {
+    const { container } = render(Explorer);
+    const [first, second] = tabStops(container);
+    expect(first).toBe(screen.getByRole("searchbox", { name: "Search" }));
+    expect(second).toBe(screen.getByRole("link", { name: "Skip to results" }));
+    expect(second).toHaveAttribute("href", "#results");
+    const results = container.querySelector("#results")!;
+    expect(results).toBe(screen.getByRole("region", { name: "Events" }));
+    // Focusable only by the link, so it is not a Tab stop of its own.
+    expect(results).toHaveAttribute("tabindex", "-1");
+    // Search is outside the phone's filter sheet.
+    expect(screen.getByRole("searchbox").closest("details")).toBeNull();
+  });
+
+  it("gives every row at most two Tab stops, its title and Save, with the host still a link", () => {
+    render(Explorer);
+    for (const row of screen.getAllByRole("article")) {
+      expect(tabStops(row).length).toBeLessThanOrEqual(2);
+      expect(row.querySelector("a.host")).toHaveAttribute("href");
+    }
+  });
+
+  it("shows the count at once but announces it once, when typing settles", async () => {
+    render(Explorer);
+    const status = announced();
+    expect(status).toHaveTextContent("4 events");
+    const changes = new MutationObserver(() => {});
+    changes.observe(status, { childList: true, characterData: true, subtree: true });
+    const search = screen.getByRole("searchbox");
+    for (const q of ["f", "fr", "fri", "frid", "frida"]) {
+      await fireEvent.input(search, { target: { value: q } });
+      vi.advanceTimersByTime(150);
+      flushSync();
+    }
+    expect(rows()).toEqual(["Friday jazz"]);
+    expect(document.querySelector(".count")).toHaveTextContent("1 event");
+    expect(status).toHaveTextContent("4 events");
+    expect(changes.takeRecords()).toHaveLength(0);
+    vi.advanceTimersByTime(500);
+    flushSync();
+    expect(status).toHaveTextContent("1 event");
+    expect(changes.takeRecords()).toHaveLength(1);
+    changes.disconnect();
   });
 });
