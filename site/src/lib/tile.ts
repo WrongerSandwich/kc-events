@@ -1,4 +1,4 @@
-import { formatDay, formatShort, formatTime, isDateOnly, localDate } from "./dates";
+import { dayOfMonth, formatDay, formatShort, formatTime, isDateOnly, localDate } from "./dates";
 import { firstDay, isMultiDay, isUnderway, lastDay } from "./events";
 import { closingLine } from "./horizon";
 import type { PublishedEvent } from "./types";
@@ -11,7 +11,7 @@ import type { PublishedEvent } from "./types";
  */
 export type Tile = { top: string; day: string; month: string; detail?: string; label: string; today?: true; started?: true };
 
-const parts = (date: string) => ({ day: String(Number(date.slice(8, 10))), month: formatShort(date).split(" ")[0]! });
+const parts = (date: string) => ({ day: String(dayOfMonth(date)), month: formatShort(date).split(" ")[0]! });
 
 /**
  * `now` is the visitor's wall clock in the site's zone (nowIn's form), known only once the page runs in a browser.

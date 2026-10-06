@@ -47,6 +47,11 @@ export function addDays(date: string, n: number): string {
   return fromUtc(utc(date) + n * DAY_MS);
 }
 
+/** 9 for "2026-10-09". */
+export function dayOfMonth(date: string): number {
+  return parts(date)[2];
+}
+
 /** 0 is Sunday, as in Date. */
 export function weekday(date: string): number {
   return new Date(utc(date)).getUTCDay();

@@ -1,4 +1,7 @@
+// @vitest-environment node
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { pngSource } from "../src/build/png-source";
 import { faviconSvg } from "../src/lib/favicon";
 
 describe("faviconSvg", () => {
@@ -22,5 +25,12 @@ describe("faviconSvg", () => {
     expect(() => faviconSvg(0)).toThrow();
     expect(() => faviconSvg(32)).toThrow();
     expect(() => faviconSvg(1.5)).toThrow();
+  });
+});
+
+describe("the committed apple-touch-icon", () => {
+  it("was drawn from the current blank tile (else rerun scripts/apple-touch-icon.ts)", () => {
+    const png = readFileSync(new URL("../public/apple-touch-icon.png", import.meta.url));
+    expect(pngSource(png)).toBe(faviconSvg());
   });
 });

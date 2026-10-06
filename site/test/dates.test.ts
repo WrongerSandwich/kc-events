@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidDate, addDays, comingSunday, formatDay, formatLong, formatRange, formatShort, formatTime, isDateOnly, localDate, nowIn, todayIn, weekday } from "../src/lib/dates";
+import { isValidDate, addDays, comingSunday, dayOfMonth, formatDay, formatLong, formatRange, formatShort, formatTime, isDateOnly, localDate, nowIn, todayIn, weekday } from "../src/lib/dates";
 import { inTimeZone } from "./fixtures/time-zone";
 
 describe("dates", () => {
@@ -14,6 +14,11 @@ describe("dates", () => {
     expect(addDays("2026-12-31", 1)).toBe("2027-01-01");
     expect(addDays("2026-10-05", 14)).toBe("2026-10-19");
     expect(addDays("2026-10-05", -1)).toBe("2026-10-04");
+  });
+
+  it("knows the day of the month", () => {
+    expect(dayOfMonth("2026-10-09")).toBe(9);
+    expect(dayOfMonth("2026-10-31")).toBe(31);
   });
 
   it("knows the weekday and the coming Sunday", () => {
