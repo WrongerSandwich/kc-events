@@ -40,6 +40,13 @@ describe("groupResults", () => {
     expect(collapsed({ when: { from: "2026-10-05", to: "2026-10-31" } })[0]).toEqual(["on-now", false]);
   });
 
+  it("leaves On now open when no dated day follows it, so a filter never shows just a closed line", () => {
+    expect(groupResults([onNow, onNowSooner, trivia], f({ recurring: true }), today, none).map((g) => [g.key, g.collapsed])).toEqual([
+      ["on-now", false],
+      ["always-there", false],
+    ]);
+  });
+
   it("lists a multi-day one-off under On now while underway, and under its opening day before", () => {
     const groups = groupResults([festNow, festLater], f(), today, none);
     expect(groups.map((g) => [g.key, g.events.map((e) => e.id)])).toEqual([

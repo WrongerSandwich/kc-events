@@ -79,20 +79,21 @@
         <p class="empty">No events to show right now.</p>
       {/if}
     {/if}
+    {#snippet rows(events: typeof groups[number]["events"])}
+      {#each events as event (event.id)}
+        <ResultRow {event} {today} withDay={filters.sort === "venue"} />
+      {/each}
+    {/snippet}
     {#each groups as g (g.key)}
       {#if g.collapsed}
         <!-- A native disclosure, so it opens without JS and announces its state; closed, it is one line. -->
         <details class="collapsed">
-          <summary><span class="heading">{g.heading}</span> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
-          {#each g.events as event (event.id)}
-            <ResultRow {event} {today} withDay={filters.sort === "venue"} />
-          {/each}
+          <summary><h2 class="heading">{g.heading}</h2> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
+          {@render rows(g.events)}
         </details>
       {:else}
         <h2 class="section-heading day">{g.heading}</h2>
-        {#each g.events as event (event.id)}
-          <ResultRow {event} {today} withDay={filters.sort === "venue"} />
-        {/each}
+        {@render rows(g.events)}
       {/if}
     {/each}
   </section>
@@ -126,7 +127,7 @@
     transform: rotate(-45deg); transition: transform 150ms var(--ease-out);
   }
   .collapsed summary:hover { border-color: var(--rule-strong); }
-  .collapsed .heading { color: var(--fg); font-weight: var(--weight-medium); }
+  .collapsed .heading { display: inline; font-size: inherit; font-weight: var(--weight-medium); color: var(--fg); margin: 0; }
   .collapsed[open] summary::before { transform: rotate(45deg); }
   .collapsed[open] summary { position: sticky; top: var(--bar-height, var(--tap)); z-index: var(--z-sticky); margin-bottom: var(--space-1); }
   @media (max-width: 800px) {

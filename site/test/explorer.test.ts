@@ -48,7 +48,7 @@ describe("Explorer", () => {
   it("renders every dated event grouped by day with the count, and no recurring events", () => {
     render(Explorer);
     expect(screen.getByRole("status")).toHaveTextContent("4 events");
-    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Fri Oct 9", "Sat Oct 10", "Tue Oct 20"]);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["On now", "Fri Oct 9", "Sat Oct 10", "Tue Oct 20"]);
     expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film", "Later talk"]);
     expect(screen.queryByText("Trivia")).toBeNull();
     expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
@@ -56,7 +56,7 @@ describe("Explorer", () => {
 
   it("leads with dated days: On now is one closed line with its count, a native disclosure that opens to its rows", async () => {
     render(Explorer);
-    const onNow = screen.getByText("On now").closest("details")!;
+    const onNow = screen.getByRole("heading", { level: 2, name: "On now" }).closest("details")!;
     expect(onNow).not.toHaveAttribute("open");
     const summary = onNow.querySelector("summary")!;
     expect(summary).toHaveTextContent("On now · 1 event");

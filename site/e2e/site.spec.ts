@@ -146,7 +146,8 @@ for (const js of [true, false]) {
     const page = await context.newPage();
     await on(page, BUILD_DAY, "/explore");
     const results = page.getByRole("region", { name: "Events" });
-    await expect(results.getByRole("heading", { level: 2 }).first()).toHaveText("Tue Oct 6");
+    // On now keeps its heading inside the closed line; the first heading outside it is a day.
+    await expect(results.locator(":scope > h2").first()).toHaveText("Tue Oct 6");
     const summary = results.locator("details > summary");
     await expect(summary).toHaveText("On now · 2 events");
     await expect(results.getByRole("heading", { name: "Closing exhibition" })).toBeHidden();

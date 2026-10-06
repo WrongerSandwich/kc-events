@@ -62,8 +62,9 @@ export function groupResults(events: PublishedEvent[], f: Filters, today: string
   const always = hits.filter((e) => !isDated(e)).sort((a, b) => a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title));
 
   const groups: ResultGroup[] = [];
-  const unbounded = "preset" in f.when && f.when.preset === "all";
-  if (onNow.length > 0) groups.push({ key: "on-now", heading: "On now", events: onNow, collapsed: unbounded });
+  const noWhenFilter = "preset" in f.when && f.when.preset === "all";
+  // Collapsed only when dated days follow it to lead instead; alone, a closed line would hide every result.
+  if (onNow.length > 0) groups.push({ key: "on-now", heading: "On now", events: onNow, collapsed: noWhenFilter && byDay.size > 0 });
   for (const day of [...byDay.keys()].sort()) groups.push({ key: day, heading: formatDay(day), events: byDay.get(day)!.sort(byStartThenTitle), collapsed: false });
   if (always.length > 0) groups.push({ key: "always-there", heading: "Always there", events: always, collapsed: false });
   return groups;
