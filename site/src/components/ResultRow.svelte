@@ -21,24 +21,50 @@
   <KindChip kind={event.kind} />
   <a class="host" href={event.primaryUrl} title={hostOf(event.primaryUrl)}>{hostOf(event.primaryUrl)}</a>
   <span class="verified"><span aria-hidden="true">✓ {verifiedOn}</span><span class="visually-hidden">Verified {verifiedOn}</span></span>
-  <SaveButton id={event.id} title={event.title} />
+  <SaveButton id={event.id} title={event.title} large />
   {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
 </article>
 
 <style>
-  /* Phones and tablets: the row wraps; the date line, the title, the details, then the why-line. */
-  .row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 var(--space-2); padding: var(--space-1) 0; border-bottom: 1px solid var(--rule); font-size: var(--text-sm); line-height: var(--leading-tight); }
-  .when { flex-basis: 100%; color: var(--fg-muted); font-size: var(--text-xs); }
-  /* The title gets its own line, so the details run under it rather than squeezing it into a narrow column. */
-  .title { flex: 1 1 100%; min-width: 0; }
+  /* Phones and tablets: every row has one shape. The date line, then the title, then the kind chip leading the venue
+     and neighborhood, so the chip sits at the same place on every row; Save spans those lines at the row's end, at its
+     44 px card size; the why-line runs full width under them. */
+  .row {
+    display: grid; align-items: center; gap: 2px var(--space-2); padding: var(--space-1) 0;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "when when save" "title title save" "chip where save" "why why why";
+    border-bottom: 1px solid var(--rule); font-size: var(--text-sm); line-height: var(--leading-tight);
+  }
+  .when { grid-area: when; color: var(--fg-muted); font-size: var(--text-xs); }
+  .title { grid-area: title; min-width: 0; }
   .title h3 { display: inline; font-size: var(--text-md); font-weight: var(--weight-medium); margin: 0; }
   .title a { color: inherit; text-decoration: none; }
   .title a:hover { text-decoration: underline; }
   .mark { color: var(--accent); margin-left: var(--space-1); font-size: var(--text-xs); }
   .where, .host, .verified { font-size: var(--text-xs); color: var(--fg-faint); }
-  .why { flex-basis: 100%; margin: 0; font-size: var(--text-sm); color: var(--fg); }
-  /* The save button is slimmer in a row than on a card; button.save outranks SaveButton's own .save rule. */
-  .row :global(button.save) { padding-block: 0; }
+  .where { grid-area: where; }
+  /* The chip is KindChip's element, so the row reaches it with :global. */
+  .row :global(.chip) { grid-area: chip; }
+  .host { grid-area: host; }
+  .verified { grid-area: verified; }
+  .row :global(button.save) { grid-area: save; }
+  .why { grid-area: why; margin: 0; font-size: var(--text-sm); color: var(--fg); }
+  .where, .host { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  /* Venue and neighborhood give way together, in proportion to their length; from 1024 px only the venue does. */
+  .where { display: flex; }
+  .venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .hood { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
+  /* Below 800 px the host and the verified stamp leave the row; the event page keeps both. */
+  .host, .verified { display: none; }
+  @media (min-width: 800px) {
+    .host, .verified { display: revert; }
+    /* A long host gives way, its full name in the title. */
+    .host { max-width: 8rem; }
+    .row {
+      grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+      grid-template-areas: "when when when when save" "title title title title save" "chip where host verified save" "why why why why why";
+    }
+  }
 
   /* 1024-1279 px: two lines, the date and the title on the first, the details under the title. */
   /* The date column holds the widest dated line on one line: "Runs through Mon May 20", 171 px at this size; with the
@@ -47,28 +73,20 @@
   @media (min-width: 1024px) {
     .row {
       --when-width: 11.25rem;
-      display: grid; align-items: center; gap: 0 var(--space-2); padding: var(--space-1) 0;
+      gap: 0 var(--space-2);
       grid-template-columns: var(--when-width) minmax(0, 1fr) auto auto auto auto;
       grid-template-areas: "when title title title title title" ". where chip host verified save" ". why why why why why";
     }
     .row.with-day { --when-width: 15.5rem; }
-    .when { grid-area: when; font-size: var(--text-sm); }
-    .title { grid-area: title; }
-    .where { grid-area: where; }
-    /* The chip fits every kind name ("outdoors/community" is the widest); a long host gives way, its full name in the title. */
-    .chip { grid-area: chip; max-width: 8.5rem; }
-    .host { grid-area: host; max-width: 8rem; }
-    .verified { grid-area: verified; }
-    .row :global(button.save) { grid-area: save; }
-    .why { grid-area: why; padding-bottom: 2px; }
+    .when { font-size: var(--text-sm); }
+    /* The save button is slimmer in a row than on a card; button.save outranks SaveButton's own .save and .large rules. */
+    .row :global(button.save) { min-height: auto; min-width: auto; padding: 0 var(--space-2); font-size: var(--text-xs); }
+    .why { padding-bottom: 2px; }
     /* An always-there schedule phrase may run longer than any dated line, so it wraps, and those rows are exempt from
        the one-line rule. */
     .row:not(.always) .when { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .title, .where, .chip, .host { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-    /* The venue gives way before the neighborhood, so the neighborhood stays visible on every row. */
-    .where { display: flex; }
-    .venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    .hood { flex: none; white-space: pre; }
+    .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hood { flex: none; overflow: visible; }
     /* base.css gives headings text-wrap: balance, which resets the inherited nowrap on the h3 itself. */
     .title h3 { white-space: nowrap; }
   }
