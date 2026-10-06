@@ -25,7 +25,7 @@ describe("StalenessBanner", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
-  it("is still absent on the ninth day and appears on the tenth", async () => {
+  it("is fresh on the ninth day after the run and stale on the tenth", async () => {
     vi.useFakeTimers({ now: new Date("2026-10-14T12:00:00Z") }); // 9 days
     const day9 = render(StalenessBanner);
     await tick();
@@ -48,7 +48,7 @@ describe("StalenessBanner", () => {
     target.remove();
   });
 
-  it("appears after nine days with the run date in it", async () => {
+  it("says when it was last researched once stale, with the run date in it", async () => {
     vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") }); // 10 days
     render(StalenessBanner);
     await tick();

@@ -84,8 +84,7 @@ describe("loadPublished", () => {
         vi.stubEnv("SITE_TODAY", "2026-10-12");
         expect(loadPublished({ ...files, today: "2026-10-05" }).buildToday).toBe("2026-10-05");
         expect(loadPublished(files).buildToday).toBe("2026-10-12");
-        vi.stubEnv("SITE_TODAY", "");
-        delete process.env.SITE_TODAY;
+        vi.stubEnv("SITE_TODAY", undefined);
         expect(loadPublished(files).buildToday).toBe("2026-10-19");
       } finally {
         vi.unstubAllEnvs();

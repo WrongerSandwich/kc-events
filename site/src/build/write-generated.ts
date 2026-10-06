@@ -7,7 +7,7 @@ import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadPublished } from "./load-dataset.ts";
 
-export function writeGenerated(opts: { datasetPath: string; configPath: string; outDir: string; publicDir: string; today?: string }): { events: number; buildToday: string } {
+export function writeGenerated(opts: { datasetPath: string; configPath: string; outDir: string; publicDir: string; today?: string }): { eventCount: number; buildToday: string } {
   const { events, ...meta } = loadPublished({ datasetPath: opts.datasetPath, configPath: opts.configPath, ...(opts.today === undefined ? {} : { today: opts.today }) });
 
   mkdirSync(opts.outDir, { recursive: true });
@@ -18,5 +18,5 @@ export function writeGenerated(opts: { datasetPath: string; configPath: string; 
 
   mkdirSync(opts.publicDir, { recursive: true });
   copyFileSync(opts.datasetPath, join(opts.publicDir, "events.json"));
-  return { events: events.length, buildToday: meta.buildToday };
+  return { eventCount: events.length, buildToday: meta.buildToday };
 }

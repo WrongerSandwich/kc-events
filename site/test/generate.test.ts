@@ -34,7 +34,7 @@ describe("writeGenerated", () => {
 
     const result = writeGenerated({ datasetPath, configPath, outDir, publicDir, today: "2026-10-05" });
 
-    expect(result).toEqual({ events: 2, buildToday: "2026-10-05" });
+    expect(result).toEqual({ eventCount: 2, buildToday: "2026-10-05" });
     const meta = exported(join(outDir, "meta.ts"));
     expect(meta.buildToday).toBe("2026-10-05");
     expect(meta).not.toHaveProperty("events");

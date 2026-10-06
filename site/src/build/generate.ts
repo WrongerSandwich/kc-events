@@ -10,10 +10,10 @@ const root = new URL("../../../", here);
 const siteDir = new URL("../../", here);
 const datasetPath = fileURLToPath(new URL(process.env.SITE_DATASET ?? "data/events.json", process.env.SITE_DATASET ? siteDir : root));
 
-const { events, buildToday } = writeGenerated({
+const { eventCount, buildToday } = writeGenerated({
   datasetPath,
   configPath: fileURLToPath(new URL("research.config.yaml", root)),
   outDir: fileURLToPath(new URL("../generated/", here)),
   publicDir: fileURLToPath(new URL("public/", siteDir)),
 });
-console.log(`site: wrote ${events} events for ${buildToday}`);
+console.log(`site: wrote ${eventCount} events for ${buildToday}`);

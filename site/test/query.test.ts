@@ -74,6 +74,15 @@ describe("query state", () => {
     }
   });
 
+  it("reads dirty input as the defaults, or the valid part of it", () => {
+    expect(parse("region=Central%20KC,Lawrence&kind=music")).toEqual({ ...DEFAULT_FILTERS, kinds: ["music"] });
+    expect(parse("kind=opera&region=mars&when=soon")).toEqual(DEFAULT_FILTERS);
+    expect(parse("when=2026-10-11..2026-10-09").when).toEqual({ from: "2026-10-09", to: "2026-10-11" });
+    expect(parse("when=2026-13-45..2026-10-11&q=%20jazz%20")).toEqual({ ...DEFAULT_FILTERS, q: "jazz" });
+    expect(parse("kind=music&kind=music&region=central-kc&region=central-kc")).toEqual({ ...DEFAULT_FILTERS, kinds: ["music"], regions: ["Central KC"] });
+    expect(parse("when=2026-10-09..2026-10-10..2026-10-11&sort=price&dontmiss=yes")).toEqual(DEFAULT_FILTERS);
+  });
+
   it("trims and drops a blank search", () => {
     expect(parse("q=%20%20").q).toBe("");
     expect(toQuery({ ...DEFAULT_FILTERS, q: "  " }, known)).toBe("");
