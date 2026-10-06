@@ -146,9 +146,19 @@ describe("Explorer", () => {
     expect(within(bar).getAllByRole("button", { name: /^Remove / }).map((p) => p.textContent?.trim())).toEqual(["film"]);
   });
 
+  it("keeps keyboard focus in the bar when a pill goes: on the next pill, else the one before, else search", async () => {
+    history.replaceState(null, "", "/explore?when=weekend&kind=music&kind=film");
+    render(Explorer);
+    await fireEvent.click(screen.getByRole("button", { name: "Remove music" }));
+    expect(screen.getByRole("button", { name: "Remove film" })).toHaveFocus();
+    await fireEvent.click(screen.getByRole("button", { name: "Remove film" }));
+    expect(screen.getByRole("button", { name: "Remove Through Sunday" })).toHaveFocus();
+    await fireEvent.click(screen.getByRole("button", { name: "Remove Through Sunday" }));
+    expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();
+  });
+
   it("returns to the top of the results when a filter changes below it, and stays put above it", async () => {
-    const scrolled = vi.fn();
-    Element.prototype.scrollIntoView = scrolled;
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
     let top = -4000;
     const rect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
       return { top: this.id === "results" ? top : 0 } as DOMRect;
@@ -156,14 +166,14 @@ describe("Explorer", () => {
     try {
       render(Explorer);
       await fireEvent.click(screen.getByRole("button", { name: "film" }));
-      expect(scrolled).toHaveBeenCalledTimes(1);
-      expect(scrolled.mock.contexts[0]).toBe(document.querySelector("#results"));
+      // jsdom lays nothing out, so the bar measures 0 px and the results' top is the whole distance.
+      expect(scrolled).toHaveBeenCalledExactlyOnceWith({ top: -4000, behavior: "instant" });
       top = 300;
       await fireEvent.click(screen.getByRole("button", { name: "music" }));
       expect(scrolled).toHaveBeenCalledTimes(1);
     } finally {
       rect.mockRestore();
-      delete (Element.prototype as Partial<Element>).scrollIntoView;
+      scrolled.mockRestore();
     }
   });
 

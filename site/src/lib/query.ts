@@ -85,8 +85,8 @@ export type FilterPill = { label: string; kind?: string; without: Filters };
 /** The filters that narrow the results, one pill each, in words ("Through Sunday", "music", "“jazz”"); sort narrows nothing and has none. */
 export function filterPills(f: Filters): FilterPill[] {
   const out: FilterPill[] = [];
-  if ("from" in f.when) out.push({ label: f.when.from === f.when.to ? formatShort(f.when.from) : formatRange(f.when.from, f.when.to), without: { ...f, when: DEFAULT_FILTERS.when } });
-  else if (f.when.preset !== "all") out.push({ label: WHEN_LABELS[f.when.preset], without: { ...f, when: DEFAULT_FILTERS.when } });
+  const when = "from" in f.when ? (f.when.from === f.when.to ? formatShort(f.when.from) : formatRange(f.when.from, f.when.to)) : f.when.preset === "all" ? undefined : WHEN_LABELS[f.when.preset];
+  if (when !== undefined) out.push({ label: when, without: { ...f, when: DEFAULT_FILTERS.when } });
   for (const k of f.kinds) out.push({ label: k, kind: k, without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
   for (const r of f.regions) out.push({ label: r, without: { ...f, regions: f.regions.filter((x) => x !== r) } });
   if (f.dontMiss) out.push({ label: "don't-miss only", without: { ...f, dontMiss: false } });

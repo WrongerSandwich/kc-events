@@ -28,6 +28,9 @@
   let mounted = $state(false);
   // The bar's height, so the sticky day headings sit just under it however it wraps (search takes a line on phones).
   let barHeight = $state(0);
+  let bar: HTMLElement;
+  let search: HTMLInputElement;
+  let pillList: HTMLElement | undefined = $state();
   let results: HTMLElement;
 
   onMount(() => {
@@ -42,9 +45,19 @@
     filters = next;
     const q = toQuery(next);
     history.replaceState(null, "", q === "" ? location.pathname : `${location.pathname}?${q}`);
-    // Scrolled past the results' top, a new slice would open mid-list; bring its first result up under the bar.
+    // Scrolled past the results' top, a new slice would open mid-list; bring its first result up under the bar. The
+    // bar is measured now, not through barHeight, which lags a pill that has just wrapped it onto another line.
     await tick();
-    if (results.getBoundingClientRect().top < barHeight) results.scrollIntoView({ block: "start", behavior: "instant" });
+    const below = results.getBoundingClientRect().top - bar.offsetHeight;
+    if (below < 0) window.scrollBy({ top: below, behavior: "instant" });
+  }
+
+  // A removed pill takes its button, and keyboard focus with it; hand focus to the pill that took its place, the one
+  // before it, or search when none is left.
+  async function removePill(index: number, without: Filters) {
+    await change(without);
+    const left = pillList?.querySelectorAll("button") ?? [];
+    (left[Math.min(index, left.length - 1)] ?? search).focus();
   }
 
   let groups = $derived(groupResults(events, filters, today, saved));
@@ -72,15 +85,16 @@
 <!-- The bar comes first so search is the explorer's first Tab stop, and its skip link the second; the grid puts the
      filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
 <div class="explorer" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
-  <div class="bar" bind:offsetHeight={barHeight}>
-    <label class="search"><span class="visually-hidden">Search</span><input type="search" value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} placeholder="Search title, venue, neighborhood, why" /></label>
+  <div class="bar" bind:this={bar} bind:offsetHeight={barHeight}>
+    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} placeholder="Search title, venue, neighborhood, why" /></label>
     <a class="skip" href="#results">Skip to results</a>
     <div class="slice">
       <p class="count" aria-hidden="true">{countText}</p>
       {#if pills.length > 0}
-        <ul class="pills" aria-label="Active filters">
-          {#each pills as p (p.label)}
-            <li><button type="button" class={p.kind === undefined ? "pill" : `pill kind kind-${slugify(p.kind)}`} aria-label={`Remove ${p.label}`} onclick={() => change(p.without)}>{#if p.kind !== undefined}<KindIcon kind={p.kind} />{/if}{p.label}<UiIcon name="x" /></button></li>
+        <ul class="pills" aria-label="Active filters" bind:this={pillList}>
+          <!-- Keyed by what removing the pill leaves, which differs per pill even if a kind and a region share a name. -->
+          {#each pills as p, i (toQuery(p.without))}
+            <li><button type="button" class={p.kind === undefined ? "pill" : `pill kind kind-${slugify(p.kind)}`} aria-label={`Remove ${p.label}`} onclick={() => removePill(i, p.without)}>{#if p.kind !== undefined}<KindIcon kind={p.kind} />{/if}{p.label}<UiIcon name="x" /></button></li>
           {/each}
         </ul>
       {/if}
@@ -179,14 +193,15 @@
     color: var(--fg-muted); font-size: var(--text-sm); cursor: pointer; list-style: none;
   }
   .collapsed summary::-webkit-details-marker { display: none; }
-  .collapsed summary::before {
+  /* A chevron that turns when its disclosure opens: On now's line, and the phone's Filters button. */
+  .collapsed summary::before, .sheet-toggle::before {
     content: ""; width: 0.4em; height: 0.4em; margin-right: var(--space-1);
     border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
     transform: rotate(-45deg); transition: transform 150ms var(--ease-out);
   }
   .collapsed summary:hover { border-color: var(--rule-strong); }
   .collapsed .heading { display: inline; font-size: inherit; font-weight: var(--weight-medium); color: var(--fg); margin: 0; }
-  .collapsed[open] summary::before { transform: rotate(45deg); }
+  .collapsed[open] summary::before, .sheet-toggle[aria-expanded="true"]::before { transform: rotate(45deg); }
   .collapsed[open] summary { position: sticky; top: var(--bar-height, var(--tap)); z-index: var(--z-sticky); margin-bottom: var(--space-1); }
   @media (max-width: 800px) {
     .explorer { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "bar" "rail" "results"; gap: var(--space-2); }
@@ -199,12 +214,7 @@
       display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0; font: inherit;
       font-weight: var(--weight-medium); color: var(--fg); background: none; border: 0; cursor: pointer;
     }
-    .sheet-toggle::before {
-      content: ""; width: 0.4em; height: 0.4em; margin: 0 var(--space-1);
-      border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
-      transform: rotate(-45deg); transition: transform 150ms var(--ease-out);
-    }
-    .sheet-toggle[aria-expanded="true"]::before { transform: rotate(45deg); }
+    .sheet-toggle::before { margin-left: var(--space-1); }
     .sheet.open { margin-bottom: var(--space-4); }
   }
 </style>

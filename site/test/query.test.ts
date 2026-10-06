@@ -3,7 +3,7 @@ import { DEFAULT_FILTERS, WHEN_LABELS, filterPills, isDefault, parseQuery, toQue
 
 const known = { kinds: ["music", "film", "theater/dance"], regions: ["Central KC", "Kansas City, Kansas", "Elsewhere in the metro"] };
 const parse = (s: string) => parseQuery(new URLSearchParams(s), known);
-const describeFilters = (f: Filters) => filterPills(f).map((p) => p.label);
+const labels = (f: Filters) => filterPills(f).map((p) => p.label);
 
 describe("query state", () => {
   it("parses nothing to the defaults", () => {
@@ -58,7 +58,7 @@ describe("query state", () => {
     expect(parse("when=weekend").when).toEqual({ preset: "weekend" });
     expect(WHEN_LABELS["fri-sun"]).toBe("This weekend");
     expect(WHEN_LABELS.weekend).toBe("Through Sunday");
-    expect(describeFilters({ ...DEFAULT_FILTERS, when: { preset: "fri-sun" } })).toEqual(["This weekend"]);
+    expect(labels({ ...DEFAULT_FILTERS, when: { preset: "fri-sun" } })).toEqual(["This weekend"]);
   });
 
   it("keeps the first of a repeated when only if it is valid", () => {
@@ -104,11 +104,11 @@ describe("query state", () => {
   });
 
   it("describes the active filters in words, for the empty state", () => {
-    expect(describeFilters(DEFAULT_FILTERS)).toEqual([]);
-    expect(describeFilters({ ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Kansas City, Kansas"], dontMiss: true, saved: true, q: " zzz " }))
+    expect(labels(DEFAULT_FILTERS)).toEqual([]);
+    expect(labels({ ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Kansas City, Kansas"], dontMiss: true, saved: true, q: " zzz " }))
       .toEqual(["Through Sunday", "music", "film", "Kansas City, Kansas", "don't-miss only", "saved only", "“zzz”"]);
-    expect(describeFilters({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-11" }, recurring: true, sort: "venue" })).toEqual(["Oct 9–11", "including always-there"]);
-    expect(describeFilters({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-09" } })).toEqual(["Oct 9"]);
+    expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-11" }, recurring: true, sort: "venue" })).toEqual(["Oct 9–11", "including always-there"]);
+    expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-09" } })).toEqual(["Oct 9"]);
   });
 
   it("names each active filter as a pill that removes only that filter, sort kept", () => {

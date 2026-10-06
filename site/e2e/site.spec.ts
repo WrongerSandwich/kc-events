@@ -161,10 +161,13 @@ test.describe("the explorer's active slice at 390 px", () => {
   });
 
   test("opens no sheet and shifts nothing when the page hydrates", async ({ page }) => {
+    // The page's cumulative layout shift, summed as the browser reports it.
+    type Shifts = { shifts: number };
     await page.addInitScript(() => {
-      (window as unknown as { shifts: number }).shifts = 0;
+      const w = window as unknown as Shifts;
+      w.shifts = 0;
       new PerformanceObserver((list) => {
-        for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) if (!e.hadRecentInput) (window as unknown as { shifts: number }).shifts += e.value;
+        for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) if (!e.hadRecentInput) w.shifts += e.value;
       }).observe({ type: "layout-shift", buffered: true });
     });
     await page.clock.setFixedTime(BUILD_DAY);
@@ -176,7 +179,7 @@ test.describe("the explorer's active slice at 390 px", () => {
     await page.waitForLoadState("load");
     expect(await results.evaluate((el) => el.getBoundingClientRect().top)).toBe(before);
     await expect(page.locator("#filter-sheet")).toBeHidden();
-    expect(await page.evaluate(() => (window as unknown as { shifts: number }).shifts)).toBeLessThan(0.01);
+    expect(await page.evaluate(() => (window as unknown as Shifts).shifts)).toBeLessThan(0.01);
   });
 
   test("returns to the first result when a pill is removed deep in the list", async ({ page }) => {
