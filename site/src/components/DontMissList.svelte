@@ -1,5 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import { flip } from "svelte/animate";
+  import { quartOut } from "svelte/easing";
+  import { fade } from "svelte/transition";
   // dont-miss, not events: the front page ships only the flagged events (its budget is 50 KB; the full list is about 26).
   import { dontMiss } from "../generated/dont-miss";
   import { meta } from "../generated/meta";
@@ -22,25 +25,54 @@
   // and is read again whenever the tab comes back into view, so a page left open overnight catches up. No timer.
   let now = $state<string | undefined>(undefined);
   let today = $derived(now === undefined ? meta.buildToday : localDate(now));
+  // The kind counts are links to the explorer as rendered (and without JavaScript); hydrated, they filter in place.
+  let hydrated = $state(false);
   onMount(() => {
     const read = () => { now = nowIn(meta.timeZone, new Date()); };
     read();
+    hydrated = true;
     document.addEventListener("visibilitychange", read);
     return () => document.removeEventListener("visibilitychange", read);
   });
   let buckets = $derived(bucketDontMiss(dontMiss, today));
   let total = $derived(HORIZONS.reduce((n, h) => n + buckets[h].length, 0));
 
-  /** A section's picks counted by kind, most first, each linking to the explorer showing just those picks. */
-  function kindCounts(h: Horizon, events: PublishedEvent[]): { kind: string; n: number; href: string }[] {
+  // Each section's kind filter, one kind at a time, and what its live region last said. Per visit: not in the URL,
+  // not stored.
+  let chosen = $state<Partial<Record<Horizon, string>>>({});
+  let said = $state<Partial<Record<Horizon, string>>>({});
+
+  /** The explorer showing a section's picks, or just one kind of them. */
+  function explore(h: Horizon, kind?: string): string {
     const { sunday, twoWeeks } = horizonBounds(today);
     const when = h === "through-sunday" ? "weekend" : `${addDays(sunday, 1)}..${twoWeeks}`;
+    return `/explore?when=${when}${kind === undefined ? "" : `&kind=${slugify(kind)}`}&dontmiss=1`;
+  }
+
+  /** A section's picks counted by kind, most first, each linking to the explorer showing just those picks. */
+  function kindCounts(h: Horizon, events: PublishedEvent[]): { kind: string; n: number; href: string }[] {
     const counts = new Map<string, number>();
     for (const e of events) counts.set(e.kind, (counts.get(e.kind) ?? 0) + 1);
     return [...counts]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([kind, n]) => ({ kind, n, href: `/explore?when=${when}&kind=${slugify(kind)}&dontmiss=1` }));
+      .map(([kind, n]) => ({ kind, n, href: explore(h, kind) }));
   }
+
+  /** The section's kind, if one is pressed and the section still has picks of it (a re-bucket can take them all). */
+  function activeKind(h: Horizon): string | undefined {
+    const kind = chosen[h];
+    return buckets[h].some((e) => e.kind === kind) ? kind : undefined;
+  }
+
+  function toggle(h: Horizon, kind: string) {
+    const next = activeKind(h) === kind ? undefined : kind;
+    chosen[h] = next;
+    const n = next === undefined ? buckets[h].length : buckets[h].filter((e) => e.kind === next).length;
+    said[h] = `Showing ${next === undefined ? "all " : ""}${n} ${next === undefined ? "" : `${next} `}${n === 1 ? "pick" : "picks"}`;
+  }
+
+  /** A motion's length, or none where the visitor asks for none (or there is no media query to ask, as in tests). */
+  const motion = (ms: number) => (typeof matchMedia === "function" && !matchMedia("(prefers-reduced-motion: reduce)").matches ? ms : 0);
 
   /** The later list's one-line date: everything there starts after the next two weeks, so nothing is on now. */
   function shortWhen(e: PublishedEvent): string {
@@ -72,18 +104,30 @@
         </ul>
         <p class="more"><a href="/explore?dontmiss=1">All the picks, with why, in the explorer</a></p>
       {:else}
+        {@const kind = activeKind(h)}
         <ul class="kinds" aria-label="Picks by kind">
           {#each kindCounts(h, buckets[h]) as k (k.kind)}
-            <li><KindChip kind={k.kind} label={`${k.n} ${k.kind}`} href={k.href} /></li>
+            <li>
+              {#if hydrated}
+                <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} pressed={k.kind === kind} onclick={() => toggle(h, k.kind)} />
+              {:else}
+                <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} href={k.href} />
+              {/if}
+            </li>
           {/each}
         </ul>
+        <p role="status" class="visually-hidden">{said[h] ?? ""}</p>
         {#if h === "through-sunday" && horizonBounds(today).sunday >= addDays(today, 2)}
           <!-- Three days or more left in the week: enough for a strip to say something. -->
           <WeekStrip picks={buckets[h]} {today} sunday={horizonBounds(today).sunday} />
         {/if}
-        {#each buckets[h] as event (event.id)}
-          <DontMissCard {event} {today} {now} />
+        <!-- Filtered, the kept cards slide into place and the others fade. -->
+        {#each buckets[h].filter((e) => kind === undefined || e.kind === kind) as event (event.id)}
+          <div class="pick" animate:flip={{ duration: motion(250), easing: quartOut }} transition:fade={{ duration: motion(150) }}>
+            <DontMissCard {event} {today} {now} />
+          </div>
         {/each}
+        <p class="more"><a href={explore(h, kind)}>These picks in the explorer</a></p>
       {/if}
     </section>
   {/each}
@@ -92,7 +136,7 @@
 <style>
   /* Cards in a run are parted by a hairline, the same one the one-line lists use. Set here, not in the card: a
      component's scoped styles cannot see its own siblings. */
-  section :global(.card + .card) { border-top: 1px solid var(--rule); margin-top: var(--space-6); padding-top: var(--space-6); }
+  .pick + .pick { border-top: 1px solid var(--rule); margin-top: var(--space-6); padding-top: var(--space-6); }
   .empty { color: var(--fg-muted); margin-top: var(--space-3); }
   /* The later picks: one line each, date in a fixed column so titles align; the venue drops under on a phone. */
   .later { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
@@ -116,11 +160,18 @@
     .later .where { grid-column: 1; }
   }
   .more { margin-top: var(--space-3); }
-  /* What kind of week it is, at a glance; each chip filters the explorer to those picks. */
+  /* Under a run of cards, the link stands off them as far as one card stands off the next. */
+  .pick + .more { margin-top: var(--space-6); }
+  /* What kind of week it is, at a glance; each chip narrows the section to those picks (links to the explorer
+     without JavaScript). Pressed, it takes the kind's ring, the one a Today tile wears. */
   .kinds { list-style: none; padding: 0; margin: var(--space-3) 0 var(--space-2); display: flex; flex-wrap: wrap; gap: var(--space-2); }
-  .kinds :global(a) { font-size: var(--text-sm); padding: var(--space-1) var(--space-3); text-decoration: none; transition: filter 150ms var(--ease-out); }
-  .kinds :global(a:hover) { filter: brightness(0.96) saturate(1.2); }
+  .kinds :global(.chip) {
+    font: inherit; font-size: var(--text-sm); font-weight: var(--weight-medium); line-height: 1.6;
+    padding: var(--space-1) var(--space-3); border: 0; cursor: pointer; text-decoration: none; transition: filter 150ms var(--ease-out);
+  }
+  .kinds :global(.chip:hover) { filter: brightness(0.96) saturate(1.2); }
+  .kinds :global(.chip[aria-pressed="true"]) { box-shadow: inset 0 0 0 1.5px var(--hue); }
   /* A kind's icon before a title in the one-line list, in the kind's colour. */
   .icon { flex: none; color: var(--hue); margin-right: var(--space-2); }
-  @media (prefers-reduced-motion: reduce) { .kinds :global(a) { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { .kinds :global(.chip) { transition: none; } }
 </style>

@@ -9,7 +9,8 @@ vi.mock("../src/generated/dont-miss", async () => {
   const { event } = await import("./fixtures/event");
   const picks = [
     event({ id: "a", title: "Tuesday show", dontMiss: true, whyLine: "Why A.", start: "2026-10-06T20:00:00-05:00" }),
-    event({ id: "b", title: "Closing run", dontMiss: true, whyLine: "Why B.", recurrence: "limited-run", start: "2026-09-01", end: "2026-10-11" }),
+    event({ id: "b", title: "Closing run", kind: "art/exhibitions", dontMiss: true, whyLine: "Why B.", recurrence: "limited-run", start: "2026-09-01", end: "2026-10-11" }),
+    event({ id: "e", title: "Wednesday show", dontMiss: true, start: "2026-10-07T20:00:00-05:00" }),
     event({ id: "c", title: "Later show", dontMiss: true, whyLine: "Why C.", start: "2026-10-17" }),
     event({ id: "d", title: "Plain show", dontMiss: false, start: "2026-10-06" }),
   ];
@@ -53,11 +54,11 @@ describe("DontMissList", () => {
     const sections = screen.getAllByRole("region");
     expect(sections.map((s) => within(s).getByRole("heading", { level: 2 }).textContent)).toEqual(["This week, Oct 5–11", "Next two weeks, through Oct 19", "Later, after Oct 19"]);
     const first = within(sections[0]!).getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
-    expect(first).toEqual(["Closing run", "Tuesday show"]); // the run is on now, so it sorts as today
+    expect(first).toEqual(["Closing run", "Tuesday show", "Wednesday show"]); // the run is on now, so it sorts as today
     expect(within(sections[0]!).getByText("Why A.")).toBeInTheDocument();
     // The tile is visual; the full date is in words for screen readers.
     expect(within(sections[0]!).getByText("On now, closes Sun Oct 11.")).toBeInTheDocument();
-    expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("2 music");
+    expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("2 music1 art/exhibitions");
     expect(within(sections[1]!).getByText("Later show")).toBeInTheDocument();
     expect(within(sections[2]!).getByText("Nothing picked further out yet.")).toBeInTheDocument();
     expect(screen.queryByText("Plain show")).toBeNull();
@@ -98,6 +99,98 @@ describe("DontMissList", () => {
       document.dispatchEvent(new Event("visibilitychange"));
       await tick();
       expect(screen.queryByText("Tuesday show")).toBeNull();
+    });
+  });
+
+  describe("a section's kind filter", () => {
+    const titles = (section: HTMLElement) => within(section).queryAllByRole("heading", { level: 3 }).map((h) => h.textContent);
+    async function front() {
+      vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") });
+      render(DontMissList);
+      await tick();
+      return screen.getAllByRole("region");
+    }
+
+    it("narrows only its own section, switches kinds, and clears on a second press", async () => {
+      const [week, next] = await front();
+      const music = within(week!).getByRole("button", { name: "2 music" });
+      const art = within(week!).getByRole("button", { name: "1 art/exhibitions" });
+      expect(music).toHaveAttribute("aria-pressed", "false");
+
+      music.click();
+      await tick();
+      expect(music).toHaveAttribute("aria-pressed", "true");
+      expect(titles(week!)).toEqual(["Tuesday show", "Wednesday show"]);
+      expect(titles(next!)).toEqual(["Later show"]);
+
+      art.click();
+      await tick();
+      expect(music).toHaveAttribute("aria-pressed", "false");
+      expect(art).toHaveAttribute("aria-pressed", "true");
+      expect(titles(week!)).toEqual(["Closing run"]);
+
+      art.click();
+      await tick();
+      expect(art).toHaveAttribute("aria-pressed", "false");
+      expect(titles(week!)).toEqual(["Closing run", "Tuesday show", "Wednesday show"]);
+    });
+
+    it("leaves the other sections' filters alone", async () => {
+      const [week, next] = await front();
+      within(next!).getByRole("button", { name: "1 music" }).click();
+      within(week!).getByRole("button", { name: "1 art/exhibitions" }).click();
+      await tick();
+      expect(titles(week!)).toEqual(["Closing run"]);
+      expect(titles(next!)).toEqual(["Later show"]);
+      expect(within(next!).getByRole("button", { name: "1 music" })).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("carries the kind on the section's explorer link exactly while one is on", async () => {
+      const [week, next] = await front();
+      const link = () => within(week!).getByRole("link", { name: /in the explorer/ });
+      expect(link()).toHaveAttribute("href", "/explore?when=weekend&dontmiss=1");
+      within(week!).getByRole("button", { name: "2 music" }).click();
+      await tick();
+      expect(link()).toHaveAttribute("href", "/explore?when=weekend&kind=music&dontmiss=1");
+      within(week!).getByRole("button", { name: "2 music" }).click();
+      await tick();
+      expect(link()).toHaveAttribute("href", "/explore?when=weekend&dontmiss=1");
+      expect(within(next!).getByRole("link", { name: /in the explorer/ })).toHaveAttribute("href", "/explore?when=2026-10-12..2026-10-19&dontmiss=1");
+    });
+
+    it("announces what the section now shows", async () => {
+      const [week] = await front();
+      const status = within(week!).getByRole("status");
+      expect(status).toHaveTextContent("");
+      within(week!).getByRole("button", { name: "2 music" }).click();
+      await tick();
+      expect(status).toHaveTextContent("Showing 2 music picks");
+      within(week!).getByRole("button", { name: "1 art/exhibitions" }).click();
+      await tick();
+      expect(status).toHaveTextContent("Showing 1 art/exhibitions pick");
+      within(week!).getByRole("button", { name: "1 art/exhibitions" }).click();
+      await tick();
+      expect(status).toHaveTextContent("Showing all 3 picks");
+    });
+
+    it("renders the counts as links to the explorer before hydration", () => {
+      vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") });
+      const target = document.body.appendChild(document.createElement("div"));
+      const component = mount(DontMissList, { target }); // no flush: the server's render
+      try {
+        const chips = target.querySelector("section .kinds")!;
+        expect(chips.querySelectorAll("button")).toHaveLength(0);
+        expect([...chips.querySelectorAll("a")].map((a) => a.getAttribute("href"))).toEqual([
+          "/explore?when=weekend&kind=music&dontmiss=1",
+          "/explore?when=weekend&kind=art-exhibitions&dontmiss=1",
+        ]);
+        flushSync();
+        expect(chips.querySelectorAll("a")).toHaveLength(0);
+        expect(chips.querySelectorAll("button[aria-pressed]")).toHaveLength(2);
+      } finally {
+        unmount(component);
+        target.remove();
+      }
     });
   });
 

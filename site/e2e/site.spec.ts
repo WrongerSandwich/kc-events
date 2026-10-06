@@ -49,6 +49,52 @@ test.describe("a visitor's browser in Tokyo", () => {
   });
 });
 
+test.describe("a section's kind filter", () => {
+  test("is a link to the explorer in the served HTML", async ({ request }) => {
+    const html = await (await request.get("/")).text();
+    const kinds = html.slice(html.indexOf('aria-label="Picks by kind"'), html.indexOf("</ul>", html.indexOf('aria-label="Picks by kind"')));
+    expect(kinds).toContain('href="/explore?when=weekend&amp;kind=music&amp;dontmiss=1"');
+    expect(kinds).not.toContain("<button");
+  });
+
+  test("hydrated, narrows its section in place, carries the kind to the explorer link, and says so", async ({ page }) => {
+    await on(page, BUILD_DAY, "/");
+    const week = page.getByRole("region").nth(0);
+    const music = week.getByRole("button", { name: "1 music" });
+    await expect(music).toHaveAttribute("aria-pressed", "false");
+    await music.click();
+    await expect(music).toHaveAttribute("aria-pressed", "true");
+    await expect(week.getByRole("heading", { level: 3 })).toHaveText(["Fabio Frizzi plays Fulci"]);
+    await expect(week.getByRole("status")).toHaveText("Showing 1 music pick");
+    await expect(week.getByRole("link", { name: "These picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&kind=music&dontmiss=1");
+    await expect(page.getByRole("region").nth(1).getByRole("heading", { level: 3 })).toHaveText(["Mid-month reading"]);
+    await music.click();
+    await expect(week.getByRole("heading", { level: 3 })).toHaveText(["Closing exhibition", "Fabio Frizzi plays Fulci"]);
+    await expect(week.getByRole("link", { name: "These picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&dontmiss=1");
+  });
+
+  /** Presses the week's music chip and, a frame later, counts the running animations and the week's cards. */
+  async function pressMusic(page: Page): Promise<{ animations: number; cards: number }> {
+    await on(page, BUILD_DAY, "/");
+    await page.getByRole("region").nth(0).getByRole("button", { name: "1 music" }).waitFor();
+    return page.evaluate(async () => {
+      const week = document.querySelector("section")!;
+      [...week.querySelectorAll<HTMLButtonElement>(".kinds button")].find((b) => b.textContent?.includes("music"))!.click();
+      await new Promise(requestAnimationFrame);
+      return { animations: document.getAnimations().length, cards: week.querySelectorAll("article").length };
+    });
+  }
+
+  test("reflows with motion by default", async ({ page }) => {
+    expect((await pressMusic(page)).animations).toBeGreaterThan(0);
+  });
+
+  test("changes at once for a visitor who asks for reduced motion", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    expect(await pressMusic(page)).toEqual({ animations: 0, cards: 1 });
+  });
+});
+
 test("the explorer honors the URL and writes it back", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore?when=weekend&kind=music");
   await expect(page.getByRole("status")).toHaveText("2 events");
@@ -144,7 +190,8 @@ test("a past event has no page, and the 404 renders", async ({ page }) => {
 
 test("the staleness banner appears after nine days", async ({ page }) => {
   await on(page, new Date("2026-10-15T17:00:00Z"), "/");
-  await expect(page.getByRole("status")).toContainText("This list was last researched on Oct 5 and may have missed changes since.");
+  // Each pick section has its own (empty) status region too, for its kind filter.
+  await expect(page.getByRole("status").filter({ hasText: "last researched" })).toContainText("This list was last researched on Oct 5 and may have missed changes since.");
 });
 
 test("the dataset is published verbatim, and llms.txt and the sitemap point at the pages", async ({ request }) => {
