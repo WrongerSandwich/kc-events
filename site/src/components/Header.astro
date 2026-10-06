@@ -2,6 +2,7 @@
 import { meta } from "../generated/meta";
 import { formatDay, localDate } from "../lib/dates";
 import { siteConfig } from "../site.config";
+import SavedLink from "./SavedLink.svelte";
 
 // `wide` matches the header's width to the page's main column (the explorer is wide; everything else is the measure).
 interface Props { wide?: boolean }
@@ -15,27 +16,34 @@ const runDay = localDate(meta.lastSuccessfulRun);
       <a class="name" href="/">{siteConfig.name}</a>
       <nav aria-label="Site">
         <a href="/explore">Explore</a>
+        <SavedLink client:load />
         <a href="/about">About</a>
       </nav>
     </div>
-    <p class="tagline">{siteConfig.tagline}</p>
-    <p class="stamp">Researched weekly; last run <time datetime={runDay}>{formatDay(runDay)}</time></p>
+    <p class="stamp">Researched weekly, last on <time datetime={runDay}>{formatDay(runDay)}</time></p>
   </div>
+  <!-- The staleness banner, when the run is old: inside the header so it sits right under the site's name. -->
+  <slot />
 </header>
 
 <style>
-  .site-header { border-bottom: 1px solid var(--rule); margin-bottom: var(--space-8); }
-  .inner { padding-block: var(--space-4) var(--space-3); }
-  .top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-4); }
-  .name { font-size: var(--text-lg); font-weight: 700; letter-spacing: -0.01em; color: var(--fg); }
-  .name:hover { text-decoration: none; color: var(--accent); }
-  nav { display: flex; gap: var(--space-4); font-size: var(--text-sm); }
-  nav a { color: var(--fg-muted); }
-  nav a:hover { color: var(--fg); }
-  .tagline { margin-top: var(--space-1); font-size: var(--text-sm); color: var(--fg-muted); }
-  .stamp { margin-top: var(--space-1); font-size: var(--text-xs); color: var(--fg-faint); }
+  .site-header { border-bottom: 1px solid var(--rule); }
+  .inner { padding-block: var(--space-3); }
+  .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-4); }
+  .name { font-size: var(--text-lg); font-weight: var(--weight-strong); letter-spacing: var(--tracking-heading); color: var(--fg); padding-block: var(--space-2); }
+  .name:hover { text-decoration: none; }
+  /* Links padded to a 44 px target; the negative margin keeps the row's right edge on the measure. */
+  nav { display: flex; margin-right: calc(-1 * var(--space-2)); }
+  nav :global(a) { display: inline-flex; align-items: center; min-height: var(--tap); padding-inline: var(--space-2); font-size: var(--text-sm); color: var(--fg-muted); }
+  nav :global(a:hover) { color: var(--fg); text-decoration: none; }
+  .stamp { font-size: var(--text-xs); color: var(--fg-faint); }
+  @media (max-width: 22rem) {
+    nav :global(a) { padding-inline: var(--space-1); }
+    nav { margin-right: calc(-1 * var(--space-1)); }
+    .top { column-gap: var(--space-2); }
+  }
   .skip {
-    position: absolute; left: var(--gutter); top: var(--space-2); z-index: 10;
+    position: absolute; left: var(--gutter); top: var(--space-2); z-index: var(--z-skip);
     transform: translateY(-200%);
     background: var(--bg-raised); color: var(--fg); border: 1px solid var(--rule); border-radius: var(--radius);
     padding: var(--space-2) var(--space-3); font-size: var(--text-sm);

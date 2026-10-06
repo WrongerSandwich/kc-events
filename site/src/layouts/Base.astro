@@ -1,5 +1,5 @@
 ---
-import "@fontsource-variable/inter";
+import "@fontsource-variable/geist";
 import "../styles/tokens.css";
 import "../styles/base.css";
 import { siteConfig } from "../site.config";
@@ -7,6 +7,7 @@ import { origin } from "../build/origin";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import StalenessBanner from "../components/StalenessBanner.svelte";
+import IconSprite from "../components/IconSprite.astro";
 
 interface Props { title: string; description: string; canonical?: string; jsonLd?: object; wide?: boolean }
 const { title, description, canonical, jsonLd, wide = false } = Astro.props;
@@ -34,8 +35,8 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, "\\u003c")} />}
   </head>
   <body>
-    <Header wide={wide} />
-    <StalenessBanner client:load />
+    <IconSprite />
+    <Header wide={wide}><StalenessBanner client:load /></Header>
     <main id="main" class={wide ? "wide" : "measure"}>
       <slot />
     </main>

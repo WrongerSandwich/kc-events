@@ -2,8 +2,8 @@
   import { formatShort, localDate } from "../lib/dates";
   import { hostOf } from "../lib/events";
   import { rowDateLine } from "../lib/group";
-  import { slugify } from "../lib/slugs";
   import type { PublishedEvent } from "../lib/types";
+  import KindChip from "./KindChip.svelte";
   import SaveButton from "./SaveButton.svelte";
 
   // withDay: the list has no day headings (the venue sort), so the date line carries the day.
@@ -12,13 +12,13 @@
   let verifiedOn = $derived(formatShort(localDate(event.lastVerified)));
 </script>
 
-<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} style={`--hue: var(--kind-${slugify(event.kind)})`}>
+<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"}>
   <span class="when" title={dateLine}>{dateLine}</span>
   <div class="title">
     <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="mark" role="img" aria-label="Don't miss">●</span>{/if}
   </div>
   <span class="where" title={`${event.venue} · ${event.neighborhood}`}><span class="venue">{event.venue}</span><span class="hood">{` · ${event.neighborhood}`}</span></span>
-  <span class="chip">{event.kind}</span>
+  <KindChip kind={event.kind} />
   <a class="host" href={event.primaryUrl} rel="noopener" title={hostOf(event.primaryUrl)}>{hostOf(event.primaryUrl)}</a>
   <span class="verified"><span aria-hidden="true">✓ {verifiedOn}</span><span class="visually-hidden">Verified {verifiedOn}</span></span>
   <SaveButton id={event.id} title={event.title} />
@@ -31,13 +31,12 @@
   .when { flex-basis: 100%; color: var(--fg-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
   /* The title gets its own line, so the details run under it rather than squeezing it into a narrow column. */
   .title { flex: 1 1 100%; min-width: 0; }
-  .title h3 { display: inline; font-size: var(--text-md); font-weight: 500; margin: 0; }
+  .title h3 { display: inline; font-size: var(--text-md); font-weight: var(--weight-medium); margin: 0; }
   .title a { color: inherit; text-decoration: none; }
   .title a:hover { text-decoration: underline; }
   .mark { color: var(--accent); margin-left: var(--space-1); font-size: var(--text-xs); }
   .where, .host, .verified { font-size: var(--text-xs); color: var(--fg-faint); }
   .why { flex-basis: 100%; margin: 0; font-size: var(--text-sm); color: var(--fg); }
-  .flagged { border-left: 3px solid var(--accent); padding-left: var(--space-2); }
   /* The save button is slimmer in a row than on a card; button.save outranks SaveButton's own .save rule. */
   .row :global(button.save) { padding-block: 0; }
 

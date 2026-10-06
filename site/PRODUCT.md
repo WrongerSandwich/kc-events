@@ -24,20 +24,23 @@ The only KC events list that tells you which things you'd regret missing, with a
 
 ## Brand Personality
 
-Friendly, warm, easygoing. It reads like a well-informed friend who has already done the looking: relaxed, never pushy, never selling. Warmth comes from the voice and the care in the layout, not from hype. Plain language, nouns for headings ("This weekend", "Always there"), no exclamation marks, no slogans. Honest about what it knows: last-verified dates and the staleness banner are part of the tone, not fine print.
+A sleek, colorful, honest tool. The delight is the delight of a well-made instrument: fast to scan, precise, legible, with color that carries meaning. Think of a calendar app that color-codes by category (Fantastical) crossed with Linear's crisp chrome and exact use of color.
+
+The voice is plain and neutral, and that is deliberate: the listings and the one-line reasons are researched and written by a model, and the site says so. It never poses as a person or an editor. Headings are nouns ("This weekend", "Always there"); no exclamation marks, no slogans, no "we".
 
 ## Anti-references
 
 - Ad-laden local aggregators: thumbnails, sponsored slots, undifferentiated volume. The site exists because these are unreadable.
 - Ticketing marketplaces (Eventbrite, Ticketmaster): big event images, countdowns, scarcity pressure, buy buttons.
 - Social feeds: infinite scroll, engagement bait, algorithmic ordering.
+- A hand-written newsletter or editorial magazine: serif "voice" type, chatty personal copy, a curator persona. It would misrepresent how the list is made.
 
 ## Design Principles
 
 1. **Calm density.** Many events readable at a glance is the thing the aggregators fail at. Space separates; rules are thin and few; nothing competes for attention.
-2. **Trust is visible.** Every date can be traced to its source, and the page says when it was last checked. Never imply more certainty than the data has.
-3. **The page is the picture.** No imagery; type, color, and order carry the identity. A page of text should look cared for.
-4. **A friend's pick, not a pitch.** Don't-miss calls come with a short reason and no urgency. The reader brings the taste; the site brings the structure.
+2. **Color carries meaning.** Many colors are welcome when each one says something (the kind of event, a state). Color is information first, decoration never.
+3. **Trust is visible.** Every date can be traced to its source, and the page says when it was last checked. Never imply more certainty, or more human authorship, than there is.
+4. **Tool, not voice.** Delight comes from precision, speed, and legibility, not from personality copy. The reader brings the taste; the site brings the structure.
 5. **Respect the visitor.** No ads, accounts, tracking, or third-party requests; fast on a phone; state stays in the visitor's browser.
 
 ## Accessibility & Inclusion

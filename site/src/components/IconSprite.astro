@@ -1,0 +1,15 @@
+---
+import { kindIcons } from "../lib/kind-icons";
+import { uiIcons } from "../lib/ui-icons";
+// Every icon the site draws, as symbols, once per page: KindIcon and UiIcon draw them with <use>, so a list of 500
+// rows carries a short reference per icon rather than the full SVG.
+const symbols = [
+  ...Object.entries(kindIcons).map(([slug, inner]) => [`kind-icon-${slug}`, inner]),
+  ...Object.entries(uiIcons).map(([name, inner]) => [`ui-icon-${name}`, inner]),
+];
+---
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none" aria-hidden="true">
+  {symbols.map(([id, inner]) => (
+    <symbol id={id} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={inner} />
+  ))}
+</svg>

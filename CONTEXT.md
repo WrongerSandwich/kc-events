@@ -153,10 +153,10 @@ A group of neighborhoods at the scale of a trip decision (Central KC, Johnson Co
 _Avoid_: area, zone
 
 **Horizon**:
-The time bucket a don't-miss event falls into: through Sunday (headed "This weekend" Thursday to Sunday, "This week" Monday to Wednesday), next two weeks, further out. A one-off is bucketed by its start, a limited run by its closing date.
+The time bucket a don't-miss event falls into: through Sunday (headed "This weekend" Thursday to Sunday, "This week" Monday to Wednesday), next two weeks, further out (headed "Later, after <date>" and listed one line each). A one-off is bucketed by its start, a limited run by when it can first be seen: its opening, or today once it is open. Its closing date stays in its date line.
 
 **Always there**:
-The section below the don't-miss list that lists recurring events.
+The section below the don't-miss list: a short, hand-kept list of recurring events (`site/src/always-there.ts`). Every recurring event is in the explorer.
 
 **Methods page**:
 The page explaining how the site is made and where to report a wrong listing.

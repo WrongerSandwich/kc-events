@@ -27,7 +27,7 @@ describe("horizon", () => {
     expect(horizonHeading("through-sunday", "2026-12-30")).toBe("This week, Dec 30–Jan 3"); // across the year
     expect(horizonHeading("next-two-weeks", "2026-10-05")).toBe("Next two weeks, through Oct 19");
     expect(horizonHeading("next-two-weeks", "2026-11-01")).toBe("Next two weeks, through Nov 15");
-    expect(horizonHeading("further-out", "2026-10-05")).toBe("Further out");
+    expect(horizonHeading("further-out", "2026-10-05")).toBe("Later, after Oct 19");
   });
 
   it("buckets around the DST Sunday by local date", () => {
@@ -39,12 +39,15 @@ describe("horizon", () => {
     expect(horizon(event({ start: "2026-11-16" }), today)).toBe("further-out");
   });
 
-  it("anchors a one-off on its start and a limited run on its close", () => {
-    expect(anchorDate(event({ start: "2026-10-09T19:00:00-05:00" }))).toBe("2026-10-09");
-    expect(anchorDate(event({ start: "2026-10-09", end: "2026-10-11" }))).toBe("2026-10-09");
-    expect(anchorDate(event({ recurrence: "limited-run", start: "2026-09-20", end: "2026-11-14" }))).toBe("2026-11-14");
-    expect(anchorDate(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }))).toBe("2026-10-31");
-    expect(anchorDate(event({ recurrence: "recurring", start: undefined, schedule: "Tuesdays" }))).toBeUndefined();
+  it("anchors a one-off on its start and a limited run on its opening, or today once it is open", () => {
+    const today = "2026-10-05";
+    expect(anchorDate(event({ start: "2026-10-09T19:00:00-05:00" }), today)).toBe("2026-10-09");
+    expect(anchorDate(event({ start: "2026-10-09", end: "2026-10-11" }), today)).toBe("2026-10-09");
+    expect(anchorDate(event({ recurrence: "limited-run", start: "2026-09-20", end: "2026-11-14" }), today)).toBe(today);
+    expect(anchorDate(event({ recurrence: "limited-run", start: "2026-10-05", end: "2026-11-14" }), today)).toBe(today);
+    expect(anchorDate(event({ recurrence: "limited-run", start: "2026-10-20", end: "2026-11-14" }), today)).toBe("2026-10-20");
+    expect(anchorDate(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }), today)).toBe(today);
+    expect(anchorDate(event({ recurrence: "recurring", start: undefined, schedule: "Tuesdays" }), today)).toBeUndefined();
   });
 
   it("buckets by anchor against the bounds", () => {
@@ -55,7 +58,9 @@ describe("horizon", () => {
     expect(horizon(event({ start: "2026-10-19" }), today)).toBe("next-two-weeks");
     expect(horizon(event({ start: "2026-10-20" }), today)).toBe("further-out");
     expect(horizon(event({ recurrence: "limited-run", start: "2026-09-01", end: "2026-10-10" }), today)).toBe("through-sunday");
-    expect(horizon(event({ recurrence: "limited-run", start: undefined, end: "2026-12-31" }), today)).toBe("further-out");
+    expect(horizon(event({ recurrence: "limited-run", start: undefined, end: "2026-12-31" }), today)).toBe("through-sunday"); // on now
+    expect(horizon(event({ recurrence: "limited-run", start: "2026-10-08", end: "2026-10-25" }), today)).toBe("through-sunday"); // opens this week
+    expect(horizon(event({ recurrence: "limited-run", start: "2026-10-30", end: "2026-12-31" }), today)).toBe("further-out");
     expect(horizon(event({ recurrence: "recurring", start: undefined, schedule: "Tuesdays" }), today)).toBeUndefined();
   });
 
@@ -77,9 +82,25 @@ describe("horizon", () => {
     const d = event({ id: "d", dontMiss: false, start: "2026-10-06" });
     const r = event({ id: "r", recurrence: "recurring", start: undefined, schedule: "Tuesdays" });
     const buckets = bucketDontMiss([a, b, c, d, r], today);
-    expect(buckets["through-sunday"].map((e) => e.id)).toEqual(["b", "a"]);
+    expect(buckets["through-sunday"].map((e) => e.id)).toEqual(["b", "a", "c"]); // c is on now and open past Sunday
     expect(buckets["next-two-weeks"]).toEqual([]);
-    expect(buckets["further-out"].map((e) => e.id)).toEqual(["c"]);
+    expect(buckets["further-out"]).toEqual([]);
+  });
+
+  it("keeps a run closing this week in date order, ahead of the dated picks after today", () => {
+    const today = "2026-10-05";
+    const closing = event({ id: "closing", dontMiss: true, recurrence: "limited-run", start: "2026-09-01", end: "2026-10-11" });
+    const lingering = event({ id: "lingering", dontMiss: true, recurrence: "limited-run", start: "2026-09-01", end: "2026-12-13" });
+    const show = event({ id: "show", dontMiss: true, start: "2026-10-07" });
+    expect(bucketDontMiss([lingering, show, closing], today)["through-sunday"].map((e) => e.id)).toEqual(["closing", "show", "lingering"]);
+  });
+
+  it("orders one day's events by start time, all-day first, then title", () => {
+    const today = "2026-10-05";
+    const late = event({ id: "late", title: "A late show", dontMiss: true, start: "2026-10-16T20:00:00-05:00" });
+    const early = event({ id: "early", title: "Z early show", dontMiss: true, start: "2026-10-16T18:00:00-05:00" });
+    const allDay = event({ id: "day", title: "M all day", dontMiss: true, start: "2026-10-16" });
+    expect(bucketDontMiss([late, early, allDay], today)["next-two-weeks"].map((e) => e.id)).toEqual(["day", "early", "late"]);
   });
 
   it("writes the closing line for runs", () => {

@@ -13,11 +13,11 @@
 </script>
 
 {#if stale}
-  <div class="banner measure" role="status">
-    This list was last researched on {formatShort(runDay)} and may have missed changes since.
+  <div class="banner" role="status">
+    <p class="measure">This list was last researched on {formatShort(runDay)} and may have missed changes since. Check the event's own page before you go.</p>
   </div>
 {/if}
 
 <style>
-  .banner { background: var(--bg-raised); border-block: 1px solid var(--rule); padding: var(--space-2) var(--gutter); font-size: var(--text-sm); color: var(--fg-muted); }
+  .banner { background: var(--bg-raised); border-top: 1px solid var(--rule); padding-block: var(--space-2); font-size: var(--text-sm); color: var(--fg); }
 </style>

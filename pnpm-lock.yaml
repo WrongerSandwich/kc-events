@@ -39,6 +39,9 @@ importers:
       '@astrojs/svelte':
         specifier: ^9.0.1
         version: 9.0.1(@types/node@26.6.4)(astro@7.3.5(@types/node@26.6.4)(tsx@4.23.15)(yaml@2.9.1))(esbuild@0.28.2)(svelte@5.57.1)(tsx@4.23.15)(typescript@6.0.3)(yaml@2.9.1)
+      '@fontsource-variable/geist':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@fontsource-variable/inter':
         specifier: ^5.2.0
         version: 5.3.0
@@ -542,6 +545,9 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
+
+  '@fontsource-variable/geist@5.3.0':
+    resolution: {integrity: sha512-j0m+vLQuG5XAYoHtGCVu0spvlGreR3EzpECUVzkFmI1mTVnAO38l/NEPDCFgZ177JxzYJCLSmTQibIiYPilGrA==}
 
   '@fontsource-variable/inter@5.3.0':
     resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
@@ -2768,6 +2774,8 @@ snapshots:
     optional: true
 
   '@exodus/bytes@1.16.0': {}
+
+  '@fontsource-variable/geist@5.3.0': {}
 
   '@fontsource-variable/inter@5.3.0': {}
 
