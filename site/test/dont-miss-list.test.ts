@@ -12,6 +12,7 @@ vi.mock("../src/generated/dont-miss", async () => {
     event({ id: "b", title: "Closing run", kind: "art/exhibitions", dontMiss: true, whyLine: "Why B.", recurrence: "limited-run", start: "2026-09-01", end: "2026-10-11" }),
     event({ id: "e", title: "Wednesday show", dontMiss: true, start: "2026-10-07T20:00:00-05:00" }),
     event({ id: "c", title: "Later show", dontMiss: true, whyLine: "Why C.", start: "2026-10-17" }),
+    event({ id: "f", title: "Art fair", kind: "art/exhibitions", dontMiss: true, start: "2026-10-19" }),
     event({ id: "d", title: "Plain show", dontMiss: false, start: "2026-10-06" }),
   ];
   // A getter, so one test can switch to no picks at all.
@@ -121,7 +122,7 @@ describe("DontMissList", () => {
       await tick();
       expect(music).toHaveAttribute("aria-pressed", "true");
       expect(titles(week!)).toEqual(["Tuesday show", "Wednesday show"]);
-      expect(titles(next!)).toEqual(["Later show"]);
+      expect(titles(next!)).toEqual(["Later show", "Art fair"]);
 
       art.click();
       await tick();
@@ -192,6 +193,24 @@ describe("DontMissList", () => {
         target.remove();
       }
     });
+  });
+
+  it("drops a section's filter, and its announcement, once a new day takes that kind's picks away", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") });
+    render(DontMissList);
+    await tick();
+    const week = () => screen.getAllByRole("region")[0]!;
+    within(week()).getByRole("button", { name: "1 art/exhibitions" }).click();
+    await tick();
+    vi.setSystemTime(new Date("2026-10-12T17:00:00Z")); // the run has closed: no art this week
+    document.dispatchEvent(new Event("visibilitychange"));
+    await tick();
+    expect(within(week()).getByRole("status")).toHaveTextContent("");
+    vi.setSystemTime(new Date("2026-10-19T17:00:00Z")); // the art fair's week: art is back, the filter is not
+    document.dispatchEvent(new Event("visibilitychange"));
+    await tick();
+    expect(within(week()).getByRole("button", { name: "1 art/exhibitions" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(week()).getByRole("link", { name: "These picks in the explorer" })).not.toHaveAttribute("href", expect.stringContaining("kind="));
   });
 
   it("says so and points at the explorer when nothing is picked", async () => {

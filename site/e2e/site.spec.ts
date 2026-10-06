@@ -50,11 +50,15 @@ test.describe("a visitor's browser in Tokyo", () => {
 });
 
 test.describe("a section's kind filter", () => {
-  test("is a link to the explorer in the served HTML", async ({ request }) => {
-    const html = await (await request.get("/")).text();
-    const kinds = html.slice(html.indexOf('aria-label="Picks by kind"'), html.indexOf("</ul>", html.indexOf('aria-label="Picks by kind"')));
-    expect(kinds).toContain('href="/explore?when=weekend&amp;kind=music&amp;dontmiss=1"');
-    expect(kinds).not.toContain("<button");
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("is a link to the explorer", async ({ page }) => {
+      await page.goto("/");
+      const kinds = page.getByRole("region").nth(0).getByRole("list", { name: "Picks by kind" });
+      await expect(kinds.getByRole("link", { name: "1 music" })).toHaveAttribute("href", "/explore?when=weekend&kind=music&dontmiss=1");
+      await expect(kinds.getByRole("button")).toHaveCount(0);
+    });
   });
 
   test("hydrated, narrows its section in place, carries the kind to the explorer link, and says so", async ({ page }) => {
@@ -76,12 +80,11 @@ test.describe("a section's kind filter", () => {
   /** Presses the week's music chip and, a frame later, counts the running animations and the week's cards. */
   async function pressMusic(page: Page): Promise<{ animations: number; cards: number }> {
     await on(page, BUILD_DAY, "/");
-    await page.getByRole("region").nth(0).getByRole("button", { name: "1 music" }).waitFor();
-    return page.evaluate(async () => {
-      const week = document.querySelector("section")!;
-      [...week.querySelectorAll<HTMLButtonElement>(".kinds button")].find((b) => b.textContent?.includes("music"))!.click();
+    // Pressed and measured in the page, so nothing has a chance to finish between the press and the count.
+    return page.getByRole("region").nth(0).getByRole("button", { name: "1 music" }).evaluate(async (music) => {
+      (music as HTMLButtonElement).click();
       await new Promise(requestAnimationFrame);
-      return { animations: document.getAnimations().length, cards: week.querySelectorAll("article").length };
+      return { animations: document.getAnimations().length, cards: music.closest("section")!.querySelectorAll("article").length };
     });
   }
 

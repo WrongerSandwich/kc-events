@@ -28,7 +28,17 @@
   // The kind counts are links to the explorer as rendered (and without JavaScript); hydrated, they filter in place.
   let hydrated = $state(false);
   onMount(() => {
-    const read = () => { now = nowIn(meta.timeZone, new Date()); };
+    const read = () => {
+      now = nowIn(meta.timeZone, new Date());
+      // A new day can take every pick of a section's chosen kind away. The filter goes with them, so it cannot come
+      // back on unpressed when a later pick of that kind moves into the section.
+      for (const h of HORIZONS) {
+        if (chosen[h] !== undefined && picksOf(h, chosen[h]).length === 0) {
+          chosen[h] = undefined;
+          announced[h] = undefined;
+        }
+      }
+    };
     read();
     hydrated = true;
     document.addEventListener("visibilitychange", read);
@@ -37,42 +47,42 @@
   let buckets = $derived(bucketDontMiss(dontMiss, today));
   let total = $derived(HORIZONS.reduce((n, h) => n + buckets[h].length, 0));
 
-  // Each section's kind filter, one kind at a time, and what its live region last said. Per visit: not in the URL,
-  // not stored.
+  // Each section's kind filter, one kind at a time, and what its live region last announced. Per visit: not in the
+  // URL, not stored.
   let chosen = $state<Partial<Record<Horizon, string>>>({});
-  let said = $state<Partial<Record<Horizon, string>>>({});
+  let announced = $state<Partial<Record<Horizon, string>>>({});
+
+  /** A section's picks, or just one kind of them. */
+  function picksOf(h: Horizon, kind: string | undefined): PublishedEvent[] {
+    return kind === undefined ? buckets[h] : buckets[h].filter((e) => e.kind === kind);
+  }
 
   /** The explorer showing a section's picks, or just one kind of them. */
-  function explore(h: Horizon, kind?: string): string {
+  function explorerHref(h: Horizon, kind?: string): string {
     const { sunday, twoWeeks } = horizonBounds(today);
     const when = h === "through-sunday" ? "weekend" : `${addDays(sunday, 1)}..${twoWeeks}`;
     return `/explore?when=${when}${kind === undefined ? "" : `&kind=${slugify(kind)}`}&dontmiss=1`;
   }
 
-  /** A section's picks counted by kind, most first, each linking to the explorer showing just those picks. */
+  /** A section's picks counted by kind, most first, each with the explorer link the chip is before hydration. */
   function kindCounts(h: Horizon, events: PublishedEvent[]): { kind: string; n: number; href: string }[] {
     const counts = new Map<string, number>();
     for (const e of events) counts.set(e.kind, (counts.get(e.kind) ?? 0) + 1);
     return [...counts]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([kind, n]) => ({ kind, n, href: explore(h, kind) }));
-  }
-
-  /** The section's kind, if one is pressed and the section still has picks of it (a re-bucket can take them all). */
-  function activeKind(h: Horizon): string | undefined {
-    const kind = chosen[h];
-    return buckets[h].some((e) => e.kind === kind) ? kind : undefined;
+      .map(([kind, n]) => ({ kind, n, href: explorerHref(h, kind) }));
   }
 
   function toggle(h: Horizon, kind: string) {
-    const next = activeKind(h) === kind ? undefined : kind;
+    const next = chosen[h] === kind ? undefined : kind;
     chosen[h] = next;
-    const n = next === undefined ? buckets[h].length : buckets[h].filter((e) => e.kind === next).length;
-    said[h] = `Showing ${next === undefined ? "all " : ""}${n} ${next === undefined ? "" : `${next} `}${n === 1 ? "pick" : "picks"}`;
+    const n = picksOf(h, next).length;
+    const picks = n === 1 ? "pick" : "picks";
+    announced[h] = next === undefined ? `Showing all ${n} ${picks}` : `Showing ${n} ${next} ${picks}`;
   }
 
-  /** A motion's length, or none where the visitor asks for none (or there is no media query to ask, as in tests). */
-  const motion = (ms: number) => (typeof matchMedia === "function" && !matchMedia("(prefers-reduced-motion: reduce)").matches ? ms : 0);
+  /** A motion's length in ms, or none where the visitor asks for none (or there is no media query to ask, as in tests). */
+  const motionMs = (ms: number) => (typeof matchMedia === "function" && !matchMedia("(prefers-reduced-motion: reduce)").matches ? ms : 0);
 
   /** The later list's one-line date: everything there starts after the next two weeks, so nothing is on now. */
   function shortWhen(e: PublishedEvent): string {
@@ -104,7 +114,7 @@
         </ul>
         <p class="more"><a href="/explore?dontmiss=1">All the picks, with why, in the explorer</a></p>
       {:else}
-        {@const kind = activeKind(h)}
+        {@const kind = chosen[h]}
         <ul class="kinds" aria-label="Picks by kind">
           {#each kindCounts(h, buckets[h]) as k (k.kind)}
             <li>
@@ -116,18 +126,18 @@
             </li>
           {/each}
         </ul>
-        <p role="status" class="visually-hidden">{said[h] ?? ""}</p>
+        <p role="status" class="visually-hidden">{announced[h] ?? ""}</p>
         {#if h === "through-sunday" && horizonBounds(today).sunday >= addDays(today, 2)}
           <!-- Three days or more left in the week: enough for a strip to say something. -->
           <WeekStrip picks={buckets[h]} {today} sunday={horizonBounds(today).sunday} />
         {/if}
         <!-- Filtered, the kept cards slide into place and the others fade. -->
-        {#each buckets[h].filter((e) => kind === undefined || e.kind === kind) as event (event.id)}
-          <div class="pick" animate:flip={{ duration: motion(250), easing: quartOut }} transition:fade={{ duration: motion(150) }}>
+        {#each picksOf(h, kind) as event (event.id)}
+          <div class="pick" animate:flip={{ duration: motionMs(250), easing: quartOut }} transition:fade={{ duration: motionMs(150) }}>
             <DontMissCard {event} {today} {now} />
           </div>
         {/each}
-        <p class="more"><a href={explore(h, kind)}>These picks in the explorer</a></p>
+        <p class="more"><a href={explorerHref(h, kind)}>These picks in the explorer</a></p>
       {/if}
     </section>
   {/each}
