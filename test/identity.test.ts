@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findMatch, normalizeName, sameVenue } from "../src/identity.js";
+import { findMatch, normalizeName, sameEvent, sameVenue } from "../src/identity.js";
 
 const CALENDAR = "https://venue.test/calendar";
 
@@ -43,6 +43,43 @@ describe("event identity", () => {
     expect(findMatch(short, [full], {})).toBe(full);
     expect(findMatch(full, [short], {})).toBe(short);
     expect(findMatch({ ...short, title: "At the Heart" + "land" }, [full], {})).toBeUndefined();
+  });
+
+  describe("a series name in front of the title", () => {
+    // The 2026-10-05 dataset's WWI Museum twins (#32): one reading names the series, the other does not.
+    const museum = { primaryUrl: "https://www.theworldwar.org/events", venue: "National WWI Museum and Memorial", start: "2026-10-21T18:30:00-05:00" };
+    const prefixed = { ...museum, title: "Pershing Lecture Series | The Wars Before the War: The American Civil War" };
+    const bare = { ...museum, title: "The Wars Before the War: The American Civil War" };
+
+    it("matches the title without it, either way round, at the same venue and date", () => {
+      expect(findMatch(bare, [prefixed], {})).toBe(prefixed);
+      expect(findMatch(prefixed, [bare], {})).toBe(bare);
+      expect(sameEvent(prefixed, bare, [prefixed, bare], {})).toBe(true);
+    });
+
+    it.each(["2026 Exchange Program Concert Series | KKS Youth Jazz Orchestra", "Concert Series: KKS Youth Jazz Orchestra", "Concert Series – KKS Youth Jazz Orchestra", "Concert Series — KKS Youth Jazz Orchestra", "Concert Series - KKS Youth Jazz Orchestra"])(
+      "after any separator: %s",
+      (title) => {
+        const jazz = { ...museum, title: "KKS Youth Jazz Orchestra" };
+        expect(findMatch(jazz, [{ ...museum, title }], {})).toBeDefined();
+      },
+    );
+
+    it("does not merge two events in the same series", () => {
+      const boer = { ...museum, title: "Pershing Lecture Series | The Wars Before the War: The Boer Wars" };
+      expect(findMatch(boer, [prefixed], {})).toBeUndefined();
+      expect(findMatch({ ...boer, title: "The Wars Before the War: The Boer Wars" }, [prefixed], {})).toBeUndefined();
+    });
+
+    it("needs a separator: a title that merely ends in the other's words is another event", () => {
+      expect(findMatch({ ...museum, title: "Jazz Orchestra" }, [{ ...museum, title: "KKS Youth Jazz Orchestra" }], {})).toBeUndefined();
+      expect(findMatch({ ...museum, title: "Orchestra" }, [{ ...museum, title: "Jazz-Orchestra" }], {})).toBeUndefined();
+    });
+
+    it("still needs the same venue and a nearby date", () => {
+      expect(findMatch({ ...bare, venue: "Union Station" }, [prefixed], {})).toBeUndefined();
+      expect(findMatch({ ...bare, start: "2026-11-18T18:30:00-06:00", primaryUrl: "https://other.test/" }, [prefixed], {})).toBeUndefined();
+    });
   });
 
   it("an exact match wins over an earlier fuzzy one", () => {

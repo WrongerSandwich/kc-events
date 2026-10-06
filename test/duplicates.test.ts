@@ -49,6 +49,7 @@ function event(title: string, venue: string | undefined, primaryUrl: string, sta
 
 const KAUFFMAN = "https://www.kauffmancenter.org/events/";
 const SYMPHONY = "https://www.kcsymphony.org/upcoming-events/";
+const WWI = "https://www.theworldwar.org/events";
 
 const pair = (kept: Event, duplicate: Event): [Event, Event] => [kept, duplicate];
 
@@ -79,6 +80,11 @@ function hand() {
       event("Interstellar Live", "Helzberg Hall", KAUFFMAN, "2026-10-23"),
       event("Interstellar Live", "Helzberg Hall", SYMPHONY, "2026-10-23"),
     ),
+    // #32: one reading of the museum's calendar puts the series name in front, the other does not.
+    series: pair(
+      event("Pershing Lecture Series | The Wars Before the War: The Boer Wars", "National WWI Museum and Memorial", WWI, "2026-11-18T18:30:00-06:00"),
+      event("The Wars Before the War: The Boer Wars", "National WWI Museum and Memorial", WWI, "2026-11-18T18:30:00-06:00", { firstSeen: RUN_TWO }),
+    ),
     venueless: pair(
       event("Baroque at 7:00: Vivaldi's Four Seasons", "Helzberg Hall", KAUFFMAN, "2026-10-14T19:00:00-05:00"),
       event("Baroque at 7:00: Vivaldi's Four Seasons", undefined, SYMPHONY, "2026-10-14"),
@@ -94,7 +100,7 @@ const withEvents = (events: Event[]): Dataset => ({ ...emptyDataset(), events })
 const byId = (dataset: Dataset) => new Map(dataset.events.map((e) => [e.id, e]));
 
 describe("folding duplicates", () => {
-  it("leaves one record per building and room, program, and venue-less group, the other expired as duplicate", async () => {
+  it("leaves one record per building and room, program, series, and venue-less group, the other expired as duplicate", async () => {
     const groups = hand();
     const { dataset, report } = await quietRun(withEvents(Object.values(groups).flat()));
 
@@ -138,18 +144,20 @@ describe("folding duplicates", () => {
     expect(byId(dataset).get(verified.id)).toMatchObject({ status: "expired", expiryReason: "duplicate" });
   });
 
-  it("folds nothing that does not match: two venues, or a venue-less record with two candidates", async () => {
+  it("folds nothing that does not match: two venues, a venue-less record with two candidates, or two events in one series", async () => {
     const separate = [
       event("Open Mic", "Bar A", "https://bara.test/", "2026-10-14"),
       event("Open Mic", "Bar B", "https://barb.test/", "2026-10-14"),
       event("Nutcracker", "Muriel Kauffman Theatre", KAUFFMAN, "2026-11-28", { recurrence: "limited-run" }),
       event("Nutcracker", undefined, "https://kcballet.org/", "2026-11-28", { recurrence: "limited-run" }),
       event("Nutcracker", undefined, "https://kcballet.org/performances/", "2026-11-28", { recurrence: "limited-run" }),
+      event("Pershing Lecture Series | The Boer Wars", "National WWI Museum and Memorial", WWI, "2026-11-18T18:30:00-06:00"),
+      event("Pershing Lecture Series | The Zulu War", "National WWI Museum and Memorial", WWI, "2026-11-18T18:30:00-06:00"),
     ];
 
     const { dataset, report } = await quietRun(withEvents(separate));
 
-    expect(dataset.events.map((e) => e.status)).toEqual(["active", "active", "active", "unverified", "unverified"]);
+    expect(dataset.events.map((e) => e.status)).toEqual(["active", "active", "active", "unverified", "unverified", "active", "active"]);
     expect(report.counts.expired.duplicate).toBe(0);
   });
 

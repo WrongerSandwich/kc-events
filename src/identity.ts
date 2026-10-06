@@ -1,6 +1,6 @@
 /**
  * Event identity (ADR 0007): an event is its primary page plus its normalized title; failing
- * that, the same normalized title (or one cut short) at the same venue on a date within a few days,
+ * that, the same normalized title (or one cut short, or with a series name in front) at the same venue on a date within a few days,
  * or, for a sighting that names no venue, on the same date when only one known event qualifies. Ids
  * are opaque and fixed at first-seen; matching never looks at them.
  */
@@ -90,13 +90,26 @@ function sameEventExactly(a: EventIdentity, b: EventIdentity): boolean {
   return a.primaryUrl === b.primaryUrl && sameName(a.title, b.title);
 }
 
+/** Where a series or program name in front of a title ends: a bar, a colon, a dash, or a hyphen with spaces round it. */
+const TITLE_SEPARATOR = /\||:|–|—|\s-\s/gu;
+
 /**
- * The same title, or one that is the other cut short at a word boundary: a page may bill an
- * event in full one week ("A / Orchestra and Choirs") and give only its lead title the next.
+ * The same title, or one that is the other cut short at a word boundary, or with a series name in
+ * front of it: a page may bill an event in full one week ("A / Orchestra and Choirs") and give only
+ * its lead title the next, and one reading of a page may put the series first ("Pershing Lecture
+ * Series | A") where another does not. The shorter title must be all that follows a separator in the
+ * longer, so two events in one series ("Series | A", "Series | B") stay two.
  */
 function sameOrShortenedTitle(a: string, b: string): boolean {
-  const [shorter, longer] = byLength(normalizeName(a), normalizeName(b));
-  return shorter !== "" && (longer === shorter || longer.startsWith(`${shorter} `));
+  const [shorter, longer] = normalizeName(a).length <= normalizeName(b).length ? [a, b] : [b, a];
+  const short = normalizeName(shorter);
+  return short !== "" && titleForms(longer).some((form) => form === short || form.startsWith(`${short} `));
+}
+
+/** A title, normalized, then whatever follows each separator in it, normalized. */
+function titleForms(title: string): string[] {
+  const afterSeparators = [...title.matchAll(TITLE_SEPARATOR)].map((m) => normalizeName(title.slice(m.index + m[0].length)));
+  return [normalizeName(title), ...afterSeparators.filter((form) => form !== "")];
 }
 
 function byLength(a: string, b: string): [string, string] {
