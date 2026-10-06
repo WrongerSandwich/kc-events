@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FILTERS, WHEN_LABELS, describeFilters, isDefault, parseQuery, toQuery, type Filters } from "../src/lib/query";
+import { DEFAULT_FILTERS, WHEN_LABELS, filterPills, isDefault, parseQuery, toQuery, type Filters } from "../src/lib/query";
 
 const known = { kinds: ["music", "film", "theater/dance"], regions: ["Central KC", "Kansas City, Kansas", "Elsewhere in the metro"] };
 const parse = (s: string) => parseQuery(new URLSearchParams(s), known);
+const describeFilters = (f: Filters) => filterPills(f).map((p) => p.label);
 
 describe("query state", () => {
   it("parses nothing to the defaults", () => {
@@ -108,5 +109,22 @@ describe("query state", () => {
       .toEqual(["Through Sunday", "music", "film", "Kansas City, Kansas", "don't-miss only", "saved only", "“zzz”"]);
     expect(describeFilters({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-11" }, recurring: true, sort: "venue" })).toEqual(["Oct 9–11", "including always-there"]);
     expect(describeFilters({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-09" } })).toEqual(["Oct 9"]);
+  });
+
+  it("names each active filter as a pill that removes only that filter, sort kept", () => {
+    expect(filterPills(DEFAULT_FILTERS)).toEqual([]);
+    const f: Filters = { ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Lawrence"], dontMiss: true, recurring: true, saved: true, q: "jazz", sort: "venue" };
+    const pills = filterPills(f);
+    expect(pills.map((p) => p.label)).toEqual(["Through Sunday", "music", "film", "Lawrence", "don't-miss only", "including always-there", "saved only", "“jazz”"]);
+    const without = Object.fromEntries(pills.map((p) => [p.label, p.without]));
+    expect(without["Through Sunday"]).toEqual({ ...f, when: { preset: "all" } });
+    expect(without["music"]).toEqual({ ...f, kinds: ["film"] });
+    expect(without["Lawrence"]).toEqual({ ...f, regions: [] });
+    expect(without["don't-miss only"]).toEqual({ ...f, dontMiss: false });
+    expect(without["including always-there"]).toEqual({ ...f, recurring: false });
+    expect(without["saved only"]).toEqual({ ...f, saved: false });
+    expect(without["“jazz”"]).toEqual({ ...f, q: "" });
+    // Kind pills say which kind they are, so they can carry its icon and tint.
+    expect(pills.filter((p) => p.kind !== undefined).map((p) => p.kind)).toEqual(["music", "film"]);
   });
 });

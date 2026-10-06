@@ -79,15 +79,19 @@ export function isDefault(f: Filters): boolean {
   return toQuery(f) === "";
 }
 
-/** The filters that narrow the results, in words ("Through Sunday", "music", "“jazz”"); sort narrows nothing and is left out. */
-export function describeFilters(f: Filters): string[] {
-  const out: string[] = [];
-  if ("from" in f.when) out.push(f.when.from === f.when.to ? formatShort(f.when.from) : formatRange(f.when.from, f.when.to));
-  else if (f.when.preset !== "all") out.push(WHEN_LABELS[f.when.preset]);
-  out.push(...f.kinds, ...f.regions);
-  if (f.dontMiss) out.push("don't-miss only");
-  if (f.recurring) out.push("including always-there");
-  if (f.saved) out.push("saved only");
-  if (f.q.trim() !== "") out.push(`“${f.q.trim()}”`);
+/** One active filter: its words, its kind when it is one, and the filters with it removed. */
+export type FilterPill = { label: string; kind?: string; without: Filters };
+
+/** The filters that narrow the results, one pill each, in words ("Through Sunday", "music", "“jazz”"); sort narrows nothing and has none. */
+export function filterPills(f: Filters): FilterPill[] {
+  const out: FilterPill[] = [];
+  if ("from" in f.when) out.push({ label: f.when.from === f.when.to ? formatShort(f.when.from) : formatRange(f.when.from, f.when.to), without: { ...f, when: DEFAULT_FILTERS.when } });
+  else if (f.when.preset !== "all") out.push({ label: WHEN_LABELS[f.when.preset], without: { ...f, when: DEFAULT_FILTERS.when } });
+  for (const k of f.kinds) out.push({ label: k, kind: k, without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
+  for (const r of f.regions) out.push({ label: r, without: { ...f, regions: f.regions.filter((x) => x !== r) } });
+  if (f.dontMiss) out.push({ label: "don't-miss only", without: { ...f, dontMiss: false } });
+  if (f.recurring) out.push({ label: "including always-there", without: { ...f, recurring: false } });
+  if (f.saved) out.push({ label: "saved only", without: { ...f, saved: false } });
+  if (f.q.trim() !== "") out.push({ label: `“${f.q.trim()}”`, without: { ...f, q: "" } });
   return out;
 }
