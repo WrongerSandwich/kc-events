@@ -31,6 +31,15 @@ describe("groupResults", () => {
     ]);
   });
 
+  it("collapses On now when no when-filter is set, so the dated days lead, and keeps it open under a when-filter", () => {
+    const collapsed = (over: Partial<Filters>) => groupResults(all, f(over), today, none).map((g) => [g.key, g.collapsed]);
+    expect(collapsed({})).toEqual([["on-now", true], ["2026-10-06", false], ["2026-10-09", false], ["2026-10-20", false]]);
+    expect(collapsed({ kinds: ["music"], recurring: true })[0]).toEqual(["on-now", true]);
+    expect(collapsed({ when: { preset: "7d" } })[0]).toEqual(["on-now", false]);
+    expect(collapsed({ when: { preset: "fri-sun" } })[0]).toEqual(["on-now", false]);
+    expect(collapsed({ when: { from: "2026-10-05", to: "2026-10-31" } })[0]).toEqual(["on-now", false]);
+  });
+
   it("lists a multi-day one-off under On now while underway, and under its opening day before", () => {
     const groups = groupResults([festNow, festLater], f(), today, none);
     expect(groups.map((g) => [g.key, g.events.map((e) => e.id)])).toEqual([
