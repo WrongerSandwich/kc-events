@@ -112,22 +112,68 @@ describe("Explorer", () => {
     expect(film).toHaveTextContent("Sat Oct 10 · all day");
   });
 
-  it("closes the filter sheet on phones after mount, and reopens it when the window widens past the phone layout", () => {
-    const listeners = new Set<(e: { matches: boolean }) => void>();
-    const mq = { matches: true, addEventListener: (_: string, l: (e: { matches: boolean }) => void) => listeners.add(l), removeEventListener: (_: string, l: (e: { matches: boolean }) => void) => listeners.delete(l) };
-    vi.stubGlobal("matchMedia", vi.fn(() => mq));
+  it("renders the phone filter sheet closed from the first render, behind a Filters button that opens it", async () => {
+    history.replaceState(null, "", "/explore?kind=music");
+    const target = document.body.appendChild(document.createElement("div"));
+    const component = mount(Explorer, { target });
+    // The first render is the server's: closed already, so nothing closes on hydration.
+    const toggle = within(target).getByRole("button", { name: /^Filters/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    const sheet = target.querySelector(`#${toggle.getAttribute("aria-controls")}`)!;
+    expect(sheet).not.toHaveClass("open");
+    flushSync();
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveTextContent("Filters (1)");
+    await fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(sheet).toHaveClass("open");
+    unmount(component);
+    target.remove();
+  });
+
+  it("names the active filters as pills in the bar, each removing only its own filter", async () => {
+    history.replaceState(null, "", "/explore?when=weekend&kind=music&kind=film");
+    render(Explorer);
+    const bar = document.querySelector(".bar") as HTMLElement;
+    const pills = within(bar).getAllByRole("button", { name: /^Remove / });
+    expect(pills.map((p) => p.textContent?.trim())).toEqual(["Through Sunday", "music", "film"]);
+    await fireEvent.click(within(bar).getByRole("button", { name: "Remove music" }));
+    expect(location.search).toBe("?when=weekend&kind=film");
+    expect(rows()).toEqual(["Saturday film"]);
+    expect(screen.getByRole("button", { name: "music" })).toHaveAttribute("aria-pressed", "false");
+    await fireEvent.click(within(bar).getByRole("button", { name: "Remove Through Sunday" }));
+    expect(location.search).toBe("?kind=film");
+    expect(within(bar).getAllByRole("button", { name: /^Remove / }).map((p) => p.textContent?.trim())).toEqual(["film"]);
+  });
+
+  it("keeps keyboard focus in the bar when a pill goes: on the next pill, else the one before, else search", async () => {
+    history.replaceState(null, "", "/explore?when=weekend&kind=music&kind=film");
+    render(Explorer);
+    await fireEvent.click(screen.getByRole("button", { name: "Remove music" }));
+    expect(screen.getByRole("button", { name: "Remove film" })).toHaveFocus();
+    await fireEvent.click(screen.getByRole("button", { name: "Remove film" }));
+    expect(screen.getByRole("button", { name: "Remove Through Sunday" })).toHaveFocus();
+    await fireEvent.click(screen.getByRole("button", { name: "Remove Through Sunday" }));
+    expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();
+  });
+
+  it("returns to the top of the results when a filter changes below it, and stays put above it", async () => {
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    let top = -4000;
+    const rect = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (this: Element) {
+      return { top: this.id === "results" ? top : 0 } as DOMRect;
+    });
     try {
-      const { container, unmount: done } = render(Explorer);
-      const sheet = container.querySelector("details")!;
-      expect(sheet.open).toBe(false);
-      mq.matches = false;
-      listeners.forEach((l) => l({ matches: false }));
-      flushSync();
-      expect(sheet.open).toBe(true);
-      done();
-      expect(listeners.size).toBe(0);
+      render(Explorer);
+      await fireEvent.click(screen.getByRole("button", { name: "film" }));
+      // jsdom lays nothing out, so the bar measures 0 px and the results' top is the whole distance.
+      expect(scrolled).toHaveBeenCalledExactlyOnceWith({ top: -4000, behavior: "instant" });
+      top = 300;
+      await fireEvent.click(screen.getByRole("button", { name: "music" }));
+      expect(scrolled).toHaveBeenCalledTimes(1);
     } finally {
-      vi.unstubAllGlobals();
+      rect.mockRestore();
+      scrolled.mockRestore();
     }
   });
 

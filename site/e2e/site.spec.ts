@@ -126,6 +126,127 @@ test("the explorer honors the URL and writes it back", async ({ page }) => {
   await expect(page).toHaveURL("/explore");
 });
 
+/**
+ * Scrolls far down the results. The fixture's list is a screen or two, short enough that a browser clamps the scroll
+ * back by itself when the list shrinks, so padding stands in for a real week's 500 rows.
+ */
+async function deepInTheList(page: Page) {
+  await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+  await page.locator(".results").evaluate((el) => { el.style.paddingBottom = "4000px"; });
+  await page.evaluate(() => window.scrollTo({ top: document.body.scrollHeight, behavior: "instant" }));
+  await expect(page.locator(".results > article.row").first()).not.toBeInViewport();
+}
+
+/** The first result is on screen and clear of the sticky bar. */
+async function expectFirstResultInView(page: Page) {
+  const first = page.locator(".results > article.row").first();
+  await expect(first).toBeInViewport();
+  const barBottom = await page.locator(".bar").evaluate((el) => el.getBoundingClientRect().bottom);
+  expect(await first.evaluate((el) => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(barBottom - 1);
+}
+
+test.describe("the explorer's active slice at 390 px", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("names a shared link's filters as pills without opening anything, and each pill removes only its filter", async ({ page }) => {
+    await on(page, BUILD_DAY, "/explore?when=weekend&kind=music");
+    const pills = page.getByRole("list", { name: "Active filters" }).getByRole("button");
+    await expect(pills).toHaveText(["Through Sunday", "music"]);
+    for (const pill of await pills.all()) await expect(pill).toBeInViewport();
+    await expect(page.locator("#filter-sheet")).toBeHidden();
+    await page.getByRole("button", { name: "Remove Through Sunday" }).click();
+    await expect(page).toHaveURL("/explore?kind=music");
+    await expect(pills).toHaveText(["music"]);
+    await expect(page.getByRole("button", { name: /^Filters/ })).toHaveText("Filters (1)");
+  });
+
+  test("opens no sheet and shifts nothing when the page hydrates", async ({ page }) => {
+    // The page's cumulative layout shift, summed as the browser reports it.
+    type Shifts = { shifts: number };
+    await page.addInitScript(() => {
+      const w = window as unknown as Shifts;
+      w.shifts = 0;
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) if (!e.hadRecentInput) w.shifts += e.value;
+      }).observe({ type: "layout-shift", buffered: true });
+    });
+    await page.clock.setFixedTime(BUILD_DAY);
+    await page.goto("/explore", { waitUntil: "commit" });
+    const results = page.getByRole("region", { name: "Events" });
+    await results.waitFor();
+    const before = await results.evaluate((el) => el.getBoundingClientRect().top);
+    await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+    await page.waitForLoadState("load");
+    expect(await results.evaluate((el) => el.getBoundingClientRect().top)).toBe(before);
+    await expect(page.locator("#filter-sheet")).toBeHidden();
+    expect(await page.evaluate(() => (window as unknown as Shifts).shifts)).toBeLessThan(0.01);
+  });
+
+  test("loads a filtered link without shifting it", async ({ page }) => {
+    await page.addInitScript(() => {
+      const w = window as unknown as { shifts: number };
+      w.shifts = 0;
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries() as unknown as { value: number; hadRecentInput: boolean }[]) if (!e.hadRecentInput) w.shifts += e.value;
+      }).observe({ type: "layout-shift", buffered: true });
+    });
+    await on(page, BUILD_DAY, "/explore?when=weekend&kind=music");
+    await expect(page.getByRole("status")).toHaveText("2 events");
+    await expect(page.getByRole("region", { name: "Events" })).toBeVisible();
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => (window as unknown as { shifts: number }).shifts)).toBeLessThan(0.1);
+  });
+
+  test.describe("before the explorer hydrates", () => {
+    // Hold the explorer's script back, so the server HTML is what shows.
+    test.beforeEach(async ({ page }) => { await page.route("**/_astro/Explorer*.js", () => {}); });
+
+    test("a filtered link shows no rows, then shows them anyway if the script never comes", async ({ page }) => {
+      await page.clock.setFixedTime(BUILD_DAY);
+      // Not the load event, which the held script delays past the three-second fallback.
+      await page.goto("/explore?kind=music", { waitUntil: "domcontentloaded" });
+      // By id: role queries skip what is hidden, so they would wait for the reveal.
+      const results = page.locator("#results");
+      await expect(results).toBeAttached();
+      await expect(results).toBeHidden();
+      await expect(results).toBeVisible({ timeout: 6000 });
+    });
+
+    test("plain /explore shows its rows from the server HTML", async ({ page }) => {
+      await on(page, BUILD_DAY, "/explore?utm_source=newsletter");
+      await expect(page.getByRole("region", { name: "Events" })).toBeVisible();
+      await expect(page.locator(".results > article.row").first()).toBeVisible();
+    });
+  });
+
+  test("returns to the first result when a pill is removed deep in the list", async ({ page }) => {
+    await on(page, BUILD_DAY, "/explore?when=30d");
+    await deepInTheList(page);
+    await page.getByRole("button", { name: "Remove Next 30 days" }).click();
+    await expectFirstResultInView(page);
+  });
+});
+
+test("returns to the first result when a filter changes deep in the list", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await on(page, BUILD_DAY, "/explore");
+  await deepInTheList(page);
+  await page.getByRole("button", { name: "music", exact: true }).click();
+  await expectFirstResultInView(page);
+});
+
+test("without JavaScript, a filtered link says the filters need it", async ({ browser }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
+  const page = await context.newPage();
+  await on(page, BUILD_DAY, "/explore?kind=music");
+  // Playwright's text and role queries skip <noscript>, so find the notice by its class.
+  const notice = page.locator(".no-js");
+  await expect(notice).toBeVisible();
+  await expect(notice).toContainText("Filters need JavaScript.");
+  await expect(page.getByRole("button", { name: /^Filters/ })).toBeHidden();
+  await context.close();
+});
+
 test("the region fallback places a region-named neighborhood", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore?region=johnson-county");
   await expect(page.getByRole("article").getByRole("heading")).toHaveText(["County fair talk", "Friday night jazz"]);
@@ -181,7 +302,7 @@ for (const width of [1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 800 });
       await on(page, BUILD_DAY, path);
       await openOnNow(page);
-      await expect(page.locator("article.row").first()).toBeVisible();
+      await expect(page.locator(".results > article.row").first()).toBeVisible();
       const rows = await page.locator("article.row").evaluateAll((els) =>
         els.map((row) => {
           const when = row.querySelector<HTMLElement>(".when")!;
