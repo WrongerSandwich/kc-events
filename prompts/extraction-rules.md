@@ -11,6 +11,7 @@ Every field you fill must come from the text of the page body you were given. No
 - An event the page places outside the geography given below (a touring act's other cities, a regional festival two states away) is still listed, with `outsideGeography` true, so the run can count what it dropped. If the page does not say where the event is and the source is not itself a venue, leave the venue null and `outsideGeography` false; do not assume.
 - Skip things that are not events: ticket on-sale announcements, newsletter signups, venue rental pitches, past-event recaps, merchandise.
 - A business's own recurring night is a promotion, not an event, whatever it offers: a bar's, restaurant's, club's, or shop's happy hour, drink or food special, food night (Taco Tuesday, a brunch), themed party, DJ night, trivia, karaoke, bingo, open mic, or birthday package. Skip it, even when an events calendar lists it with a weekly schedule. A recurring thing is an event only when it is bigger than one business's standing night: a district's First Friday, a market, a museum's or art center's tours or open studios, a team's season.
+- A class or workshop is an event wherever it is held, a bar or winery included: a lesson, a make-and-take, a craft session where you leave having learned or made something.
 - A watch party or game-day party at a bar or entertainment district is a promotion too, recurring or one-off: skip it.
 
 ## One event per occurrence group, not per date

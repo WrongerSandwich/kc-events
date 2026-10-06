@@ -31,7 +31,7 @@ An event that happens over a bounded span with a known end date, such as an exhi
 An event that repeats indefinitely on a schedule, such as a monthly market, First Fridays, or a museum's weekly tour.
 
 **Promotion**:
-A business's own standing night, or a bar's watch party, listed as if it were an event: a happy hour, a food or drink special, a themed or DJ night, trivia, karaoke, a game-day party. Never an event, whatever it offers; extraction skips it. A recurring event is bigger than one business's night.
+A business's own standing night, or a bar's watch party, listed as if it were an event: a happy hour, a food or drink special, a themed or DJ night, trivia, karaoke, a game-day party. Never an event, whatever it offers; extraction skips it. A recurring event is bigger than one business's night. A class or workshop is never a promotion, wherever it is held.
 _Avoid_: special, deal
 
 **Schedule phrase**:
