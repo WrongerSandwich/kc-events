@@ -24,9 +24,9 @@ export type ScriptedReply = CompletionResult | Error;
 
 export interface FakePortOptions {
   pages?: Record<string, CannedPage>;
-  /** Scripted extraction replies, consumed in call order; running out is an error, and an Error is thrown. */
+  /** Scripted extraction replies, consumed in call order; running out is an error. An Error entry is thrown, not returned. */
   completions?: ScriptedReply[];
-  /** Scripted curation replies, consumed in call order; running out flags nothing, and an Error is thrown. */
+  /** Scripted curation replies, consumed in call order; running out flags nothing. An Error entry is thrown, not returned. */
   curations?: ScriptedReply[];
   /** Search results by query; a query not listed returns nothing, an Error is thrown. */
   searches?: Record<string, SearchResult[] | Error>;

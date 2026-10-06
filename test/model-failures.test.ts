@@ -129,7 +129,7 @@ describe("a model call that throws", () => {
     expect(dataset.events).toHaveLength(1);
     expect(dataset.events[0]).toMatchObject({ status: "active", dontMiss: false });
     expect(dataset.events[0]!.lastJudged).toBeUndefined();
-    expect(report.curation).toMatchObject({ calls: 1, judged: 0, problems: ["a curation call failed (terminated); 1 event(s) left unjudged"] });
+    expect(report.curation).toMatchObject({ calls: 1, judged: 0, problems: ["a curation call was not read: the model call failed (terminated); 1 event(s) left unjudged"] });
   });
 
   it("on curation leaves later batches to be judged", async () => {

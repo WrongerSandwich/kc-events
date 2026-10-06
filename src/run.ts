@@ -576,14 +576,14 @@ async function reverify(
       continue;
     }
     const { page } = fetched;
-    const event = pending.find((e) => e.primaryUrl === url)!;
+    const onPage = pending.filter((e) => e.primaryUrl === url);
     const pageUrls = new Set([url, normalizeUrl(page.finalUrl, url)]);
     let read: Awaited<ReturnType<typeof extractPage>>;
     try {
-      read = await extractPage(page, originFor(event, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
+      read = await extractPage(page, originFor(onPage[0]!, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
     } catch (error) {
       if (error instanceof SpendCapReached) throw error;
-      problems.push(`${url} not re-read: ${modelFailed(error)}; ${plural(pending.filter((e) => e.primaryUrl === url).length, "event")} left unchanged`);
+      problems.push(`${url} not re-read: ${modelFailed(error)}; ${plural(onPage.length, "event")} left unchanged`);
       continue;
     }
     outsideGeography += read.outsideGeography;
@@ -864,16 +864,16 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
       notCurated += batch.length;
       continue;
     }
+    // A call that throws was still made.
+    report.calls++;
     let reply: Awaited<ReturnType<CappedModel["complete"]>>;
     try {
       reply = await model.complete(buildCurationRequest(batch, context));
     } catch (error) {
       if (error instanceof SpendCapReached) throw error;
-      report.calls++;
-      report.problems.push(`a curation call failed (${errorMessage(error)}); ${batch.length} event(s) left unjudged`);
+      report.problems.push(`a curation call was not read: ${modelFailed(error)}; ${batch.length} event(s) left unjudged`);
       continue;
     }
-    report.calls++;
     const parsed = curationReplySchema.safeParse(reply.value);
     if (!parsed.success) {
       report.problems.push(`a curation reply was not in the expected shape; ${batch.length} event(s) left unjudged`);
