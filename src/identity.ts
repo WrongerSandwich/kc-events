@@ -84,15 +84,25 @@ export function sameVenue(a: string, b: string, aliases: VenueAliases): boolean 
   });
 }
 
-/** Two normalized venue names: the same, one contained in the other at word boundaries, or the same words reordered. */
+/** Two normalized venue names that are one venue under any of sameVenue's three rules. */
 function oneVenueName(a: string, b: string): boolean {
-  const [shorter, longer] = byLength(a, b);
-  if (shorter === "") return false;
-  return ` ${longer} `.includes(` ${shorter} `) || sortedWords(a) === sortedWords(b);
+  return sameOrContained(a, b) || sameWordsReordered(a, b);
 }
 
-function sortedWords(name: string): string {
-  return name.split(" ").sort().join(" ");
+function sameOrContained(a: string, b: string): boolean {
+  const [shorter, longer] = byLength(a, b);
+  return shorter !== "" && ` ${longer} `.includes(` ${shorter} `);
+}
+
+/**
+ * The same words in another order. Not for a name with a letter or number label in it: "Studio A
+ * Room B" and "Studio B Room A" are two rooms, though their words are the same.
+ */
+function sameWordsReordered(a: string, b: string): boolean {
+  const words = (name: string) => name.split(" ").sort();
+  const [x, y] = [words(a), words(b)];
+  if ([...x, ...y].some((word) => word.length < 2 || /\p{N}/u.test(word))) return false;
+  return x.join(" ") === y.join(" ");
 }
 
 function sameEventExactly(a: EventIdentity, b: EventIdentity): boolean {

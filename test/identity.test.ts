@@ -145,6 +145,15 @@ describe("the same venue", () => {
     expect(sameVenue("Royal American Campus", "American Royal New Campus", {})).toBe(false);
   });
 
+  it("is not two rooms whose letter or number labels are swapped", () => {
+    expect(sameVenue("Studio A Room B", "Studio B Room A", {})).toBe(false);
+    expect(sameVenue("Hall 1, Level 2", "Hall 2, Level 1", {})).toBe(false);
+  });
+
+  it("applies word order to alias entries too", () => {
+    expect(sameVenue("Hall Helzberg", "Kauffman Center for the Performing Arts", ALIASES)).toBe(true);
+  });
+
   it("is not two different bars that share nothing but a word", () => {
     const a = { primaryUrl: "https://bara.test/", title: "Open Mic", venue: "Bar A", start: "2026-10-14" };
     const b = { primaryUrl: "https://barb.test/", title: "Open Mic", venue: "Bar B", start: "2026-10-14" };
