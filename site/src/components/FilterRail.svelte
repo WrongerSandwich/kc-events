@@ -83,9 +83,9 @@
   .segments, .chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
   button { font: inherit; font-size: var(--text-xs); background: none; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: var(--space-1) var(--space-2); cursor: pointer; }
   /* One pressed look across the rail: a tint, an edge and words in a shade, and medium weight. Kind buttons take their
-     kind's tint and shade from their .kind-<slug> class; every other button the grey "other" tint and ink, set here on
+     kind's tint and shade from their .kind-<slug> class; every other button the grey pressed tint and ink, set here on
      the rail so a kind button's own class still wins. */
-  .rail { --hue: var(--fg); --hue-tint: var(--kind-other-tint); }
+  .rail { --hue: var(--fg); --hue-tint: var(--pressed-tint); }
   button[aria-pressed="true"] { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
   /* Kind buttons carry their kind: the icon in its colour. */
   .kind { display: inline-flex; align-items: center; gap: 0.3em; }

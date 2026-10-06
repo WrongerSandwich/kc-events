@@ -111,14 +111,15 @@
       --when-width: 9.75rem;
       --chip-width: 9.75rem; --host-width: 8rem; --verified-width: 3.5rem; --save-width: 4.25rem;
       padding: 2px 0;
-      grid-template-columns: var(--when-width) fit-content(18rem) minmax(12rem, 1fr) var(--chip-width) var(--host-width) var(--verified-width) var(--save-width);
+      --title-max: 18rem;
+      grid-template-columns: var(--when-width) fit-content(var(--title-max)) minmax(12rem, 1fr) var(--chip-width) var(--host-width) var(--verified-width) var(--save-width);
       grid-template-areas: "when title where chip host verified save" ". why why why why why why";
     }
     .row.with-day { --when-width: 13.5rem; }
   }
   /* 1440 px and up the container is wider (base.css), so the title can take more. */
   @media (min-width: 1440px) {
-    .row { grid-template-columns: var(--when-width) fit-content(22rem) minmax(12rem, 1fr) var(--chip-width) var(--host-width) var(--verified-width) var(--save-width); }
+    .row { --title-max: 22rem; }
   }
   /* The tightest one-line width: the host gives up the most so the title and the venue keep theirs. */
   @media (min-width: 1280px) and (max-width: 1439px) {

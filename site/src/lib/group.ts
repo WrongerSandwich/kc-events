@@ -42,7 +42,7 @@ function byStartThenTitle(a: PublishedEvent, b: PublishedEvent): number {
 /**
  * The explorer's results: "On now", then one group per day, then "Always there" when recurring events are included;
  * sorted by venue, one group per venue instead.
- * With no when-filter, "On now" is collapsed: its runs (often dozens of exhibitions closing months out) would
+ * Under the date sort, with no when-filter, "On now" is collapsed: its runs (often dozens of exhibitions closing months out) would
  * otherwise push the first dated day off the first screen. A when-filter slice is short enough to show it open.
  */
 export function groupResults(events: PublishedEvent[], f: Filters, today: string, saved: ReadonlySet<string>): ResultGroup[] {
@@ -51,7 +51,11 @@ export function groupResults(events: PublishedEvent[], f: Filters, today: string
   if (f.sort === "venue") {
     const sorted = [...hits].sort((a, b) => a.venue.localeCompare(b.venue) || sortStart(a).localeCompare(sortStart(b)) || a.title.localeCompare(b.title));
     const byVenue = new Map<string, PublishedEvent[]>();
-    for (const e of sorted) byVenue.set(e.venue, [...(byVenue.get(e.venue) ?? []), e]);
+    for (const e of sorted) {
+      const list = byVenue.get(e.venue);
+      if (list) list.push(e);
+      else byVenue.set(e.venue, [e]);
+    }
     return [...byVenue].map(([venue, events]) => ({ key: `venue:${venue}`, heading: venue, events, collapsed: false }));
   }
 

@@ -57,7 +57,7 @@ p a, .prose a { text-decoration: underline; }
   white-space: nowrap;
 }
 
-/* A section's heading: the horizon buckets, Always there, More like this, the explorer's day groups. */
+/* A section's heading: the horizon buckets, Always there, More like this, the explorer's groups. */
 .section-heading {
   font-size: var(--text-2xl);
   color: var(--fg);
@@ -65,9 +65,9 @@ p a, .prose a { text-decoration: underline; }
   margin: var(--space-16) 0 0;
 }
 
-/* The explorer's day group: smaller, and stuck just under the result bar (the explorer measures the bar into
-   --bar-height; --tap is the one-line bar: the export button's 28 px plus its padding). */
-.section-heading.day {
+/* The explorer's group, a day or a venue: smaller, and stuck just under the result bar (the explorer measures the bar
+   into --bar-height; --tap is the one-line bar: the export button's 28 px plus its padding). */
+.section-heading.group {
   font-size: var(--text-sm);
   margin: var(--space-6) 0 var(--space-1);
   position: sticky; top: var(--bar-height, var(--tap));
