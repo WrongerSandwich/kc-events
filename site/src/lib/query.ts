@@ -29,6 +29,9 @@ export type Filters = {
   sort: Sort;
 };
 
+/** Every key toQuery can write; the explore page checks for them before the explorer hydrates. */
+export const QUERY_KEYS = ["when", "kind", "region", "dontmiss", "recurring", "saved", "q", "sort"] as const;
+
 export const DEFAULT_FILTERS: Filters = { when: { preset: "all" }, kinds: [], regions: [], dontMiss: false, recurring: false, saved: false, q: "", sort: "date" };
 
 export type Known = { kinds: readonly string[]; regions: readonly string[] };

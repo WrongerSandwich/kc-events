@@ -38,6 +38,8 @@
     filters = parseQuery(new URLSearchParams(location.search), known);
     const unsubscribe = saves().subscribe((ids) => { saved = ids; });
     mounted = true;
+    // The explore page hides a filtered link's explorer until its own slice is on screen; show it once this render lands.
+    void tick().then(() => { delete document.documentElement.dataset.slice; });
     return unsubscribe;
   });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FILTERS, WHEN_LABELS, filterPills, isDefault, parseQuery, toQuery, type Filters } from "../src/lib/query";
+import { DEFAULT_FILTERS, QUERY_KEYS, WHEN_LABELS, filterPills, isDefault, parseQuery, toQuery, type Filters } from "../src/lib/query";
 
 const known = { kinds: ["music", "film", "theater/dance"], regions: ["Central KC", "Kansas City, Kansas", "Elsewhere in the metro"] };
 const parse = (s: string) => parseQuery(new URLSearchParams(s), known);
@@ -109,6 +109,11 @@ describe("query state", () => {
       .toEqual(["Through Sunday", "music", "film", "Kansas City, Kansas", "don't-miss only", "saved only", "“zzz”"]);
     expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-11" }, recurring: true, sort: "venue" })).toEqual(["Oct 9–11", "including always-there"]);
     expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-09" } })).toEqual(["Oct 9"]);
+  });
+
+  it("lists every key the query string can carry, for the page's before-hydration check", () => {
+    const all: Filters = { when: { preset: "7d" }, kinds: ["music"], regions: ["Central KC"], dontMiss: true, recurring: true, saved: true, q: "jazz", sort: "venue" };
+    expect([...new URLSearchParams(toQuery(all)).keys()].sort()).toEqual([...QUERY_KEYS].sort());
   });
 
   it("names each active filter as a pill that removes only that filter, sort kept", () => {
