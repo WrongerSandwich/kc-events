@@ -49,6 +49,23 @@ test.describe("a visitor's browser in Tokyo", () => {
   });
 });
 
+test.describe("the favicon", () => {
+  // Already Wednesday the 7th there; the icon still goes by Kansas City time.
+  test.use({ timezoneId: "Asia/Tokyo" });
+
+  test("shows today's day of month in the site's zone, and rolls over when the tab comes back", async ({ page }) => {
+    await page.clock.install({ time: new Date("2026-10-06T23:00:00Z") }); // 6:00 pm Tuesday the 6th in Chicago
+    await page.goto("/about");
+    const icon = page.locator('link[rel="icon"]');
+    const day = async () => decodeURIComponent((await icon.getAttribute("href"))!).match(/>(\d+)<\/text>/)?.[1];
+    await expect(icon).toHaveAttribute("href", /^data:image\/svg\+xml,/);
+    expect(await day()).toBe("6");
+    await page.clock.setFixedTime(new Date("2026-10-07T05:30:00Z")); // 12:30 am Wednesday the 7th
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    await expect.poll(day).toBe("7");
+  });
+});
+
 test.describe("a section's kind filter", () => {
   test.describe("without JavaScript", () => {
     test.use({ javaScriptEnabled: false });

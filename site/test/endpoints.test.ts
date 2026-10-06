@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
+import { faviconSvg } from "../src/lib/favicon";
 
 const dist = new URL("../dist/", import.meta.url);
 const has = (p: string) => existsSync(new URL(p, dist));
@@ -66,5 +67,13 @@ describe.skipIf(!matchesGenerated)("built output", () => {
     expect(canonical(`e/${events[0]!.id}.html`)).toMatch(new RegExp(`/e/${events[0]!.id}$`));
     expect(canonical("index.html")).toMatch(/\/$/);
     expect(canonical("about.html")).toMatch(/\/about$/);
+  });
+  it("links the favicon and the apple-touch-icon from every page, and serves the tile with no day as /favicon.svg", () => {
+    expect(read("favicon.svg")).toBe(faviconSvg());
+    expect(has("apple-touch-icon.png")).toBe(true);
+    for (const page of ["index.html", "explore.html", "about.html", "404.html", `e/${events[0]!.id}.html`]) {
+      expect(read(page), page).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml">');
+      expect(read(page), page).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">');
+    }
   });
 });
