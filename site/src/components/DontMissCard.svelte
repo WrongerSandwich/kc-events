@@ -32,7 +32,7 @@
     {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
     <p class="tags">
       <KindChip kind={event.kind} />
-      <a class="fact primary" href={event.primaryUrl} rel="noopener"><UiIcon name="link" />{hostOf(event.primaryUrl)}</a>
+      <a class="fact primary" href={event.primaryUrl}><UiIcon name="link" />{hostOf(event.primaryUrl)}</a>
       {#if checked < runDay}<span class="fact verified"><UiIcon name="check" />Verified {formatShort(checked)}</span>{/if}
     </p>
   </div>

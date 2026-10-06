@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay } from "../src/lib/events";
+import { firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay } from "../src/lib/events";
 import { event } from "./fixtures/event";
 
 const oneDay = event();
@@ -48,5 +48,13 @@ describe("event predicates", () => {
     expect(hostOf("https://www.therecordbar.com/shows")).toBe("therecordbar.com");
     expect(hostOf("https://kcrep.org/event/x")).toBe("kcrep.org");
     expect(hostOf("not a url")).toBe("not a url");
+  });
+});
+
+describe("hasStartDay", () => {
+  it("is true for a dated event with a start, false for a recurring event or a run with no start", () => {
+    expect(hasStartDay(event())).toBe(true);
+    expect(hasStartDay(event({ recurrence: "recurring", start: undefined, schedule: "Tuesdays" }))).toBe(false);
+    expect(hasStartDay(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }))).toBe(false);
   });
 });

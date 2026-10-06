@@ -12,7 +12,7 @@ import { meta } from "../../generated/meta";
 import { formatDay, formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd } from "../../lib/event-meta";
 import { longDateLine } from "../../lib/date-line";
-import { firstDay, hostOf, isDated, lastDay } from "../../lib/events";
+import { firstDay, hasStartDay, hostOf, isDated, lastDay } from "../../lib/events";
 import { siteConfig } from "../../site.config";
 import type { PublishedEvent } from "../../lib/types";
 
@@ -25,7 +25,7 @@ const line = longDateLine(event, meta.buildToday);
 const description = eventDescription(event, meta.buildToday);
 const reportUrl = `${siteConfig.repoUrl}/issues/new?title=${encodeURIComponent(`Wrong listing: ${event.title}`)}&body=${encodeURIComponent(`Event: ${origin}/e/${event.id}\nPrimary page: ${event.primaryUrl}\n\nWhat is wrong:\n`)}`;
 const moreLikeThis = events
-  .filter((e) => e.id !== event.id && e.kind === event.kind && isDated(e) && firstDay(e) !== undefined && firstDay(e)! >= meta.buildToday)
+  .filter((e) => e.id !== event.id && e.kind === event.kind && hasStartDay(e) && firstDay(e)! >= meta.buildToday)
   .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
   .slice(0, 5);
 const jsonLd = eventJsonLd(event);

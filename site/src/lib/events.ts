@@ -5,6 +5,11 @@ export function isDated(e: PublishedEvent): boolean {
   return e.recurrence !== "recurring";
 }
 
+/** Dated, and with a first day to state: not recurring, and not a run read after it began. */
+export function hasStartDay(e: PublishedEvent): boolean {
+  return isDated(e) && firstDay(e) !== undefined;
+}
+
 /** The first local day, undefined for a recurring event or a limited run read after it began. */
 export function firstDay(e: PublishedEvent): string | undefined {
   return e.start === undefined ? undefined : localDate(e.start);

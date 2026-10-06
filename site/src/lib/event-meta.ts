@@ -1,5 +1,5 @@
 import { longDateLine } from "./date-line";
-import { isDated, firstDay } from "./events";
+import { hasStartDay } from "./events";
 import type { PublishedEvent } from "./types";
 
 /** The page's meta description: the date line (when there is one), the place, and the why-line. */
@@ -15,7 +15,7 @@ export function eventDescription(e: PublishedEvent, today: string): string {
  * Venues span Missouri and Kansas, so no addressRegion: name and locality only (spec section 7).
  */
 export function eventJsonLd(e: PublishedEvent): object | undefined {
-  if (!isDated(e) || firstDay(e) === undefined) return undefined;
+  if (!hasStartDay(e)) return undefined;
   return {
     "@context": "https://schema.org",
     "@type": "Event",
