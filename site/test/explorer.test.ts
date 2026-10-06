@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/svelte";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/svelte";
 import { flushSync, mount, unmount } from "svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { STORAGE_KEY } from "../src/lib/saves";
@@ -110,6 +110,32 @@ describe("Explorer", () => {
     expect(jazz).toHaveTextContent("Fri Oct 9 · 7:00 pm");
     const film = screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Saturday film")!;
     expect(film).toHaveTextContent("Sat Oct 10 · all day");
+  });
+
+  it("puts a heading over each venue's rows under the venue sort", () => {
+    history.replaceState(null, "", "/explore?sort=venue");
+    render(Explorer);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Liberty Hall", "recordBar"]);
+  });
+
+  it("labels a don't-miss row in words, not by colour alone", () => {
+    history.replaceState(null, "", "/explore?when=30d"); // On now open, so its rows show
+    render(Explorer);
+    const row = (title: string) => screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === title)!;
+    expect(within(row("Exhibition")).getByText("Don't miss")).toBeVisible();
+    expect(within(row("Friday jazz")).queryByText("Don't miss")).toBeNull();
+  });
+
+  it("keeps the From and To fields behind Custom dates…, open when the link carries a range", () => {
+    render(Explorer);
+    const custom = screen.getByText("Custom dates…").closest("details")!;
+    expect(custom).not.toHaveAttribute("open");
+    expect(custom).toContainElement(screen.getByLabelText("From"));
+    expect(custom).toContainElement(screen.getByLabelText("To"));
+    cleanup();
+    history.replaceState(null, "", "/explore?when=2026-10-09..2026-10-10");
+    render(Explorer);
+    expect(screen.getByText("Custom dates…").closest("details")).toHaveAttribute("open");
   });
 
   it("renders the phone filter sheet closed from the first render, behind a Filters button that opens it", async () => {

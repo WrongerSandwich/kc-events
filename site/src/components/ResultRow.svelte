@@ -15,7 +15,7 @@
 <article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} class:with-day={withDay}>
   <span class="when">{dateLine}</span>
   <div class="title">
-    <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="mark" role="img" aria-label="Don't miss">●</span>{/if}
+    <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="tag">Don't miss</span>{/if}
   </div>
   <span class="where" title={`${event.venue} · ${event.neighborhood}`}><span class="venue">{event.venue}</span><span class="hood">{` · ${event.neighborhood}`}</span></span>
   <KindChip kind={event.kind} />
@@ -37,11 +37,17 @@
     border-bottom: 1px solid var(--rule); font-size: var(--text-sm); line-height: var(--leading-tight);
   }
   .when { grid-area: when; color: var(--fg-muted); font-size: var(--text-xs); }
-  .title { grid-area: title; min-width: 0; }
-  .title h3 { display: inline; font-size: var(--text-md); font-weight: var(--weight-medium); margin: 0; }
+  /* The title, then a don't-miss tag that never gives way to it. */
+  .title { grid-area: title; min-width: 0; display: flex; align-items: baseline; gap: var(--space-2); }
+  .title h3 { min-width: 0; font-size: var(--text-md); font-weight: var(--weight-medium); margin: 0; }
   .title a { color: inherit; text-decoration: none; }
   .title a:hover { text-decoration: underline; }
-  .mark { color: var(--accent); margin-left: var(--space-1); font-size: var(--text-xs); }
+  /* Don't miss in words, in ink like the rest of the chrome: it reads in grayscale and to a screen reader, and no hue
+     is mistaken for a kind. */
+  .tag {
+    flex: none; font-size: var(--text-xs); font-weight: var(--weight-medium); line-height: 1.6; color: var(--fg);
+    border: 1px solid var(--fg); border-radius: 999px; padding: 0 var(--space-2);
+  }
   .where, .host, .verified { font-size: var(--text-xs); color: var(--fg-faint); }
   .where { grid-area: where; }
   /* The chip is KindChip's element, so the row reaches it with :global. */
@@ -86,32 +92,36 @@
     /* An always-there schedule phrase may run longer than any dated line, so it wraps, and those rows are exempt from
        the one-line rule. */
     .row:not(.always) .when { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hood { flex: none; overflow: visible; }
-    /* base.css gives headings text-wrap: balance, which resets the inherited nowrap on the h3 itself. */
-    .title h3 { white-space: nowrap; }
+    /* base.css gives headings text-wrap: balance, which would reset an inherited nowrap, so the h3 sets its own. */
+    .title h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   }
 
   /* 1280 px and up: an unflagged row is a single line, 25 px tall (20 px title + 4 px padding + 1 px rule). The date is
      set small, like the other details, so the title (natural width up to 18rem) and the venue and neighborhood (at
      least 12rem, then the rest) share the room. The widest dated lines at this size are 149 px, and 206 px with the day
-     first. */
+     first. The trailing columns have fixed widths, so the kind chips, hosts, stamps and Save buttons each make a column
+     down the list, whatever a row's title or venue: the widest chip ("outdoors/community") is 154 px, the widest stamp
+     ("✓ Sep 30") about 50 px, and Save widens to 68 px once saved. */
   @media (min-width: 1280px) {
     .when { font-size: var(--text-xs); }
+    .row :global(.chip) { justify-self: start; }
+    .row :global(button.save) { justify-self: stretch; }
     .row {
       --when-width: 9.75rem;
+      --chip-width: 9.75rem; --host-width: 8rem; --verified-width: 3.5rem; --save-width: 4.25rem;
       padding: 2px 0;
-      grid-template-columns: var(--when-width) fit-content(18rem) minmax(12rem, 1fr) auto auto auto auto;
+      grid-template-columns: var(--when-width) fit-content(18rem) minmax(12rem, 1fr) var(--chip-width) var(--host-width) var(--verified-width) var(--save-width);
       grid-template-areas: "when title where chip host verified save" ". why why why why why why";
     }
     .row.with-day { --when-width: 13.5rem; }
   }
   /* 1440 px and up the container is wider (base.css), so the title can take more. */
   @media (min-width: 1440px) {
-    .row { grid-template-columns: var(--when-width) fit-content(22rem) minmax(12rem, 1fr) auto auto auto auto; }
+    .row { grid-template-columns: var(--when-width) fit-content(22rem) minmax(12rem, 1fr) var(--chip-width) var(--host-width) var(--verified-width) var(--save-width); }
   }
   /* The tightest one-line width: the host gives up the most so the title and the venue keep theirs. */
   @media (min-width: 1280px) and (max-width: 1439px) {
-    .host { max-width: 6rem; }
+    .row { --host-width: 6rem; }
   }
 </style>

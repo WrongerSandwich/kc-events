@@ -14,6 +14,12 @@
     const [from = "", to = ""] = rangeKey.split("..");
     range = { from, to };
   });
+  // The fields wait behind "Custom dates…" so the presets lead; a range in force opens it, so a shared ?when=a..b link
+  // shows its dates. Closed, a native disclosure keeps the fields out of the Tab order.
+  let custom = $state(false);
+  $effect(() => {
+    if (rangeKey !== "") custom = true;
+  });
 
   const toggleIn = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
   function applyRange() {
@@ -32,10 +38,13 @@
         <button type="button" aria-pressed={"preset" in filters.when && filters.when.preset === p} onclick={() => onchange({ ...filters, when: { preset: p } })}>{WHEN_LABELS[p]}</button>
       {/each}
     </div>
-    <div class="range">
-      <label>From <input type="date" bind:value={range.from} onchange={applyRange} /></label>
-      <label>To <input type="date" bind:value={range.to} onchange={applyRange} /></label>
-    </div>
+    <details class="custom" bind:open={custom}>
+      <summary>Custom dates…</summary>
+      <div class="range">
+        <label>From <input type="date" bind:value={range.from} onchange={applyRange} /></label>
+        <label>To <input type="date" bind:value={range.to} onchange={applyRange} /></label>
+      </div>
+    </details>
   </fieldset>
 
   <fieldset>
@@ -69,15 +78,22 @@
 <style>
   .rail { display: flex; flex-direction: column; gap: var(--space-4); font-size: var(--text-sm); }
   fieldset { border: 0; padding: 0; margin: 0; }
-  legend { font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--fg-muted); margin-bottom: var(--space-1); }
+  /* Sentence case, as the front page sets its labels. */
+  legend { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--fg); margin-bottom: var(--space-1); }
   .segments, .chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
   button { font: inherit; font-size: var(--text-xs); background: none; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: var(--space-1) var(--space-2); cursor: pointer; }
-  button[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); }
-  /* Kind buttons carry their kind: the icon in its colour, and when on, the kind's own tint and shade. */
+  /* One pressed look across the rail: a tint, an edge and words in a shade, and medium weight. Kind buttons take their
+     kind's tint and shade from their .kind-<slug> class; every other button the grey "other" tint and ink, set here on
+     the rail so a kind button's own class still wins. */
+  .rail { --hue: var(--fg); --hue-tint: var(--kind-other-tint); }
+  button[aria-pressed="true"] { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
+  /* Kind buttons carry their kind: the icon in its colour. */
   .kind { display: inline-flex; align-items: center; gap: 0.3em; }
   .kind :global(.kind-icon) { color: var(--hue); }
-  .kind[aria-pressed="true"] { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
-  .range { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); } .range label { display: flex; flex-direction: column; font-size: var(--text-xs); }
+  .custom { margin-top: var(--space-2); }
+  .custom summary { display: inline-flex; align-items: center; min-height: 1.75rem; font-size: var(--text-xs); color: var(--fg-muted); cursor: pointer; }
+  .custom summary:hover { color: var(--fg); }
+  .range { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1); } .range label { display: flex; flex-direction: column; font-size: var(--text-xs); }
   /* The Show checkboxes, one per line with the box beside its words. */
   fieldset > label { display: flex; align-items: center; gap: var(--space-2); }
   input, select { font: inherit; }
