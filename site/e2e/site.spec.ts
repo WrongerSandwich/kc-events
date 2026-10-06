@@ -20,7 +20,7 @@ test("the front page buckets the fixture's don't-miss events", async ({ page }) 
   await expect(sections.nth(2).getByRole("listitem")).toHaveText([/November festival/]);
   // No hand-kept Always there pick matches the fixture, so the section is left out rather than shown empty.
   await expect(page.getByRole("heading", { name: "Always there" })).toHaveCount(0);
-  await expect(page.getByText("Browse all 9 events")).toBeVisible();
+  await expect(page.getByText("Browse all 10 events")).toBeVisible();
   // On a Monday the week strip runs today through Sunday; a day with a pick jumps to its card.
   const week = page.getByRole("navigation", { name: "This week by day" });
   await expect(week.locator(".day")).toHaveCount(7);
@@ -131,44 +131,52 @@ test("the region fallback places a region-named neighborhood", async ({ page }) 
   await expect(page.getByRole("article").getByRole("heading")).toHaveText(["County fair talk", "Friday night jazz"]);
 });
 
-test("an unflagged explorer row is one line, at most 28 px tall, at 1280 px", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await on(page, BUILD_DAY, "/explore");
-  const rows = page.locator("article.row:not(.flagged)");
-  await expect(rows.first()).toBeVisible();
-  for (const row of await rows.all()) {
-    const box = await row.boundingBox();
-    expect(box!.height).toBeLessThanOrEqual(28);
+for (const width of [1280, 1440]) {
+  for (const path of ["/explore", "/explore?sort=venue"]) {
+    test(`an unflagged explorer row is one line, at most 28 px tall, at ${width} px on ${path}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await on(page, BUILD_DAY, path);
+      const rows = page.locator("article.row:not(.flagged)");
+      await expect(rows.first()).toBeVisible();
+      for (const row of await rows.all()) {
+        const box = await row.boundingBox();
+        expect(box!.height).toBeLessThanOrEqual(28);
+      }
+    });
   }
-});
+}
 
-for (const width of [1024, 1280]) {
-  test(`no explorer row truncates its date, and every row shows its neighborhood, at ${width} px`, async ({ page }) => {
-    await page.setViewportSize({ width, height: 800 });
-    await on(page, BUILD_DAY, "/explore");
-    await expect(page.locator("article.row").first()).toBeVisible();
-    const rows = await page.locator("article.row").evaluateAll((els) =>
-      els.map((row) => {
-        const when = row.querySelector<HTMLElement>(".when")!;
-        const where = row.querySelector<HTMLElement>(".where")!.getBoundingClientRect();
-        const hood = row.querySelector<HTMLElement>(".hood")!;
-        const hoodBox = hood.getBoundingClientRect();
-        return {
-          title: row.querySelector("h3")!.textContent,
-          dated: !row.classList.contains("always"),
-          dateFits: when.scrollWidth <= when.clientWidth,
-          hood: hood.textContent,
-          hoodShown: hoodBox.width > 0 && hoodBox.left >= where.left - 0.5 && hoodBox.right <= where.right + 0.5,
-        };
-      }),
-    );
-    expect(rows.length).toBe(8); // every active event but the always-there one, which the default filters leave out
-    for (const row of rows) {
-      if (row.dated) expect(row.dateFits, `${row.title}: date fits`).toBe(true);
-      expect(row.hood, `${row.title}: neighborhood`).toMatch(/ · \S/);
-      expect(row.hoodShown, `${row.title}: neighborhood visible`).toBe(true);
-    }
-  });
+// The fixture's haunted house has the widest date lines: "10:00 am–Wed Nov 18", and "Wed Oct 28, 10:00 am–Wed Nov 18"
+// in the venue sort.
+for (const width of [1024, 1280, 1440]) {
+  for (const path of ["/explore", "/explore?sort=venue"]) {
+    test(`no explorer row truncates its date, and every row shows its neighborhood, at ${width} px on ${path}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await on(page, BUILD_DAY, path);
+      await expect(page.locator("article.row").first()).toBeVisible();
+      const rows = await page.locator("article.row").evaluateAll((els) =>
+        els.map((row) => {
+          const when = row.querySelector<HTMLElement>(".when")!;
+          const where = row.querySelector<HTMLElement>(".where")!.getBoundingClientRect();
+          const hood = row.querySelector<HTMLElement>(".hood")!;
+          const hoodBox = hood.getBoundingClientRect();
+          return {
+            title: row.querySelector("h3")!.textContent,
+            dated: !row.classList.contains("always"),
+            dateFits: when.scrollWidth <= when.clientWidth,
+            hood: hood.textContent,
+            hoodShown: hoodBox.width > 0 && hoodBox.left >= where.left - 0.5 && hoodBox.right <= where.right + 0.5,
+          };
+        }),
+      );
+      expect(rows.length).toBe(9); // every active event but the always-there one, which the default filters leave out
+      for (const row of rows) {
+        if (row.dated) expect(row.dateFits, `${row.title}: date fits`).toBe(true);
+        expect(row.hood, `${row.title}: neighborhood`).toMatch(/ · \S/);
+        expect(row.hoodShown, `${row.title}: neighborhood visible`).toBe(true);
+      }
+    });
+  }
 }
 
 test("explorer rows read their dates relative to the day headings and the sort", async ({ page }) => {
@@ -177,11 +185,13 @@ test("explorer rows read their dates relative to the day headings and the sort",
   await expect(row("Closing exhibition")).toHaveText("Closes Sun Oct 11");
   await expect(row("Artboards")).toHaveText("Closes Thu Dec 31");
   await expect(row("November festival")).toHaveText("Runs through Sun Nov 22");
+  await expect(row("Haunted house")).toHaveText("10:00 am–Wed Nov 18");
   const verified = page.locator("article.row", { has: page.getByRole("heading", { name: "Fabio Frizzi plays Fulci" }) }).locator(".verified");
   await expect(verified.locator('[aria-hidden="true"]')).toHaveText("✓ Oct 3");
   await expect(verified.locator(".visually-hidden")).toHaveText("Verified Oct 3");
   await on(page, BUILD_DAY, "/explore?sort=venue");
   await expect(row("Friday night jazz")).toHaveText("Fri Oct 9 · 8:00 pm");
+  await expect(row("Haunted house")).toHaveText("Wed Oct 28, 10:00 am–Wed Nov 18");
 });
 
 test("an event page exists, downloads a calendar, and knows when it has passed", async ({ page }) => {
@@ -216,7 +226,7 @@ test("the staleness banner appears after nine days", async ({ page }) => {
 
 test("the dataset is published verbatim, and llms.txt and the sitemap point at the pages", async ({ request }) => {
   const json = await (await request.get("/events.json")).text();
-  expect(JSON.parse(json).events).toHaveLength(10);
+  expect(JSON.parse(json).events).toHaveLength(11);
   expect(await (await request.get("/llms.txt")).text()).toContain("/events.json");
   expect(await (await request.get("/sitemap.xml")).text()).toContain("/e/evt_e2e000000001</loc>");
 });

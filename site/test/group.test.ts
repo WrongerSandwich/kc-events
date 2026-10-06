@@ -74,9 +74,9 @@ describe("venue sort", () => {
 });
 
 describe("rowDateLine", () => {
-  it("keeps the start time of a timed multi-day one-off on its opening day", () => {
+  it("keeps the start time of a timed multi-day one-off on its opening day, as a span short enough for the date column", () => {
     const timed = event({ id: "timed", title: "Festival", start: "2026-10-29T18:00:00-05:00", end: "2026-10-31T22:00:00-05:00" });
-    expect(rowDateLine(timed, today)).toBe("6:00 pm, runs through Sat Oct 31");
+    expect(rowDateLine(timed, today)).toBe("6:00 pm–Sat Oct 31");
     expect(rowDateLine(timed, today, true)).toBe("Thu Oct 29, 6:00 pm–Sat Oct 31");
     expect(rowDateLine(event({ ...timed, start: "2026-10-03T18:00:00-05:00", end: "2026-10-07T22:00:00-05:00" }), today)).toBe("Through Wed Oct 7");
   });

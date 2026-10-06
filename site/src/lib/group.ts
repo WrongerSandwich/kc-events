@@ -9,8 +9,8 @@ export type ResultGroup = { key: string; heading: string; events: PublishedEvent
 /**
  * A row's date line under its group heading: a start time or "All day"; for a span underway, "Closes Tue Oct 20" (a
  * run) or "Through Wed Oct 7" (a multi-day one-off), under "On now"; for a span not yet open, "Runs through Sat Nov
- * 14" under its opening day; a recurring event's schedule phrase. Kept short so the explorer's date column stays
- * narrow; the front page's cards say more (closingLine).
+ * 14" under its opening day, or "7:00 pm–Sat Nov 14" when it has a start time; a recurring event's schedule phrase.
+ * Kept short so the explorer's date column stays narrow; the front page's cards say more (closingLine).
  * With `withDay` (the venue sort, which has no day headings), the day comes first: "Fri Oct 9 · 7:00 pm",
  * "Fri Oct 9 · all day", "Tue Oct 20–Sat Nov 14".
  */
@@ -21,7 +21,7 @@ export function rowDateLine(e: PublishedEvent, today: string, withDay = false): 
     if (isUnderway(e, today)) return e.recurrence === "limited-run" ? `Closes ${last}` : `Through ${last}`;
     const time = isDateOnly(e.start!) ? undefined : formatTime(e.start!);
     if (withDay) return `${formatDay(firstDay(e)!)}${time ? `, ${time}` : ""}–${last}`;
-    return time ? `${time}, runs through ${last}` : `Runs through ${last}`;
+    return time ? `${time}–${last}` : `Runs through ${last}`;
   }
   const start = e.start!;
   if (!withDay) return isDateOnly(start) ? "All day" : formatTime(start);

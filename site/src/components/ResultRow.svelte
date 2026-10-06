@@ -12,7 +12,7 @@
   let verifiedOn = $derived(formatShort(localDate(event.lastVerified)));
 </script>
 
-<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"}>
+<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} class:with-day={withDay}>
   <span class="when">{dateLine}</span>
   <div class="title">
     <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="mark" role="img" aria-label="Don't miss">●</span>{/if}
@@ -41,10 +41,15 @@
   .row :global(button.save) { padding-block: 0; }
 
   /* 1024-1279 px: two lines, the date and the title on the first, the details under the title. */
+  /* The date column holds the widest dated line on one line: "Runs through Mon May 20", 171 px at this size; with the
+     day first (the venue sort), "Mon May 20, 10:00 am–Mon May 20", 239 px. Every row of a list has the same flag, so
+     the column stays aligned. */
   @media (min-width: 1024px) {
+    .row { --when-width: 11.25rem; }
+    .row.with-day { --when-width: 15.5rem; }
     .row {
       display: grid; align-items: center; gap: 0 var(--space-2); padding: var(--space-1) 0;
-      grid-template-columns: 11.25rem minmax(0, 1fr) auto auto auto auto;
+      grid-template-columns: var(--when-width) minmax(0, 1fr) auto auto auto auto;
       grid-template-areas: "when title title title title title" ". where chip host verified save" ". why why why why why";
     }
     .when { grid-area: when; font-size: var(--text-sm); }
@@ -56,8 +61,8 @@
     .verified { grid-area: verified; }
     .row :global(button.save) { grid-area: save; }
     .why { grid-area: why; padding-bottom: 2px; }
-    /* Every dated line fits 11.25rem on one line (the widest in today's data, "Runs through Sun Oct 25", is 174 px); an
-       always-there schedule phrase may run longer, so it wraps, and those rows are exempt from the one-line rule. */
+    /* An always-there schedule phrase may run longer than any dated line, so it wraps, and those rows are exempt from
+       the one-line rule. */
     .row:not(.always) .when { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .title, .where, .chip, .host { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
     /* The venue gives way before the neighborhood, so the neighborhood stays visible on every row. */
@@ -70,18 +75,21 @@
 
   /* 1280 px and up: an unflagged row is a single line, 25 px tall (20 px title + 4 px padding + 1 px rule). The date is
      set small, like the other details, so the title (natural width up to 18rem) and the venue and neighborhood (at
-     least 12rem, then the rest) share the room. 9.75rem holds the widest dated line at this size, about 150 px. */
+     least 12rem, then the rest) share the room. The widest dated lines at this size are 149 px, and 206 px with the day
+     first. */
   @media (min-width: 1280px) {
     .when { font-size: var(--text-xs); }
+    .row { --when-width: 9.75rem; }
+    .row.with-day { --when-width: 13.5rem; }
     .row {
       padding: 2px 0;
-      grid-template-columns: 9.75rem fit-content(18rem) minmax(12rem, 1fr) auto auto auto auto;
+      grid-template-columns: var(--when-width) fit-content(18rem) minmax(12rem, 1fr) auto auto auto auto;
       grid-template-areas: "when title where chip host verified save" ". why why why why why why";
     }
   }
   /* 1440 px and up the container is wider (base.css), so the title can take more. */
   @media (min-width: 1440px) {
-    .row { grid-template-columns: 9.75rem fit-content(22rem) minmax(12rem, 1fr) auto auto auto auto; }
+    .row { grid-template-columns: var(--when-width) fit-content(22rem) minmax(12rem, 1fr) auto auto auto auto; }
   }
   /* The tightest one-line width: the host gives up the most so the title and the venue keep theirs. */
   @media (min-width: 1280px) and (max-width: 1439px) {

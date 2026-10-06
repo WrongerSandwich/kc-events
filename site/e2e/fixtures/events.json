@@ -238,6 +238,30 @@
         "date": "Sat Oct 3 8pm",
         "venue": "Midland Theatre"
       }
+    },
+    {
+      "id": "evt_e2e000000011",
+      "title": "Haunted house",
+      "start": "2026-10-28T10:00:00-05:00",
+      "end": "2026-11-18",
+      "venue": "The Edge of Hell",
+      "neighborhood": "West Bottoms",
+      "primaryUrl": "https://example.com/west-bottoms/haunted-house",
+      "kind": "outdoors/community",
+      "recurrence": "limited-run",
+      "dontMiss": false,
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "The Edge of Hell"
+      },
+      "evidence": {
+        "date": "Opens Wed Oct 28 at 10 am, through Nov 18",
+        "venue": "The Edge of Hell"
+      }
     }
   ],
   "sourceState": {},
