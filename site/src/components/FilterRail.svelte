@@ -82,9 +82,8 @@
   fieldset > label { display: flex; align-items: center; gap: var(--space-2); }
   input, select { font: inherit; }
   /* Chromium's dark-scheme select is grey (#6b6b6b), under 4.5:1 with --fg; the raised surface clears AA in both schemes. */
-  /* The inputs too: Chromium's dark field is #3b3b3b, where its placeholder grey is about 2.4:1. */
+  /* The date fields too: Chromium's dark field is #3b3b3b. (Explorer's search field has the same surface.) */
   select, input[type="date"] { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
-  input::placeholder { color: var(--fg-faint); opacity: 1; }
   /* Tabbing onto a date field's calendar button matches neither :focus-visible nor :focus on the field, only
      :focus-within, so the field rings whenever focus is inside it, mouse clicks included. The inner parts are in a
      closed shadow tree, so :has(:focus-visible) cannot see them; no supported way to ring only for the keyboard. */

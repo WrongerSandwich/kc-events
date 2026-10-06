@@ -22,7 +22,7 @@ vi.mock("../src/generated/meta", () => ({
 import Explorer from "../src/components/Explorer.svelte";
 
 const rows = () => screen.getAllByRole("article").map((a) => within(a).getByRole("heading").textContent);
-// The live count is announced once input settles, so read it after the wait.
+// The live count is announced once input settles (Explorer's SETTLE_MS, 500 ms), so read it after the wait.
 const announced = () => { vi.advanceTimersByTime(500); flushSync(); return screen.getByRole("status"); };
 // What Tab reaches, in order: no tabindex="-1", nothing disabled.
 const tabStops = (root: ParentNode) => [...root.querySelectorAll<HTMLElement>("a[href], button, input, select, summary")].filter((el) => el.getAttribute("tabindex") !== "-1" && !(el as HTMLButtonElement).disabled);
@@ -232,7 +232,7 @@ describe("Explorer", () => {
     vi.advanceTimersByTime(500);
     flushSync();
     expect(status).toHaveTextContent("1 event");
-    expect(new Set(changes.takeRecords().map((r) => r.target))).toHaveProperty("size", 1);
+    expect(changes.takeRecords()).toHaveLength(1);
     changes.disconnect();
   });
 });

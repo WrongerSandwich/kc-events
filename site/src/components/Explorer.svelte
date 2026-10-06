@@ -18,12 +18,12 @@
   let today = $state(meta.buildToday);
   let filters = $state<Filters>(DEFAULT_FILTERS);
   let saved = $state<ReadonlySet<string>>(new Set());
-  // Open in the server HTML so no-JS readers see the controls; on phones it closes after hydration so the count
-  // and the results are on screen on arrival.
+  // Open in the server HTML so no-JS readers see the controls; on phones it closes after hydration so the results
+  // are on screen on arrival.
   let sheetOpen = $state(true);
   // Export needs the browser; the server-rendered button stays disabled until mount.
   let mounted = $state(false);
-  // The result bar's height, so the sticky day headings sit just under it even when "Clear filters" wraps it.
+  // The bar's height, so the sticky day headings sit just under it however it wraps (search takes a line on phones).
   let barHeight = $state(0);
 
   onMount(() => {
@@ -51,11 +51,12 @@
   let countText = $derived(`${count} ${count === 1 ? "event" : "events"}`);
   // The count on screen follows every keystroke; the live region waits until input settles, so a screen reader hears
   // one count per search, not one per letter. Every change restarts the wait, even one that leaves the count alone.
+  const SETTLE_MS = 500;
   let announced = $state(countText);
   $effect(() => {
     void filters;
     const text = countText;
-    const settle = setTimeout(() => { announced = text; }, 500);
+    const settle = setTimeout(() => { announced = text; }, SETTLE_MS);
     return () => clearTimeout(settle);
   });
   let active = $derived(describeFilters(filters));
@@ -71,7 +72,7 @@
      filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
 <div class="explorer" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
   <div class="bar" bind:offsetHeight={barHeight}>
-    <label class="search"><span class="visually-hidden">Search</span><input type="search" value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} placeholder="Search titles, venues, neighborhoods" /></label>
+    <label class="search"><span class="visually-hidden">Search</span><input type="search" value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} placeholder="Search title, venue, neighborhood, why" /></label>
     <a class="skip" href="#results">Skip to results</a>
     <p class="count" aria-hidden="true">{countText}</p>
     <p role="status" class="visually-hidden">{announced}</p>
@@ -148,7 +149,7 @@
   .export[disabled] { opacity: 0.5; cursor: default; }
   .empty { color: var(--fg-muted); }
   /* A collapsed group (On now with no when-filter): one raised line, a full tap target, with a chevron that turns
-     when it opens. Open, its line sticks under the result bar like a day heading, so it can be closed from anywhere. */
+     when it opens. Open, its line sticks under the bar like a day heading, so it can be closed from anywhere. */
   .collapsed { margin-top: var(--space-2); }
   .collapsed summary {
     display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0 var(--space-3);
