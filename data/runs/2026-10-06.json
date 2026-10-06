@@ -1,0 +1,793 @@
+{
+  "runDate": "2026-10-06",
+  "startedAt": "2026-10-06T10:11:38-05:00",
+  "finishedAt": "2026-10-06T10:37:56-05:00",
+  "horizonWeeks": 8,
+  "counts": {
+    "found": 418,
+    "new": 17,
+    "updated": 361,
+    "reverified": 33,
+    "heldUnverified": 34,
+    "heldThroughOutage": 0,
+    "unverifiedByOutageLimit": 28,
+    "unverifiedByUncitableReading": 11,
+    "outsideGeography": 3,
+    "expired": {
+      "past": 5,
+      "two-strike": 8,
+      "cancelled": 0,
+      "index-page": 0,
+      "duplicate": 15
+    }
+  },
+  "spend": {
+    "totalUsd": 0.15183299,
+    "capUsd": 5,
+    "capHit": false,
+    "shortfall": {
+      "pagesNotExtracted": 0,
+      "eventsNotReverified": 0,
+      "queriesNotSearched": 0,
+      "leadsNotFollowed": 0,
+      "eventsNotCurated": 0
+    }
+  },
+  "discovery": {
+    "enabled": true,
+    "queries": 10,
+    "aggregatorPages": 9,
+    "pagesExtracted": 47,
+    "problems": [
+      "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7nJ: HTTP 403",
+      "https://kcparks.org/: HTTP 403",
+      "http://www.kansasspeedway.com/: HTTP 403",
+      "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7na&classificationId=KnvZfZ7vAe1: HTTP 403",
+      "https://seatgeek.com/cities/kansas-city/comedy: HTTP 403",
+      "https://www.applebaumkc.com/blog/11-fall-festivals-around-kansas-city-you-can-still-catch-in-2026: HTTP 403",
+      "https://kcur.secureallegiance.com/kcur/WebModule/Donate.aspx?P=KCG0226&PAGETYPE=PLG&CHECK=%2b5g%2fQkV05qm4ViHtxJWDB%2bzWDeZ%2beA1M: HTTP 403",
+      "https://gonorthkc.com/events: HTTP 403",
+      "https://www.kcfilmoffice.com/: HTTP 403",
+      "https://mindtrip.ai/: HTTP 403",
+      "https://kcoktoberfest.com/: HTTP 403",
+      "https://www.kcrunningcompany.com/oktoberfest5k: HTTP 404",
+      "https://www.eventbrite.com/e/oktoberfest-in-the-woods-tickets-1004691067027: HTTP 404",
+      "https://seatgeek.com/cities/kansas-city/sports: HTTP 403",
+      "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7nE: HTTP 403",
+      "https://kcconvention.com/event/boozy-book-fest-2026: HTTP 404",
+      "robots.txt disallows https://tickets.kauffmancenter.org/"
+    ]
+  },
+  "curation": {
+    "calls": 2,
+    "judged": 39,
+    "flagged": 1,
+    "problems": []
+  },
+  "sources": [
+    {
+      "name": "Kauffman Center for the Performing Arts",
+      "result": "fetched",
+      "extracted": 20
+    },
+    {
+      "name": "Kansas City Symphony",
+      "result": "fetched",
+      "extracted": 9
+    },
+    {
+      "name": "recordBar",
+      "result": "fetched",
+      "extracted": 39
+    },
+    {
+      "name": "The Midland",
+      "result": "fetched",
+      "extracted": 14
+    },
+    {
+      "name": "T-Mobile Center",
+      "result": "fetched",
+      "extracted": 11
+    },
+    {
+      "name": "The Truman",
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://www.thetruman.com/: ECONNRESET fetching https://www.thetruman.com/robots.txt"
+    },
+    {
+      "name": "Azura Amphitheater",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "Folly Theater",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "American Jazz Museum",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Harriman-Jewell Series",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "Its homepage names no venue for any performance, so every event is held unverified; its performances are found on the Folly Theater and Lied Center calendars, which name the hall (checked 2026-10-04)."
+    },
+    {
+      "name": "Friends of Chamber Music",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Kansas City Chorale",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Midwest Trust Center",
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://www.jccc.edu/midwest-trust-center/events/: HTTP 403"
+    },
+    {
+      "name": "The Bottleneck",
+      "result": "fetched",
+      "extracted": 9
+    },
+    {
+      "name": "The Granada",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "Replay Lounge",
+      "result": "fetched",
+      "extracted": 22
+    },
+    {
+      "name": "Lied Center of Kansas",
+      "result": "fetched",
+      "extracted": 15
+    },
+    {
+      "name": "Lawrence Arts Center",
+      "result": "fetched",
+      "extracted": 22
+    },
+    {
+      "name": "Spencer Museum of Art",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Kansas City Ballet",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Kansas City Repertory Theatre",
+      "result": "fetched",
+      "extracted": 4
+    },
+    {
+      "name": "Unicorn Theatre",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Kansas City Actors Theatre",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "American Theatre Guild (Broadway in Kansas City)",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "New Theatre & Restaurant",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "KC Fringe Festival",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "The Comedy Club of Kansas City",
+      "result": "fetched",
+      "extracted": 11
+    },
+    {
+      "name": "Nelson-Atkins Museum of Art",
+      "result": "fetched",
+      "extracted": 8
+    },
+    {
+      "name": "Tivoli Cinemas",
+      "result": "fetched",
+      "extracted": 6
+    },
+    {
+      "name": "Kemper Museum of Contemporary Art",
+      "result": "fetched",
+      "extracted": 13
+    },
+    {
+      "name": "Linda Hall Library",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Nerman Museum of Contemporary Art",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "Zhou B Art Center KC",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Charlotte Street Foundation",
+      "result": "fetched",
+      "extracted": 11
+    },
+    {
+      "name": "Crossroads Arts District",
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://kccrossroads.org/: HTTP 403"
+    },
+    {
+      "name": "Art Garden KC",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Arts Council of Johnson County",
+      "result": "fetched",
+      "extracted": 17
+    },
+    {
+      "name": "Kansas City Public Library",
+      "result": "fetched",
+      "extracted": 9
+    },
+    {
+      "name": "Rainy Day Books",
+      "result": "fetched",
+      "extracted": 9
+    },
+    {
+      "name": "Heartland Book Festival",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "National WWI Museum and Memorial",
+      "result": "fetched",
+      "extracted": 14
+    },
+    {
+      "name": "GEHA Field at Arrowhead Stadium",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Kansas City Mavericks",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Power & Light District",
+      "result": "fetched",
+      "extracted": 13
+    },
+    {
+      "name": "Kansas City Convention Center",
+      "result": "fetched",
+      "extracted": 18
+    },
+    {
+      "name": "City Market",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "American Royal",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "KC Parks and Recreation",
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://kcparks.org/events/: HTTP 403"
+    },
+    {
+      "name": "Kansas City Zoo & Aquarium",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "Powell Gardens",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Musical Theater Heritage",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "robots.txt disallows the site (checked 2026-10-03)."
+    },
+    {
+      "name": "Starlight Theatre",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The events and tickets pages redirect to a queue-it waiting room whose robots.txt disallows fetching (checked 2026-10-03)."
+    },
+    {
+      "name": "Knuckleheads",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The show list is rendered by script; the fetched page has no events (checked 2026-10-03)."
+    },
+    {
+      "name": "Liberty Hall",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The event and cinema lists are rendered by script; the fetched page has no events (checked 2026-10-03)."
+    },
+    {
+      "name": "Uptown Theater",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The calendar is rendered by script, and its RSS feed gives post dates, not show dates (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Royals",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The schedule is rendered by script; the fetched page has no dates (checked 2026-10-03)."
+    },
+    {
+      "name": "Sporting Kansas City",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The schedule is rendered by script; the fetched page has no dates (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Current",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Funny Bone Comedy Club",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Renaissance Festival",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Museum",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Union Station",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The events list is rendered by script, and its RSS feed carries no event dates (checked 2026-10-03)."
+    }
+  ],
+  "failingSources": [
+    "The Truman",
+    "Midwest Trust Center",
+    "Crossroads Arts District",
+    "KC Parks and Recreation"
+  ],
+  "offListNeighborhoods": [
+    {
+      "stored": "Johnson County",
+      "placed": "Overland Park",
+      "events": 9
+    }
+  ],
+  "unmappableNeighborhoods": [
+    {
+      "eventTitle": "Dancing in the Street: Music of Motown"
+    },
+    {
+      "eventTitle": "Interstellar Live"
+    },
+    {
+      "eventTitle": "Prokofiev’s Sixth and Barber’s Violin Concerto"
+    },
+    {
+      "eventTitle": "Petite Performances: Halloween Spooktacular"
+    },
+    {
+      "eventTitle": "Happy Hour: Beethoven, Brahms and the Romantic Spirit"
+    },
+    {
+      "eventTitle": "The Music of Studio Ghibli"
+    },
+    {
+      "eventTitle": "Frizzi 2 Fulci : Fabio Frizzi and the F2F Band",
+      "venue": "the Grand Temple"
+    },
+    {
+      "eventTitle": "Matinees for Schools"
+    },
+    {
+      "eventTitle": "The Nutcracker"
+    },
+    {
+      "eventTitle": "A Christmas Carol 2026"
+    },
+    {
+      "eventTitle": "Roundtable Conversation Series"
+    },
+    {
+      "eventTitle": "Prelude Conversation Series"
+    },
+    {
+      "eventTitle": "Loving Vincent",
+      "venue": "Tivoli Cinema"
+    },
+    {
+      "eventTitle": "Coco",
+      "venue": "Tivoli Cinema"
+    },
+    {
+      "eventTitle": "Cinema Paradiso",
+      "venue": "Tivoli Cinema"
+    },
+    {
+      "eventTitle": "2026 Gala: Rodeo Nouveau"
+    },
+    {
+      "eventTitle": "EMAS Presents"
+    },
+    {
+      "eventTitle": "Nightshades Experimental Animation Festival"
+    },
+    {
+      "eventTitle": "Beyond the Black Crack: 50th Anniversary Celebration"
+    },
+    {
+      "eventTitle": "Rooms We Carry Opening Reception"
+    },
+    {
+      "eventTitle": "Artist Market @ Rooms We Carry Opening Reception"
+    },
+    {
+      "eventTitle": "FrankenWines"
+    },
+    {
+      "eventTitle": "An Evening with Joyce Carol Oates"
+    },
+    {
+      "eventTitle": "PBR OUTLAW DAYS FESTIVAL"
+    },
+    {
+      "eventTitle": "4-H/FFA Livestock Judging Contest"
+    },
+    {
+      "eventTitle": "Meats Judging Contests"
+    },
+    {
+      "eventTitle": "Collegiate Livestock Judging Contest"
+    },
+    {
+      "eventTitle": "UPHA American Royal National Championship Horse Show"
+    },
+    {
+      "eventTitle": "Fire Feast",
+      "venue": "Powell Gardens"
+    },
+    {
+      "eventTitle": "Dark Forest",
+      "venue": "Powell Gardens"
+    },
+    {
+      "eventTitle": "Wild and Useful Things: Foraging with the Seasons (October)",
+      "venue": "Powell Gardens"
+    },
+    {
+      "eventTitle": "The Planets"
+    },
+    {
+      "eventTitle": "Baroque at 7:00: Vivaldi's Four Seasons"
+    },
+    {
+      "eventTitle": "Silent Film + Live Organ: Dr. Jekyll & Mr. Hyde"
+    },
+    {
+      "eventTitle": "Buckets N Boards"
+    },
+    {
+      "eventTitle": "The Wizard of Oz"
+    },
+    {
+      "eventTitle": "Kansas City Symphony’s Mobile Music Box at MLK Park (KCMO)",
+      "venue": "MLK Park (KCMO)"
+    },
+    {
+      "eventTitle": "Kansas City Symphony’s Mobile Music Box at Kirkwood Green Space",
+      "venue": "Kirkwood Green Space"
+    },
+    {
+      "eventTitle": "The Billy Joel Legacy"
+    },
+    {
+      "eventTitle": "Goldenberg Duo (at JCCC)"
+    },
+    {
+      "eventTitle": "Calvin Arsenia"
+    },
+    {
+      "eventTitle": "The Who's Tommy"
+    },
+    {
+      "eventTitle": "The Kansas City Symphony Presents Baroque at 7:00: Vivaldi's Four Seasons"
+    },
+    {
+      "eventTitle": "Electric Poe"
+    },
+    {
+      "eventTitle": "Red Like Fruit by Hannah Moscovitch"
+    },
+    {
+      "eventTitle": "Dancing in the Street: Music of Motown with The Kansas City Symphony"
+    },
+    {
+      "eventTitle": "Kansas City Ballet Presents “The Wizard of Oz”"
+    },
+    {
+      "eventTitle": "Kansas City Symphony’s Mobile Music Box at Union Cemetery",
+      "venue": "Union Cemetery"
+    },
+    {
+      "eventTitle": "Kansas City Symphony’s Mobile Music Box at Kessler Park",
+      "venue": "Kessler Park"
+    },
+    {
+      "eventTitle": "Interstellar Live with The Kansas City Symphony"
+    },
+    {
+      "eventTitle": "Outlander in Concert"
+    },
+    {
+      "eventTitle": "Stars of American Ballet"
+    },
+    {
+      "eventTitle": "MTC Kids Jam - Matt Heaton"
+    },
+    {
+      "eventTitle": "Ryan & Ryan 'Kickin' the Clouds Away'"
+    },
+    {
+      "eventTitle": "The Kansas City Symphony Presents: Prokofiev's Sixth and Barber's Violin Concerto with Stella Chen"
+    },
+    {
+      "eventTitle": "Fall Festival",
+      "venue": "KC Pumpkin Patch"
+    },
+    {
+      "eventTitle": "Live Bluegrass Music",
+      "venue": "Louisburg Cider Mill & Country Store",
+      "proposed": "Louisburg"
+    },
+    {
+      "eventTitle": "DR. JEKYLL & MR. HYDE",
+      "venue": "Helzberg Hall"
+    },
+    {
+      "eventTitle": "Fun Farm 2026 Fall Festival",
+      "venue": "Fun Farm Pumpkin Patch",
+      "proposed": "Kearney"
+    },
+    {
+      "eventTitle": "Crown Center District Homeschool Event"
+    },
+    {
+      "eventTitle": "The Pigeon Gets a Big Time Holiday Extravaganza!"
+    }
+  ],
+  "promotionSuggestions": [
+    {
+      "host": "kclivearts.org",
+      "runsSeen": 2,
+      "exampleUrl": "https://kclivearts.org/"
+    },
+    {
+      "host": "smalterart.com",
+      "runsSeen": 2,
+      "exampleUrl": "https://www.smalterart.com/event"
+    },
+    {
+      "host": "kcwineco.com",
+      "runsSeen": 3,
+      "exampleUrl": "https://www.kcwineco.com/events/upcoming-events"
+    },
+    {
+      "host": "kc.kidsoutandabout.com",
+      "runsSeen": 2,
+      "exampleUrl": "https://kc.kidsoutandabout.com/"
+    }
+  ],
+  "outageLimited": [
+    {
+      "title": "Happy Hour",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "First Friday",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "The Berlin Wall. A World Divided. Exhibition at Union Station",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "Body Forth: incarnation, embodiment, and the Christian imagination",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "Cerbera Gallery presents: “BE, AND KNOW” with photographic works by David K. Pugh",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "Jones Gallery October Art Show",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "Ongoing Exhibition: “Resquache”, Maria Vasquez Boyd",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "This Might Hurt A Little",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "Crossroads Flea is Back at Mildred’s",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "Science City After Hours 21+",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "The Wizard of Oz",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "Neighborhood Garden Party",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "The Secret Show",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "VISUAL VOICE: Moments of Abstraction Exhibit",
+      "primaryUrl": "https://kcparks.org/events/"
+    },
+    {
+      "title": "Mobile Music Box Concert: MLK Park",
+      "primaryUrl": "https://kcparks.org/events/"
+    },
+    {
+      "title": "Brush Creek Art Walk Awards Reception",
+      "primaryUrl": "https://kcparks.org/events/"
+    },
+    {
+      "title": "Puzzle Exchange Night",
+      "primaryUrl": "https://kcparks.org/events/"
+    },
+    {
+      "title": "Garden Work Day",
+      "primaryUrl": "https://kcparks.org/events/"
+    },
+    {
+      "title": "Paint & Garden",
+      "primaryUrl": "https://kcparks.org/events/"
+    },
+    {
+      "title": "Cafecítón: A Latin Brunch Club",
+      "primaryUrl": "https://kccrossroads.org/"
+    },
+    {
+      "title": "Walktober 2026: Kemper Outdoor Education Center",
+      "primaryUrl": "https://kcparks.org/event/walktober-kemper/"
+    },
+    {
+      "title": "Maronde Professional Recital Series - Fall 2026",
+      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
+    },
+    {
+      "title": "Add More Arts to Your Classroom: Virtual Professional Development",
+      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
+    },
+    {
+      "title": "What if Puppets presents 'How to Snag a Sea Monster'",
+      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
+    },
+    {
+      "title": "Our Shared Future (Re)Shaped by AI",
+      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
+    },
+    {
+      "title": "Kansas City Civic Orchestra: Sounds of a New World",
+      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
+    },
+    {
+      "title": "Don't Say It… SING IT! The Power of Music Education in the Elementary Classroom with Aaron Fowler",
+      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
+    },
+    {
+      "title": "INfusion 2026 by Seva Dance",
+      "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
+    }
+  ],
+  "uncitableReadings": [
+    {
+      "title": "2026 Gala: Rodeo Nouveau",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    },
+    {
+      "title": "Crossroads Artboards: Caroline Honas / Arin Yoon",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    },
+    {
+      "title": "FrankenWines",
+      "primaryUrl": "https://kclibrary.org/events"
+    },
+    {
+      "title": "PBR OUTLAW DAYS FESTIVAL",
+      "primaryUrl": "https://powerandlightdistrict.com/events-and-entertainment"
+    },
+    {
+      "title": "Petite Performances: Halloween Spooktacular",
+      "primaryUrl": "https://www.kcsymphony.org/"
+    },
+    {
+      "title": "EMAS Presents",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    },
+    {
+      "title": "Artist Market @ Rooms We Carry Opening Reception",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    },
+    {
+      "title": "Rooms We Carry Opening Reception",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    },
+    {
+      "title": "An Evening with Joyce Carol Oates",
+      "primaryUrl": "https://kclibrary.org/events"
+    },
+    {
+      "title": "Prokofiev’s Sixth and Barber’s Violin Concerto",
+      "primaryUrl": "https://www.kcsymphony.org/"
+    },
+    {
+      "title": "Goldenberg Duo (at JCCC)",
+      "primaryUrl": "https://kclivearts.org/"
+    }
+  ]
+}
