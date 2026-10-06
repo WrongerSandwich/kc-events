@@ -404,6 +404,14 @@ for (const width of [390, 1440]) {
   });
 }
 
+test("an event page says don't miss in the explorer's words and case", async ({ page }) => {
+  await on(page, BUILD_DAY, "/e/evt_e2e000000001");
+  const tag = page.getByText("Don't miss", { exact: true });
+  await expect(tag).toBeVisible();
+  await expect(tag).toHaveCSS("text-transform", "none");
+  await expect(tag).toHaveClass(/\bdont-miss\b/);
+});
+
 test("the explorer sets nothing in uppercase", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore");
   await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated

@@ -15,7 +15,7 @@
 <article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} class:with-day={withDay}>
   <span class="when">{dateLine}</span>
   <div class="title">
-    <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="tag">Don't miss</span>{/if}
+    <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="dont-miss">Don't miss</span>{/if}
   </div>
   <span class="where" title={`${event.venue} · ${event.neighborhood}`}><span class="venue">{event.venue}</span><span class="hood">{` · ${event.neighborhood}`}</span></span>
   <KindChip kind={event.kind} />
@@ -42,12 +42,8 @@
   .title h3 { min-width: 0; font-size: var(--text-md); font-weight: var(--weight-medium); margin: 0; }
   .title a { color: inherit; text-decoration: none; }
   .title a:hover { text-decoration: underline; }
-  /* Don't miss in words, in ink like the rest of the chrome: it reads in grayscale and to a screen reader, and no hue
-     is mistaken for a kind. */
-  .tag {
-    flex: none; font-size: var(--text-xs); font-weight: var(--weight-medium); line-height: 1.6; color: var(--fg);
-    border: 1px solid var(--fg); border-radius: 999px; padding: 0 var(--space-2);
-  }
+  /* The don't-miss tag is base.css's; in a row it never gives way to the title. */
+  .title :global(.dont-miss) { flex: none; }
   .where, .host, .verified { font-size: var(--text-xs); color: var(--fg-faint); }
   .where { grid-area: where; }
   /* The chip is KindChip's element, so the row reaches it with :global. */
