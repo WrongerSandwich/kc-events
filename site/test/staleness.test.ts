@@ -48,6 +48,17 @@ describe("StalenessBanner", () => {
     target.remove();
   });
 
+  it("takes the page's width: the measure by default, the wide layout when asked", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") });
+    const narrow = render(StalenessBanner);
+    await tick();
+    expect(screen.getByRole("status").firstElementChild).toHaveClass("measure");
+    narrow.unmount();
+    render(StalenessBanner, { wide: true });
+    await tick();
+    expect(screen.getByRole("status").firstElementChild).toHaveClass("wide");
+  });
+
   it("says when it was last researched once stale, with the run date in it", async () => {
     vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") }); // 10 days
     render(StalenessBanner);

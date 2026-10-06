@@ -4,6 +4,9 @@
   import { addDays, formatShort, localDate, todayIn } from "../lib/dates";
   import { siteConfig } from "../site.config";
 
+  // `wide` matches the banner to the header and page below it (the explorer is wide; everything else is the measure).
+  let { wide = false }: { wide?: boolean } = $props();
+
   const runDay = localDate(meta.lastSuccessfulRun);
   const staleFrom = addDays(runDay, siteConfig.staleAfterDays + 1);
   // Server-rendered with the build's date; the visitor's date takes over on mount.
@@ -14,7 +17,7 @@
 
 {#if stale}
   <div class="banner" role="status">
-    <p class="measure">This list was last researched on {formatShort(runDay)} and may have missed changes since. Check the event's own page before you go.</p>
+    <p class={wide ? "wide" : "measure"}>This list was last researched on {formatShort(runDay)} and may have missed changes since. Check the event's own page before you go.</p>
   </div>
 {/if}
 

@@ -48,8 +48,8 @@
 {:else}
   {#each HORIZONS as h (h)}
     {@const heading = horizonHeading(h, today)}
-    <section aria-label={heading}>
-      <h2 class="section-heading">{heading}</h2>
+    <section aria-labelledby={`heading-${h}`}>
+      <h2 id={`heading-${h}`} class="section-heading">{heading}</h2>
       {#if buckets[h].length === 0}
         <p class="empty">{emptyLines[h]}</p>
       {:else if h === "further-out"}

@@ -65,6 +65,15 @@ p a, .prose a { text-decoration: underline; }
   margin: var(--space-16) 0 0;
 }
 
+/* The explorer's day group: smaller, and stuck just under the result bar (the explorer measures the bar into
+   --bar-height; --tap is the one-line bar: the export button's 28 px plus its padding). */
+.section-heading.day {
+  font-size: var(--text-sm);
+  margin: var(--space-6) 0 var(--space-1);
+  position: sticky; top: var(--bar-height, var(--tap));
+  background: var(--bg); z-index: var(--z-sticky);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

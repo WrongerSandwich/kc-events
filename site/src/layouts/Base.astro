@@ -36,7 +36,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
   </head>
   <body>
     <IconSprite />
-    <Header wide={wide}><StalenessBanner client:load /></Header>
+    <Header wide={wide}><StalenessBanner client:load wide={wide} /></Header>
     <main id="main" class={wide ? "wide" : "measure"}>
       <slot />
     </main>

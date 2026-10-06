@@ -31,7 +31,7 @@ describe("DontMissList", () => {
   it("hydrates with the build's state, then takes the visitor's date on mount", () => {
     vi.useFakeTimers({ now: new Date("2026-10-12T12:00:00Z") }); // a week after the build
     const target = document.body.appendChild(document.createElement("div"));
-    const labels = () => [...target.querySelectorAll("section")].map((s) => s.getAttribute("aria-label"));
+    const labels = () => [...target.querySelectorAll("section")].map((s) => s.querySelector("h2")?.textContent);
     // Svelte's mount renders synchronously but runs no effects (onMount included) until a flush, so this is
     // the first render: it must equal what the server rendered at build, or hydration would mismatch.
     const component = mount(DontMissList, { target });
@@ -49,7 +49,7 @@ describe("DontMissList", () => {
     render(DontMissList);
     await tick();
     const sections = screen.getAllByRole("region");
-    expect(sections.map((s) => s.getAttribute("aria-label"))).toEqual(["This week, Oct 5–11", "Next two weeks, through Oct 19", "Later, after Oct 19"]);
+    expect(sections.map((s) => within(s).getByRole("heading", { level: 2 }).textContent)).toEqual(["This week, Oct 5–11", "Next two weeks, through Oct 19", "Later, after Oct 19"]);
     const first = within(sections[0]!).getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(first).toEqual(["Closing run", "Tuesday show"]); // the run is on now, so it sorts as today
     expect(within(sections[0]!).getByText("Why A.")).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe("DontMissList", () => {
     render(DontMissList);
     await tick();
     const sections = screen.getAllByRole("region");
-    expect(sections[0]).toHaveAttribute("aria-label", "This week, Oct 12–18");
+    expect(sections[0]).toHaveAccessibleName("This week, Oct 12–18");
     expect(within(sections[0]!).getByText("Later show")).toBeInTheDocument();
     expect(screen.queryByText("Tuesday show")).toBeNull(); // past
   });

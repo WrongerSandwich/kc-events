@@ -57,7 +57,9 @@
   .fact :global(.ui-icon) { color: var(--fg-faint); align-self: center; }
   .why { margin-top: var(--space-2); color: var(--fg-muted); max-width: 38rem; }
   .tags { margin-top: var(--space-2); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); font-size: var(--text-sm); }
-  .primary { color: var(--fg-muted); }
+  /* Like the always-there host links: plain until hovered (base.css underlines links in a <p>). */
+  .primary { color: var(--fg-muted); text-decoration: none; }
+  .primary:hover { text-decoration: underline; }
   .primary:hover { color: var(--fg); }
   .verified { color: var(--fg-faint); }
   /* Save, then add to calendar; the slot keeps its width before Save mounts, so nothing re-wraps when it appears. */

@@ -107,6 +107,28 @@ describe("Explorer", () => {
     expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film"]);
   });
 
+  it("keeps a half-entered range when another filter changes", async () => {
+    render(Explorer);
+    const from = screen.getByLabelText("From");
+    await fireEvent.input(from, { target: { value: "2026-10-09" } });
+    await fireEvent.change(from);
+    await fireEvent.click(screen.getByRole("button", { name: "film" }));
+    expect(screen.getByLabelText("From")).toHaveValue("2026-10-09");
+  });
+
+  it("drops an applied range when one of its dates is cleared", async () => {
+    history.replaceState(null, "", "/explore?when=2026-10-09..2026-10-10");
+    render(Explorer);
+    // A browser fires input, then change, which is what binds and then applies the value.
+    const from = screen.getByLabelText("From");
+    await fireEvent.input(from, { target: { value: "" } });
+    await fireEvent.change(from);
+    flushSync();
+    expect(screen.getByLabelText("From")).toHaveValue("");
+    expect(screen.getByLabelText("To")).toHaveValue("");
+    expect(location.search).toBe("");
+  });
+
   it("searches, includes always-there, and clears", async () => {
     render(Explorer);
     await fireEvent.input(screen.getByRole("searchbox"), { target: { value: "liberty" } });

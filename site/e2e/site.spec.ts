@@ -11,12 +11,12 @@ test("the front page buckets the fixture's don't-miss events", async ({ page }) 
   await on(page, BUILD_DAY, "/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("What's on in Kansas City");
   const sections = page.getByRole("region");
-  await expect(sections.nth(0)).toHaveAttribute("aria-label", "This week, Oct 5–11");
+  await expect(sections.nth(0)).toHaveAccessibleName("This week, Oct 5–11");
   // The exhibition is on now, so it sorts as today, ahead of Tuesday's show.
   await expect(sections.nth(0).getByRole("heading", { level: 3 })).toHaveText(["Closing exhibition", "Fabio Frizzi plays Fulci"]);
   await expect(sections.nth(1).getByRole("heading", { level: 3 })).toHaveText(["Mid-month reading"]);
   // Later picks are one line each, not cards.
-  await expect(sections.nth(2)).toHaveAttribute("aria-label", "Later, after Oct 19");
+  await expect(sections.nth(2)).toHaveAccessibleName("Later, after Oct 19");
   await expect(sections.nth(2).getByRole("listitem")).toHaveText([/November festival/]);
   // No hand-kept Always there pick matches the fixture, so the section is left out rather than shown empty.
   await expect(page.getByRole("heading", { name: "Always there" })).toHaveCount(0);

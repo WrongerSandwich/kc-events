@@ -1,22 +1,26 @@
 <script lang="ts">
-  import { WHEN_LABELS, WHEN_PRESETS, type Filters } from "../lib/query";
+  import { DEFAULT_FILTERS, WHEN_LABELS, WHEN_PRESETS, type Filters } from "../lib/query";
   import { slugify } from "../lib/slugs";
   import KindIcon from "./KindIcon.svelte";
 
   let { filters, onchange, kinds, regions }: { filters: Filters; onchange: (f: Filters) => void; kinds: string[]; regions: string[] } = $props();
 
-  // The range inputs follow the filter in force, so a shared ?when=a..b link fills them; between changes they
-  // hold a half-entered range locally until both ends are set.
+  // The range inputs follow the range in force, so a shared ?when=a..b link fills them; between changes they hold a
+  // half-entered range locally until both ends are set. The effect reads only the range's key, a string, so a change
+  // to any other filter leaves a half-entered range alone.
   let range = $state({ from: "", to: "" });
+  let rangeKey = $derived("from" in filters.when ? `${filters.when.from}..${filters.when.to}` : "");
   $effect(() => {
-    const when = filters.when;
-    range = "from" in when ? { from: when.from, to: when.to } : { from: "", to: "" };
+    const [from = "", to = ""] = rangeKey.split("..");
+    range = { from, to };
   });
 
   const toggleIn = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
   function applyRange() {
     const { from, to } = range;
     if (from && to) onchange({ ...filters, when: from <= to ? { from, to } : { from: to, to: from } });
+    // Emptying one end of a range in force ends the range, so the inputs never look empty while it still filters.
+    else if ("from" in filters.when) onchange({ ...filters, when: DEFAULT_FILTERS.when });
   }
 </script>
 
@@ -84,7 +88,8 @@
   select, input[type="date"], input[type="search"] { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
   input::placeholder { color: var(--fg-faint); opacity: 1; }
   /* Tabbing onto a date field's calendar button matches neither :focus-visible nor :focus on the field, only
-     :focus-within, so the field rings whenever focus is inside it. */
+     :focus-within, so the field rings whenever focus is inside it, mouse clicks included. The inner parts are in a
+     closed shadow tree, so :has(:focus-visible) cannot see them; no supported way to ring only for the keyboard. */
   input[type="date"]:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
   .search input { width: 100%; padding: var(--space-1) var(--space-2); }
 </style>
