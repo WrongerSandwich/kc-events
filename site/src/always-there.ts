@@ -12,6 +12,5 @@ export const alwaysTherePicks: readonly { title: string; host: string }[] = [
   { title: "Second Fridays Open Studios", host: "zhoubartcenterkc.com" },
   { title: "Kansas City Chiefs", host: "arrowheadstadiumkc.com" },
   { title: "Mavericks", host: "kcmavericks.com" },
-  { title: "Trivia", host: "replaylounge.com" },
   { title: "Main Gallery Tours", host: "theworldwar.org" },
 ];

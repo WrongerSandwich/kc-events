@@ -361,7 +361,7 @@ sources:
     urls: [https://www.powerandlightdistrict.com/events-and-entertainment/events]
     kind: other
     neighborhood: Downtown
-    checkHints: Entertainment district; KC Live! block concerts, watch parties and festivals.
+    checkHints: Entertainment district; KC Live! block concerts and festivals. Watch parties and its bars' and restaurants' standing nights are promotions, not events.
     status: active
 
   - name: Kansas City Convention Center

@@ -28,7 +28,11 @@ An event that happens once, including a short consecutive span such as a festiva
 An event that happens over a bounded span with a known end date, such as an exhibition or a theatre run.
 
 **Recurring**:
-An event that repeats indefinitely on a schedule, such as weekly trivia, a monthly market, or First Fridays.
+An event that repeats indefinitely on a schedule, such as a monthly market, First Fridays, or a museum's weekly tour.
+
+**Promotion**:
+A business's own standing night, or a bar's watch party, listed as if it were an event: a happy hour, a food or drink special, a themed or DJ night, trivia, karaoke, a game-day party. Never an event, whatever it offers; extraction skips it. A recurring event is bigger than one business's night.
+_Avoid_: special, deal
 
 **Schedule phrase**:
 How a recurring event repeats, in a few words from its page ("Every Tuesday, 7pm"). A recurring event carries it instead of a start and end date. A sports team's season is one recurring event with a schedule phrase, not a one-off per game.
