@@ -207,6 +207,51 @@ for (const width of [1024, 1280, 1440]) {
   }
 }
 
+// A phone row has one shape: the date, the title, then the kind chip leading the venue line, with Save at the end.
+for (const path of EXPLORER_SORTS) {
+  test(`every explorer row has the same shape and a 44 px Save at 390 px on ${path}`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await on(page, BUILD_DAY, path);
+    await openOnNow(page);
+    await expect(page.locator("article.row button.save").first()).toBeVisible();
+    const rows = await page.locator("article.row").evaluateAll((els) =>
+      els.map((row) => {
+        const box = (sel: string) => row.querySelector<HTMLElement>(sel)!.getBoundingClientRect();
+        const shown = (sel: string) => box(sel).width > 0 && box(sel).height > 0;
+        return {
+          title: row.querySelector("h3")!.textContent,
+          dated: !row.classList.contains("always"),
+          row: row.getBoundingClientRect(),
+          when: box(".when"), heading: box(".title"), where: box(".where"), chip: box(".chip"), save: box("button.save"),
+          hostShown: shown(".host"), verifiedShown: shown(".verified"),
+        };
+      }),
+    );
+    expect(rows.length).toBe(9);
+    const chipLeft = rows[0]!.chip.left;
+    for (const r of rows.filter((r) => r.dated)) {
+      expect(r.when.bottom, `${r.title}: date above title`).toBeLessThanOrEqual(r.heading.top + 0.5);
+      expect(r.heading.bottom, `${r.title}: title above venue`).toBeLessThanOrEqual(r.where.top + 0.5);
+      expect(Math.abs(r.chip.top + r.chip.height / 2 - (r.where.top + r.where.height / 2)), `${r.title}: chip on the venue line`).toBeLessThan(2);
+      expect(r.chip.left, `${r.title}: chip position`).toBeCloseTo(chipLeft, 0);
+      expect(r.chip.right, `${r.title}: chip before venue`).toBeLessThanOrEqual(r.where.left + 0.5);
+      expect(r.hostShown, `${r.title}: no host`).toBe(false);
+      expect(r.verifiedShown, `${r.title}: no verified stamp`).toBe(false);
+      expect(r.save.width, `${r.title}: Save width`).toBeGreaterThanOrEqual(44);
+      expect(r.save.height, `${r.title}: Save height`).toBeGreaterThanOrEqual(44);
+      expect(r.save.right, `${r.title}: Save at the row's end`).toBeGreaterThan(r.where.right);
+      expect(r.row.right, `${r.title}: row inside the page`).toBeLessThanOrEqual(390);
+    }
+  });
+}
+
+test("a don't-miss row keeps its why-line on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await on(page, BUILD_DAY, "/explore");
+  await openOnNow(page);
+  await expect(page.locator("article.row.flagged .why").first()).toBeVisible();
+});
+
 test("explorer rows read their dates relative to the day headings and the sort", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore");
   await openOnNow(page);
