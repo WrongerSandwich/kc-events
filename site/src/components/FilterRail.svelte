@@ -58,12 +58,10 @@
 
   <fieldset>
     <legend>Show</legend>
-    <label><input type="checkbox" role="switch" checked={filters.dontMiss} onchange={() => onchange({ ...filters, dontMiss: !filters.dontMiss })} /> Don't-miss only</label>
-    <label><input type="checkbox" role="switch" checked={filters.recurring} onchange={() => onchange({ ...filters, recurring: !filters.recurring })} /> Include always-there</label>
-    <label><input type="checkbox" role="switch" checked={filters.saved} onchange={() => onchange({ ...filters, saved: !filters.saved })} /> Saved only</label>
+    <label><input type="checkbox" checked={filters.dontMiss} onchange={() => onchange({ ...filters, dontMiss: !filters.dontMiss })} /> Don't-miss only</label>
+    <label><input type="checkbox" checked={filters.recurring} onchange={() => onchange({ ...filters, recurring: !filters.recurring })} /> Include always-there</label>
+    <label><input type="checkbox" checked={filters.saved} onchange={() => onchange({ ...filters, saved: !filters.saved })} /> Saved only</label>
   </fieldset>
-
-  <label class="search">Search <input type="search" value={filters.q} oninput={(e) => onchange({ ...filters, q: e.currentTarget.value })} placeholder="Title, venue, neighborhood, why" /></label>
 
   <label class="sort">Sort <select value={filters.sort} onchange={(e) => onchange({ ...filters, sort: e.currentTarget.value === "venue" ? "venue" : "date" })}><option value="date">By date</option><option value="venue">By venue</option></select></label>
 </div>
@@ -80,16 +78,15 @@
   .kind :global(.kind-icon) { color: var(--hue); }
   .kind[aria-pressed="true"] { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
   .range { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); } .range label { display: flex; flex-direction: column; font-size: var(--text-xs); }
-  /* The Show switches, one per line with the box beside its words. */
+  /* The Show checkboxes, one per line with the box beside its words. */
   fieldset > label { display: flex; align-items: center; gap: var(--space-2); }
   input, select { font: inherit; }
   /* Chromium's dark-scheme select is grey (#6b6b6b), under 4.5:1 with --fg; the raised surface clears AA in both schemes. */
   /* The inputs too: Chromium's dark field is #3b3b3b, where its placeholder grey is about 2.4:1. */
-  select, input[type="date"], input[type="search"] { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
+  select, input[type="date"] { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
   input::placeholder { color: var(--fg-faint); opacity: 1; }
   /* Tabbing onto a date field's calendar button matches neither :focus-visible nor :focus on the field, only
      :focus-within, so the field rings whenever focus is inside it, mouse clicks included. The inner parts are in a
      closed shadow tree, so :has(:focus-visible) cannot see them; no supported way to ring only for the keyboard. */
   input[type="date"]:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .search input { width: 100%; padding: var(--space-1) var(--space-2); }
 </style>
