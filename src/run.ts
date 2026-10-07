@@ -6,6 +6,7 @@ import {
   candidateToSighting,
   extractionReplySchema,
   normalizeUrl,
+  readPage,
   type ExtractionContext,
   type PageOrigin,
   type Sighting,
@@ -371,7 +372,8 @@ async function extractPage(
   model: ModelPort,
   context: ExtractionContext,
 ): Promise<{ sightings?: Sighting[]; extracted: number; outsideGeography: number; problems: string[] }> {
-  const reply = await model.complete(buildExtractionRequest(page, origin, context));
+  const reading = readPage(page, context.config);
+  const reply = await model.complete(buildExtractionRequest(page, reading, origin, context));
   const parsed = extractionReplySchema.safeParse(reply.value);
   if (!parsed.success) {
     return {
@@ -380,7 +382,7 @@ async function extractPage(
       problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`],
     };
   }
-  const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl) };
+  const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl), links: reading.links };
   const sightings: Sighting[] = [];
   const problems: string[] = [];
   let outsideGeography = 0;

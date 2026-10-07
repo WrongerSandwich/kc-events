@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay } from "../src/lib/events";
+import { firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl } from "../src/lib/events";
 import { event } from "./fixtures/event";
 
 const oneDay = event();
@@ -56,5 +56,12 @@ describe("hasStartDay", () => {
     expect(hasStartDay(event())).toBe(true);
     expect(hasStartDay(event({ recurrence: "recurring", start: undefined, schedule: "Tuesdays" }))).toBe(false);
     expect(hasStartDay(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }))).toBe(false);
+  });
+});
+
+describe("detailsUrl", () => {
+  it("is the event's own page when the job found one, else the primary page", () => {
+    expect(detailsUrl(event({ eventUrl: "https://www.therecordbar.com/shows/a-show" }))).toBe("https://www.therecordbar.com/shows/a-show");
+    expect(detailsUrl(event())).toBe("https://www.therecordbar.com/shows");
   });
 });

@@ -12,7 +12,10 @@ export type PublishedEvent = {
   venue: string;
   neighborhood: string;
   region: string;
+  /** The page the date and venue were read from; what the verified line names. */
   primaryUrl: string;
+  /** The event's own page when the job found one linked from the primary page; where "Details and tickets" goes (see detailsUrl). */
+  eventUrl?: string;
   kind: string;
   recurrence: Recurrence;
   dontMiss: boolean;

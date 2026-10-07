@@ -50,3 +50,8 @@ export function hostOf(url: string): string {
     return url;
   }
 }
+
+/** Where "Details and tickets" goes: the event's own page when the job found one, else the page it was read from. */
+export function detailsUrl(e: PublishedEvent): string {
+  return e.eventUrl ?? e.primaryUrl;
+}

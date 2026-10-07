@@ -33,6 +33,8 @@ const eventFields = z.strictObject({
   venue: z.string().min(1).optional(),
   neighborhood: z.string().min(1),
   primaryUrl: z.url(),
+  /** The event's own page, linked from the primary page: where the site sends the reader. Never fetched; absent when the primary page links to none. */
+  eventUrl: z.url().optional(),
   kind: z.string().min(1),
   recurrence: z.enum(RECURRENCE_CLASSES),
   dontMiss: z.boolean(),

@@ -44,7 +44,9 @@ export function measure(dist: string, page: string): { bytes: number; assets: st
 
 function main(): void {
   const dist = new URL(`../${process.env.SITE_OUT_DIR ?? "dist"}/`, import.meta.url).pathname;
-  const budgets: Record<string, number> = { "index.html": 50_000, "explore.html": 100_000 };
+  // The explorer carries every event twice, in its rows and in the island's data, so an event's own page (#53) added
+  // about 9 KB across the dataset; its budget rose from 100 KB to 120 KB for that data, not for code.
+  const budgets: Record<string, number> = { "index.html": 50_000, "explore.html": 120_000 };
   let failed = false;
   const check = (page: string, budget: number, bytes: number, assets: string[]) => {
     const ok = bytes <= budget;

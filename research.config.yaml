@@ -120,6 +120,7 @@ discovery:
     - artskcgo.com
     - concertfix.com
     - concerts50.com # #16: the 2026-10-03 hand run read three Midland shows from its listing page
+    - kidsoutandabout.com # #53: a family-events listing site, read as a primary page by discovery through 2026-10-06
   ignoredHosts: # never followed: social media and the like, which carry no primary page
     - facebook.com
     - instagram.com

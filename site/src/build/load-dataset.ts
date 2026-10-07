@@ -46,6 +46,7 @@ function project(e: Event, config: RunConfig): PublishedEvent {
     dontMiss: e.dontMiss,
     lastVerified: e.lastVerified!,
   };
+  if (e.eventUrl !== undefined) out.eventUrl = e.eventUrl;
   if (e.start !== undefined) out.start = e.start;
   if (e.end !== undefined) out.end = e.end;
   if (e.schedule !== undefined) out.schedule = e.schedule;

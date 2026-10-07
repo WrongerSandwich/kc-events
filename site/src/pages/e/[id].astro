@@ -12,7 +12,7 @@ import { meta } from "../../generated/meta";
 import { formatDay, formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd } from "../../lib/event-meta";
 import { longDateLine } from "../../lib/date-line";
-import { firstDay, hasStartDay, hostOf, isDated, lastDay } from "../../lib/events";
+import { firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl } from "../../lib/events";
 import { siteConfig } from "../../site.config";
 import type { PublishedEvent } from "../../lib/types";
 
@@ -23,7 +23,10 @@ const { event } = Astro.props as { event: PublishedEvent };
 
 const line = longDateLine(event, meta.buildToday);
 const description = eventDescription(event, meta.buildToday);
-const reportUrl = `${siteConfig.repoUrl}/issues/new?title=${encodeURIComponent(`Wrong listing: ${event.title}`)}&body=${encodeURIComponent(`Event: ${origin}/e/${event.id}\nPrimary page: ${event.primaryUrl}\n\nWhat is wrong:\n`)}`;
+// The reader lands on the event's own page when the job found one; the verified line still names the list it was read from.
+const details = detailsUrl(event);
+const reportBody = [`Event: ${origin}/e/${event.id}`, `Primary page: ${event.primaryUrl}`, ...(event.eventUrl ? [`Event page: ${event.eventUrl}`] : []), "", "What is wrong:", ""].join("\n");
+const reportUrl = `${siteConfig.repoUrl}/issues/new?title=${encodeURIComponent(`Wrong listing: ${event.title}`)}&body=${encodeURIComponent(reportBody)}`;
 const moreLikeThis = events
   .filter((e) => e.id !== event.id && e.kind === event.kind && hasStartDay(e) && firstDay(e)! >= meta.buildToday)
   .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
@@ -44,12 +47,12 @@ const jsonLd = eventJsonLd(event);
       </div>
     </header>
     {event.whyLine && <p class="why">{event.whyLine}</p>}
-    <p class="primary"><a href={event.primaryUrl}>Details and tickets at {hostOf(event.primaryUrl)}</a></p>
+    <p class="primary"><a href={details}>Details and tickets at {hostOf(details)}</a></p>
     <div class="actions">
       <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} />
       {isDated(event) && <a class="ics" href={`/e/${event.id}.ics`} download><UiIcon name="calendar-plus" />Add to calendar</a>}
     </div>
-    <p class="verified">Date and venue verified {formatShort(localDate(event.lastVerified))} from the page linked above. <a href={reportUrl}>Wrong? Report it</a>.</p>
+    <p class="verified">Date and venue verified {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}. <a href={reportUrl}>Wrong? Report it</a>.</p>
   </article>
 
   {moreLikeThis.length > 0 && (
