@@ -25,6 +25,8 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={url} />
+    <!-- Safari draws no SVG icon and takes the ICO; the others take the SVG, listed after it. -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:type" content="website" />

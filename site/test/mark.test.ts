@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { icoImage } from "../src/build/ico";
 import { pngSource } from "../src/build/png-source";
 import { MARK_INNER, faviconSvg, markSvg } from "../src/lib/mark";
 
@@ -19,9 +20,17 @@ describe("faviconSvg", () => {
   });
 });
 
-describe("the committed apple-touch-icon", () => {
-  it("was drawn from the current mark (else rerun scripts/apple-touch-icon.ts)", () => {
+describe("the committed raster icons (else rerun scripts/icons.ts)", () => {
+  it("apple-touch-icon.png was drawn from the current mark", () => {
     const png = readFileSync(new URL("../public/apple-touch-icon.png", import.meta.url));
+    expect(pngSource(png)).toBe(markSvg());
+  });
+
+  it("favicon.ico holds a 32 px PNG drawn from the current mark", () => {
+    const ico = readFileSync(new URL("../public/favicon.ico", import.meta.url));
+    expect(ico.readUInt8(6)).toBe(32);
+    const png = icoImage(ico);
+    expect(png.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
     expect(pngSource(png)).toBe(markSvg());
   });
 });

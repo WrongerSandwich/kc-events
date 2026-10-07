@@ -69,11 +69,12 @@ describe.skipIf(!matchesGenerated)("built output", () => {
     expect(canonical("index.html")).toMatch(/\/$/);
     expect(canonical("about.html")).toMatch(/\/about$/);
   });
-  it("links the favicon and the apple-touch-icon from every page, and serves the mark as /favicon.svg", () => {
+  it("links the ICO, the SVG, and the apple-touch-icon from every page, and serves the mark as /favicon.svg", () => {
     expect(read("favicon.svg")).toBe(faviconSvg());
     expect(has("apple-touch-icon.png")).toBe(true);
+    expect(has("favicon.ico")).toBe(true);
     for (const page of ["index.html", "explore.html", "about.html", "404.html", `e/${events[0]!.id}.html`]) {
-      expect(read(page), page).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml">');
+      expect(read(page), page).toContain('<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/favicon.svg" type="image/svg+xml">');
       expect(read(page), page).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">');
     }
   });
