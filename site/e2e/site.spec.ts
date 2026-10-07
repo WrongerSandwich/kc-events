@@ -365,6 +365,106 @@ for (const path of EXPLORER_SORTS) {
   });
 }
 
+// The kind chips make a column, so the kinds can be scanned down the list: the same left edge on every row.
+for (const width of [1280, 1440]) {
+  for (const path of EXPLORER_SORTS) {
+    test(`the kind chips line up down the explorer at ${width} px on ${path}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await on(page, BUILD_DAY, path);
+      await openOnNow(page);
+      await expect(page.locator("article.row button.save").first()).toBeVisible();
+      const lefts = await page.locator("article.row").evaluateAll((els) =>
+        els.slice(0, 20).map((row) => ({
+          title: row.querySelector("h3")!.textContent,
+          chip: row.querySelector(".chip")!.getBoundingClientRect().left,
+          host: row.querySelector(".host")!.getBoundingClientRect().left,
+          save: row.querySelector("button.save")!.getBoundingClientRect().left,
+        })),
+      );
+      expect(lefts.length).toBeGreaterThan(5);
+      for (const r of lefts) {
+        expect(r.chip, `${r.title}: chip`).toBeCloseTo(lefts[0]!.chip, 0);
+        expect(r.host, `${r.title}: host`).toBeCloseTo(lefts[0]!.host, 0);
+        expect(r.save, `${r.title}: save`).toBeCloseTo(lefts[0]!.save, 0);
+      }
+    });
+  }
+}
+
+// In words, so it reads in grayscale and to a screen reader, and visible at every width.
+for (const width of [390, 1440]) {
+  test(`a don't-miss row says so in words at ${width} px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await on(page, BUILD_DAY, "/explore");
+    await openOnNow(page);
+    const flagged = page.locator("article.row.flagged");
+    await expect(flagged.first()).toBeVisible();
+    for (const row of await flagged.all()) await expect(row.getByText("Don't miss", { exact: true })).toBeVisible();
+    await expect(page.locator("article.row:not(.flagged)").getByText("Don't miss")).toHaveCount(0);
+  });
+}
+
+test("an event page says don't miss in the explorer's words and case", async ({ page }) => {
+  await on(page, BUILD_DAY, "/e/evt_e2e000000001");
+  const tag = page.getByText("Don't miss", { exact: true });
+  await expect(tag).toBeVisible();
+  await expect(tag).toHaveCSS("text-transform", "none");
+  await expect(tag).toHaveClass(/\bdont-miss\b/);
+});
+
+test("the explorer sets nothing in uppercase", async ({ page }) => {
+  await on(page, BUILD_DAY, "/explore");
+  await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+  await expect(page.getByRole("group", { name: "When" }).first()).toBeVisible();
+  const shouting = await page.locator(".explorer, .explorer *").evaluateAll((els) =>
+    els.filter((el) => getComputedStyle(el).textTransform === "uppercase").map((el) => el.outerHTML.slice(0, 80)),
+  );
+  expect(shouting).toEqual([]);
+});
+
+test("From and To wait behind Custom dates…, out of the Tab order until it opens", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await on(page, BUILD_DAY, "/explore");
+  await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+  await expect(page.getByLabel("From")).toBeHidden();
+  await page.getByRole("button", { name: "All", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  const custom = page.getByText("Custom dates…");
+  await expect(custom).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.locator(".rail button.kind").first()).toBeFocused(); // past the closed fields, to the kinds
+  await custom.click();
+  await custom.focus();
+  await page.keyboard.press("Tab");
+  await expect(page.getByLabel("From")).toBeFocused();
+});
+
+test("a shared range link opens Custom dates… with its dates in the fields", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await on(page, BUILD_DAY, "/explore?when=2026-10-09..2026-10-12");
+  await expect(page.getByLabel("From")).toBeVisible();
+  await expect(page.getByLabel("From")).toHaveValue("2026-10-09");
+  await expect(page.getByLabel("To")).toHaveValue("2026-10-12");
+});
+
+test("the venue sort puts each venue's rows under its own heading", async ({ page }) => {
+  await on(page, BUILD_DAY, "/explore?sort=venue");
+  await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+  // In document order: [true, venue] for a heading, [false, venue] for a row.
+  const items = await page.locator(".results > h2, .results > article.row").evaluateAll((els) =>
+    els.map((el) => [el.tagName === "H2", (el.tagName === "H2" ? el : el.querySelector(".venue")!).textContent ?? ""] as const),
+  );
+  expect(items[0]![0], "a heading comes first").toBe(true);
+  let heading = "";
+  const seen: string[] = [];
+  for (const [isHeading, venue] of items) {
+    if (isHeading) { heading = venue; seen.push(venue); }
+    else expect(venue, "a row sits under its venue's heading").toBe(heading);
+  }
+  expect(new Set(seen).size, "one heading per venue").toBe(seen.length);
+  expect(seen.length).toBeGreaterThan(5);
+});
+
 test("from 800 px a row shows the host and the verified stamp again", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 800 });
   await on(page, BUILD_DAY, "/explore");

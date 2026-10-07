@@ -22,6 +22,8 @@
   --accent: oklch(0.21 0 0);
   --accent-fg: oklch(1 0 0);
   --focus: oklch(0.55 0.2 260);
+  /* A pressed filter that is not a kind: a grey tint under ink, the same shape as a pressed kind's tint and shade. */
+  --pressed-tint: oklch(0.94 0 0);
   /* The kinds */
   --kind-talks-readings: oklch(0.47 0.14 20); --kind-talks-readings-tint: oklch(0.945 0.045 20);
   --kind-food-drink: oklch(0.47 0.14 56); --kind-food-drink-tint: oklch(0.945 0.045 56);
@@ -55,6 +57,7 @@
     --bg: oklch(0.17 0 0); --bg-raised: oklch(0.205 0 0); --fg: oklch(0.94 0 0); --fg-muted: oklch(0.76 0 0);
     --fg-faint: oklch(0.67 0 0); --rule: oklch(0.28 0 0); --rule-strong: oklch(0.43 0 0); --control-border: oklch(0.53 0 0);
     --accent: oklch(0.94 0 0); --accent-fg: oklch(0.17 0 0); --focus: oklch(0.72 0.15 260);
+    --pressed-tint: oklch(0.30 0 0);
     --kind-talks-readings: oklch(0.82 0.11 20); --kind-talks-readings-tint: oklch(0.31 0.06 20);
     --kind-food-drink: oklch(0.82 0.11 56); --kind-food-drink-tint: oklch(0.31 0.06 56);
     --kind-comedy: oklch(0.82 0.11 88); --kind-comedy-tint: oklch(0.31 0.06 88);

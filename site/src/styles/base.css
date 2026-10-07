@@ -57,7 +57,21 @@ p a, .prose a { text-decoration: underline; }
   white-space: nowrap;
 }
 
-/* A section's heading: the horizon buckets, Always there, More like this, the explorer's day groups. */
+/* Don't miss, in words and in ink, on an explorer row and an event page: it reads in grayscale and to a screen reader,
+   and no hue is mistaken for a kind. */
+.dont-miss {
+  display: inline-flex; align-items: center;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 1.6;
+  color: var(--fg);
+  border: 1px solid var(--fg);
+  border-radius: 999px;
+  padding: 0 var(--space-2);
+  white-space: nowrap;
+}
+
+/* A section's heading: the horizon buckets, Always there, More like this, the explorer's groups. */
 .section-heading {
   font-size: var(--text-2xl);
   color: var(--fg);
@@ -65,9 +79,9 @@ p a, .prose a { text-decoration: underline; }
   margin: var(--space-16) 0 0;
 }
 
-/* The explorer's day group: smaller, and stuck just under the result bar (the explorer measures the bar into
-   --bar-height; --tap is the one-line bar: the export button's 28 px plus its padding). */
-.section-heading.day {
+/* The explorer's group, a day or a venue: smaller, and stuck just under the result bar (the explorer measures the bar
+   into --bar-height; --tap is the one-line bar: the export button's 28 px plus its padding). */
+.section-heading.group {
   font-size: var(--text-sm);
   margin: var(--space-6) 0 var(--space-1);
   position: sticky; top: var(--bar-height, var(--tap));

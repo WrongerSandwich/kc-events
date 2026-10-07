@@ -26,7 +26,7 @@
   let sheetOpen = $state(false);
   // Export needs the browser; the server-rendered button stays disabled until mount.
   let mounted = $state(false);
-  // The bar's height, so the sticky day headings sit just under it however it wraps (search takes a line on phones).
+  // The bar's height, so the sticky group headings sit just under it however it wraps (search takes a line on phones).
   let barHeight = $state(0);
   let bar: HTMLElement;
   let search: HTMLInputElement;
@@ -135,7 +135,7 @@
           {@render rows(g.events)}
         </details>
       {:else}
-        <h2 class="section-heading day">{g.heading}</h2>
+        <h2 class={`section-heading group${filters.sort === "venue" ? " venue" : ""}`}>{g.heading}</h2>
         {@render rows(g.events)}
       {/if}
     {/each}
@@ -189,6 +189,8 @@
   /* A collapsed group (On now with no when-filter): one raised line, a full tap target, with a chevron that turns
      when it opens. Open, its line sticks under the bar like a day heading, so it can be closed from anywhere. */
   .collapsed { margin-top: var(--space-2); }
+  /* A hundred-odd venues, half of them with a single event: their headings sit closer than the days'. */
+  .results :global(.section-heading.venue) { margin-top: var(--space-3); }
   .collapsed summary {
     display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0 var(--space-3);
     background: var(--bg-raised); border: 1px solid var(--rule); border-radius: var(--radius);

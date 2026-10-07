@@ -36,7 +36,7 @@ const jsonLd = eventJsonLd(event);
       {/* The same tile as the front page's card, by the same view-transition name, so one glides into the other. */}
       {isDated(event) && <DateTile tile={dateTile(event, meta.buildToday)} id={event.id} large />}
       <div>
-        <p class="kind"><KindChip kind={event.kind} />{event.dontMiss && <span class="mark">Don't miss</span>}</p>
+        <p class="kind"><KindChip kind={event.kind} />{event.dontMiss && <span class="dont-miss">Don't miss</span>}</p>
         <h1 style={`view-transition-name: title-${event.id}`}>{event.title}</h1>
         <p class="date">{line}</p>
         {/* A neighborhood that is its own region (Lawrence, Elsewhere in the metro) is named once. */}
@@ -69,7 +69,6 @@ const jsonLd = eventJsonLd(event);
   .head { margin-bottom: var(--space-4); }
   .head.dated { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-4); align-items: start; }
   .kind { display: flex; gap: var(--space-2); align-items: center; margin: 0; }
-  .mark { color: var(--accent); font-size: var(--text-xs); font-weight: var(--weight-strong); text-transform: uppercase; letter-spacing: 0.04em; }
   h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: var(--space-2) 0; }
   .date { font-size: var(--text-lg); margin: 0; }
   .where { color: var(--fg-muted); margin: 0; }

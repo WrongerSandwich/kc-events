@@ -67,11 +67,17 @@ describe("groupResults", () => {
     expect(groups.map((g) => g.key)).toEqual(["2026-10-06", "2026-10-09"]);
   });
 
-  it("sorts by venue into one list when asked", () => {
-    const groups = groupResults([fri7, fri5, onNow], f({ sort: "venue" }), today, none);
-    expect(groups).toHaveLength(1);
-    expect(groups[0]!.heading).toBe("By venue");
-    expect(groups[0]!.events.map((e) => e.id)).toEqual(["fri5", "onNow", "fri7"]);
+  it("groups by venue when asked, a heading per venue, each venue's events by start", () => {
+    const early = event({ id: "early", title: "Matinee", start: "2026-10-08T14:00:00-05:00", venue: "recordBar" });
+    const groups = groupResults([fri7, fri5, onNow, early], f({ sort: "venue" }), today, none);
+    expect(groups.map((g) => [g.heading, g.collapsed, g.events.map((e) => e.id)])).toEqual([
+      ["Knuckleheads", false, ["fri5"]],
+      ["Nelson-Atkins", false, ["onNow"]],
+      ["recordBar", false, ["early", "fri7"]],
+    ]);
+    // Keys never collide with a day's or a fixed group's, whatever a venue is called.
+    expect(new Set(groups.map((g) => g.key)).size).toBe(3);
+    expect(groups.every((g) => g.key.startsWith("venue:"))).toBe(true);
   });
 
   it("applies the filters", () => {
