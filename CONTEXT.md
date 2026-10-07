@@ -15,8 +15,12 @@ The `events.json` the site publishes alongside its HTML. It is the interface bet
 _Avoid_: database, feed, API
 
 **Primary page**:
-The page on the event's own web presence (venue calendar, promoter page, organizer site) from which its date and venue were read.
+The page on the event's own web presence (venue calendar, promoter page, organizer site) from which its date and venue were read. Verification and identity hang on it.
 _Avoid_: official page, canonical URL, source page
+
+**Event page**:
+The event's own page, when the primary page links one: its details or its tickets, on the venue's site or a ticketing platform. Where the site sends the reader. Named by the extractor as a link number, resolved by the job, never fetched, and no part of verifying; an event whose primary page links none sends the reader to the primary page.
+_Avoid_: ticket link, detail page, link-out
 
 **Recurrence class**:
 Which of three shapes an event's occurrence takes: one-off, limited run, or recurring. Derived from page evidence, not judgment.

@@ -45,6 +45,7 @@ export function candidateAt(at: Source, overrides: Record<string, unknown> = {})
     outsideGeography: false,
     kind: at.kind,
     primaryUrl: at.urls[0],
+    eventLink: null,
     dateEvidence: "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM",
     venueEvidence: `${at.name}, 1 Main St`,
     notice: "none",

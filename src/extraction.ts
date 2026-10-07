@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import { citedDate, type Event } from "./dataset.js";
+import { linkTarget } from "./discovery.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
 import type { Source } from "./registry.js";
@@ -13,8 +14,15 @@ import { deriveRecurrence } from "./recurrence.js";
 import { toKind, toNeighborhood } from "./taxonomy.js";
 import { fromLocal } from "./time.js";
 
-/** A page body longer than this is cut before it reaches the model; venue calendars rarely need more. */
-const MAX_PAGE_CHARS = 60_000;
+/** A page body longer than this is cut before it reaches the model; venue calendars rarely need more, link markers included. */
+const MAX_PAGE_CHARS = 70_000;
+
+/**
+ * A whole anchor element: its attributes (group 1), read one at a time so a quoted value holding ">"
+ * cannot end the tag early, and its content (group 2). A nested anchor is invalid HTML and not read.
+ */
+const ANCHOR = /<a\b((?:\s+[^\s<>"'=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s<>"']+))?)*)\s*\/?>([\s\S]*?)<\/a\s*>/gi;
+const HREF = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))/i;
 
 const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const LOCAL_TIME = /^\d{2}:\d{2}$/;
@@ -44,7 +52,12 @@ export const candidateSchema = z.object({
     ),
   outsideGeography: z.boolean().describe("True when the page places the event outside the Geography under This run."),
   kind: z.string().describe("One kind from the Kinds list under This run; other when none fits."),
-  primaryUrl: z.string().describe("The URL of the page the date and venue were read from, or the event's own page when this page links to one."),
+  primaryUrl: z.string().describe("The URL on the Page URL line, exactly as given."),
+  eventLink: z
+    .number()
+    .int()
+    .nullable()
+    .describe("The number in brackets after the link on this page that goes to this event's own page (its details or tickets): 12 for \"[12]\". Null when the event has no link of its own."),
   dateEvidence: z.string().nullable().describe("The exact text from the page body the dates and times were read from. Null when there is none."),
   venueEvidence: z.string().nullable().describe("The exact text from the page body the venue was read from. Null when there is none."),
   notice: z.enum(["none", "cancelled", "postponed"]).describe("Whether the page says the event is cancelled or postponed."),
@@ -75,7 +88,7 @@ export interface ExtractionContext {
 /** Where a page came from: a registry source, or a discovery search that led to it. */
 export type PageOrigin = { lane: "registry"; source: Source } | { lane: "discovery"; query: string };
 
-export function buildExtractionRequest(page: FetchResult, origin: PageOrigin, context: ExtractionContext): CompletionRequest {
+export function buildExtractionRequest(page: FetchResult, text: string, origin: PageOrigin, context: ExtractionContext): CompletionRequest {
   const { config, rules, today, neighborhoods } = context;
   const sourceLines =
     origin.lane === "registry"
@@ -93,7 +106,7 @@ export function buildExtractionRequest(page: FetchResult, origin: PageOrigin, co
     `- Neighborhoods: ${neighborhoods.join(", ")}`,
     ...sourceLines,
   ].join("\n");
-  const user = `Page URL: ${page.finalUrl}\n\n${pageText(page.body)}`;
+  const user = `Page URL: ${page.finalUrl}\n\n${text}`;
   return {
     model: config.models.extraction,
     messages: [
@@ -104,12 +117,47 @@ export function buildExtractionRequest(page: FetchResult, origin: PageOrigin, co
   };
 }
 
+/** A page as the model reads it: its text, with each followable link marked by number, and what the numbers lead to. */
+export interface PageReading {
+  text: string;
+  /** Link n on the page is `links[n - 1]`. */
+  links: string[];
+}
+
+/**
+ * The page's text with every link a reader could follow kept as a number in brackets after the
+ * linked text ("Cheekface [12]"), the same URL getting the same number wherever it is linked. The
+ * model names an event's own page by number, so it never writes a URL. Not numbered: the page
+ * itself, and anything `linkTarget` rules out (assets, ignored and aggregator hosts). A feed has
+ * no anchors and is passed through.
+ */
+export function readPage(page: FetchResult, config: RunConfig): PageReading {
+  if (!isHtml(page.body)) return { text: pageText(page.body), links: [] };
+  const links: string[] = [];
+  const self = normalizeUrl(page.finalUrl, page.finalUrl).replace(/\/$/, "");
+  const marked = withoutScripts(page.body).replace(ANCHOR, (_, attributes: string, content: string) => {
+    const href = attributes.match(HREF);
+    const link = href ? linkTarget(href[1] ?? href[2] ?? href[3] ?? "", page, config) : undefined;
+    if (link === undefined || link.replace(/\/$/, "") === self) return content;
+    let n = links.indexOf(link) + 1;
+    if (n === 0) n = links.push(link);
+    return `${content} [${n}] `;
+  });
+  return { text: pageText(marked), links };
+}
+
+function isHtml(body: string): boolean {
+  return /<\s*(!doctype|html|body|div)\b/i.test(body);
+}
+
+function withoutScripts(body: string): string {
+  return body.replace(/<(script|style|noscript|svg)\b[\s\S]*?<\/\1>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ");
+}
+
 /** HTML becomes readable text; anything else (an ICS or RSS feed) is passed through. Both are capped. */
 export function pageText(body: string): string {
-  const text = /<\s*(!doctype|html|body|div)\b/i.test(body)
-    ? body
-        .replace(/<(script|style|noscript|svg)\b[\s\S]*?<\/\1>/gi, " ")
-        .replace(/<!--[\s\S]*?-->/g, " ")
+  const text = isHtml(body)
+    ? withoutScripts(body)
         .replace(/<br\s*\/?>|<\/(p|div|li|h[1-6]|tr|section|article|header|footer)>/gi, "\n")
         .replace(/<[^>]+>/g, " ")
         .replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, decodeCharacterReference)
@@ -148,6 +196,8 @@ export function newEventId(primaryUrl: string, title: string, nowIso: string): s
 export type CandidateOrigin = PageOrigin & {
   /** The page this candidate was read from, normalized; the fallback primary URL. */
   pageUrl: string;
+  /** What the page's numbered links lead to, as `readPage` gave them. */
+  links: string[];
 };
 
 /**
@@ -166,10 +216,13 @@ export interface Sighting {
  * and the model quoted evidence for both a usable date and a venue; anything less is held
  * unverified. A recurring event's date is its schedule phrase, which it carries instead of a
  * start and end. A venue the page did not name stays absent rather than borrowing the source's.
+ * The event's own page, when the model named one of the page's links by number, rides along
+ * whatever the status; it is never fetched and plays no part in verifying.
  */
 export function candidateToSighting(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Sighting {
   const { timezone } = context.config;
   const primaryUrl = normalizeUrl(candidate.primaryUrl, origin.pageUrl);
+  const eventUrl = linkedPage(candidate.eventLink, origin.links, primaryUrl);
   const title = candidate.title.trim();
   const start = localIso(candidate.startDate, candidate.startTime, timezone);
   const end = localIso(candidate.endDate, candidate.endTime, timezone);
@@ -197,6 +250,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     ...(venue !== undefined ? { venue } : {}),
     neighborhood: placement.neighborhood,
     primaryUrl,
+    ...(eventUrl !== undefined ? { eventUrl } : {}),
     kind: toKind(candidate.kind, context.config.kinds),
     recurrence,
     dontMiss: false,
@@ -212,6 +266,13 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     },
   };
   return { event, cancelled: candidate.notice === "cancelled", ...("unmappable" in placement ? { unmappable: placement.unmappable } : {}) };
+}
+
+/** Link number n on the page, when there is one and it is not the primary page itself. */
+function linkedPage(n: number | null, links: string[], primaryUrl: string): string | undefined {
+  if (n === null || !Number.isInteger(n) || n < 1 || n > links.length) return undefined;
+  const link = links[n - 1]!;
+  return link === primaryUrl ? undefined : link;
 }
 
 /** The URL in canonical form, or the fallback when it does not parse. */

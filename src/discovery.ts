@@ -94,6 +94,24 @@ export function isLead(url: string, config: RunConfig): boolean {
 }
 
 /**
+ * Where an anchor's href on the page leads, if a reader could usefully follow it: an http(s) URL,
+ * resolved against the page and without its fragment, that is not a static asset, not on an
+ * ignored host, and not an index page. Undefined otherwise.
+ */
+export function linkTarget(href: string, page: FetchResult, config: RunConfig): string | undefined {
+  let url: URL;
+  try {
+    url = new URL(href.replace(/&amp;/g, "&"), page.finalUrl);
+  } catch {
+    return undefined;
+  }
+  url.hash = "";
+  if (STATIC_ASSET_PATH.test(url.pathname)) return undefined;
+  const link = url.href;
+  return isLead(link, config) && !isIndexPage(link, config) ? link : undefined;
+}
+
+/**
  * An index page read for its leads: the anchors on it a person could click that go to a followable
  * page other than another index page and are not a static asset, in page order, each once, up to
  * the configured number. Nothing else on the page is read.
@@ -101,18 +119,8 @@ export function isLead(url: string, config: RunConfig): boolean {
 export function outboundLinks(page: FetchResult, config: RunConfig): string[] {
   const links: string[] = [];
   for (const [, doubleQuoted, singleQuoted, bare] of page.body.matchAll(ANCHOR_HREF)) {
-    const href = doubleQuoted || singleQuoted || bare;
-    if (!href) continue;
-    let url: URL;
-    try {
-      url = new URL(href.replace(/&amp;/g, "&"), page.finalUrl);
-    } catch {
-      continue;
-    }
-    url.hash = "";
-    if (STATIC_ASSET_PATH.test(url.pathname)) continue;
-    const link = url.href;
-    if (!isLead(link, config) || isIndexPage(link, config) || links.includes(link)) continue;
+    const link = linkTarget(doubleQuoted || singleQuoted || bare || "", page, config);
+    if (link === undefined || links.includes(link)) continue;
     links.push(link);
     if (links.length >= config.discovery.linksPerAggregatorPage) break;
   }

@@ -9,7 +9,7 @@ import { testConfig, testPrompts } from "./config.js";
 /**
  * One run over these registry sources with canned pages and scripted model replies, under the test
  * config unless another is given. The dataset it returns must parse; the fake ports' calls come back
- * with the run's output.
+ * and the model requests come back with the run's output.
  */
 export async function runWith(
   now: Date,
@@ -24,5 +24,5 @@ export async function runWith(
   const fakes = fakePorts(now, { pages, completions });
   const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports });
   expect(parseDataset(result.dataset)).toEqual(result.dataset);
-  return { ...result, calls: fakes.calls };
+  return { ...result, calls: fakes.calls, requests: fakes.requests };
 }
