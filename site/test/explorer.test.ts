@@ -25,6 +25,8 @@ const rows = () => screen.getAllByRole("article").map((a) => within(a).getByRole
 // The live count is announced once input settles (Explorer's SETTLE_MS, 500 ms), so read it after the wait.
 const announced = () => { vi.advanceTimersByTime(500); flushSync(); return screen.getByRole("status"); };
 // What Tab reaches, in order: no tabindex="-1", nothing disabled.
+// Dispatches a keydown and says whether a handler prevented it (testing-library's fireEvent is async here).
+const prevented = (el: Element, key: string, init: KeyboardEventInit = {}) => { const ok = el.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init })); flushSync(); return !ok; };
 const tabStops = (root: ParentNode) => [...root.querySelectorAll<HTMLElement>("a[href], button, input, select, summary")].filter((el) => el.getAttribute("tabindex") !== "-1" && !(el as HTMLButtonElement).disabled);
 
 describe("Explorer", () => {
@@ -306,5 +308,41 @@ describe("Explorer", () => {
     expect(status).toHaveTextContent("1 event");
     expect(changes.takeRecords()).toHaveLength(1);
     changes.disconnect();
+  });
+  it("focuses search on / from outside a text field, without typing it; a modified / and / in a field are left alone", () => {
+    render(Explorer);
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    expect(search).toHaveAttribute("aria-keyshortcuts", "/");
+    expect(prevented(document.body, "/")).toBe(true);
+    expect(search).toHaveFocus();
+    expect(search).toHaveValue("");
+    search.blur();
+    for (const mod of ["ctrlKey", "metaKey", "altKey"]) {
+      expect(prevented(document.body, "/", { [mod]: true })).toBe(false);
+      expect(search).not.toHaveFocus();
+    }
+    const checkbox = screen.getAllByRole("checkbox")[0]!;
+    checkbox.focus();
+    expect(prevented(checkbox, "/")).toBe(false);
+    expect(checkbox).toHaveFocus();
+    search.focus();
+    expect(prevented(search, "/")).toBe(false);
+  });
+
+  it("clears a non-empty search on Esc, dropping q from the URL, and leaves an empty one on the next", async () => {
+    render(Explorer);
+    const search = screen.getByRole("searchbox", { name: "Search" });
+    search.focus();
+    await fireEvent.input(search, { target: { value: "jazz" } });
+    expect(location.search).toBe("?q=jazz");
+    expect(rows()).toEqual(["Friday jazz"]);
+    // Prevented, so a type=search field's own Esc clear does not run as well.
+    expect(prevented(search, "Escape")).toBe(true);
+    expect(search).toHaveValue("");
+    expect(location.search).toBe("");
+    expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film", "Later talk"]);
+    expect(search).toHaveFocus();
+    prevented(search, "Escape");
+    expect(search).not.toHaveFocus();
   });
 });

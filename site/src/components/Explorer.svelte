@@ -62,6 +62,23 @@
     (left[Math.min(index, left.length - 1)] ?? search).focus();
   }
 
+  // `/` jumps to search from anywhere but a field (where it is typed); with Ctrl, Cmd or Alt it is someone else's.
+  function focusSearch(e: KeyboardEvent) {
+    const t = e.target;
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || (t instanceof HTMLElement && t.isContentEditable)) return;
+    e.preventDefault();
+    search.focus();
+  }
+
+  // Esc clears a search, then leaves it. Prevented, so the field's own Esc clear does not run alongside.
+  function escapeSearch(e: KeyboardEvent) {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    if (filters.q === "") search.blur();
+    else void change({ ...filters, q: "" });
+  }
+
   let groups = $derived(groupResults(events, filters, today, saved));
   let count = $derived(groups.reduce((n, g) => n + g.events.length, 0));
   let countText = $derived(`${count} ${count === 1 ? "event" : "events"}`);
@@ -84,11 +101,13 @@
   }
 </script>
 
+<svelte:window onkeydown={focusSearch} />
+
 <!-- The bar comes first so search is the explorer's first Tab stop, and its skip link the second; the grid puts the
      filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
 <div class="explorer" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
   <div class="bar" bind:this={bar} bind:offsetHeight={barHeight}>
-    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} placeholder="Search title, venue, neighborhood, why" /></label>
+    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts="/" placeholder="Search title, venue, neighborhood, why" />{#if mounted}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
     <a class="skip" href="#results">Skip to results</a>
     <div class="slice">
       <p class="count" aria-hidden="true">{countText}</p>
@@ -163,6 +182,16 @@
   /* The raised surface, as in the rail: Chromium's dark field is #3b3b3b, where its placeholder grey is about 2.4:1. */
   .search input { width: 100%; font-size: var(--text-sm); padding: var(--space-1) var(--space-2); background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
   .search input::placeholder { color: var(--fg-faint); opacity: 1; }
+  /* The / shortcut, at the field's end while it is empty and unfocused; not where there is no keyboard to press it. */
+  .search { position: relative; }
+  .search input { padding-right: 1.75rem; }
+  .hint {
+    position: absolute; right: var(--space-2); top: 50%; transform: translateY(-50%); pointer-events: none;
+    font: inherit; font-size: var(--text-xs); line-height: 1; color: var(--fg-muted);
+    border: 1px solid var(--rule); border-radius: 3px; padding: 0.15em 0.4em;
+  }
+  .search input:focus + .hint, .search input:not(:placeholder-shown) + .hint { display: none; }
+  @media (hover: none) { .hint { display: none; } }
   /* Off screen until focused, then just under the search field. */
   .skip {
     position: absolute; left: 0; top: 100%; z-index: var(--z-skip); transform: translateY(-200vh);
