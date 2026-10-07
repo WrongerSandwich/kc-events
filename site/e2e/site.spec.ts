@@ -505,6 +505,46 @@ for (const width of [1280, 390]) {
   });
 }
 
+// The search shortcut: / from the page, Esc to clear and then leave; a hint where there is a keyboard to press it.
+test("/ focuses the explorer's search and Esc clears it, then leaves it", async ({ page }) => {
+  await on(page, BUILD_DAY, "/explore");
+  await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+  const search = page.getByRole("searchbox", { name: "Search" });
+  const hint = page.locator(".search .hint");
+  await expect(hint).toBeVisible();
+  await page.locator("body").press("/");
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue("");
+  await expect(hint).toBeHidden();
+  await page.keyboard.press("/");
+  await expect(search).toHaveValue("/");
+  await search.fill("artboards");
+  await expect(page).toHaveURL(/\?q=artboards$/);
+  await page.keyboard.press("Escape");
+  await expect(search).toHaveValue("");
+  await expect(page).toHaveURL(/\/explore$/);
+  await expect(search).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(search).not.toBeFocused();
+  // Ctrl+/ and Cmd+/ belong to the browser and its extensions.
+  for (const chord of ["Control+/", "Meta+/"]) {
+    await page.keyboard.press(chord);
+    await expect(search).not.toBeFocused();
+  }
+});
+
+test.describe("a touch-only device", () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
+
+  test("the explorer's search shows no / hint", async ({ page }) => {
+    await on(page, BUILD_DAY, "/explore");
+    await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+    expect(await page.evaluate(() => matchMedia("(hover: none)").matches)).toBe(true);
+    await expect(page.locator(".search .hint")).toBeAttached();
+    await expect(page.locator(".search .hint")).toBeHidden();
+  });
+});
+
 test("a don't-miss row keeps its why-line on a phone", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await on(page, BUILD_DAY, "/explore");

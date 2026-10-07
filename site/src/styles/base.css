@@ -23,6 +23,8 @@ p { text-wrap: pretty; }
 time, .date, .when, .verified, .section-heading { font-variant-numeric: tabular-nums; }
 img, svg { display: block; max-width: 100%; }
 button, input, select, textarea { font: inherit; color: inherit; }
+/* A key to press, drawn as a keycap: the explorer's / hint and the About page's shortcuts. */
+kbd { font: inherit; font-size: 0.9em; line-height: 1; border: 1px solid var(--rule); border-radius: 3px; padding: 0.15em 0.4em; }
 
 a { color: var(--accent); text-decoration: none; text-underline-offset: 0.15em; text-decoration-thickness: 1px; }
 a:hover { text-decoration: underline; }

@@ -62,6 +62,26 @@
     (left[Math.min(index, left.length - 1)] ?? search).focus();
   }
 
+  // Where a / is typed rather than taken as the shortcut: a field that takes text. A checkbox or a select does not.
+  const TEXT_ENTRY = "textarea, input:not([type=checkbox], [type=radio], [type=button], [type=submit], [type=reset], [type=range], [type=color], [type=file])";
+  const isTextEntry = (target: EventTarget | null) => target instanceof HTMLElement && (target.matches(TEXT_ENTRY) || target.isContentEditable);
+
+  // `/` jumps to search from anywhere but a text field; with Ctrl, Cmd or Alt it is someone else's.
+  function focusSearch(e: KeyboardEvent) {
+    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.defaultPrevented || isTextEntry(e.target)) return;
+    e.preventDefault();
+    search.focus();
+  }
+
+  // Esc clears a search, then leaves it. Prevented, so the field's own Esc clear does not run alongside; an Esc that
+  // cancels an input method's composition is left to it.
+  function escapeSearch(e: KeyboardEvent) {
+    if (e.key !== "Escape" || e.isComposing) return;
+    e.preventDefault();
+    if (filters.q === "") search.blur();
+    else void change({ ...filters, q: "" });
+  }
+
   let groups = $derived(groupResults(events, filters, today, saved));
   let count = $derived(groups.reduce((n, g) => n + g.events.length, 0));
   let countText = $derived(`${count} ${count === 1 ? "event" : "events"}`);
@@ -84,11 +104,13 @@
   }
 </script>
 
+<svelte:window onkeydown={focusSearch} />
+
 <!-- The bar comes first so search is the explorer's first Tab stop, and its skip link the second; the grid puts the
      filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
 <div class="explorer" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
   <div class="bar" bind:this={bar} bind:offsetHeight={barHeight}>
-    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} placeholder="Search title, venue, neighborhood, why" /></label>
+    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts="/" placeholder="Search title, venue, neighborhood, why" />{#if mounted}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
     <a class="skip" href="#results">Skip to results</a>
     <div class="slice">
       <p class="count" aria-hidden="true">{countText}</p>
@@ -159,10 +181,15 @@
   .sheet-toggle { display: none; }
   /* Sticky within the whole explorer, not just its grid row, so it stays over the results as they scroll. */
   .bar { grid-area: bar; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); position: sticky; top: 0; background: var(--bg); padding: var(--space-2) 0; z-index: var(--z-bar); }
-  .search { flex: 1 1 14rem; max-width: 24rem; }
+  .search { position: relative; flex: 1 1 14rem; max-width: 24rem; }
   /* The raised surface, as in the rail: Chromium's dark field is #3b3b3b, where its placeholder grey is about 2.4:1. */
-  .search input { width: 100%; font-size: var(--text-sm); padding: var(--space-1) var(--space-2); background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
+  .search input { width: 100%; font-size: var(--text-sm); padding: var(--space-1) 1.75rem var(--space-1) var(--space-2); background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
   .search input::placeholder { color: var(--fg-faint); opacity: 1; }
+  /* The / shortcut, at the field's end (in the padding it keeps clear) while it is empty and unfocused; not where
+     there is no keyboard to press it. */
+  .hint { position: absolute; right: var(--space-2); top: 50%; transform: translateY(-50%); pointer-events: none; font-size: var(--text-xs); color: var(--fg-muted); }
+  .search input:focus + .hint, .search input:not(:placeholder-shown) + .hint { display: none; }
+  @media (hover: none) { .hint { display: none; } }
   /* Off screen until focused, then just under the search field. */
   .skip {
     position: absolute; left: 0; top: 100%; z-index: var(--z-skip); transform: translateY(-200vh);
