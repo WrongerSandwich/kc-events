@@ -31,8 +31,13 @@ describe("pickAlwaysThere", () => {
     expect(pickAlwaysThere([e], [{ title: "Trivia", host: "replaylounge.com" }])).toEqual([]);
   });
 
-  it("finds most of the hand-kept picks in the committed dataset", () => {
-    // A guard against the list rotting silently: venues retitle and sources change.
-    expect(pickAlwaysThere(events, alwaysTherePicks).length).toBeGreaterThanOrEqual(5);
+  it("finds all but one of the hand-kept picks whose source is up, in the committed dataset", () => {
+    // A guard against the list rotting silently: venues retitle and sources change. A pick whose host has no published
+    // event at all is a source that is down (the run report flags that; the registry fixes it), not a rotten pick, so
+    // it is left out of the count; one miss among the rest is a retitle to catch at leisure, two is rot.
+    const hosts = new Set(events.map((e) => new URL(e.primaryUrl).host.replace(/^www\./, "")));
+    const up = alwaysTherePicks.filter((p) => hosts.has(p.host));
+    expect(up.length, "picks whose source is up").toBeGreaterThanOrEqual(3);
+    expect(pickAlwaysThere(events, alwaysTherePicks).length).toBeGreaterThanOrEqual(up.length - 1);
   });
 });
