@@ -1,28 +1,29 @@
 {
   "runDate": "2026-10-06",
-  "startedAt": "2026-10-06T10:41:01-05:00",
-  "finishedAt": "2026-10-06T11:08:56-05:00",
+  "startedAt": "2026-10-06T22:25:10-05:00",
+  "finishedAt": "2026-10-06T22:47:49-05:00",
   "horizonWeeks": 8,
   "counts": {
-    "found": 441,
-    "new": 47,
-    "updated": 361,
-    "reverified": 37,
-    "heldUnverified": 32,
-    "heldThroughOutage": 0,
+    "found": 453,
+    "new": 38,
+    "updated": 389,
+    "reverified": 25,
+    "heldUnverified": 53,
+    "heldThroughOutage": 5,
+    "beyondHorizonUnstruck": 2,
     "unverifiedByOutageLimit": 0,
-    "unverifiedByUncitableReading": 1,
-    "outsideGeography": 4,
+    "unverifiedByUncitableReading": 0,
+    "outsideGeography": 67,
     "expired": {
       "past": 0,
-      "two-strike": 75,
+      "two-strike": 8,
       "cancelled": 0,
-      "index-page": 0,
+      "index-page": 6,
       "duplicate": 1
     }
   },
   "spend": {
-    "totalUsd": 0.15484956499999997,
+    "totalUsd": 0.20175778000000003,
     "capUsd": 5,
     "capHit": false,
     "shortfall": {
@@ -36,36 +37,34 @@
   "discovery": {
     "enabled": true,
     "queries": 10,
-    "aggregatorPages": 9,
-    "pagesExtracted": 51,
+    "aggregatorPages": 13,
+    "pagesExtracted": 44,
     "problems": [
+      "https://www.kcfilmoffice.com/: HTTP 403",
+      "https://mindtrip.ai/: HTTP 403",
       "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7nJ: HTTP 403",
-      "https://www.kcirishparade.com/: HTTP 403",
       "https://kcparks.org/: HTTP 403",
       "http://www.kansasspeedway.com/: HTTP 403",
       "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7na&classificationId=KnvZfZ7vAe1: HTTP 403",
       "https://seatgeek.com/cities/kansas-city/comedy: HTTP 403",
-      "https://artskcgo.com/: HTTP 403",
+      "https://www.applebaumkc.com/blog/11-fall-festivals-around-kansas-city-you-can-still-catch-in-2026: HTTP 403",
+      "https://kcur.secureallegiance.com/kcur/WebModule/Donate.aspx?P=KCG0226&PAGETYPE=PLG&CHECK=%2b5g%2fQkV05qm4ViHtxJWDB%2bzWDeZ%2beA1M: HTTP 403",
       "https://gonorthkc.com/events: HTTP 403",
       "robots.txt disallows https://www.eventbrite.com/signin/signup/?referrer=%2Fmytickets",
       "robots.txt disallows https://www.eventbrite.com/signin/?referrer=%2Fb%2Fmo--kansas-city%2Ffood-and-drink%2F",
       "robots.txt disallows https://www.eventbrite.com/signin/signup/?referrer=%2Fb%2Fmo--kansas-city%2Ffood-and-drink%2F",
-      "https://kcoktoberfest.com/: HTTP 403",
-      "https://www.kcrunningcompany.com/oktoberfest5k: HTTP 404",
-      "https://www.eventbrite.com/e/oktoberfest-in-the-woods-tickets-1004691067027: HTTP 404",
-      "https://www.kcfilmoffice.com/: HTTP 403",
-      "https://mindtrip.ai/: HTTP 403",
+      "https://do816.com/events/food-drink/2026/10/03: HTTP 403",
       "https://seatgeek.com/cities/kansas-city/sports: HTTP 403",
       "https://www.ticketmaster.com/discover/kansas-city-mo?categoryId=KZFzniwnSyZfZ7v7nE: HTTP 403",
-      "https://artskcgo.com/categories/film: HTTP 403",
-      "https://kcconvention.com/event/boozy-book-fest-2026: HTTP 404",
-      "robots.txt disallows https://www.kckpl.org/events/month/2026/10?cerkl_id=22973830&cerkl_ue=ho9yfKAqYiJvBziAEACsrIUwZ8aN0ZTvm7P8vxPFiH8%3D&page=10",
-      "robots.txt disallows https://tickets.kauffmancenter.org/events"
+      "https://kcconvention.com/event/boozy-book-fest-2026: HTTP 404"
     ]
+  },
+  "reverification": {
+    "problems": []
   },
   "curation": {
     "calls": 3,
-    "judged": 69,
+    "judged": 72,
     "flagged": 3,
     "problems": []
   },
@@ -73,7 +72,7 @@
     {
       "name": "Kauffman Center for the Performing Arts",
       "result": "fetched",
-      "extracted": 20
+      "extracted": 19
     },
     {
       "name": "Kansas City Symphony",
@@ -130,7 +129,7 @@
     {
       "name": "Kansas City Chorale",
       "result": "fetched",
-      "extracted": 1
+      "extracted": 0
     },
     {
       "name": "Midwest Trust Center",
@@ -191,7 +190,7 @@
     {
       "name": "American Theatre Guild (Broadway in Kansas City)",
       "result": "fetched",
-      "extracted": 0
+      "extracted": 1
     },
     {
       "name": "New Theatre & Restaurant",
@@ -211,7 +210,7 @@
     {
       "name": "Nelson-Atkins Museum of Art",
       "result": "fetched",
-      "extracted": 8
+      "extracted": 5
     },
     {
       "name": "Tivoli Cinemas",
@@ -236,7 +235,7 @@
     {
       "name": "Zhou B Art Center KC",
       "result": "fetched",
-      "extracted": 2
+      "extracted": 3
     },
     {
       "name": "Charlotte Street Foundation",
@@ -257,12 +256,12 @@
     {
       "name": "Arts Council of Johnson County",
       "result": "fetched",
-      "extracted": 17
+      "extracted": 15
     },
     {
       "name": "Kansas City Public Library",
       "result": "fetched",
-      "extracted": 9
+      "extracted": 8
     },
     {
       "name": "Rainy Day Books",
@@ -292,7 +291,7 @@
     {
       "name": "Power & Light District",
       "result": "fetched",
-      "extracted": 11
+      "extracted": 9
     },
     {
       "name": "Kansas City Convention Center",
@@ -301,8 +300,9 @@
     },
     {
       "name": "City Market",
-      "result": "fetched",
-      "extracted": 2
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://thecitymarket.org/events/: UND_ERR_CONNECT_TIMEOUT fetching https://thecitymarket.org/robots.txt"
     },
     {
       "name": "American Royal",
@@ -428,8 +428,11 @@
       "eventTitle": "Brahms’ German Requiem"
     },
     {
-      "eventTitle": "Frizzi 2 Fulci : Fabio Frizzi and the F2F Band",
+      "eventTitle": "Frizzi 2 Fulci : Fabio Frizzi and the F2F Band at the Grand Temple",
       "venue": "Grand Temple"
+    },
+    {
+      "eventTitle": "2026 Ghosting Lawrence: A Theatrical Tour of Downtown Haunts"
     },
     {
       "eventTitle": "Matinees for Schools"
@@ -445,24 +448,6 @@
     },
     {
       "eventTitle": "Prelude Conversation Series"
-    },
-    {
-      "eventTitle": "2026 Gala: Rodeo Nouveau"
-    },
-    {
-      "eventTitle": "EMAS Presents"
-    },
-    {
-      "eventTitle": "Nightshades Experimental Animation Festival"
-    },
-    {
-      "eventTitle": "Beyond the Black Crack: 50th Anniversary Celebration"
-    },
-    {
-      "eventTitle": "Artist Market @ Rooms We Carry Opening Reception"
-    },
-    {
-      "eventTitle": "Rooms We Carry Opening Reception"
     },
     {
       "eventTitle": "FrankenWines"
@@ -498,102 +483,33 @@
       "venue": "Powell Gardens"
     },
     {
-      "eventTitle": "Chris Stapleton's All-American Road Show",
-      "venue": "Morton Amphitheater",
-      "proposed": "Riverside"
-    },
-    {
-      "eventTitle": "Thomas Rhett: The Soundtrack to Life Tour",
-      "venue": "Morton Amphitheater",
-      "proposed": "Riverside"
-    },
-    {
       "eventTitle": "The Wizard of Oz"
-    },
-    {
-      "eventTitle": "Kansas City Symphony’s Mobile Music Box at MLK Park (KCMO)",
-      "venue": "MLK Park (KCMO)"
     },
     {
       "eventTitle": "Kansas City Symphony’s Mobile Music Box at Kirkwood Green Space",
       "venue": "Kirkwood Green Space"
     },
     {
-      "eventTitle": "The Billy Joel Legacy"
+      "eventTitle": "Bunyaad Rug Event",
+      "venue": "Crafted Fair Trade"
     },
     {
-      "eventTitle": "Calvin Arsenia"
+      "eventTitle": "Panda Fest"
     },
     {
-      "eventTitle": "The Who's Tommy"
+      "eventTitle": "Lansing Fall Festival",
+      "proposed": "Lansing"
     },
     {
-      "eventTitle": "Baroque at 7:00: Vivaldi's Four Seasons"
+      "eventTitle": "Mildale Farm Fall Festival",
+      "proposed": "Edgerton"
     },
     {
-      "eventTitle": "Electric Poe"
+      "eventTitle": "Dia de los Muertos Celebration"
     },
     {
-      "eventTitle": "Red Like Fruit by Hannah Moscovitch"
-    },
-    {
-      "eventTitle": "Dancing in the Street: Music of Motown with The Kansas City Symphony"
-    },
-    {
-      "eventTitle": "Kansas City Symphony’s Mobile Music Box at Union Cemetery",
-      "venue": "Union Cemetery"
-    },
-    {
-      "eventTitle": "Kansas City Symphony’s Mobile Music Box at Kessler Park",
-      "venue": "Kessler Park"
-    },
-    {
-      "eventTitle": "Interstellar Live with The Kansas City Symphony"
-    },
-    {
-      "eventTitle": "Outlander in Concert"
-    },
-    {
-      "eventTitle": "Stars of American Ballet"
-    },
-    {
-      "eventTitle": "MTC Kids Jam - Matt Heaton"
-    },
-    {
-      "eventTitle": "Ryan & Ryan 'Kickin' the Clouds Away'"
-    },
-    {
-      "eventTitle": "Prokofiev's Sixth and Barber's Violin Concerto with Stella Chen"
-    },
-    {
-      "eventTitle": "Fall Festival",
+      "eventTitle": "Fall Festival {ticketed, family-friendly}",
       "venue": "KC Pumpkin Patch"
-    },
-    {
-      "eventTitle": "Fun Farm 2026 Fall Festival",
-      "venue": "Fun Farm Pumpkin Patch",
-      "proposed": "Kearney"
-    },
-    {
-      "eventTitle": "The Planets"
-    },
-    {
-      "eventTitle": "Silent Film + Live Organ: Dr. Jekyll & Mr. Hyde"
-    },
-    {
-      "eventTitle": "Prokofiev’s Sixth & Barber’s Violin Concerto"
-    },
-    {
-      "eventTitle": "Buckets N Boards"
-    },
-    {
-      "eventTitle": "Crown Center District Homeschool Event"
-    },
-    {
-      "eventTitle": "The Pigeon Gets a Big Time Holiday Extravaganza!"
-    },
-    {
-      "eventTitle": "Winterland: A Holiday Cirque Experience"
     },
     {
       "eventTitle": "Ride the Drive: Cliff Drive by Pedicab"
@@ -605,41 +521,70 @@
       "eventTitle": "Create Your Own Ofrenda Items with Mattie Rhodes"
     },
     {
+      "eventTitle": "soft clubbing at Elixir with DJ hunni bunni"
+    },
+    {
       "eventTitle": "The Stanza Room featuring Jennifer Maritza McCauley"
+    },
+    {
+      "eventTitle": "BUCKETS N BOARDS"
+    },
+    {
+      "eventTitle": "City Center Live"
+    },
+    {
+      "eventTitle": "Truck or Treat"
+    },
+    {
+      "eventTitle": "Holiday Farmers Market"
+    },
+    {
+      "eventTitle": "The Planets"
+    },
+    {
+      "eventTitle": "Baroque at 7:00: Vivaldi's Four Seasons"
+    },
+    {
+      "eventTitle": "Silent Film + Live Organ: Dr. Jekyll & Mr. Hyde"
+    },
+    {
+      "eventTitle": "Chris Stapleton",
+      "venue": "Morton Amphitheater",
+      "proposed": "Riverside"
+    },
+    {
+      "eventTitle": "Thomas Rhett",
+      "venue": "Morton Amphitheater",
+      "proposed": "Riverside"
     }
   ],
   "promotionSuggestions": [
     {
+      "host": "warehouseonbroadway.com",
+      "runsSeen": 2,
+      "exampleUrl": "https://www.warehouseonbroadway.com/events"
+    },
+    {
       "host": "kclivearts.org",
-      "runsSeen": 3,
+      "runsSeen": 4,
       "exampleUrl": "https://kclivearts.org/"
     },
     {
-      "host": "thecitymarketkc.org",
-      "runsSeen": 3,
-      "exampleUrl": "https://thecitymarketkc.org/events/"
-    },
-    {
       "host": "kcwineco.com",
-      "runsSeen": 4,
+      "runsSeen": 5,
       "exampleUrl": "https://www.kcwineco.com/events/upcoming-events"
     },
     {
-      "host": "btt.boldtypetickets.com",
-      "runsSeen": 4,
-      "exampleUrl": "https://btt.boldtypetickets.com/events/185466137/2026-hump-film-festival-fall-season-kansas-city-mo?ref=home"
+      "host": "museumofkansascity.org",
+      "runsSeen": 2,
+      "exampleUrl": "https://museumofkansascity.org/film-series/"
     },
     {
-      "host": "kc.kidsoutandabout.com",
+      "host": "crowncenter.com",
       "runsSeen": 3,
-      "exampleUrl": "https://kc.kidsoutandabout.com/"
+      "exampleUrl": "https://www.crowncenter.com/events"
     }
   ],
   "outageLimited": [],
-  "uncitableReadings": [
-    {
-      "title": "Winterland: A Holiday Cirque Experience",
-      "primaryUrl": "https://www.crowncenter.com/events"
-    }
-  ]
+  "uncitableReadings": []
 }
