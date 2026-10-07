@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- The 1200x630 share image. Rendered to public/og.png by share-image.ts, by hand, when the design changes; share-image.ts fills the tagline from site.config.ts. Light-scheme tokens copied inline; the swatches are the ten hued kinds. -->
+<!-- The 1200x630 share image. Rendered to public/og.png by share-image.ts, by hand, when the design changes; share-image.ts fills the tagline from site.config.ts and the mark from src/lib/mark.ts. Light-scheme tokens copied inline; the swatches are the ten hued kinds. The skyline is Bartle Hall's four pylons with their Sky Stations, in the rule's grey. -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -10,9 +10,15 @@
         font-weight: 100 900;
         src: url("../node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2-variations");
       }
-      :root { --bg: oklch(0.985 0 0); --fg: oklch(0.21 0 0); --fg-muted: oklch(0.46 0 0); --text-2xl: 1.75rem; --text-xl: 1.375rem; }
+      @font-face {
+        font-family: "Josefin Sans";
+        font-weight: 700;
+        src: url("../node_modules/@fontsource/josefin-sans/files/josefin-sans-latin-700-normal.woff2") format("woff2");
+      }
+      :root { --bg: oklch(0.985 0 0); --fg: oklch(0.21 0 0); --fg-muted: oklch(0.46 0 0); --rule: oklch(0.915 0 0); --text-2xl: 1.75rem; --text-xl: 1.375rem; }
       html, body { margin: 0; width: 1200px; height: 630px; }
       body {
+        position: relative; overflow: hidden;
         background: var(--bg);
         color: var(--fg);
         font-family: "Geist Variable", system-ui, sans-serif;
@@ -23,15 +29,19 @@
         box-sizing: border-box;
         -webkit-font-smoothing: antialiased;
       }
-      h1 { margin: 0; font-size: calc(var(--text-2xl) * 3); font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; }
+      /* The name as the header sets it: the fountain mark, then tracked capitals in the display face. */
+      h1 { margin: 0; display: flex; align-items: center; gap: 28px; font-family: "Josefin Sans", sans-serif; font-size: 72px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; line-height: 1; }
+      h1 svg { width: 96px; height: 96px; flex: none; }
       /* The kind palette, as a row of swatches: the site's colour is the kinds'. */
       .kinds { display: flex; gap: 12px; margin-top: 48px; }
       .kinds span { width: 56px; height: 16px; border-radius: 8px; }
-      p { margin: 32px 0 0; max-width: 22em; font-size: calc(var(--text-xl) * 1.6); line-height: 1.35; color: var(--fg-muted); }
+      p { margin: 32px 0 0; max-width: 20em; font-size: calc(var(--text-xl) * 1.6); line-height: 1.35; color: var(--fg-muted); }
+      /* Bartle Hall's pylons, behind the text at the right, rising from the bottom edge. */
+      .skyline { position: absolute; right: 64px; bottom: 0; width: 390px; height: 520px; color: var(--rule); }
     </style>
   </head>
   <body>
-    <h1>KC Events</h1>
+    <h1><span id="mark"></span>KC Events</h1>
     <p id="tagline"></p>
     <div class="kinds" aria-hidden="true">
       <span style="background: oklch(0.47 0.14 20)"></span><span style="background: oklch(0.47 0.14 56)"></span>
@@ -40,5 +50,23 @@
       <span style="background: oklch(0.47 0.14 245)"></span><span style="background: oklch(0.47 0.14 278)"></span>
       <span style="background: oklch(0.47 0.14 308)"></span><span style="background: oklch(0.47 0.14 345)"></span>
     </div>
+    <svg class="skyline" viewBox="0 0 300 400" fill="currentColor" aria-hidden="true">
+      <defs>
+        <!-- One pylon: a slender shaft under a Sky Station, the flared finial with a sphere above. -->
+        <g id="pylon">
+          <path d="M31 80h13l1 320H30z" />
+          <rect x="35" y="62" width="5" height="18" />
+          <path d="M18 54h39l-8 12H26z" />
+          <path d="M14 38l12 12-3 6-14-8zM61 38 49 50l3 6 14-8z" />
+          <path d="M28 46h19l-3 8H31z" />
+          <rect x="36" y="18" width="3" height="22" />
+          <circle cx="37.5" cy="15" r="5" />
+        </g>
+      </defs>
+      <use href="#pylon" x="0" />
+      <use href="#pylon" x="75" />
+      <use href="#pylon" x="150" />
+      <use href="#pylon" x="225" />
+    </svg>
   </body>
 </html>

@@ -44,7 +44,8 @@ describe.skipIf(!matchesGenerated)("built output", () => {
     expect(html).toContain('"@type":"Event"');
     expect(html).not.toContain("addressRegion");
     expect(html).toContain("/og.png");
-    expect(html).toContain("from the page linked above");
+    // Verified from the page linked above when the list is the event's own page, else from the list it was read from (#53).
+    expect(html).toMatch(/Date and venue verified .* from (the page linked above|<a [^>]*>the list at [^<]+<\/a>)\./);
   });
 
   it("gives a recurring event's page no Add to calendar link, and a dated one's page has it", () => {

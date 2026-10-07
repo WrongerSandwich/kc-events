@@ -2,6 +2,7 @@
 import { meta } from "../generated/meta";
 import { formatDay, localDate } from "../lib/dates";
 import { siteConfig } from "../site.config";
+import Mark from "./Mark.astro";
 import SavedLink from "./SavedLink.svelte";
 
 // `wide` matches the header's width to the page's main column (the explorer is wide; everything else is the measure).
@@ -13,7 +14,7 @@ const runDay = localDate(meta.lastSuccessfulRun);
   <a class="skip" href="#main">Skip to content</a>
   <div class:list={["inner", wide ? "wide" : "measure"]}>
     <div class="top">
-      <a class="name" href="/">{siteConfig.name}</a>
+      <a class="name" href="/"><Mark class="mark" />{siteConfig.name}</a>
       <nav aria-label="Site">
         <a href="/explore">Explore</a>
         <SavedLink client:load />
@@ -30,7 +31,9 @@ const runDay = localDate(meta.lastSuccessfulRun);
   .site-header { border-bottom: 1px solid var(--rule); }
   .inner { padding-block: var(--space-3); }
   .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-4); }
-  .name { font-size: var(--text-lg); font-weight: var(--weight-strong); letter-spacing: var(--tracking-heading); color: var(--fg); padding-block: var(--space-2); }
+  /* The name is the site's one piece of display type: the fountain mark, then the words in tracked capitals. */
+  .name { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--font-display); font-size: 1.0625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg); padding-block: var(--space-2); }
+  .name :global(.mark) { width: 1.375rem; height: 1.375rem; flex: none; }
   .name:hover { text-decoration: none; }
   /* Links padded to a 44 px target; the negative margin keeps the row's right edge on the measure. */
   nav { display: flex; margin-right: calc(-1 * var(--space-2)); }

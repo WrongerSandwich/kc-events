@@ -1,0 +1,7 @@
+---
+import { MARK_INNER, MARK_VIEWBOX } from "../lib/mark";
+// The fountain mark inline, in currentColor, so it takes the ink of the text beside it. Decorative: the name is the words.
+interface Props { class?: string }
+const { class: className } = Astro.props;
+---
+<svg class={className} viewBox={MARK_VIEWBOX} fill="currentColor" aria-hidden="true" set:html={MARK_INNER} />

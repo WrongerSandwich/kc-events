@@ -21,7 +21,11 @@
   /* Links, selection, and the saved state are ink, not a hue: a hue would read as one more kind. */
   --accent: oklch(0.21 0 0);
   --accent-fg: oklch(1 0 0);
-  --focus: oklch(0.55 0.2 260);
+  --focus: oklch(0.56 0.15 238);
+  /* The city flag's two colours (its 2023 design: carmine over NCS blue, a white fountain between). Red marks
+     don't-miss, the one state that is not a kind, as a solid pill where a kind's chip is a tint, so it is never read as
+     a kind; blue is the focus ring. Their lightness is set for the words on them, not the flag's. */
+  --flag-red: oklch(0.55 0.2 27); --flag-red-fg: oklch(1 0 0);
   /* A pressed filter that is not a kind: a grey tint under ink, the same shape as a pressed kind's tint and shade. */
   --pressed-tint: oklch(0.94 0 0);
   /* The kinds */
@@ -36,8 +40,10 @@
   --kind-music: oklch(0.47 0.14 308); --kind-music-tint: oklch(0.945 0.045 308);
   --kind-theater-dance: oklch(0.47 0.14 345); --kind-theater-dance-tint: oklch(0.945 0.045 345);
   --kind-other: oklch(0.48 0 0); --kind-other-tint: oklch(0.94 0 0);
-  /* Type: one sans, with tabular figures where numbers line up. */
+  /* Type: one sans, with tabular figures where numbers line up. The display face is for the site's name alone: a
+     1920s geometric, for a skyline that is mostly Art Deco; it never sets a label, a button, or a heading. */
   --font: "Geist Variable", system-ui, sans-serif;
+  --font-display: "Josefin Sans", var(--font);
   --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.125rem; --text-xl: 1.375rem; --text-2xl: 1.75rem; --text-3xl: 2.25rem;
   --weight-regular: 400; --weight-medium: 500; --weight-strong: 600;
   --tracking-display: -0.03em; --tracking-heading: -0.02em;
@@ -56,7 +62,8 @@
   :root {
     --bg: oklch(0.17 0 0); --bg-raised: oklch(0.205 0 0); --fg: oklch(0.94 0 0); --fg-muted: oklch(0.76 0 0);
     --fg-faint: oklch(0.67 0 0); --rule: oklch(0.28 0 0); --rule-strong: oklch(0.43 0 0); --control-border: oklch(0.53 0 0);
-    --accent: oklch(0.94 0 0); --accent-fg: oklch(0.17 0 0); --focus: oklch(0.72 0.15 260);
+    --accent: oklch(0.94 0 0); --accent-fg: oklch(0.17 0 0); --focus: oklch(0.75 0.13 235);
+    --flag-red: oklch(0.68 0.19 27); --flag-red-fg: oklch(0.17 0 0);
     --pressed-tint: oklch(0.30 0 0);
     --kind-talks-readings: oklch(0.82 0.11 20); --kind-talks-readings-tint: oklch(0.31 0.06 20);
     --kind-food-drink: oklch(0.82 0.11 56); --kind-food-drink-tint: oklch(0.31 0.06 56);
