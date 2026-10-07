@@ -373,7 +373,7 @@ async function extractPage(
   context: ExtractionContext,
 ): Promise<{ sightings?: Sighting[]; extracted: number; outsideGeography: number; problems: string[] }> {
   const reading = readPage(page, context.config);
-  const reply = await model.complete(buildExtractionRequest(page, reading.text, origin, context));
+  const reply = await model.complete(buildExtractionRequest(page, reading, origin, context));
   const parsed = extractionReplySchema.safeParse(reply.value);
   if (!parsed.success) {
     return {

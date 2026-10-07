@@ -9,7 +9,7 @@ import { testConfig, testPrompts } from "./config.js";
 /**
  * One run over these registry sources with canned pages and scripted model replies, under the test
  * config unless another is given. The dataset it returns must parse; the fake ports' calls come back
- * and the model requests come back with the run's output.
+ * and model requests come back with the run's output.
  */
 export async function runWith(
   now: Date,

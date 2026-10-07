@@ -412,12 +412,12 @@ test("an event page says don't miss in the explorer's words and case", async ({ 
   await expect(tag).toHaveClass(/\bdont-miss\b/);
 });
 
-test("an event page sends the reader to the event's own page and names the list it was verified from", async ({ page }) => {
+test("the site's page for an event sends the reader to the event's own page and names the list it was verified from", async ({ page }) => {
   await on(page, BUILD_DAY, "/e/evt_e2e000000001");
   await expect(page.getByRole("link", { name: "Details and tickets at tickets.example.com" })).toHaveAttribute("href", "https://tickets.example.com/frizzi");
   const verified = page.locator(".verified");
-  await expect(verified).toContainText("Date and venue verified Oct 3 from the listing at example.com.");
-  await expect(verified.getByRole("link", { name: "the listing at example.com" })).toHaveAttribute("href", "https://example.com/recordbar/frizzi");
+  await expect(verified).toContainText("Date and venue verified Oct 3 from the list at example.com.");
+  await expect(verified.getByRole("link", { name: "the list at example.com" })).toHaveAttribute("href", "https://example.com/recordbar/frizzi");
   await expect(verified.getByRole("link", { name: "Wrong? Report it" })).toHaveAttribute("href", /Event%20page%3A%20https%3A%2F%2Ftickets.example.com%2Ffrizzi/);
 });
 

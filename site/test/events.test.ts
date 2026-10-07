@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, linkOut } from "../src/lib/events";
+import { firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl } from "../src/lib/events";
 import { event } from "./fixtures/event";
 
 const oneDay = event();
@@ -59,9 +59,9 @@ describe("hasStartDay", () => {
   });
 });
 
-describe("linkOut", () => {
+describe("detailsUrl", () => {
   it("is the event's own page when the job found one, else the primary page", () => {
-    expect(linkOut(event({ eventUrl: "https://www.therecordbar.com/shows/a-show" }))).toBe("https://www.therecordbar.com/shows/a-show");
-    expect(linkOut(event())).toBe("https://www.therecordbar.com/shows");
+    expect(detailsUrl(event({ eventUrl: "https://www.therecordbar.com/shows/a-show" }))).toBe("https://www.therecordbar.com/shows/a-show");
+    expect(detailsUrl(event())).toBe("https://www.therecordbar.com/shows");
   });
 });

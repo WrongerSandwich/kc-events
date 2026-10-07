@@ -2,6 +2,8 @@
  * The discovery lane's pure parts: the search queries a run makes, which pages are index pages and
  * which hosts are ignored, the outbound links read off an index page, and which discovery hosts to
  * suggest for promotion. The lane itself, which searches and fetches through the ports, lives in the run.
+ * Which links a reader could follow (`linkTarget`) is decided here once, for index pages and for the
+ * links extraction numbers on a primary page.
  */
 import type { RunConfig } from "./config.js";
 import type { Dataset } from "./dataset.js";

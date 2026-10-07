@@ -19,9 +19,10 @@ const MAX_PAGE_CHARS = 70_000;
 
 /**
  * A whole anchor element: its attributes (group 1), read one at a time so a quoted value holding ">"
- * cannot end the tag early, and its content (group 2). A nested anchor is invalid HTML and not read.
+ * cannot end the tag early, and its content (group 2), which stops at the next anchor's start so
+ * an unclosed anchor can neither swallow the next one's text nor take its number.
  */
-const ANCHOR = /<a\b((?:\s+[^\s<>"'=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s<>"']+))?)*)\s*\/?>([\s\S]*?)<\/a\s*>/gi;
+const ANCHOR = /<a\b((?:\s+[^\s<>"'=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s<>"']+))?)*)\s*\/?>((?:(?!<a\b)[\s\S])*?)<\/a\s*>/gi;
 const HREF = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))/i;
 
 const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -88,7 +89,7 @@ export interface ExtractionContext {
 /** Where a page came from: a registry source, or a discovery search that led to it. */
 export type PageOrigin = { lane: "registry"; source: Source } | { lane: "discovery"; query: string };
 
-export function buildExtractionRequest(page: FetchResult, text: string, origin: PageOrigin, context: ExtractionContext): CompletionRequest {
+export function buildExtractionRequest(page: FetchResult, reading: PageReading, origin: PageOrigin, context: ExtractionContext): CompletionRequest {
   const { config, rules, today, neighborhoods } = context;
   const sourceLines =
     origin.lane === "registry"
@@ -106,7 +107,7 @@ export function buildExtractionRequest(page: FetchResult, text: string, origin: 
     `- Neighborhoods: ${neighborhoods.join(", ")}`,
     ...sourceLines,
   ].join("\n");
-  const user = `Page URL: ${page.finalUrl}\n\n${text}`;
+  const user = `Page URL: ${page.finalUrl}\n\n${reading.text}`;
   return {
     model: config.models.extraction,
     messages: [
@@ -128,22 +129,27 @@ export interface PageReading {
  * The page's text with every link a reader could follow kept as a number in brackets after the
  * linked text ("Cheekface [12]"), the same URL getting the same number wherever it is linked. The
  * model names an event's own page by number, so it never writes a URL. Not numbered: the page
- * itself, and anything `linkTarget` rules out (assets, ignored and aggregator hosts). A feed has
- * no anchors and is passed through.
+ * itself (as fetched or as it redirected), and anything `linkTarget` rules out (assets, ignored
+ * and aggregator hosts). A feed has no anchors and is passed through.
  */
 export function readPage(page: FetchResult, config: RunConfig): PageReading {
   if (!isHtml(page.body)) return { text: pageText(page.body), links: [] };
   const links: string[] = [];
-  const self = normalizeUrl(page.finalUrl, page.finalUrl).replace(/\/$/, "");
   const marked = withoutScripts(page.body).replace(ANCHOR, (_, attributes: string, content: string) => {
     const href = attributes.match(HREF);
     const link = href ? linkTarget(href[1] ?? href[2] ?? href[3] ?? "", page, config) : undefined;
-    if (link === undefined || link.replace(/\/$/, "") === self) return content;
+    // Spaced as the tags were, so adjacent anchors do not run together once the tags are gone.
+    if (link === undefined || samePage(link, page.url) || samePage(link, page.finalUrl)) return ` ${content} `;
     let n = links.indexOf(link) + 1;
     if (n === 0) n = links.push(link);
-    return `${content} [${n}] `;
+    return ` ${content} [${n}] `;
   });
   return { text: pageText(marked), links };
+}
+
+/** The same page but for a trailing slash; a query string makes a different page, since some sites keep their events behind one. */
+function samePage(a: string, b: string): boolean {
+  return normalizeUrl(a, a).replace(/\/$/, "") === normalizeUrl(b, b).replace(/\/$/, "");
 }
 
 function isHtml(body: string): boolean {
@@ -272,7 +278,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
 function linkedPage(n: number | null, links: string[], primaryUrl: string): string | undefined {
   if (n === null || !Number.isInteger(n) || n < 1 || n > links.length) return undefined;
   const link = links[n - 1]!;
-  return link === primaryUrl ? undefined : link;
+  return samePage(link, primaryUrl) ? undefined : link;
 }
 
 /** The URL in canonical form, or the fallback when it does not parse. */

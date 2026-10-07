@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyDataset } from "../src/dataset.js";
 import { candidateAt, knuckleheads, PAGE, reply, WEEK_1, WEEK_1_ISO, WEEK_2, WEEK_2_ISO } from "./fakes/fixtures.js";
 import { testConfig } from "./fakes/config.js";
+import type { RunConfig } from "../src/config.js";
 import { runWith } from "./fakes/run.js";
 
 const CALENDAR_URL = knuckleheads.urls[0]!;
@@ -13,8 +14,8 @@ const LISTING = {
 <div><a href="/shows/big-show">Big Show</a> Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM</div>
 <div><a href="/shows/other-band">Other Band</a> Sun, Nov 1</div></body></html>`,
 };
-const runAt = (now: Date, dataset = emptyDataset(), completions = [reply(candidate({ eventLink: 1 }))], pages: Record<string, typeof PAGE> = { [CALENDAR_URL]: LISTING }) =>
-  runWith(now, dataset, { sources: [knuckleheads], pages, completions, config: testConfig() });
+const runAt = (now: Date, dataset = emptyDataset(), completions = [reply(candidate({ eventLink: 1 }))], pages: Record<string, typeof PAGE> = { [CALENDAR_URL]: LISTING }, config: RunConfig = testConfig()) =>
+  runWith(now, dataset, { sources: [knuckleheads], pages, completions, config });
 
 /**
  * The event's own page, when the list links one, is where the site sends the reader. The primary page
@@ -58,6 +59,16 @@ describe("the event's own page", () => {
     expect(content).toContain("Big Show [1] Sat, Oct 31");
     expect(content).not.toContain("Calendar [");
     expect(dataset.events[0]!.eventUrl).toBe("https://knuckleheads.test/shows/big-show");
+  });
+
+  it("a link on an ignored or aggregator host is never numbered, so the model cannot name it", async () => {
+    const body = `<html><body><div><a href="https://listings.test/kc/big-show">Big Show</a> <a href="https://www.facebook.com/events/1">RSVP</a> Sat, Oct 31</div></body></html>`;
+    const config = testConfig();
+    const aggregating = { ...config, discovery: { ...config.discovery, aggregatorHosts: ["listings.test"] } };
+    const { dataset, requests } = await runAt(WEEK_1, emptyDataset(), [reply(candidate({ eventLink: 1 }))], { [CALENDAR_URL]: { status: 200, body } }, aggregating);
+    expect(requests.find((r) => r.model === "test/extraction")!.messages[1]!.content).toContain("Big Show RSVP Sat, Oct 31");
+    expect(dataset.events[0]).toMatchObject({ status: "active", primaryUrl: CALENDAR_URL });
+    expect(dataset.events[0]).not.toHaveProperty("eventUrl");
   });
 
   it("a re-reading that links a different page moves the eventUrl without a new id or a change for curation", async () => {

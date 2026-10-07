@@ -51,6 +51,18 @@ describe("page reading with links", () => {
     expect(reading.links).toEqual(["https://venue.test/shows/c"]);
   });
 
+  it("an unclosed anchor neither swallows the next anchor's text nor takes its number", () => {
+    const reading = readPage(page('<html><body><div><a href="/shows/a">A</div><div><a href="/shows/b">B</a></div></body></html>'), config);
+    expect(reading.text).toBe("A\nB [1]");
+    expect(reading.links).toEqual(["https://venue.test/shows/b"]);
+  });
+
+  it("numbers no link back to the URL the page was fetched at when it redirected elsewhere", () => {
+    const reading = readPage(page('<html><body><a href="https://venue.test/shows">Shows</a><a href="/calendar/">Calendar</a><a href="/shows/a">A</a></body></html>', "https://venue.test/calendar"), config);
+    expect(reading.text).toBe("Shows Calendar A [1]");
+    expect(reading.links).toEqual(["https://venue.test/shows/a"]);
+  });
+
   it("leaves a feed as it is: no markers, no links", () => {
     const feed = "BEGIN:VCALENDAR\nURL:https://venue.test/shows/a\nEND:VCALENDAR";
     expect(readPage(page(feed), config)).toEqual({ text: feed, links: [] });

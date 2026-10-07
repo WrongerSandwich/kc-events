@@ -1,7 +1,7 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { hostOf, linkOut } from "../lib/events";
+  import { hostOf, detailsUrl } from "../lib/events";
   import { slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
@@ -32,7 +32,7 @@
     {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
     <p class="tags">
       <KindChip kind={event.kind} />
-      <a class="fact primary" href={linkOut(event)}><UiIcon name="link" />{hostOf(linkOut(event))}</a>
+      <a class="fact primary" href={detailsUrl(event)}><UiIcon name="link" />{hostOf(detailsUrl(event))}</a>
       {#if checked < runDay}<span class="fact verified"><UiIcon name="check" />Verified {formatShort(checked)}</span>{/if}
     </p>
   </div>
