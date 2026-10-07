@@ -1,8 +1,7 @@
 /**
  * The site's mark: a fountain, for the City of Fountains. Three stepped basins under a jet and five drops, filled in
- * currentColor so it takes the ink of wherever it sits: the header beside the name, the home-screen icon, the share
- * image. (The tab's icon stays the date tile in favicon.ts, which carries today's date; the mark has no number to
- * show.) Drawn as flat shapes so it reads at 20 px.
+ * currentColor so it takes the ink of wherever it sits: the header beside the name, the tab's icon, the home-screen
+ * icon, the share image. Drawn as flat shapes so it reads at 16 px.
  */
 export const MARK_VIEWBOX = "0 0 32 32";
 export const MARK_INNER =
@@ -12,4 +11,13 @@ export const MARK_INNER =
 /** The mark as a standalone SVG in `ink` (a hex colour, since an image cannot read the page's tokens). */
 export function markSvg(ink = "#171717"): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${MARK_VIEWBOX}" fill="${ink}">${MARK_INNER}</svg>`;
+}
+
+/**
+ * The tab's icon (/favicon.svg): the mark in ink, and in near-white when the browser's chrome is dark, since an icon
+ * cannot read the page's tokens but can read the scheme. Safari does not draw SVG icons and shows nothing, as before.
+ */
+export function faviconSvg(): string {
+  const style = `<style>svg{fill:#171717}@media (prefers-color-scheme:dark){svg{fill:#f0f0f0}}</style>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${MARK_VIEWBOX}">${style}${MARK_INNER}</svg>`;
 }

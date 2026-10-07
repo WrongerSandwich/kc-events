@@ -44,18 +44,5 @@ const url = canonical ?? new URL(publicPath, origin).toString();
       <slot />
     </main>
     <Footer wide={wide} />
-    <script>
-      import { meta } from "../generated/meta";
-      import { dayOfMonth, todayIn } from "../lib/dates";
-      import { faviconSvg } from "../lib/favicon";
-      // The tab's icon shows today's date in the site's zone; again on return, so a tab left open overnight rolls over.
-      const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')!;
-      const show = () => {
-        const day = dayOfMonth(todayIn(meta.timeZone, new Date()));
-        icon.href = `data:image/svg+xml,${encodeURIComponent(faviconSvg(day))}`;
-      };
-      show();
-      document.addEventListener("visibilitychange", show);
-    </script>
   </body>
 </html>
