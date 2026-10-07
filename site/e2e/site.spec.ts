@@ -412,6 +412,31 @@ test("an event page says don't miss in the explorer's words and case", async ({ 
   await expect(tag).toHaveClass(/\bdont-miss\b/);
 });
 
+test("an event page sends the reader to the event's own page and names the list it was verified from", async ({ page }) => {
+  await on(page, BUILD_DAY, "/e/evt_e2e000000001");
+  await expect(page.getByRole("link", { name: "Details and tickets at tickets.example.com" })).toHaveAttribute("href", "https://tickets.example.com/frizzi");
+  const verified = page.locator(".verified");
+  await expect(verified).toContainText("Date and venue verified Oct 3 from the listing at example.com.");
+  await expect(verified.getByRole("link", { name: "the listing at example.com" })).toHaveAttribute("href", "https://example.com/recordbar/frizzi");
+  await expect(verified.getByRole("link", { name: "Wrong? Report it" })).toHaveAttribute("href", /Event%20page%3A%20https%3A%2F%2Ftickets.example.com%2Ffrizzi/);
+});
+
+test("an event with no page of its own links its primary page and says so", async ({ page }) => {
+  await on(page, BUILD_DAY, "/e/evt_e2e000000002");
+  await expect(page.getByRole("link", { name: "Details and tickets at example.com" })).toHaveAttribute("href", "https://example.com/westport/comedy");
+  await expect(page.locator(".verified")).toContainText("verified Oct 3 from the page linked above.");
+});
+
+test("the front page card and the explorer row link the event's own page too", async ({ page }) => {
+  await on(page, BUILD_DAY, "/");
+  await expect(page.locator("#pick-evt_e2e000000001 a.primary")).toHaveAttribute("href", "https://tickets.example.com/frizzi");
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await on(page, BUILD_DAY, "/explore");
+  const row = page.locator("article.row", { has: page.getByRole("heading", { name: "Fabio Frizzi plays Fulci" }) });
+  await expect(row.locator(".host")).toHaveAttribute("href", "https://tickets.example.com/frizzi");
+  await expect(row.locator(".host")).toHaveText("tickets.example.com");
+});
+
 test("the explorer sets nothing in uppercase", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore");
   await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated

@@ -1,5 +1,5 @@
 import { addDays, formatShort, isDateOnly, localDate } from "./dates";
-import { firstDay, isDated, lastDay } from "./events";
+import { firstDay, isDated, lastDay, linkOut } from "./events";
 import type { PublishedEvent } from "./types";
 
 /** RFC 5545 TEXT escaping: backslash first, then semicolon, comma, and newline. */
@@ -55,9 +55,9 @@ function vevent(e: PublishedEvent, siteName: string, stamp: string): string[] {
     lines.push(`DTSTART:${utcStamp(e.start!)}`, `DTEND:${utcStamp(end)}`);
   }
 
-  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.neighborhood}`)}`, `URL:${e.primaryUrl}`);
+  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.neighborhood}`)}`, `URL:${linkOut(e)}`);
   if (e.whyLine) notes.push(e.whyLine);
-  notes.push(`Verified ${formatShort(localDate(e.lastVerified))} by ${siteName}; details at ${e.primaryUrl}.`);
+  notes.push(`Verified ${formatShort(localDate(e.lastVerified))} by ${siteName}; details at ${linkOut(e)}.`);
   lines.push(`DESCRIPTION:${escapeText(notes.join("\n\n"))}`);
   return ["BEGIN:VEVENT", ...lines, "END:VEVENT"];
 }

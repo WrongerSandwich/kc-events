@@ -12,6 +12,13 @@ describe("toIcs", () => {
     expect(toIcs([event({ dontMiss: true, whyLine: "Rare; see it." })], opts)).toBe(fixture("timed"));
   });
 
+  it("links the event's own page when there is one, in URL and in the notes", () => {
+    const unfolded = toIcs([event({ eventUrl: "https://www.therecordbar.com/shows/a-show" })], opts).replace(/\r\n[ \t]/g, "");
+    expect(unfolded).toContain("URL:https://www.therecordbar.com/shows/a-show\r\n");
+    expect(unfolded).toContain("details at https://www.therecordbar.com/shows/a-show.");
+    expect(unfolded).not.toContain("https://www.therecordbar.com/shows\r\n");
+  });
+
   it("writes a date-only event as all-day with an exclusive end", () => {
     expect(toIcs([event({ start: "2026-10-09" })], opts)).toBe(fixture("all-day"));
   });

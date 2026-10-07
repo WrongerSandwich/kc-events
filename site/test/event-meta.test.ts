@@ -21,6 +21,11 @@ describe("eventJsonLd", () => {
     expect(ld).toMatchObject({ "@type": "Event", name: "A show", startDate: "2026-10-09T19:00:00-05:00", endDate: "2026-10-09T22:00:00-05:00" });
   });
 
+  it("points at the event's own page when there is one, else the primary page", () => {
+    expect(eventJsonLd(event({ eventUrl: "https://www.therecordbar.com/shows/a-show" }))).toMatchObject({ url: "https://www.therecordbar.com/shows/a-show" });
+    expect(eventJsonLd(event())).toMatchObject({ url: "https://www.therecordbar.com/shows" });
+  });
+
   it("is omitted for a recurring event, which has no start date to state", () => {
     expect(eventJsonLd(event({ recurrence: "recurring", start: undefined, schedule: "Tuesdays" }))).toBeUndefined();
   });

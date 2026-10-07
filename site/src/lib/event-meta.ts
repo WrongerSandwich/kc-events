@@ -1,5 +1,5 @@
 import { longDateLine } from "./date-line";
-import { hasStartDay } from "./events";
+import { hasStartDay, linkOut } from "./events";
 import type { PublishedEvent } from "./types";
 
 /** The page's meta description: the date line (when there is one), the place, and the why-line. */
@@ -23,7 +23,7 @@ export function eventJsonLd(e: PublishedEvent): object | undefined {
     startDate: e.start,
     ...(e.end && { endDate: e.end }),
     location: { "@type": "Place", name: e.venue, address: { "@type": "PostalAddress", addressLocality: e.neighborhood } },
-    url: e.primaryUrl,
+    url: linkOut(e),
     ...(e.whyLine && { description: e.whyLine }),
   };
 }

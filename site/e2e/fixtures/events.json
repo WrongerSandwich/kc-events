@@ -10,6 +10,7 @@
       "venue": "recordBar",
       "neighborhood": "Crossroads",
       "primaryUrl": "https://example.com/recordbar/frizzi",
+      "eventUrl": "https://tickets.example.com/frizzi",
       "kind": "music",
       "recurrence": "one-off",
       "dontMiss": true,

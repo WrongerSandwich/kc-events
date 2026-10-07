@@ -1,5 +1,5 @@
 dist/
-dist-e2e/
+dist-*/
 .astro/
 src/generated/
 public/events.json

@@ -72,6 +72,7 @@ Every field you fill must come from the text of the page body you were given. No
 
 - `primaryUrl` is the URL on the "Page URL" line, exactly as given. Never any other URL.
 - A link on the page appears as a number in brackets after the linked text: "Cheekface [12]" means that text links to page 12 of this page's links. `eventLink` is the number of the link that goes to this event's own page: its details, its tickets, a "More info" or "Buy tickets" beside it. Null when the event has no link of its own.
+- When an event has both a details link on this site and a tickets link elsewhere ("More info" and "Buy tickets"), give the details link.
 - A link that is the same for every event on the page (the calendar itself, "All events", the venue's own ticket office) is not an event's link. Never give a number that does not appear on the page, and never give one event's link to another.
 
 ## Evidence

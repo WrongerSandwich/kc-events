@@ -26,6 +26,12 @@ describe("loadPublished", () => {
     expect(p.timeZone).toBe("America/Chicago");
   });
 
+  it("carries the event's own page through when the job found one", () => {
+    const p = loadPublished(write(dataset([activeEvent({ eventUrl: "https://www.therecordbar.com/shows/a-show" }), activeEvent({ id: "evt_000000000002" })])));
+    expect(p.events[0]!.eventUrl).toBe("https://www.therecordbar.com/shows/a-show");
+    expect(p.events[1]).not.toHaveProperty("eventUrl");
+  });
+
   it("maps a neighborhood that names a region to that region, and anything else unlisted to the catch-all", () => {
     const p = loadPublished(write(dataset([
       activeEvent({ neighborhood: "Johnson County" }),
