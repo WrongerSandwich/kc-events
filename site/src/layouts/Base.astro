@@ -1,5 +1,6 @@
 ---
 import "@fontsource-variable/geist";
+import "@fontsource/josefin-sans/700.css";
 import "../styles/tokens.css";
 import "../styles/base.css";
 import { siteConfig } from "../site.config";
@@ -24,6 +25,8 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={url} />
+    <!-- Safari draws no SVG icon and takes the ICO; the others take the SVG, listed after it. -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:type" content="website" />
@@ -43,18 +46,5 @@ const url = canonical ?? new URL(publicPath, origin).toString();
       <slot />
     </main>
     <Footer wide={wide} />
-    <script>
-      import { meta } from "../generated/meta";
-      import { dayOfMonth, todayIn } from "../lib/dates";
-      import { faviconSvg } from "../lib/favicon";
-      // The tab's icon shows today's date in the site's zone; again on return, so a tab left open overnight rolls over.
-      const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')!;
-      const show = () => {
-        const day = dayOfMonth(todayIn(meta.timeZone, new Date()));
-        icon.href = `data:image/svg+xml,${encodeURIComponent(faviconSvg(day))}`;
-      };
-      show();
-      document.addEventListener("visibilitychange", show);
-    </script>
   </body>
 </html>

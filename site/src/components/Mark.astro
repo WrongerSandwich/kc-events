@@ -1,0 +1,16 @@
+---
+import { MARK_INNER, MARK_VIEWBOX } from "../lib/mark";
+// The fountain mark inline, in currentColor, so it takes the ink of the text beside it, with its five drops in five of
+// the kinds' hues, a spread across the wheel: the site's colour is the kinds'. Decorative: the name is the words.
+interface Props { class?: string }
+const { class: className } = Astro.props;
+---
+<svg class={className} viewBox={MARK_VIEWBOX} fill="currentColor" aria-hidden="true" set:html={MARK_INNER} />
+
+<style>
+  svg :global(.drop-1) { fill: var(--kind-talks-readings); }
+  svg :global(.drop-2) { fill: var(--kind-comedy); }
+  svg :global(.drop-3) { fill: var(--kind-festivals-markets); }
+  svg :global(.drop-4) { fill: var(--kind-sports); }
+  svg :global(.drop-5) { fill: var(--kind-music); }
+</style>

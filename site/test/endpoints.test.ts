@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
-import { faviconSvg } from "../src/lib/favicon";
+import { faviconSvg } from "../src/lib/mark";
 
 const dist = new URL("../dist/", import.meta.url);
 const has = (p: string) => existsSync(new URL(p, dist));
@@ -44,7 +44,8 @@ describe.skipIf(!matchesGenerated)("built output", () => {
     expect(html).toContain('"@type":"Event"');
     expect(html).not.toContain("addressRegion");
     expect(html).toContain("/og.png");
-    expect(html).toContain("from the page linked above");
+    // Verified from the page linked above when the list is the event's own page, else from the list it was read from (#53).
+    expect(html).toMatch(/Date and venue verified .* from (the page linked above|<a [^>]*>the list at [^<]+<\/a>)\./);
   });
 
   it("gives a recurring event's page no Add to calendar link, and a dated one's page has it", () => {
@@ -68,11 +69,12 @@ describe.skipIf(!matchesGenerated)("built output", () => {
     expect(canonical("index.html")).toMatch(/\/$/);
     expect(canonical("about.html")).toMatch(/\/about$/);
   });
-  it("links the favicon and the apple-touch-icon from every page, and serves the tile with no day as /favicon.svg", () => {
+  it("links the ICO, the SVG, and the apple-touch-icon from every page, and serves the mark as /favicon.svg", () => {
     expect(read("favicon.svg")).toBe(faviconSvg());
     expect(has("apple-touch-icon.png")).toBe(true);
+    expect(has("favicon.ico")).toBe(true);
     for (const page of ["index.html", "explore.html", "about.html", "404.html", `e/${events[0]!.id}.html`]) {
-      expect(read(page), page).toContain('<link rel="icon" href="/favicon.svg" type="image/svg+xml">');
+      expect(read(page), page).toContain('<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/favicon.svg" type="image/svg+xml">');
       expect(read(page), page).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">');
     }
   });

@@ -49,21 +49,18 @@ test.describe("a visitor's browser in Tokyo", () => {
   });
 });
 
-test.describe("the favicon", () => {
-  // Already Wednesday the 7th there; the icon still goes by Kansas City time.
-  test.use({ timezoneId: "Asia/Tokyo" });
-
-  test("shows today's day of month in the site's zone, and rolls over when the tab comes back", async ({ page }) => {
-    await page.clock.install({ time: new Date("2026-10-06T23:00:00Z") }); // 6:00 pm Tuesday the 6th in Chicago
-    await page.goto("/about");
-    const icon = page.locator('link[rel="icon"]');
-    const day = async () => decodeURIComponent((await icon.getAttribute("href"))!).match(/>(\d+)<\/text>/)?.[1];
-    await expect(icon).toHaveAttribute("href", /^data:image\/svg\+xml,/);
-    expect(await day()).toBe("6");
-    await page.clock.setFixedTime(new Date("2026-10-07T05:30:00Z")); // 12:30 am Wednesday the 7th
-    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
-    await expect.poll(day).toBe("7");
-  });
+test("the tab's icon is the fountain mark: an ICO for Safari, then the SVG for the rest", async ({ page, request }) => {
+  await page.goto("/about");
+  const icons = page.locator('link[rel="icon"]');
+  await expect(icons).toHaveCount(2);
+  await expect(icons.nth(0)).toHaveAttribute("href", "/favicon.ico");
+  await expect(icons.nth(1)).toHaveAttribute("href", "/favicon.svg");
+  const svg = await request.get("/favicon.svg");
+  expect(svg.headers()["content-type"]).toContain("image/svg+xml");
+  expect(await svg.text()).toContain("prefers-color-scheme:dark");
+  const ico = await request.get("/favicon.ico");
+  expect(ico.ok()).toBe(true);
+  expect((await ico.body()).subarray(0, 4)).toEqual(Buffer.from([0, 0, 1, 0]));
 });
 
 test.describe("a section's kind filter", () => {
@@ -255,8 +252,13 @@ test("the region fallback places a region-named neighborhood", async ({ page }) 
 // The explorer's two row layouts: under day headings, and with the day first (the venue sort).
 const EXPLORER_SORTS = ["/explore", "/explore?sort=venue"];
 
-/** Opens the collapsed On now line, if there is one, so its rows are measured with the rest. */
+/**
+ * Opens the collapsed On now line, if there is one, so its rows are measured with the rest. The page is prerendered in
+ * date order, On now closed; hydrating with another sort takes the line away, so wait for every island first (Astro
+ * drops the ssr attribute as each one hydrates), else the click waits on a line that is gone.
+ */
 async function openOnNow(page: Page) {
+  await expect(page.locator("astro-island[ssr]")).toHaveCount(0);
   const closed = page.locator(".results details:not([open]) > summary");
   if ((await closed.count()) > 0) await closed.click();
 }
