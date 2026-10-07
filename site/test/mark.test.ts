@@ -10,6 +10,12 @@ describe("markSvg", () => {
     expect(markSvg("#abc")).toBe(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="#abc">${MARK_INNER}</svg>`);
     expect(markSvg()).toContain('fill="#171717"');
   });
+
+  it("classes its five drops left to right, for a surface that colours them", () => {
+    const drops = [...MARK_INNER.matchAll(/<circle class="drop drop-(\d)" cx="([\d.]+)"/g)].map((m) => ({ n: Number(m[1]), cx: Number(m[2]) }));
+    expect(drops.map((d) => d.n)).toEqual([1, 2, 3, 4, 5]);
+    expect(drops.map((d) => d.cx)).toEqual([7.5, 11, 16, 21, 24.5]);
+  });
 });
 
 describe("faviconSvg", () => {
