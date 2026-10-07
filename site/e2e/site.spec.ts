@@ -49,12 +49,18 @@ test.describe("a visitor's browser in Tokyo", () => {
   });
 });
 
-test("the tab's icon is the fountain mark, served as SVG", async ({ page, request }) => {
+test("the tab's icon is the fountain mark: an ICO for Safari, then the SVG for the rest", async ({ page, request }) => {
   await page.goto("/about");
-  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", "/favicon.svg");
-  const icon = await request.get("/favicon.svg");
-  expect(icon.headers()["content-type"]).toContain("image/svg+xml");
-  expect(await icon.text()).toContain("prefers-color-scheme:dark");
+  const icons = page.locator('link[rel="icon"]');
+  await expect(icons).toHaveCount(2);
+  await expect(icons.nth(0)).toHaveAttribute("href", "/favicon.ico");
+  await expect(icons.nth(1)).toHaveAttribute("href", "/favicon.svg");
+  const svg = await request.get("/favicon.svg");
+  expect(svg.headers()["content-type"]).toContain("image/svg+xml");
+  expect(await svg.text()).toContain("prefers-color-scheme:dark");
+  const ico = await request.get("/favicon.ico");
+  expect(ico.ok()).toBe(true);
+  expect((await ico.body()).subarray(0, 4)).toEqual(Buffer.from([0, 0, 1, 0]));
 });
 
 test.describe("a section's kind filter", () => {
@@ -246,8 +252,13 @@ test("the region fallback places a region-named neighborhood", async ({ page }) 
 // The explorer's two row layouts: under day headings, and with the day first (the venue sort).
 const EXPLORER_SORTS = ["/explore", "/explore?sort=venue"];
 
-/** Opens the collapsed On now line, if there is one, so its rows are measured with the rest. */
+/**
+ * Opens the collapsed On now line, if there is one, so its rows are measured with the rest. The page is prerendered in
+ * date order, On now closed; hydrating with another sort takes the line away, so wait for every island first (Astro
+ * drops the ssr attribute as each one hydrates), else the click waits on a line that is gone.
+ */
 async function openOnNow(page: Page) {
+  await expect(page.locator("astro-island[ssr]")).toHaveCount(0);
   const closed = page.locator(".results details:not([open]) > summary");
   if ((await closed.count()) > 0) await closed.click();
 }
