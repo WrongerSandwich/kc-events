@@ -24,9 +24,9 @@ import Explorer from "../src/components/Explorer.svelte";
 const rows = () => screen.getAllByRole("article").map((a) => within(a).getByRole("heading").textContent);
 // The live count is announced once input settles (Explorer's SETTLE_MS, 500 ms), so read it after the wait.
 const announced = () => { vi.advanceTimersByTime(500); flushSync(); return screen.getByRole("status"); };
-// What Tab reaches, in order: no tabindex="-1", nothing disabled.
 // Dispatches a keydown and says whether a handler prevented it (testing-library's fireEvent is async here).
 const prevented = (el: Element, key: string, init: KeyboardEventInit = {}) => { const ok = el.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true, ...init })); flushSync(); return !ok; };
+// What Tab reaches, in order: no tabindex="-1", nothing disabled.
 const tabStops = (root: ParentNode) => [...root.querySelectorAll<HTMLElement>("a[href], button, input, select, summary")].filter((el) => el.getAttribute("tabindex") !== "-1" && !(el as HTMLButtonElement).disabled);
 
 describe("Explorer", () => {
@@ -309,7 +309,7 @@ describe("Explorer", () => {
     expect(changes.takeRecords()).toHaveLength(1);
     changes.disconnect();
   });
-  it("focuses search on / from outside a text field, without typing it; a modified / and / in a field are left alone", () => {
+  it("focuses search on / from outside a text field, without typing it; a modified / and / in a text field are left alone", () => {
     render(Explorer);
     const search = screen.getByRole("searchbox", { name: "Search" });
     expect(search).toHaveAttribute("aria-keyshortcuts", "/");
@@ -321,12 +321,13 @@ describe("Explorer", () => {
       expect(prevented(document.body, "/", { [mod]: true })).toBe(false);
       expect(search).not.toHaveFocus();
     }
+    // A checkbox takes no text, so / from a filter still jumps.
     const checkbox = screen.getAllByRole("checkbox")[0]!;
     checkbox.focus();
-    expect(prevented(checkbox, "/")).toBe(false);
-    expect(checkbox).toHaveFocus();
-    search.focus();
+    expect(prevented(checkbox, "/")).toBe(true);
+    expect(search).toHaveFocus();
     expect(prevented(search, "/")).toBe(false);
+    expect(prevented(document.body, "/", { isComposing: true })).toBe(false);
   });
 
   it("clears a non-empty search on Esc, dropping q from the URL, and leaves an empty one on the next", async () => {
@@ -341,6 +342,8 @@ describe("Explorer", () => {
     expect(search).toHaveValue("");
     expect(location.search).toBe("");
     expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film", "Later talk"]);
+    expect(search).toHaveFocus();
+    expect(prevented(search, "Escape", { isComposing: true })).toBe(false);
     expect(search).toHaveFocus();
     prevented(search, "Escape");
     expect(search).not.toHaveFocus();

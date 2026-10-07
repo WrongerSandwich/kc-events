@@ -21,7 +21,7 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
     <p>A don't-miss event is a one-off or a limited run that is worth going out of your way for. It is an editorial call, made by a model under <a href={curationRules}>written rules</a> kept in the repository, and each one comes with a one-line reason. Recurring events are never flagged; they are listed under Always there instead.</p>
 
     <h2>Keyboard shortcuts</h2>
-    <p>In the <a href="/explore">explorer</a>, press <kbd>/</kbd> to jump to search and <kbd>Esc</kbd> to clear it.</p>
+    <p>In the <a href="/explore">explorer</a>, press <kbd>/</kbd> to jump to search, and <kbd>Esc</kbd> to clear it, then again to leave it.</p>
 
     <h2>The data</h2>
     <p>The full dataset is at <a href="/events.json">/events.json</a>. It is free to reuse; a link back is all that is asked. For language models and other readers, <a href="/llms.txt">/llms.txt</a> describes the site, the dataset, and how to cite it.</p>
@@ -38,5 +38,4 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
   h1 { margin: var(--space-8) 0 var(--space-4); }
   h2 { font-size: var(--text-lg); margin: var(--space-8) 0 var(--space-2); }
   p + p { margin-top: var(--space-3); }
-  kbd { font: inherit; font-size: 0.9em; border: 1px solid var(--rule); border-radius: 3px; padding: 0.05em 0.35em; }
 </style>
