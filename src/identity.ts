@@ -69,6 +69,25 @@ export function sameEvent(a: EventIdentity, b: EventIdentity, live: readonly Eve
 }
 
 /**
+ * A month tag at the end of a title: a month's name or abbreviation in parentheses, with or without
+ * a period, optionally with a year ("(Oct. 2026)", "(November)", "(Sept 2026)"). Kept this narrow:
+ * a title that differs in any other way is a different event.
+ */
+const MONTH_TAG = /\s*\(\s*(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?(?:\s+\d{4})?\s*\)\s*$/iu;
+
+/**
+ * Whether a dated record is one month's entry of a standing program (#63): the same primary page,
+ * and its title is the program's with a month tag after it. A page that titles a standing program
+ * month by month ("Main Gallery Tours (Oct. 2026)") is read as the one recurring event, but a
+ * reading may still give one month as a one-off.
+ */
+export function monthEntryOf(entry: EventIdentity, program: EventIdentity): boolean {
+  if (entry.primaryUrl !== program.primaryUrl) return false;
+  const untagged = entry.title.replace(MONTH_TAG, "");
+  return untagged !== entry.title && sameName(untagged, program.title);
+}
+
+/**
  * Two venue names are one venue when they normalize alike, when one contains the other at word
  * boundaries ("The Midland" in "The Midland Theatre - MO"), when they are the same words in another
  * order ("New American Royal Campus" is "American Royal New Campus"), or when the alias list names

@@ -230,3 +230,73 @@ describe("folding duplicates", () => {
     expect(report.counts.expired.cancelled).toBe(0);
   });
 });
+
+describe("folding a month-titled one-off into its recurring event (#63)", () => {
+  const museum = source("National WWI Museum and Memorial", { kind: "other", neighborhood: "Crossroads", urls: [WWI] });
+  const VENUE = "National WWI Museum and Memorial";
+
+  /** A recurring record of this page, first seen at run two: after the monthly one-offs it folds. */
+  const recurring = (title: string, primaryUrl = WWI, overrides: Partial<Event> = {}): Event => {
+    const { start: _start, ...e } = event(title, VENUE, primaryUrl, "2026-10-05", {
+      recurrence: "recurring",
+      schedule: "Monday, Friday-Saturday, Select times",
+      firstSeen: RUN_TWO,
+      ...overrides,
+    });
+    return { ...e, evidence: { date: "Monday, Friday-Saturday Select times", venue: VENUE } };
+  };
+  const monthly = (title: string, primaryUrl = WWI, overrides: Partial<Event> = {}) =>
+    event(title, VENUE, primaryUrl, "2026-10-05", { recurrence: "limited-run", end: "2026-10-31", ...overrides });
+
+  it("expires the one-off as duplicate when the page sights the recurring event, and keeps the recurring record under its id", async () => {
+    const oneOff = monthly("Main Gallery Tours (Oct. 2026)");
+    const standing = recurring("Main Gallery Tours");
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([oneOff, standing]), {
+      sources: [museum],
+      pages: { [WWI]: PAGE },
+      completions: [
+        reply(
+          candidateAt(museum, {
+            title: "Main Gallery Tours",
+            startDate: null,
+            startTime: null,
+            schedule: "Monday, Friday-Saturday, Select times",
+            dateEvidence: "Monday, Friday-Saturday Select times",
+            venueEvidence: VENUE,
+          }),
+        ),
+      ],
+      config,
+    });
+
+    expect(byId(dataset).get(standing.id)).toMatchObject({ status: "active", recurrence: "recurring", title: "Main Gallery Tours" });
+    expect(byId(dataset).get(oneOff.id)).toMatchObject({ status: "expired", expiryReason: "duplicate" });
+    expect(dataset.events).toHaveLength(2);
+    expect(report.counts.expired.duplicate).toBe(1);
+  });
+
+  it("folds a month tag of any spelling the tag allows: abbreviated or full, with or without a period or a year", async () => {
+    const standing = recurring("Hands-on History");
+    const tagged = ["Hands-on History (Nov. 2026)", "Hands-on History (November)", "Hands-on History (Sept 2026)", "hands-on history (dec)"].map((t) => monthly(t));
+
+    const { dataset } = await quietRun(withEvents([standing, ...tagged]));
+
+    expect(byId(dataset).get(standing.id)).toMatchObject({ status: "active" });
+    for (const t of tagged) expect(byId(dataset).get(t.id)).toMatchObject({ title: t.title, status: "expired", expiryReason: "duplicate" });
+  });
+
+  it("folds nothing when the one-off is from another page, is another event on the page, has more to its title, or the recurring record has expired", async () => {
+    const otherPage = [monthly("Main Gallery Tours (Oct. 2026)", "https://www.theworldwar.org/visit/tours"), recurring("Main Gallery Tours")];
+    const otherEvent = [monthly("Tower After Hours (Oct. 2026)"), recurring("Main Gallery Tours")];
+    const moreTitle = [monthly("Main Gallery Tours: Behind the Scenes (Oct. 2026)"), recurring("Main Gallery Tours")];
+    const notAMonth = [monthly("Main Gallery Tours (Members)"), recurring("Main Gallery Tours")];
+    const expired = [monthly("Hands-on History (Oct. 2026)"), recurring("Hands-on History", WWI, { status: "expired", expiryReason: "two-strike" })];
+
+    for (const [name, [oneOff, standing]] of Object.entries({ otherPage, otherEvent, moreTitle, notAMonth, expired })) {
+      const { dataset, report } = await quietRun(withEvents([oneOff!, standing!]));
+      expect({ name, status: byId(dataset).get(oneOff!.id)!.status }).toEqual({ name, status: "active" });
+      expect({ name, duplicates: report.counts.expired.duplicate }).toEqual({ name, duplicates: 0 });
+    }
+  });
+});

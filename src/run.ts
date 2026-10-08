@@ -13,7 +13,7 @@ import {
 } from "./extraction.js";
 import { applyJudgment, buildCurationRequest, cleanStoredWhyLine, cleanWhyLine, unflagged, CURATION_BATCH_SIZE, curationReplySchema, needsCuration, type CurationContext } from "./curation.js";
 import { discoveryQueries, hostOf, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
-import { findMatch, normalizeName, sameEvent, sameName, type VenueAliases } from "./identity.js";
+import { findMatch, monthEntryOf, normalizeName, sameEvent, sameName, type VenueAliases } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
 import { plural } from "./markdown.js";
@@ -480,7 +480,8 @@ function applySighting(
  * Folds records that turn out to be the same event (ADR 0007, amended): any two not expired that
  * match each other under the identity rules, recurring events aside, which never fuzzily match.
  * The record seen first is kept, a tie going to the one earlier in the dataset, which was created
- * first; the other expires as duplicate. A kept record that is not active takes an active
+ * first; the other expires as duplicate. One more fold leaves the first-seen rule aside: a month's
+ * entry of a recurring program folds into the program (firstMonthEntryPair). A kept record that is not active takes an active
  * duplicate's reading under its own id, first-seen, and curation. Folding repeats until nothing
  * matches, since a fold can leave a venue-less record with one candidate where it had two. The
  * result depends only on the dataset. Returns which record each duplicate was folded into.
@@ -488,9 +489,12 @@ function applySighting(
 function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event[]; foldedInto: Map<string, string> } {
   const byId = new Map(events.map((e) => [e.id, e]));
   const foldedInto = new Map<string, string>();
-  for (let pair = firstMatchingPair([...byId.values()], aliases); pair; pair = firstMatchingPair([...byId.values()], aliases)) {
+  const nextPair = () => firstMatchingPair([...byId.values()], aliases) ?? firstMonthEntryPair([...byId.values()]);
+  for (let pair = nextPair(); pair; pair = nextPair()) {
     const [kept, duplicate] = pair;
-    byId.set(kept.id, kept.status !== "active" && duplicate.status === "active" ? refresh(kept, duplicate) : kept);
+    // A recurring record keeps its own reading: a month entry's dates would make it a one-off.
+    const takesReading = kept.status !== "active" && duplicate.status === "active" && kept.recurrence !== "recurring";
+    byId.set(kept.id, takesReading ? refresh(kept, duplicate) : kept);
     byId.set(duplicate.id, expire(duplicate, "duplicate"));
     foldedInto.set(duplicate.id, kept.id);
   }
@@ -505,6 +509,21 @@ function firstMatchingPair(events: Event[], aliases: VenueAliases): [Event, Even
   for (const [j, later] of live.entries()) {
     const kept = live.slice(0, j).find((earlier) => sameEvent(earlier, later, live, aliases));
     if (kept) return [kept, later];
+  }
+  return undefined;
+}
+
+/**
+ * A record not recurring that is one month's entry of a recurring record not expired (#63), both
+ * live: the recurring record to keep, then the month entry. The recurring record is kept even when
+ * it was seen later than its month entry, unlike other folds, which keep the record seen first: it
+ * is the program, and the month entry only one reading of it.
+ */
+function firstMonthEntryPair(events: Event[]): [Event, Event] | undefined {
+  const live = events.filter((e) => e.status !== "expired");
+  for (const entry of live.filter((e) => e.recurrence !== "recurring")) {
+    const program = live.find((e) => e.recurrence === "recurring" && monthEntryOf(entry, e));
+    if (program) return [program, entry];
   }
   return undefined;
 }
