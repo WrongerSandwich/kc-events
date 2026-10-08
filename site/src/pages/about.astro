@@ -17,6 +17,9 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
     <p>Once a week a research job reads venue and organizer pages directly. A date and a venue are published only when they were read from the event's own page; when the job cannot cite one, the event is held back rather than guessed at. The rules it reads pages by are <a href={extractionRules}>written down in the repository</a>.</p>
     <p>Every event shows when it was last verified, and the stamp under the site name says when the job last ran. If {siteConfig.staleAfterDays} days pass without a run, every page says so.</p>
 
+    <h2 id="for-venues">For venues</h2>
+    <p>The research job fetches pages once a week as <code>kc-this-week</code>, with the user agent <code>Mozilla/5.0 (compatible; kc-this-week/0.1; +https://www.kcthisweek.com/about)</code>. It obeys <code>robots.txt</code>: to keep it off your site, add a <code>User-agent: kc-this-week</code> group with <code>Disallow: /</code>. Each listing links to your own event page.</p>
+
     <h2>What don't-miss means</h2>
     <p>A don't-miss event is a one-off or a limited run that is worth going out of your way for. It is an editorial call, made by a model under <a href={curationRules}>written rules</a> kept in the repository, and each one comes with a one-line reason. Recurring events are never flagged; they are listed under Always there instead.</p>
 

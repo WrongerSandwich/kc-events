@@ -31,7 +31,7 @@ export function createOpenRouterModel({ apiKey }: { apiKey: string | undefined }
       apiKey,
       baseURL: OPENROUTER_BASE_URL,
       // OpenRouter's app attribution headers; shown on its activity page, not required.
-      defaultHeaders: { "HTTP-Referer": REPO_URL, "X-Title": "kc-events research" },
+      defaultHeaders: { "HTTP-Referer": REPO_URL, "X-Title": "KC This Week" },
     });
     return client;
   };

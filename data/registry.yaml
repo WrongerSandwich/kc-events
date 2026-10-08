@@ -392,6 +392,14 @@ sources:
     waitFor: .mls-c-match-list__match
     status: active
 
+  - name: Kansas City Current
+    urls: [https://www.kansascitycurrent.com/schedule]
+    kind: sports
+    neighborhood: Berkley Riverfront
+    checkHints: NWSL club. Home matches are at CPKC Stadium on the Berkley Riverfront; the schedule lists away matches at other clubs' stadiums too, which are outside the geography, and watch parties for them, which are not events. Past matches show a result; playoff rounds dated as a range with "TBD" have no confirmed date or venue yet.
+    status: active
+    notes: Until 2026-10-08 the registry pointed at kccurrent.com, which is another publication's site; the 403 there was its user-agent rule, not the club's.
+
   # --- Festivals, markets, community -------------------------------------------------------------
 
   - name: Power & Light District
@@ -446,6 +454,14 @@ sources:
     checkHints: The homepage carries the event list; /events is a 404. Botanical garden near Kingsville; seasonal festivals like Dark Forest are limited runs.
     status: active
 
+  - name: Kansas City Renaissance Festival
+    urls: [https://www.kcrenfest.com/]
+    kind: festivals/markets
+    neighborhood: Bonner Springs
+    checkHints: One seasonal run, Saturdays and Sundays from early September to mid-October plus a couple of Mondays, at the festival grounds in Bonner Springs; the homepage banner gives the season's dates. Theme weekends are part of that run, not separate events. Some theme-weekend pages still carry last year's dates.
+    status: active
+    notes: Refuses any user agent containing "research" (HTTP 403); fetchable since the job's user agent became kc-this-week (ADR 0011, 2026-10-08).
+
   # --- Excluded: known, deliberately not fetched -------------------------------------------------
 
   - name: Musical Theater Heritage
@@ -479,33 +495,19 @@ sources:
     reason: Off-season. Rendered in a browser, the schedule shows games, but there are none until spring training (checked 2026-10-08 on the September page). Activate it in late February with a browser fetch.
     notes: The page redirects to the current month's grid, so in season a run reads only the rest of that month. Wait for games with a selector; the page never goes network-quiet, so without one the browser fetch times out.
 
-  - name: Kansas City Current
-    urls: [https://www.kccurrent.com/schedule]
-    kind: sports
-    neighborhood: Berkley Riverfront
-    status: excluded
-    reason: The site answers the job's fetcher with HTTP 403 (checked 2026-10-03).
-
   - name: Funny Bone Comedy Club
     urls: [https://kc.funnybone.com/]
     kind: comedy
     neighborhood: Overland Park
     status: excluded
-    reason: The site answers the job's fetcher with HTTP 403 (checked 2026-10-03).
-
-  - name: Kansas City Renaissance Festival
-    urls: [https://www.kcrenfest.com/]
-    kind: festivals/markets
-    neighborhood: Bonner Springs
-    status: excluded
-    reason: The site answers the job's fetcher with HTTP 403 (checked 2026-10-03).
+    reason: Cloudflare blocks every non-interactive client with HTTP 403, a headless browser and a browser's user agent included (checked 2026-10-08). Only the club allowing the job's user agent would change that; its acts often play Comedy Club KC and recordBar, which are sources.
 
   - name: Kansas City Museum
     urls: [https://www.kansascitymuseum.org/events]
     kind: art/exhibitions
     neighborhood: Northeast
     status: excluded
-    reason: The site answers the job's fetcher with HTTP 403 (checked 2026-10-03).
+    reason: Cloudflare answers every non-interactive client with its "Just a moment" JavaScript challenge (HTTP 403), a headless browser included (checked 2026-10-08). Getting past it would take disguising the browser, which ADR 0011 rules out; only the museum allowing the job's user agent would change that.
 
   - name: Union Station
     urls: [https://unionstation.org/events/]
