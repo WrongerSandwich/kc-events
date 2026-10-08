@@ -9,6 +9,7 @@ import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import StalenessBanner from "../components/StalenessBanner.svelte";
 import IconSprite from "../components/IconSprite.astro";
+import Analytics from "@vercel/analytics/astro";
 
 interface Props { title: string; description: string; canonical?: string; jsonLd?: object; wide?: boolean }
 const { title, description, canonical, jsonLd, wide = false } = Astro.props;
@@ -38,6 +39,8 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="sitemap" href="/sitemap.xml" />
     {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, "\\u003c")} />}
+    <!-- Vercel Web Analytics: cookieless page views; its script is served from the deployment, so local and e2e builds send nothing. -->
+    <Analytics />
   </head>
   <body>
     <IconSprite />

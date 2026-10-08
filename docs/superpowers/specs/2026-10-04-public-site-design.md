@@ -29,7 +29,7 @@ Vocabulary is `CONTEXT.md`'s: *don't-miss list*, *always there*, *horizon*, *met
 - **No event images.** Legal exposure and the thing that makes aggregators look like aggregators. The visual identity comes from type and color. The one image the site has is a single site-wide typographic share card (section 7), generated once, so links unfurl without looking broken.
 - **No venue pages, no kind landing pages.** Candidates for v1.1; the explorer's URL state covers both cases for now.
 - **No daily rebuild.** The site is rebuilt when the weekly run commits; client-side logic keeps the day-dependent parts correct between builds (sections 4, 7, 8). A deploy hook on a daily cron is a cheap follow-up if the no-JS HTML going a week stale ever matters.
-- **No naming decision.** The site name is a single config value and ships as "KC Events" at a Vercel subdomain; a name and domain are a separate call.
+- **Naming.** The site name is a single config value. It shipped as "KC Events" at a Vercel subdomain; on 2026-10-07 it became "KC This Week" at kcthisweek.com (#61).
 
 ## 3. Architecture
 
@@ -65,7 +65,7 @@ data/events.json  (committed by the weekly run)
 
 **Build fails loudly, deploy keeps the last good site.** Any parse failure, a schema version mismatch, a dataset with `lastSuccessfulRun: null`, an id collision among active events, or a projected payload over 400 KB raw throws during `astro build`. Vercel then keeps the previous deployment live. The weekly workflow already commits nothing on a failed run, so the two failure modes compose: a bad run leaves the old data, a bad build leaves the old site.
 
-**Production.** The site is live at https://kc-events-lime.vercel.app (Vercel project `kc-events`, first deployed 2026-10-05 from 05345fa). Vercel Authentication is off so the production URL is public, and the monorepo "skip when no changes" switch is off so the ignored build step below is the only skip rule.
+**Production.** The site is live at https://kcthisweek.com (Vercel project `kc-events`, first deployed 2026-10-05 from 05345fa at https://kc-events-lime.vercel.app, which still serves; the custom domain was attached 2026-10-07). Vercel Authentication is off so the production URL is public, and the monorepo "skip when no changes" switch is off so the ignored build step below is the only skip rule.
 
 **Deploy trigger.** Vercel project settings: root directory `site`, framework Astro, "Include source files outside of the Root Directory" on, and the automatic "skip deployment when unaffected" switch for monorepos **off**: Vercel's own change detection follows declared workspace dependencies, and the site reaches the dataset by relative path, so the one commit that matters (the weekly `data/events.json` change) could be classified as unrelated and skipped, which would silently freeze the site. Instead an explicit *ignored build step* command, versioned as `ignoreCommand` in `site/vercel.json` so the dashboard needs no custom command (it uses the previous deployed SHA when Vercel provides one and falls back to `HEAD^`), runs inside `site/` and skips the build on exit 0, builds on exit 1:
 
@@ -77,7 +77,7 @@ so a run-report-only or docs-only commit does not rebuild. Ticket 1's acceptance
 
 A small `site-ci.yml` workflow runs `pnpm -r typecheck`, `pnpm --filter kc-events-site build`, a separate `pnpm --filter kc-events-site size` step, `pnpm -r test` (after the build, because the built-output tests read `dist/`), and the end-to-end suite (built into its own `dist-e2e/`) on pull requests and on pushes to `main`. Note what it guards: GitHub does not trigger workflows from pushes made with the default `GITHUB_TOKEN`, so the weekly research commit runs no CI; on that commit the build assertions run only inside Vercel's build, which is sufficient because that build is the one that would publish bad data.
 
-**Configuration.** `site/src/site.config.ts` holds the site-level values: `name` ("KC Events"), `tagline`, `repoUrl` (for the corrections link), `staleAfterDays` (9), and nothing about slugs; islands import it, so it reads no environment. The canonical origin for sitemap, JSON-LD, and share tags is build-only, in `site/src/build/origin.ts`: `SITE_ORIGIN` once a fixed production domain exists, falling back to `https://${VERCEL_PROJECT_PRODUCTION_URL}` so previews are not canonical. Slugs: kind and region slugs are derived by one `slugify` function from the config's names, with a test pinning them distinct (section 6). The time zone is `timezone` from `research.config.yaml`, not duplicated. Two environment overrides exist for reproducible builds: `SITE_TODAY=YYYY-MM-DD` fixes the build's date and `SITE_DATASET=<path>` points the build at a fixture dataset; both are used by the end-to-end suite and otherwise unset.
+**Configuration.** `site/src/site.config.ts` holds the site-level values: `name` ("KC This Week"), `tagline`, `repoUrl` (for the corrections link), `staleAfterDays` (9), and nothing about slugs; islands import it, so it reads no environment. The canonical origin for sitemap, JSON-LD, and share tags is build-only, in `site/src/build/origin.ts`: `SITE_ORIGIN` once a fixed production domain exists, falling back to `https://${VERCEL_PROJECT_PRODUCTION_URL}` so previews are not canonical. Slugs: kind and region slugs are derived by one `slugify` function from the config's names, with a test pinning them distinct (section 6). The time zone is `timezone` from `research.config.yaml`, not duplicated. Two environment overrides exist for reproducible builds: `SITE_TODAY=YYYY-MM-DD` fixes the build's date and `SITE_DATASET=<path>` points the build at a fixture dataset; both are used by the end-to-end suite and otherwise unset.
 
 ## 4. Data contract
 
@@ -274,11 +274,11 @@ The site has no imagery, so it has to be beautiful as a page of text. The direct
 - `/llms.txt`: what the site is, how it is made, where the dataset is, the URL patterns, and the one-paragraph cite-or-drop rule.
 - `/events.json`: the published dataset, served with `Cache-Control: public, max-age=3600` and `Access-Control-Allow-Origin: *` from `site/vercel.json`, so browser-side readers can fetch the contract.
 - `schema.org/Event` JSON-LD on event pages; `sitemap.xml` listing every page from the canonical origin; `robots.txt` allowing everything.
-- No analytics, no cookies, no third-party requests. The methods page says so.
+- No cookies, no third-party requests. The one measurement is Vercel Web Analytics (added 2026-10-07 at Evan's call): cookieless page views, its script served from the site's own origin. The about page says so.
 
 ## 11. The methods page
 
-`/about`, in plain language: what the site is for; how it is made (a weekly research job that reads venue and organizer pages directly, extracts dates and venues only from those pages, and holds back anything it cannot cite); what don't-miss means and that it is an editorial call made by a model under written rules; that nothing is tracked; where the dataset is and that it is free to reuse with attribution; and how to report a wrong listing (a link to a prefilled GitHub issue). It links the repo.
+`/about`, in plain language: what the site is for; how it is made (a weekly research job that reads venue and organizer pages directly, extracts dates and venues only from those pages, and holds back anything it cannot cite); what don't-miss means and that it is an editorial call made by a model under written rules; that visits are counted only by cookieless first-party analytics; where the dataset is and that it is free to reuse with attribution; and how to report a wrong listing (a link to a prefilled GitHub issue). It links the repo.
 
 ## 12. Testing
 

@@ -34,7 +34,7 @@ describe("export this view", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Export this view" }));
     expect(downloadText).toHaveBeenCalledTimes(1);
     const [name, text, mime] = vi.mocked(downloadText).mock.calls[0]!;
-    expect(name).toBe("kc-events.ics");
+    expect(name).toBe("kc-this-week.ics");
     expect(mime).toBe("text/calendar");
     expect(text).toContain("SUMMARY:Friday jazz");
     expect(text).not.toContain("Trivia");

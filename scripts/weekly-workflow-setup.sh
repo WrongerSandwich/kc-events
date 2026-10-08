@@ -203,7 +203,7 @@ bare() {
   printf '%s' "$v"
 }
 
-banner "KC Events: weekly workflow setup"
+banner "KC This Week: weekly workflow setup"
 
 # ── Stage 1: GitHub CLI ────────────────────────────────────────────────────
 stage "GitHub CLI: signed in to this repo"

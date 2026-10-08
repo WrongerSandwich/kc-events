@@ -4,7 +4,7 @@
  * The canonical origin is build-only, in src/build/origin.ts.
  */
 export const siteConfig = {
-  name: "KC Events",
+  name: "KC This Week",
   tagline: "A weekly researched, ad-free list of what's worth doing in Kansas City.",
   repoUrl: "https://github.com/WrongerSandwich/kc-events",
   /** Days after the last successful run before every page shows the staleness banner. */
