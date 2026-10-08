@@ -1,0 +1,772 @@
+{
+  "runDate": "2026-10-07",
+  "startedAt": "2026-10-07T20:43:52-05:00",
+  "finishedAt": "2026-10-07T21:12:47-05:00",
+  "horizonWeeks": 8,
+  "counts": {
+    "found": 465,
+    "new": 65,
+    "updated": 366,
+    "reverified": 77,
+    "heldUnverified": 39,
+    "heldThroughOutage": 0,
+    "beyondHorizonUnstruck": 0,
+    "unverifiedByOutageLimit": 0,
+    "unverifiedByUncitableReading": 6,
+    "outsideGeography": 12,
+    "expired": {
+      "past": 14,
+      "two-strike": 17,
+      "cancelled": 0,
+      "index-page": 0,
+      "duplicate": 7
+    }
+  },
+  "spend": {
+    "totalUsd": 0.26982534999999985,
+    "capUsd": 5,
+    "capHit": false,
+    "shortfall": {
+      "pagesNotExtracted": 0,
+      "eventsNotReverified": 0,
+      "queriesNotSearched": 0,
+      "leadsNotFollowed": 0,
+      "eventsNotCurated": 0
+    }
+  },
+  "discovery": {
+    "enabled": true,
+    "queries": 10,
+    "aggregatorPages": 17,
+    "pagesExtracted": 72,
+    "problems": [
+      "https://www.kcrunningcompany.com/oktoberfest5k: HTTP 404",
+      "https://www.eventbrite.com/e/oktoberfest-in-the-woods-tickets-1004691067027: HTTP 404",
+      "https://seatgeek.com/cities/kansas-city: HTTP 403",
+      "https://www.ticketmaster.com/matt-mathews-not-what-i-ordered-kansas-city-missouri-10-17-2026/event/060064AFB5A72979: HTTP 401",
+      "https://seatgeek.com/cities/kansas-city/comedy: HTTP 403",
+      "http://www.kansasspeedway.com/: HTTP 403",
+      "https://artskcgo.com/categories/visual-art: HTTP 403",
+      "https://www.kcfilmoffice.com/: HTTP 403",
+      "robots.txt disallows https://www.eventbrite.com/signin/signup/?referrer=%2Fmytickets",
+      "robots.txt disallows https://www.eventbrite.com/signin/?referrer=%2Fb%2Fmo--kansas-city%2Ffood-and-drink%2F",
+      "robots.txt disallows https://www.eventbrite.com/signin/signup/?referrer=%2Fb%2Fmo--kansas-city%2Ffood-and-drink%2F",
+      "https://do816.com/events/food-drink/2026/10/03: HTTP 403",
+      "https://seatgeek.com/cities/kansas-city/sports: HTTP 403",
+      "https://www.ticketmaster.com/event/Z7r9jZ1AAvEFz: HTTP 401",
+      "https://kcconvention.com/event/boozy-book-fest-2026: HTTP 404",
+      "https://kcur.secureallegiance.com/kcur/WebModule/Donate.aspx?P=CHANGE&PAGETYPE=PLG&CHECK=dvlaltUaXT8hrOSvjvOZaxiCxtaFReuS&_ga=2.210570837.1382953104.1581349443-2097256821.1571674000: HTTP 403",
+      "https://kcur.secureallegiance.com/kcur/WebModule/Donate.aspx?P=KCG0226&PAGETYPE=PLG&CHECK=%2b5g%2fQkV05qm4ViHtxJWDB%2bzWDeZ%2beA1M: HTTP 403"
+    ]
+  },
+  "reverification": {
+    "problems": []
+  },
+  "curation": {
+    "calls": 5,
+    "judged": 112,
+    "flagged": 2,
+    "problems": []
+  },
+  "sources": [
+    {
+      "name": "Kauffman Center for the Performing Arts",
+      "result": "fetched",
+      "extracted": 19
+    },
+    {
+      "name": "Kansas City Symphony",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "recordBar",
+      "result": "fetched",
+      "extracted": 38
+    },
+    {
+      "name": "The Midland",
+      "result": "fetched",
+      "extracted": 13
+    },
+    {
+      "name": "T-Mobile Center",
+      "result": "fetched",
+      "extracted": 12
+    },
+    {
+      "name": "The Truman",
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://www.thetruman.com/: ECONNRESET fetching https://www.thetruman.com/robots.txt"
+    },
+    {
+      "name": "Azura Amphitheater",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "Folly Theater",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "American Jazz Museum",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Harriman-Jewell Series",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "Its homepage names no venue for any performance, so every event is held unverified; its performances are found on the Folly Theater and Lied Center calendars, which name the hall (checked 2026-10-04)."
+    },
+    {
+      "name": "Friends of Chamber Music",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Kansas City Chorale",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "Midwest Trust Center",
+      "result": "fetched",
+      "extracted": 20
+    },
+    {
+      "name": "The Bottleneck",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "The Granada",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "Replay Lounge",
+      "result": "fetched",
+      "extracted": 23
+    },
+    {
+      "name": "Lied Center of Kansas",
+      "result": "fetched",
+      "extracted": 15
+    },
+    {
+      "name": "Lawrence Arts Center",
+      "result": "fetched",
+      "extracted": 22
+    },
+    {
+      "name": "Spencer Museum of Art",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Kansas City Ballet",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Kansas City Repertory Theatre",
+      "result": "fetched",
+      "extracted": 4
+    },
+    {
+      "name": "Unicorn Theatre",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Kansas City Actors Theatre",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "American Theatre Guild (Broadway in Kansas City)",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "New Theatre & Restaurant",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "KC Fringe Festival",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "The Comedy Club of Kansas City",
+      "result": "fetched",
+      "extracted": 11
+    },
+    {
+      "name": "Nelson-Atkins Museum of Art",
+      "result": "fetched",
+      "extracted": 8
+    },
+    {
+      "name": "Tivoli Cinemas",
+      "result": "fetched",
+      "extracted": 6
+    },
+    {
+      "name": "Kemper Museum of Contemporary Art",
+      "result": "fetched",
+      "extracted": 13
+    },
+    {
+      "name": "Linda Hall Library",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Nerman Museum of Contemporary Art",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "Zhou B Art Center KC",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Charlotte Street Foundation",
+      "result": "fetched",
+      "extracted": 12
+    },
+    {
+      "name": "Crossroads Arts District",
+      "result": "fetched",
+      "extracted": 22
+    },
+    {
+      "name": "Art Garden KC",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Arts Council of Johnson County",
+      "result": "fetched",
+      "extracted": 15
+    },
+    {
+      "name": "Kansas City Public Library",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "Rainy Day Books",
+      "result": "fetched",
+      "extracted": 8
+    },
+    {
+      "name": "Heartland Book Festival",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "National WWI Museum and Memorial",
+      "result": "fetched",
+      "extracted": 13
+    },
+    {
+      "name": "GEHA Field at Arrowhead Stadium",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Kansas City Mavericks",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Power & Light District",
+      "result": "fetched",
+      "extracted": 9
+    },
+    {
+      "name": "Kansas City Convention Center",
+      "result": "fetched",
+      "extracted": 13
+    },
+    {
+      "name": "City Market",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "American Royal",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "KC Parks and Recreation",
+      "result": "fetched",
+      "extracted": 4
+    },
+    {
+      "name": "Kansas City Zoo & Aquarium",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "Powell Gardens",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Musical Theater Heritage",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "robots.txt disallows the site (checked 2026-10-03)."
+    },
+    {
+      "name": "Starlight Theatre",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The events and tickets pages redirect to a queue-it waiting room whose robots.txt disallows fetching (checked 2026-10-03)."
+    },
+    {
+      "name": "Knuckleheads",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The show list is rendered by script; the fetched page has no events (checked 2026-10-03)."
+    },
+    {
+      "name": "Liberty Hall",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The event and cinema lists are rendered by script; the fetched page has no events (checked 2026-10-03)."
+    },
+    {
+      "name": "Uptown Theater",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The calendar is rendered by script, and its RSS feed gives post dates, not show dates (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Royals",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The schedule is rendered by script; the fetched page has no dates (checked 2026-10-03)."
+    },
+    {
+      "name": "Sporting Kansas City",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The schedule is rendered by script; the fetched page has no dates (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Current",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Funny Bone Comedy Club",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Renaissance Festival",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Kansas City Museum",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The site answers the job's fetcher with HTTP 403 (checked 2026-10-03)."
+    },
+    {
+      "name": "Union Station",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The events list is rendered by script, and its RSS feed carries no event dates (checked 2026-10-03)."
+    }
+  ],
+  "failingSources": [
+    "The Truman"
+  ],
+  "offListNeighborhoods": [],
+  "unmappableNeighborhoods": [
+    {
+      "eventTitle": "Dancing in the Street: Music of Motown"
+    },
+    {
+      "eventTitle": "Interstellar Live"
+    },
+    {
+      "eventTitle": "Prokofiev’s Sixth and Barber’s Violin Concerto"
+    },
+    {
+      "eventTitle": "Petite Performances: Halloween Spooktacular"
+    },
+    {
+      "eventTitle": "Happy Hour: Beethoven, Brahms and the Romantic Spirit"
+    },
+    {
+      "eventTitle": "The Music of Studio Ghibli"
+    },
+    {
+      "eventTitle": "Frizzi 2 Fulci : Fabio Frizzi and the F2F Band",
+      "venue": "Grand Temple"
+    },
+    {
+      "eventTitle": "Add More Arts to Your Classroom: Virtual Professional Development",
+      "venue": "Online"
+    },
+    {
+      "eventTitle": "See it. Show It. Know It.: Using Creative Movement and Visual Literacy to Deepen Learning with Garrett Brown and Harlan Brownlee",
+      "venue": "Liberty Fine Arts Office",
+      "proposed": "Liberty"
+    },
+    {
+      "eventTitle": "Matinees for Schools"
+    },
+    {
+      "eventTitle": "The Nutcracker"
+    },
+    {
+      "eventTitle": "A Christmas Carol 2026"
+    },
+    {
+      "eventTitle": "Roundtable Conversation Series"
+    },
+    {
+      "eventTitle": "Prelude Conversation Series"
+    },
+    {
+      "eventTitle": "2026 Gala: Rodeo Nouveau"
+    },
+    {
+      "eventTitle": "EMAS Presents"
+    },
+    {
+      "eventTitle": "Nightshades Experimental Animation Festival"
+    },
+    {
+      "eventTitle": "Beyond the Black Crack: 50th Anniversary Celebration"
+    },
+    {
+      "eventTitle": "Rooms We Carry Opening Reception"
+    },
+    {
+      "eventTitle": "Artist Market @ Rooms We Carry Opening Reception"
+    },
+    {
+      "eventTitle": "First Friday"
+    },
+    {
+      "eventTitle": "CCA Quarterly Mix & Mingle"
+    },
+    {
+      "eventTitle": "The Wizard of Oz"
+    },
+    {
+      "eventTitle": "The Marriage of Figaro"
+    },
+    {
+      "eventTitle": "FrankenWines",
+      "venue": "Offsite Location"
+    },
+    {
+      "eventTitle": "PBR OUTLAW DAYS FESTIVAL"
+    },
+    {
+      "eventTitle": "MPI 2026 Gala",
+      "venue": "The Gallery"
+    },
+    {
+      "eventTitle": "4-H/FFA Livestock Judging Contest"
+    },
+    {
+      "eventTitle": "Meats Judging Contests"
+    },
+    {
+      "eventTitle": "Collegiate Livestock Judging Contest"
+    },
+    {
+      "eventTitle": "UPHA American Royal National Championship Horse Show"
+    },
+    {
+      "eventTitle": "VISUAL VOICE: Moments of Abstraction Exhibit",
+      "venue": "Bruce R. Watkins Cultural Heritage Center",
+      "proposed": "Blue Hills"
+    },
+    {
+      "eventTitle": "Fire Feast",
+      "venue": "Powell Gardens"
+    },
+    {
+      "eventTitle": "Dark Forest",
+      "venue": "Powell Gardens"
+    },
+    {
+      "eventTitle": "Wild and Useful Things: Foraging with the Seasons (October)",
+      "venue": "Powell Gardens"
+    },
+    {
+      "eventTitle": "Live music",
+      "venue": "Louisburg Cider Mill",
+      "proposed": "Louisburg"
+    },
+    {
+      "eventTitle": "KC Restaurant Week"
+    },
+    {
+      "eventTitle": "Walktober Returns to Four New Locations"
+    },
+    {
+      "eventTitle": "Bunyaad Rug Event Comes to Crafted Fair Trade this October",
+      "venue": "Crafted Fair Trade"
+    },
+    {
+      "eventTitle": "Pumpkin Festival & Block Party",
+      "venue": "Historic Downtown Liberty Square",
+      "proposed": "Liberty"
+    },
+    {
+      "eventTitle": "Mildale Farm Fall Fest",
+      "venue": "Mildale Farm",
+      "proposed": "Edgerton"
+    },
+    {
+      "eventTitle": "Crown Center District Homeschool Event"
+    },
+    {
+      "eventTitle": "The Pigeon Gets a Big Time Holiday Extravaganza!"
+    },
+    {
+      "eventTitle": "Winterland: A Holiday Cirque Experience"
+    },
+    {
+      "eventTitle": "Fall Festival",
+      "venue": "KC Pumpkin Patch"
+    },
+    {
+      "eventTitle": "BUCKETS N BOARDS"
+    },
+    {
+      "eventTitle": "Market at the Park",
+      "venue": "Lions Park",
+      "proposed": "Kearney"
+    },
+    {
+      "eventTitle": "Opal Wapoo Gravel Experience",
+      "venue": "roads of Excelsior Springs",
+      "proposed": "Excelsior Springs"
+    },
+    {
+      "eventTitle": "Parkville Farmers Market Fall Season",
+      "venue": "Parkville Farmers Market",
+      "proposed": "Parkville"
+    },
+    {
+      "eventTitle": "Liberty Farmers’ Market",
+      "venue": "Historic Downtown Liberty Square",
+      "proposed": "Liberty"
+    },
+    {
+      "eventTitle": "5th Annual Pumpkin Festival & Block Party",
+      "venue": "Historic Downtown Liberty Square",
+      "proposed": "Liberty"
+    },
+    {
+      "eventTitle": "Fall Fest"
+    },
+    {
+      "eventTitle": "Northtown Oktoberfest",
+      "venue": "Downtown North Kansas City on Armour Road",
+      "proposed": "North Kansas City"
+    },
+    {
+      "eventTitle": "Fairy Tale Forest",
+      "venue": "Martha Lafite Thompson Nature Sanctuary",
+      "proposed": "Liberty"
+    },
+    {
+      "eventTitle": "Creepy Crawl",
+      "venue": "Downtown Parkville",
+      "proposed": "Parkville"
+    },
+    {
+      "eventTitle": "Pumpkin Carving"
+    },
+    {
+      "eventTitle": "Beats & Broomsticks Hocus Pocus in the Park"
+    },
+    {
+      "eventTitle": "Trick or Treat",
+      "venue": "Downtown Parkville",
+      "proposed": "Parkville"
+    },
+    {
+      "eventTitle": "Ghost Stories"
+    },
+    {
+      "eventTitle": "Final Friday",
+      "venue": "Historic downtown Parkville",
+      "proposed": "Parkville"
+    },
+    {
+      "eventTitle": "Trick or Treat on the Square 2026"
+    },
+    {
+      "eventTitle": "Foodeesfest"
+    },
+    {
+      "eventTitle": "Holiday Open House",
+      "venue": "Historic Downtown Parkville",
+      "proposed": "Parkville"
+    },
+    {
+      "eventTitle": "Lane of Lights"
+    },
+    {
+      "eventTitle": "Mayor’s Tree Lighting",
+      "venue": "Historic Downtown Parkville",
+      "proposed": "Parkville"
+    },
+    {
+      "eventTitle": "Small Business Saturday",
+      "venue": "Historic downtown Parkville",
+      "proposed": "Parkville"
+    },
+    {
+      "eventTitle": "Turkey Trot"
+    },
+    {
+      "eventTitle": "The Planets"
+    },
+    {
+      "eventTitle": "Baroque at 7:00: Vivaldi's Four Seasons"
+    },
+    {
+      "eventTitle": "Silent Film + Live Organ: Dr. Jekyll & Mr. Hyde"
+    },
+    {
+      "eventTitle": "Kansas City Symphony’s Mobile Music Box at Kirkwood Green Space",
+      "venue": "Kirkwood Green Space"
+    },
+    {
+      "eventTitle": "Calvin Arsenia"
+    },
+    {
+      "eventTitle": "Red Like Fruit by Hannah Moscovitch"
+    },
+    {
+      "eventTitle": "Electric Poe"
+    },
+    {
+      "eventTitle": "Dancing in the Street: Music of Motown with The Kansas City Symphony"
+    },
+    {
+      "eventTitle": "Interstellar Live with The Kansas City Symphony"
+    },
+    {
+      "eventTitle": "'Outlander in Concert'"
+    },
+    {
+      "eventTitle": "Stars of American Ballet"
+    },
+    {
+      "eventTitle": "MTC Kids Jam - Matt Heaton"
+    },
+    {
+      "eventTitle": "Ryan & Ryan 'Kickin' the Clouds Away'"
+    },
+    {
+      "eventTitle": "Prokofiev's Sixth and Barber's Violin Concerto with Stella Chen"
+    },
+    {
+      "eventTitle": "Ride the Drive: Cliff Drive by Pedicab"
+    },
+    {
+      "eventTitle": "13th Annual Día de los Muertos Celebration"
+    },
+    {
+      "eventTitle": "Create Your Own Ofrenda Items with Mattie Rhodes"
+    },
+    {
+      "eventTitle": "Pop Up with Roots KC"
+    },
+    {
+      "eventTitle": "Chris Stapleton's All-American Road Show",
+      "venue": "Morton Amphitheater",
+      "proposed": "Riverside"
+    },
+    {
+      "eventTitle": "Thomas Rhett",
+      "venue": "Morton Amphitheater",
+      "proposed": "Riverside"
+    },
+    {
+      "eventTitle": "City Center Live"
+    },
+    {
+      "eventTitle": "Truck or Treat"
+    },
+    {
+      "eventTitle": "Holiday Farmers Market"
+    }
+  ],
+  "promotionSuggestions": [
+    {
+      "host": "kcstudio.org",
+      "runsSeen": 2,
+      "exampleUrl": "https://kcstudio.org/"
+    },
+    {
+      "host": "thecitymarketkc.org",
+      "runsSeen": 4,
+      "exampleUrl": "https://thecitymarketkc.org/events/"
+    },
+    {
+      "host": "crowncenter.com",
+      "runsSeen": 4,
+      "exampleUrl": "https://www.crowncenter.com/events"
+    },
+    {
+      "host": "kcwineco.com",
+      "runsSeen": 6,
+      "exampleUrl": "https://www.kcwineco.com/events/upcoming-events"
+    }
+  ],
+  "outageLimited": [],
+  "uncitableReadings": [
+    {
+      "title": "2026 Gala: Rodeo Nouveau",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    },
+    {
+      "title": "EMAS Presents",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    },
+    {
+      "title": "Nightshades Experimental Animation Festival",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    },
+    {
+      "title": "Beyond the Black Crack: 50th Anniversary Celebration",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    },
+    {
+      "title": "Artist Market @ Rooms We Carry Opening Reception",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    },
+    {
+      "title": "Rooms We Carry Opening Reception",
+      "primaryUrl": "https://charlottestreet.org/2026-event-calendar/"
+    }
+  ]
+}
