@@ -1,4 +1,4 @@
-# KC Events
+# KC This Week
 
 A weekly researched, ad-free list of what's worth doing in Kansas City. The idea, decisions, and first milestone are in `PROPOSAL.md`; read it before planning any work.
 

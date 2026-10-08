@@ -100,7 +100,7 @@
 
   function exportView() {
     // new Date() is fine here: this is a component, not lib/ (the no-clock grep covers lib only).
-    downloadText("kc-events.ics", toIcs(exportable, { siteName: siteConfig.name, stamp: new Date().toISOString() }), "text/calendar");
+    downloadText("kc-this-week.ics", toIcs(exportable, { siteName: siteConfig.name, stamp: new Date().toISOString() }), "text/calendar");
   }
 </script>
 

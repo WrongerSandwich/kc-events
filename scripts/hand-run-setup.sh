@@ -196,7 +196,7 @@ TOTAL_STAGES=3
 # ceiling below that would cut honest runs short. 25 USD leaves that room and still bounds a bug.
 SUGGESTED_MONTHLY_LIMIT_USD=25
 
-banner "KC Events: hand-run setup"
+banner "KC This Week: hand-run setup"
 
 # ── Stage 1: OpenRouter key ────────────────────────────────────────────────
 stage "OpenRouter: API key"

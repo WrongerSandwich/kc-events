@@ -1,4 +1,4 @@
-# KC Events
+# KC This Week
 
 A weekly-researched, ad-free picture of what is worth doing in Kansas City, built around one structural idea: which events are don't-miss because they won't come around again, versus which are always there.
 
