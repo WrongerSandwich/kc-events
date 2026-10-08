@@ -3,7 +3,9 @@
 # only inside Vercel's build; that build is the one that would publish bad data, so it is enough.
 #
 # Order matters: the real build and its size check run before the tests, because the built-output
-# tests read dist/ and fail in CI when it is missing; the end-to-end build goes to dist-e2e/ last.
+# tests read dist/ and fail in CI when it is missing. The end-to-end build (dist-e2e/) also runs before
+# the size check, which measures the explorer on its fixed fixture data so that budget tracks code, not
+# the week's event count; Playwright rebuilds it for the end-to-end tests.
 # The size check runs here and not in `pnpm build`, which is Vercel's build command: a page going over
 # budget should fail CI, not stop the weekly data commit from deploying.
 name: Site
@@ -27,6 +29,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
       - run: pnpm --filter kc-events-site build
+      - run: pnpm --filter kc-events-site build:e2e
       - run: pnpm --filter kc-events-site size
       - run: pnpm -r test
       - run: pnpm --filter kc-events-site exec playwright install --with-deps chromium

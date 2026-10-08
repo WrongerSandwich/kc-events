@@ -266,7 +266,7 @@ The site has no imagery, so it has to be beautiful as a page of text. The direct
 
 **Accessibility.** Semantic landmarks, one `h1` per page, keyboard-operable filters with visible focus, chips as real buttons with `aria-pressed`, the live region of section 6, and contrast as above.
 
-**Performance budget**, measured as compressed transfer of HTML, CSS, and JavaScript per page (the event data arrives inside the HTML, so a JavaScript-only budget would miss it): front page under 50 KB; explorer under 120 KB (100 KB until each event carried a link to its own page, #53); event page under 40 KB. No third-party requests of any kind. A size check after `astro build` (the separate `size` step in CI, not part of the deploy build) fails CI when a budget is exceeded.
+**Performance budget**, measured as compressed transfer of HTML, CSS, and JavaScript per page (the event data arrives inside the HTML, so a JavaScript-only budget would miss it): front page under 50 KB; explorer under 50 KB measured on the end-to-end build's fixed fixture data, so the budget is for its code (until 2026-10-07 it was measured on the real data, 100 KB and then 120 KB once each event carried a link to its own page, #53, and the weekly event count alone pushed it over; the build's 400 KB raw-payload limit bounds the data); event page under 40 KB. No third-party requests of any kind. A size check after `astro build` (the separate `size` step in CI, not part of the deploy build) fails CI when a budget is exceeded.
 
 ## 10. Chatbot and search legibility
 

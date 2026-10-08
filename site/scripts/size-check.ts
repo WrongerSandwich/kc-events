@@ -1,8 +1,14 @@
 /**
- * Run as `pnpm size` after a build, in CI only (not in `pnpm build`, the deploy build): exits non-zero when a page's
- * compressed transfer (HTML + every CSS and JS file it loads, transitively) exceeds its budget (spec section 9). Font
- * files are not counted: they are the same for every page and woff2 is already compressed; the budget is about markup,
- * styles, script, and the event data the script carries.
+ * Run as `pnpm size` after both builds (`pnpm build` and `pnpm build:e2e`), in CI only (not in `pnpm build`, the
+ * deploy build): exits non-zero when a page's compressed transfer (HTML + every CSS and JS file it loads, transitively)
+ * exceeds its budget (spec section 9). Font files are not counted: they are the same for every page and woff2 is
+ * already compressed; the budget is about markup, styles, and script.
+ *
+ * The explorer carries every published event, in its rows and in its script, so on the real build its size tracks the
+ * dataset and not the code. It is measured on the end-to-end build instead, whose fixture dataset and date never
+ * change, so its budget is a budget for code; the build's 400 KB raw-payload guard (MAX_PAYLOAD_BYTES in
+ * src/build/load-dataset.ts) is what bounds the data. The front page and event pages carry little data each and stay
+ * on the real build.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
@@ -42,20 +48,33 @@ export function measure(dist: string, page: string): { bytes: number; assets: st
   return { bytes, assets: [...seen] };
 }
 
+/** Each page's budget in gzipped bytes and the build it is measured on: "real" is dist/, "fixture" is the end-to-end build. */
+export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" }[] = [
+  { page: "index.html", budget: 50_000, build: "real" },
+  { page: "explore.html", budget: 50_000, build: "fixture" },
+];
+
 function main(): void {
-  const dist = new URL(`../${process.env.SITE_OUT_DIR ?? "dist"}/`, import.meta.url).pathname;
-  // The explorer carries every event twice, in its rows and in the island's data, so an event's own page (#53) added
-  // about 9 KB across the dataset; its budget rose from 100 KB to 120 KB for that data, not for code.
-  const budgets: Record<string, number> = { "index.html": 50_000, "explore.html": 120_000 };
+  const dirs = {
+    real: new URL("../dist/", import.meta.url).pathname,
+    fixture: new URL("../dist-e2e/", import.meta.url).pathname,
+  };
+  for (const [build, dir] of Object.entries(dirs)) {
+    if (!existsSync(dir)) {
+      console.error(`no ${dir}: run \`pnpm ${build === "real" ? "build" : "build:e2e"}\` first`);
+      process.exit(1);
+    }
+  }
+  const dist = dirs.real;
   let failed = false;
   const check = (page: string, budget: number, bytes: number, assets: string[]) => {
     const ok = bytes <= budget;
     if (!ok) failed = true;
     console.log(`${ok ? "ok  " : "OVER"} ${page}: ${bytes} / ${budget} bytes gzipped (${assets.length} assets)`);
   };
-  for (const [page, budget] of Object.entries(budgets)) {
-    const { bytes, assets } = measure(dist, page);
-    check(page, budget, bytes, assets);
+  for (const { page, budget, build } of BUDGETS) {
+    const { bytes, assets } = measure(dirs[build], page);
+    check(build === "fixture" ? `${page} (fixture data)` : page, budget, bytes, assets);
   }
   // Event pages share their scripts and differ only in markup, so the largest one is the one that could go over.
   const eventDir = join(dist, "e");
