@@ -41,7 +41,7 @@ The voice is plain and neutral, and that is deliberate: the listings and the one
 2. **Color carries meaning.** Many colors are welcome when each one says something (the kind of event, a state). Color is information first, decoration never.
 3. **Trust is visible.** Every date can be traced to its source, and the page says when it was last checked. Never imply more certainty, or more human authorship, than there is.
 4. **Tool, not voice.** Delight comes from precision, speed, and legibility, not from personality copy. The reader brings the taste; the site brings the structure.
-5. **Respect the visitor.** No ads, accounts, tracking, or third-party requests; fast on a phone; state stays in the visitor's browser.
+5. **Respect the visitor.** No ads, accounts, cookies, or third-party requests, and no measurement beyond cookieless page counts; fast on a phone; state stays in the visitor's browser.
 
 ## Accessibility & Inclusion
 
