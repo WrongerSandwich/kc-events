@@ -3,7 +3,8 @@ import type { FetchPort, FetchResult } from "../ports.js";
 import { PRODUCT, USER_AGENT } from "./identity.js";
 
 const MAX_REDIRECTS = 5;
-const TIMEOUT_MS = 15_000;
+/** How long one page may take, for either fetcher. */
+export const TIMEOUT_MS = 15_000;
 
 interface Robots {
   isAllowed(url: string, userAgent?: string): boolean | undefined;
@@ -16,9 +17,10 @@ const robotsParser = createRequire(import.meta.url)("robots-parser") as (url: st
  * identifies itself, times out, and caches by URL so each page is requested at most once per
  * run. One attempt only: a failure is cached too, and the next run is the retry.
  *
- * Build one per run; the cache lives as long as the fetcher.
+ * Build one per run; the cache lives as long as the fetcher. The browser fetcher asks this one
+ * whether robots.txt allows a URL, so both share one robots.txt cache.
  */
-export function createFetcher(): FetchPort {
+export function createFetcher(): PlainFetcher {
   const pages = new Map<string, Promise<FetchResult>>();
   const robotsByOrigin = new Map<string, Promise<Robots>>();
 
@@ -70,11 +72,19 @@ export function createFetcher(): FetchPort {
     throw new Error(`more than ${MAX_REDIRECTS} redirects`);
   }
 
-  return { fetch: (url) => memoized(pages, url, fetchPage) };
+  return {
+    fetch: (url) => memoized(pages, url, fetchPage),
+    robotsAllows: async (url) => (await robotsFor(new URL(url))).isAllowed(url, PRODUCT) === true,
+  };
+}
+
+export interface PlainFetcher extends FetchPort {
+  /** Whether robots.txt lets the job fetch this URL; throws when robots.txt cannot be reached. */
+  robotsAllows(url: string): Promise<boolean>;
 }
 
 /** Get-or-start: the first caller's promise, result or failure, is what every later caller gets. */
-function memoized<T>(cache: Map<string, Promise<T>>, key: string, load: (key: string) => Promise<T>): Promise<T> {
+export function memoized<T>(cache: Map<string, Promise<T>>, key: string, load: (key: string) => Promise<T>): Promise<T> {
   let value = cache.get(key);
   if (!value) {
     value = load(key);

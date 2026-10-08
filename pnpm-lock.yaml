@@ -11,6 +11,9 @@ importers:
       openai:
         specifier: ^7.27.0
         version: 7.27.0(undici@8.11.2)(zod@4.6.5)
+      playwright:
+        specifier: ^1.63.0
+        version: 1.63.0
       robots-parser:
         specifier: ^3.0.1
         version: 3.0.1

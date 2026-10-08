@@ -148,7 +148,7 @@ The rule that an active event which takes a strike on two consecutive runs becom
 The per-run cost ceiling, enforced by the loop from the cost returned on every model call and backstopped by a monthly limit on the API key itself. When hit, the run publishes what it verified and logs the shortfall.
 
 **Excluded source**:
-A source the job knows about but does not fetch, with the reason recorded: its `robots.txt` disallows it, its pages cannot be read (listings rendered by script, or the site refuses the job's fetcher), or its information is not worth checking.
+A source the job knows about but does not fetch, with the reason recorded: its `robots.txt` disallows it, its pages cannot be read (listings that even a browser fetch does not show, or a site that refuses the job's fetcher), or its information is not worth checking.
 
 ### Site
 

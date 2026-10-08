@@ -1,6 +1,7 @@
 /**
  * The research command. Does all file I/O: loads config, prompts, registry, and dataset, builds
  * the adapters, calls the run, and writes the dataset and the run report (Markdown plus JSON twin).
+ * BROWSER_CHANNEL=chrome has the browser fetcher use an installed Chrome instead of Playwright's Chromium.
  *
  *   pnpm research [--horizon-weeks N] [--no-discovery]
  */
@@ -15,6 +16,7 @@ import { parseRegistry } from "./registry.js";
 import { renderReportMarkdown } from "./report.js";
 import { run } from "./run.js";
 import { systemClock } from "./adapters/system.js";
+import { createBrowserFetcher } from "./adapters/browser-fetcher.js";
 import { createFetcher } from "./adapters/fetcher.js";
 import { createOpenRouterModel } from "./adapters/openrouter.js";
 import { createTavilySearch } from "./adapters/tavily.js";
@@ -58,6 +60,8 @@ async function main() {
     ? parseDataset(JSON.parse(await readFile(DATASET_PATH, "utf8")))
     : emptyDataset();
 
+  const fetcher = createFetcher();
+  const browserFetcher = createBrowserFetcher(fetcher, { channel: process.env.BROWSER_CHANNEL || undefined });
   const result = await run({
     config,
     prompts,
@@ -66,10 +70,11 @@ async function main() {
     ports: {
       model: createOpenRouterModel({ apiKey: process.env.OPENROUTER_API_KEY }),
       search: createTavilySearch({ apiKey: process.env.TAVILY_API_KEY, maxResults: config.discovery.resultsPerQuery }),
-      fetcher: createFetcher(),
+      fetcher,
+      browserFetcher,
       clock: systemClock,
     },
-  });
+  }).finally(() => browserFetcher.close());
 
   await mkdir(RUNS_DIR, { recursive: true });
   const reportBase = join(RUNS_DIR, result.report.runDate);

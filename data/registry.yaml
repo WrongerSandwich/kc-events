@@ -6,6 +6,8 @@
 #   kind: music                            # from the kinds taxonomy in research.config.yaml
 #   neighborhood: East Bottoms             # listed under a region in research.config.yaml, or the catch-all
 #   checkHints: free text passed to the extractor
+#   fetch: browser                         # optional; only for listings rendered by script (see below)
+#   waitFor: .event-card                   # optional, browser only: a CSS selector for one rendered listing
 #   status: active                         # or excluded, with a reason
 #   reason: robots.txt disallows           # required when excluded
 #   notes: free text
@@ -14,6 +16,14 @@
 # where a homepage is the listings page, the check hints say so. The neighborhood is where the
 # source's own venue is; a source that books many venues names its home base, and its check hints
 # tell the extractor to read the venue from each listing.
+#
+# Choosing the fetch: leave `fetch` out, and the page is fetched plainly. Where the plain page has no
+# listings because script renders them, `fetch: browser` loads it in headless Chromium and reads the
+# rendered page (same robots.txt check, user agent, and timeout; a few seconds more a page). The browser
+# reads the page once the network goes quiet; where it never does (ads, live scores) or the list fills
+# in after it does, `waitFor` names a selector that only a rendered listing matches. A browser does not
+# get past a site that refuses the job, and some script-rendered sites list nothing worth reading even
+# rendered; those stay excluded with the reason.
 #
 # Growing the registry: the first runs' don't-miss picks leaned heavily to music, because concert
 # rooms and series list many dated one-offs while museums, parks and festivals mostly yield runs and
@@ -99,7 +109,7 @@ sources:
     neighborhood: Downtown
     checkHints: The homepage carries the season. Presenter; performances are at the Folly Theater, the Kauffman Center and elsewhere, so read the venue from each listing.
     status: excluded
-    reason: Its homepage names no venue for any performance, so every event is held unverified; its performances are found on the Folly Theater and Lied Center calendars, which name the hall (checked 2026-10-04).
+    reason: Its homepage names no venue for any performance, so every event is held unverified; its performances are found on the Folly Theater and Lied Center calendars, which name the hall (checked 2026-10-04). It is not rendered by script; the plain fetch reads the season, so a browser does not help (checked 2026-10-08).
     notes: Presenter based at William Jewell College in Liberty; most shows are downtown.
 
   - name: Friends of Chamber Music
@@ -121,6 +131,15 @@ sources:
     kind: music
     neighborhood: Overland Park
     checkHints: Performing arts center at Johnson County Community College, Overland Park; Yardley Hall and Polsky Theatre.
+    status: active
+
+  - name: Knuckleheads
+    urls: [https://tickets.knuckleheadskc.com/]
+    kind: music
+    neighborhood: East Bottoms
+    checkHints: The ticketing homepage is the show list, at Knuckleheads, 2715 Rochester Ave; dates read like "Fri 9 Oct". Ignore the literal "%PERFORMANCESTARTDATE%" placeholders.
+    fetch: browser
+    waitFor: "#swPerformanceList .pl-item"
     status: active
 
   # --- Lawrence ----------------------------------------------------------------------------------
@@ -170,6 +189,15 @@ sources:
     kind: art/exhibitions
     neighborhood: Lawrence
     checkHints: KU's art museum. Exhibitions are limited runs.
+    status: active
+
+  - name: Liberty Hall
+    urls: [https://www.liberty-hall.com/upcoming-events]
+    kind: music
+    neighborhood: Lawrence
+    checkHints: Liberty Hall, 644 Massachusetts St, Lawrence. The list carries concerts in the Big Theatre, special film screenings in the Main Auditorium, and Jazz Sundays in the Spacement; the room is on each listing. Its regular cinema schedule is a separate page, not listed here.
+    fetch: browser
+    waitFor: .eapp-events-calendar-grid-item
     status: active
 
   # --- Theater and dance -------------------------------------------------------------------------
@@ -355,6 +383,15 @@ sources:
     status: active
     notes: ICS feed at https://kcmavericks.com/schedule-home.ics
 
+  - name: Sporting Kansas City
+    urls: [https://www.sportingkc.com/schedule/]
+    kind: sports
+    neighborhood: Kansas City, Kansas
+    checkHints: The season of home matches is one recurring event titled "Sporting Kansas City", with a schedule naming the competition and its months. Home matches are at Sporting Park (Children's Mercy Park), 1 Sporting Way, Kansas City, Kansas; the schedule lists away matches at other clubs' stadiums too, which are outside the geography. Past matches show a final score.
+    fetch: browser
+    waitFor: .mls-c-match-list__match
+    status: active
+
   # --- Festivals, markets, community -------------------------------------------------------------
 
   - name: Power & Light District
@@ -426,41 +463,21 @@ sources:
     reason: The events and tickets pages redirect to a queue-it waiting room whose robots.txt disallows fetching (checked 2026-10-03).
     notes: The homepage loads but carries no listings.
 
-  - name: Knuckleheads
-    urls: [https://tickets.knuckleheadskc.com/]
-    kind: music
-    neighborhood: East Bottoms
-    status: excluded
-    reason: The show list is rendered by script; the fetched page has no events (checked 2026-10-03).
-
-  - name: Liberty Hall
-    urls: [https://www.liberty-hall.com/upcoming-events]
-    kind: music
-    neighborhood: Lawrence
-    status: excluded
-    reason: The event and cinema lists are rendered by script; the fetched page has no events (checked 2026-10-03).
-
   - name: Uptown Theater
-    urls: [https://uptowntheater.com/events/]
+    urls: [https://uptowntheater.com/calendar/]
     kind: music
     neighborhood: Midtown
     status: excluded
-    reason: The calendar is rendered by script, and its RSS feed gives post dates, not show dates (checked 2026-10-03).
+    reason: Even rendered in a browser the site lists no shows; its calendar page only links out to Ticketmaster, and /events/ shows a broken-plugin error (checked 2026-10-08).
+    notes: Its RSS feed gives post dates, not show dates.
 
   - name: Kansas City Royals
     urls: [https://www.mlb.com/royals/schedule]
     kind: sports
     neighborhood: Truman Sports Complex
     status: excluded
-    reason: The schedule is rendered by script; the fetched page has no dates (checked 2026-10-03).
-
-  - name: Sporting Kansas City
-    urls: [https://www.sportingkc.com/schedule/]
-    kind: sports
-    neighborhood: Kansas City, Kansas
-    status: excluded
-    reason: The schedule is rendered by script; the fetched page has no dates (checked 2026-10-03).
-    notes: Children's Mercy Park, Kansas City, Kansas.
+    reason: Off-season. Rendered in a browser, the schedule shows games, but there are none until spring training (checked 2026-10-08 on the September page). Activate it in late February with a browser fetch.
+    notes: The page redirects to the current month's grid, so in season a run reads only the rest of that month. Wait for games with a selector; the page never goes network-quiet, so without one the browser fetch times out.
 
   - name: Kansas City Current
     urls: [https://www.kccurrent.com/schedule]
@@ -495,4 +512,5 @@ sources:
     kind: other
     neighborhood: Crown Center
     status: excluded
-    reason: The events list is rendered by script, and its RSS feed carries no event dates (checked 2026-10-03).
+    reason: Even rendered in a browser, the list shows only one day's events with no dates on them (exhibitions, shows, the planetarium), and nothing beyond that day (checked 2026-10-08). City Stage productions come in through their presenters.
+    notes: Its RSS feed carries no event dates.

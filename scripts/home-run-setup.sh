@@ -192,7 +192,7 @@ finish() {
 # The GitHub workflow stays as the manual fallback; scripts/weekly-workflow-setup.sh sets its secrets.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=6
+TOTAL_STAGES=7
 DEFAULT_RUN_DIR="$HOME/kc-this-week-run"
 CRON_SCHEDULE="17 6 * * 1" # Mondays 6:17 a.m. local: early in the week, off the top of the hour
 
@@ -251,7 +251,21 @@ if [[ -z "$(cd "$RUN_DIR" && git config user.name)" || -z "$(cd "$RUN_DIR" && gi
 fi
 say "Commits will be by $(cd "$RUN_DIR" && git config user.name) <$(cd "$RUN_DIR" && git config user.email)>."
 
-# ── Stage 3: keys into the clone's .env ────────────────────────────────────
+# ── Stage 3: the browser ───────────────────────────────────────────────────
+stage "Browser: Chromium for the script-rendered calendars"
+say "Registry sources marked fetch: browser are loaded in headless Chromium, which Playwright keeps"
+say "in its own cache (~/.cache/ms-playwright), not on the system. The weekly run re-runs this install,"
+say "which does nothing unless a Playwright upgrade needs a new Chromium."
+(cd "$RUN_DIR" && pnpm exec playwright install --only-shell chromium)
+if (cd "$RUN_DIR" && node -e 'import("playwright").then(({ chromium }) => chromium.launch()).then((b) => b.close())' 2>/dev/null); then
+  say "Chromium launches."
+else
+  warn "Chromium is installed but does not launch, most likely for want of system libraries"
+  step "Install them with: cd $RUN_DIR && sudo pnpm exec playwright install-deps chromium"
+  SKIPPED+=("make Chromium launch: cd $RUN_DIR && sudo pnpm exec playwright install-deps chromium")
+fi
+
+# ── Stage 4: keys into the clone's .env ────────────────────────────────────
 stage "Keys: the clone's .env"
 say "The run reads OPENROUTER_API_KEY and TAVILY_API_KEY from the clone's gitignored .env."
 note "Enter keeps the key already in this checkout's $ENV_FILE."
@@ -269,7 +283,7 @@ for key in OPENROUTER_API_KEY TAVILY_API_KEY; do
   fi
 done
 
-# ── Stage 4: push credential ───────────────────────────────────────────────
+# ── Stage 5: push credential ───────────────────────────────────────────────
 stage "Push credential: git uses gh's token"
 say "gh auth setup-git makes git use the token gh holds, for every github.com clone of this user."
 if confirm "Run gh auth setup-git?"; then
@@ -284,7 +298,7 @@ else
   SKIPPED+=("fix the push credential: cd $RUN_DIR && git push --dry-run origin main")
 fi
 
-# ── Stage 5: the cron line ─────────────────────────────────────────────────
+# ── Stage 6: the cron line ─────────────────────────────────────────────────
 stage "Cron: Mondays at 6:17 a.m. local"
 CRON_LINE="$CRON_SCHEDULE PATH=$CRON_PATH $RUN_DIR/scripts/weekly-run.sh"
 say "This line goes in your crontab (PATH is set for this job alone; other lines are untouched):"
@@ -297,7 +311,7 @@ else
   SKIPPED+=("add to crontab: $CRON_LINE")
 fi
 
-# ── Stage 6: a first run ───────────────────────────────────────────────────
+# ── Stage 7: a first run ───────────────────────────────────────────────────
 stage "First run"
 say "A run started now checks that everything works end to end: it spends real model money (up to"
 say "the 5 USD per-run cap) and commits its results to main. It takes a few minutes."

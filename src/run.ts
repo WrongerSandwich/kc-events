@@ -15,7 +15,7 @@ import { applyJudgment, buildCurationRequest, cleanStoredWhyLine, cleanWhyLine, 
 import { discoveryQueries, hostOf, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { findMatch, normalizeName, oneMonthOf, sameEvent, sameName, type VenueAliases } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
-import type { FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
+import type { FetchOptions, FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
 import { plural } from "./markdown.js";
 import type { EventRef, RunReport, SourceReport } from "./report.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
@@ -59,7 +59,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const neighborhoods = neighborhoodList(config, registry);
   // Every model call goes through the cap, whatever stage makes it, and is counted for the fuse.
   const model = countOutcomes(capSpend(ports.model, config.spendCapUsd));
-  const registryLane = await checkRegistry(registry, dataset.sourceState, ports.fetcher);
+  const registryLane = await checkRegistry(registry, dataset.sourceState, ports);
   assertSomethingFetched(registryLane.sourceReports);
   // An index page is never a primary page, so nothing can be cited to one even if the registry fetched it.
   const fetchedUrls = new Set(
@@ -251,7 +251,7 @@ interface SourcePage {
  * each source's consecutive failure count forward. A blocked source's count is left alone:
  * it is neither a success nor a transient failure.
  */
-async function checkRegistry(registry: Registry, previous: Record<string, SourceState>, fetcher: FetchPort) {
+async function checkRegistry(registry: Registry, previous: Record<string, SourceState>, ports: Ports) {
   const sourceReports: SourceReport[] = [];
   const pages: SourcePage[] = [];
   const attempts = noAttempts();
@@ -263,7 +263,7 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
       sourceReports.push({ name: source.name, result: "excluded", extracted: 0, detail: source.reason });
       continue;
     }
-    const checked = await checkSource(source, fetcher);
+    const checked = await checkSource(source, ports);
     for (const url of [...source.urls, ...checked.pages.map((p) => p.finalUrl)]) attempts.tried.add(normalizeUrl(url, url));
     for (const url of checked.outages) attempts.outages.add(normalizeUrl(url, url));
     for (const url of checked.gone) attempts.gone.add(normalizeUrl(url, url));
@@ -289,14 +289,14 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
  * are returned so re-verification does not strike the events on them, and URLs gone or disallowed
  * so it strikes every event on them, whatever its date.
  */
-async function checkSource(source: Source, fetcher: FetchPort): Promise<{ report: SourceReport; pages: FetchResult[]; outages: string[]; gone: string[] }> {
+async function checkSource(source: Source, ports: Ports): Promise<{ report: SourceReport; pages: FetchResult[]; outages: string[]; gone: string[] }> {
   const blocked: string[] = [];
   const failed: string[] = [];
   const outages: string[] = [];
   const gone: string[] = [];
   const pages: FetchResult[] = [];
   for (const url of source.urls) {
-    const fetched = await fetchReadable(url, fetcher);
+    const fetched = await fetchReadable(url, ...fetcherFor(source, ports));
     if ("page" in fetched) {
       pages.push(fetched.page);
       continue;
@@ -604,7 +604,10 @@ async function reverify(
       notReverified += pending.filter((e) => e.primaryUrl === url).length;
       continue;
     }
-    const fetched = await fetchReadable(url, ports.fetcher);
+    const onPage = pending.filter((e) => e.primaryUrl === url);
+    const origin = originFor(onPage[0]!, url, registry);
+    // The page is fetched the way its source's pages are; a discovered page always plainly.
+    const fetched = await fetchReadable(url, ...(origin.lane === "registry" ? fetcherFor(origin.source, ports) : plainly(ports)));
     if (!("page" in fetched)) {
       if (fetched.failure === "outage") {
         outageAt.add(url);
@@ -615,11 +618,10 @@ async function reverify(
       continue;
     }
     const { page } = fetched;
-    const onPage = pending.filter((e) => e.primaryUrl === url);
     const pageUrls = new Set([url, normalizeUrl(page.finalUrl, url)]);
     let read: Awaited<ReturnType<typeof extractPage>>;
     try {
-      read = await extractPage(page, originFor(onPage[0]!, url, registry), ports.model, { ...context, fetchedUrls: pageUrls });
+      read = await extractPage(page, origin, ports.model, { ...context, fetchedUrls: pageUrls });
     } catch (error) {
       if (error instanceof SpendCapReached) throw error;
       problems.push(`${url} not re-read: ${modelFailed(error)}; ${plural(onPage.length, "event")} left unchanged`);
@@ -700,6 +702,19 @@ function combineAttempts(...all: PageAttempts[]): PageAttempts {
   };
 }
 
+/**
+ * The fetcher a registry source's pages go through, and what it is told: the browser for a source
+ * whose listings are rendered by script, the plain fetcher otherwise.
+ */
+function fetcherFor(source: Source, ports: Ports): FetchRoute {
+  if (source.fetch !== "browser") return plainly(ports);
+  return [ports.browserFetcher, source.waitFor ? { waitFor: source.waitFor } : undefined];
+}
+
+type FetchRoute = [fetcher: FetchPort, options?: FetchOptions];
+
+const plainly = (ports: Ports): FetchRoute => [ports.fetcher];
+
 /** HTTP statuses that say a page is gone, which is a reading of it; any other failure is an outage. */
 const GONE_STATUSES = new Set([404, 410]);
 
@@ -711,9 +726,10 @@ const GONE_STATUSES = new Set([404, 410]);
 async function fetchReadable(
   url: string,
   fetcher: FetchPort,
+  options?: FetchOptions,
 ): Promise<{ page: FetchResult } | { problem: string; failure: "outage" | "gone" | "disallowed" }> {
   try {
-    const page = await fetcher.fetch(url);
+    const page = await fetcher.fetch(url, options);
     if (!page.robotsAllowed) return { problem: `robots.txt disallows ${url}`, failure: "disallowed" };
     if (page.status >= 200 && page.status < 300) return { page };
     return { problem: `${url}: HTTP ${page.status}`, failure: GONE_STATUSES.has(page.status) ? "gone" : "outage" };

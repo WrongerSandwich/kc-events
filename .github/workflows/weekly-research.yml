@@ -51,6 +51,9 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
           NO_DISCOVERY: ${{ inputs.no-discovery }}
+          # Registry sources with fetch: browser load in the Chrome GitHub's Ubuntu image already has,
+          # so the run downloads no Chromium of its own.
+          BROWSER_CHANNEL: chrome
         run: |
           args=()
           if [[ "$NO_DISCOVERY" == "true" ]]; then args+=(--no-discovery); fi

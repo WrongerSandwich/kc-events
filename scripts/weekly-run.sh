@@ -6,7 +6,8 @@
 # Runs in the clone this script lives in, which should be one dedicated to the job (set up by
 # scripts/home-run-setup.sh): it pulls main, installs, runs `pnpm research`, and commits
 # data/events.json and the run's report as "Weekly research run <run date>", then pushes. A failed
-# run commits nothing, so the last committed dataset stands. Each run's output goes to a log under
+# run commits nothing, so the last committed dataset stands. It also installs the Chromium that
+# registry sources with `fetch: browser` are loaded in. Each run's output goes to a log under
 # $XDG_STATE_HOME/kc-this-week (default ~/.local/state/kc-this-week), and a failure opens a GitHub
 # issue carrying the log's tail, since nobody is watching a cron job's terminal.
 #
@@ -57,6 +58,9 @@ fi
 git switch --quiet main
 git pull --quiet --rebase origin main
 pnpm install --frozen-lockfile --silent
+# The browser fetch's Chromium, in step with the Playwright the lockfile pins; a no-op once it is there.
+# A failed download does not stop the run: the browser sources count an outage, the rest are read.
+pnpm exec playwright install --only-shell chromium || echo "could not install Chromium; sources with fetch: browser will fail this run"
 
 timeout 90m pnpm research "$@"
 

@@ -1,5 +1,5 @@
 /**
- * The four ports the run talks to the world through. The run does no I/O of its own;
+ * The ports the run talks to the world through: a model, a search, two fetchers, and a clock. The run does no I/O of its own;
  * the CLI builds real adapters, tests pass fakes.
  */
 
@@ -60,8 +60,13 @@ export interface FetchResult {
   robotsAllowed: boolean;
 }
 
+export interface FetchOptions {
+  /** A CSS selector to wait for before reading the page; only a browser fetcher waits for anything. */
+  waitFor?: string;
+}
+
 export interface FetchPort {
-  fetch(url: string): Promise<FetchResult>;
+  fetch(url: string, options?: FetchOptions): Promise<FetchResult>;
 }
 
 export interface Clock {
@@ -72,5 +77,7 @@ export interface Ports {
   model: ModelPort;
   search: SearchPort;
   fetcher: FetchPort;
+  /** Loads a page in a browser and returns the rendered HTML, for a registry source with `fetch: browser`. */
+  browserFetcher: FetchPort;
   clock: Clock;
 }

@@ -1,4 +1,4 @@
-import type { CompletionRequest, CompletionResult, FetchResult, Ports, SearchResult } from "../../src/ports.js";
+import type { CompletionRequest, CompletionResult, FetchPort, FetchResult, Ports, SearchResult } from "../../src/ports.js";
 import { EVENTS_TO_JUDGE } from "../../src/curation.js";
 import { TEST_MODELS } from "./config.js";
 
@@ -57,24 +57,35 @@ export function fakePorts(now: Date, { pages = {}, completions = [], curations =
         return results;
       },
     },
-    fetcher: {
-      async fetch(url): Promise<FetchResult> {
-        const page = pages[url];
-        if (page === "robots-blocked") {
-          calls.push(`robots-blocked:${url}`);
-          return { url, finalUrl: url, status: 0, body: "", robotsAllowed: false };
-        }
-        if (page === "robots-unreachable") {
-          calls.push(`robots-unreachable:${url}`);
-          throw new Error("robots.txt unreachable (HTTP 503)");
-        }
-        calls.push(`fetch:${url}`);
-        if (page === undefined) throw new Error(`fake fetcher has no canned page for ${url}`);
-        if (page instanceof Error) throw page;
-        return { url, finalUrl: url, status: page.status, body: page.body, robotsAllowed: true };
-      },
-    },
+    fetcher: cannedFetcher(pages, calls, ""),
+    browserFetcher: cannedFetcher(pages, calls, "browser"),
     clock: { now: () => now },
   };
   return { ports, calls, requests };
+}
+
+/**
+ * A fetcher over the canned pages, recording each call. The plain one records `fetch:<url>`,
+ * `robots-blocked:<url>`, and `robots-unreachable:<url>`; the browser one puts `browser` in front
+ * (`browser:<url>`, `browser robots-blocked:<url>`) and adds the selector it was told to wait for.
+ */
+function cannedFetcher(pages: Record<string, CannedPage>, calls: string[], prefix: string): FetchPort {
+  const record = (what: string, url: string) => calls.push(prefix && what ? `${prefix} ${what}:${url}` : `${prefix || what}:${url}`);
+  return {
+    async fetch(url, options): Promise<FetchResult> {
+      const page = pages[url];
+      if (page === "robots-blocked") {
+        record("robots-blocked", url);
+        return { url, finalUrl: url, status: 0, body: "", robotsAllowed: false };
+      }
+      if (page === "robots-unreachable") {
+        record("robots-unreachable", url);
+        throw new Error("robots.txt unreachable (HTTP 503)");
+      }
+      calls.push(`${prefix || "fetch"}:${url}${options?.waitFor ? ` waiting for ${options.waitFor}` : ""}`);
+      if (page === undefined) throw new Error(`fake fetcher has no canned page for ${url}`);
+      if (page instanceof Error) throw page;
+      return { url, finalUrl: url, status: page.status, body: page.body, robotsAllowed: true };
+    },
+  };
 }

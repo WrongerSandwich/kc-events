@@ -56,6 +56,13 @@ describe("registry", () => {
     expect(() => parseRegistry({ sources: [{ ...active, urls: [] }] })).toThrow();
     expect(() => parseRegistry({ sources: [active, active] })).toThrow(/unique/);
   });
+
+  it("takes a browser fetch per source, with a selector to wait for only alongside it", () => {
+    const registry = parseRegistry({ sources: [active, { ...active, name: "Rendered", fetch: "browser", waitFor: ".show" }] });
+    expect(registry.sources.map((s) => s.fetch)).toEqual([undefined, "browser"]);
+    expect(() => parseRegistry({ sources: [{ ...active, fetch: "headless" }] })).toThrow();
+    expect(() => parseRegistry({ sources: [{ ...active, waitFor: ".show" }] })).toThrow(/waitFor/);
+  });
 });
 
 describe("dataset", () => {
