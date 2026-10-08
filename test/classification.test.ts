@@ -64,26 +64,25 @@ describe("recurrence, kind, geography, and neighborhood", () => {
     expect(dataset.events[0]).not.toHaveProperty("start");
   });
 
-  it("a program a page titles month by month is one recurring event, read with rules that say so, and a dated series still ends", async () => {
+  it("a series a page titles month by month with only days and times is one recurring event, and a month-titled entry with dates keeps them", async () => {
+    // The shape of the National WWI Museum's calendar, which splits its standing tours into one entry per month.
     const museum = source("National WWI Museum and Memorial", { kind: "other", neighborhood: "Crossroads" });
     const url = museum.urls[0]!;
     const page = `<html><body>
-      <h3>Main Gallery Tours (Oct. 2026)</h3><p>Daily, 10:30am and 1:30pm. Meet at the Paul Sunderland Glass Bridge.</p>
-      <h3>Main Gallery Tours (Nov. 2026)</h3><p>Daily, 10:30am and 1:30pm. Meet at the Paul Sunderland Glass Bridge.</p>
-      <h3>Hands-on History (Oct. 2026)</h3><p>Saturdays, 11am–2pm, in the Main Gallery.</p>
-      <h3>Hands-on History (Nov. 2026)</h3><p>Saturdays, 11am–2pm, in the Main Gallery.</p>
-      <h3>Film Series: The Great War on Screen</h3><p>Thursdays, Oct. 15 through Nov. 12, 6pm.</p>
+      <p>Monday, Friday-Saturday</p><p>Select times</p><h3>Main Gallery Tours (Oct. 2026)</h3>
+      <p>Monday, Friday-Saturday</p><p>Select times</p><h3>Main Gallery Tours (Nov. 2026)</h3>
+      <p>Wednesdays, Oct. 7-28, 2026</p><p>5:30-8 p.m.</p><h3>Tower After Hours (Oct. 2026)</h3>
     </body></html>`;
     const rules = readFileSync(new URL("../prompts/extraction-rules.md", import.meta.url), "utf8");
-    const at = (overrides: Record<string, unknown>) => candidateAt(museum, { startDate: null, startTime: null, venueEvidence: "National WWI Museum and Memorial", ...overrides });
+    const museumCandidate = (overrides: Record<string, unknown>) =>
+      candidateAt(museum, { startDate: null, startTime: null, venueEvidence: "National WWI Museum and Memorial", ...overrides });
     const fakes = fakePorts(WEEK_1, {
       pages: { [url]: { status: 200, body: page } },
       completions: [
         costing(
           0.01,
-          at({ title: "Main Gallery Tours", schedule: "Daily, 10:30am and 1:30pm", dateEvidence: "Daily, 10:30am and 1:30pm" }),
-          at({ title: "Hands-on History", schedule: "Saturdays, 11am–2pm", dateEvidence: "Saturdays, 11am–2pm" }),
-          at({ title: "Film Series: The Great War on Screen", startDate: "2026-10-15", startTime: "18:00", endDate: "2026-11-12", dateEvidence: "Thursdays, Oct. 15 through Nov. 12, 6pm" }),
+          museumCandidate({ title: "Main Gallery Tours", schedule: "Monday, Friday-Saturday, Select times", dateEvidence: "Monday, Friday-Saturday Select times" }),
+          museumCandidate({ title: "Tower After Hours", startDate: "2026-10-07", startTime: "17:30", endDate: "2026-10-28", dateEvidence: "Wednesdays, Oct. 7-28, 2026" }),
         ),
       ],
     });
@@ -96,18 +95,17 @@ describe("recurrence, kind, geography, and neighborhood", () => {
       ports: fakes.ports,
     });
 
-    // The model is told to fold month-titled entries into one recurring candidate, and that a stated end still makes a limited run.
+    // The rules the model reads say to fold undated month-titled entries, and still say a stated end makes a limited run.
     const system = fakes.requests.find((r) => r.model === "test/extraction")!.messages[0]!.content;
     expect(system).toContain("with the month in the title");
     expect(system).toContain("is not recurring: give its `startDate` and `endDate`");
 
     expect(dataset.events.map((e) => [e.title, e.recurrence, e.status])).toEqual([
       ["Main Gallery Tours", "recurring", "active"],
-      ["Hands-on History", "recurring", "active"],
-      ["Film Series: The Great War on Screen", "limited-run", "active"],
+      ["Tower After Hours", "limited-run", "active"],
     ]);
-    for (const e of dataset.events.slice(0, 2)) expect(e).not.toHaveProperty("start");
-    expect(dataset.events[0]).toMatchObject({ schedule: "Daily, 10:30am and 1:30pm" });
+    expect(dataset.events[0]).toMatchObject({ schedule: "Monday, Friday-Saturday, Select times" });
+    expect(dataset.events[0]).not.toHaveProperty("start");
   });
 
   it("a kind from the taxonomy is kept, and the model's kind wins over the source's", async () => {
