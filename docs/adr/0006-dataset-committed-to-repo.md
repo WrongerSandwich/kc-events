@@ -1,3 +1,5 @@
 # The dataset and run reports are committed back to the repo by each run
 
 The research job is incremental, so state must persist between weekly runs. We commit `events.json`, the registry, and each run's report back to this repo from the job itself, rather than keeping state only in a deploy artifact or an external store. Git history is then the audit trail for every add, update, and expiry, which is what grading wrong dates needs, and the weekly commit is also the repository activity that stops GitHub from auto-disabling a public repo's scheduled workflows after 60 days of inactivity. The cost is a growing history of a few hundred KB a week, accepted.
+
+**Amended (#22, ADR 0010):** the 60-day note no longer applies; the workflow has no schedule to disable, and the weekly commit now comes from a home machine.

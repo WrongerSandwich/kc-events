@@ -1,17 +1,16 @@
-# The weekly research run: runs the CLI and commits the dataset (source state lives inside it) and
-# the run's report back to the branch it ran on. A failed run commits nothing, so the last committed
-# dataset stands, and the job goes red with the error in the "Research run" step's log.
+# The weekly research run on GitHub Actions: the manual fallback for the home machine's cron
+# (scripts/weekly-run.sh, ADR 0010), run from the Actions page when the home run misses a week. It
+# runs the CLI and commits the dataset (source state lives inside it) and the run's report back to
+# the branch it ran on. A failed run commits nothing, so the last committed dataset stands, and the
+# job goes red with the error in the "Research run" step's log.
 #
 # Secrets OPENROUTER_API_KEY and TAVILY_API_KEY are set by scripts/weekly-workflow-setup.sh.
-# The weekly commit is meant to be the repo activity that keeps GitHub from disabling this schedule
-# after 60 quiet days. If GitHub disables it anyway, re-enable it on the Actions page.
+# There is no schedule here: GitHub's address ranges are refused by some sources (#22), so the
+# schedule lives at home. Only scheduled workflows are disabled after 60 quiet days, so this one
+# stays runnable by hand indefinitely.
 name: Weekly research
 
 on:
-  schedule:
-    # Mondays at 11:17 UTC: 6:17 a.m. Central in summer, 5:17 in winter. Early in the week, ahead of
-    # the Tuesday-morning push, and off the top of the hour, when scheduled jobs queue longest.
-    - cron: "17 11 * * 1"
   workflow_dispatch:
     inputs:
       no-discovery:
