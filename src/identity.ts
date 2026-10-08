@@ -76,15 +76,15 @@ export function sameEvent(a: EventIdentity, b: EventIdentity, live: readonly Eve
 const MONTH_TAG = /\s*\(\s*(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\.?(?:\s+\d{4})?\s*\)\s*$/iu;
 
 /**
- * Whether a dated record is one month's entry of a standing program (#63): the same primary page,
- * and its title is the program's with a month tag after it. A page that titles a standing program
+ * Whether a dated record is one month of a recurring event (#63): the same primary page, and its
+ * title is the recurring event's with a month tag after it. A page that titles a recurring event
  * month by month ("Main Gallery Tours (Oct. 2026)") is read as the one recurring event, but a
- * reading may still give one month as a one-off.
+ * reading may still give one month as a dated event.
  */
-export function monthEntryOf(entry: EventIdentity, program: EventIdentity): boolean {
-  if (entry.primaryUrl !== program.primaryUrl) return false;
-  const untagged = entry.title.replace(MONTH_TAG, "");
-  return untagged !== entry.title && sameName(untagged, program.title);
+export function oneMonthOf(dated: EventIdentity, recurring: EventIdentity): boolean {
+  if (dated.primaryUrl !== recurring.primaryUrl) return false;
+  const untagged = dated.title.replace(MONTH_TAG, "");
+  return untagged !== dated.title && sameName(untagged, recurring.title);
 }
 
 /**

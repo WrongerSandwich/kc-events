@@ -54,7 +54,7 @@ The category of an event, from a fixed taxonomy.
 _Avoid_: type, category, genre
 
 **Status**:
-Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, `index-page` (its primary page was an index page), or `duplicate` (another record turned out to be the same event and was seen first, or is the recurring event this one month's entry of a standing program belongs to). A postponement with a new date is a date change, not an expiry.
+Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, `index-page` (its primary page was an index page), or `duplicate` (another record turned out to be the same event and was seen first, or is the recurring event this one is one month of). A postponement with a new date is a date change, not an expiry.
 
 **Last-verified**:
 The date of the most recent run that read the event's date and venue from its primary page. Shown on every published event.
