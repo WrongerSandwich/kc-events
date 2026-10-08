@@ -33,16 +33,45 @@ const runDay = localDate(meta.lastSuccessfulRun);
   .top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 var(--space-4); }
   /* The name is the site's one piece of display type: the fountain mark, then the words in tracked capitals. */
   .name { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--font-display); font-size: 1.0625rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg); padding-block: var(--space-2); }
-  .name :global(.mark) { width: 1.375rem; height: 1.375rem; flex: none; }
+  .name :global(.mark) { width: 1.375rem; height: 1.375rem; flex: none; overflow: visible; }
   /* Josefin Sans sits high in its line box; the words come down so the capitals centre on the mark and the nav. */
   .words { display: inline-block; transform: translateY(0.14em); }
   .name:hover { text-decoration: none; }
+  /* Pointing at the name makes the fountain play once: the jet surges, and the drops leave it centre first, arc
+     outward, fall into the basins, and well back up in place. Drawn in the mark's own 32-unit space; the global
+     reduced-motion rule turns it off. */
+  .name :global(.drop), .name :global(.jet) { transform-box: fill-box; }
+  .name :global(.jet) { transform-origin: 50% 100%; }
+  .name :global(.drop-1) { --dx: -2.5px; --rise: -2px; --fall: 8px; --delay: 120ms; }
+  .name :global(.drop-2) { --dx: -2px; --rise: -2.5px; --fall: 6px; --delay: 60ms; }
+  .name :global(.drop-3) { --dx: 0px; --rise: -3px; --fall: 4px; --delay: 0ms; }
+  .name :global(.drop-4) { --dx: 2px; --rise: -2.5px; --fall: 6px; --delay: 60ms; }
+  .name :global(.drop-5) { --dx: 2.5px; --rise: -2px; --fall: 8px; --delay: 120ms; }
+  .name:hover :global(.drop), .name:focus-visible :global(.drop) { animation: fountain-drop 900ms var(--delay) both; }
+  .name:hover :global(.jet), .name:focus-visible :global(.jet) { animation: fountain-jet 420ms var(--ease-out); }
+  @keyframes fountain-drop {
+    0% { transform: translate(0, 0); animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1); }
+    30% { transform: translate(calc(var(--dx) * 0.5), var(--rise)); opacity: 1; animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.4); }
+    70% { transform: translate(var(--dx), var(--fall)); opacity: 0; }
+    71% { transform: translate(0, 0) scale(0); opacity: 0; animation-timing-function: var(--ease-out); }
+    100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  }
+  @keyframes fountain-jet {
+    0%, 100% { transform: scaleY(1); }
+    35% { transform: scaleY(1.35); }
+  }
   /* Links padded to a 44 px target; the negative margin keeps the row's right edge on the measure. */
   nav { display: flex; margin-right: calc(-1 * var(--space-2)); }
   nav :global(a) { display: inline-flex; align-items: center; min-height: var(--tap); padding-inline: var(--space-2); font-size: var(--text-sm); color: var(--fg-muted); }
   nav :global(a:hover) { color: var(--fg); text-decoration: none; }
   .stamp { font-size: var(--text-xs); color: var(--fg-faint); }
-  @media (max-width: 22rem) {
+  /* "KC This Week" is three words: on a phone the name sets smaller and tighter so the nav keeps its row, with room
+     to spare while the fallback faces (wider than Josefin and Geist) stand in, or the nav would wrap and then jump. */
+  @media (max-width: 26rem) {
+    .name { font-size: 0.875rem; letter-spacing: 0.08em; }
+    .top { column-gap: var(--space-2); }
+  }
+  @media (max-width: 23rem) {
     nav :global(a) { padding-inline: var(--space-1); }
     nav { margin-right: calc(-1 * var(--space-1)); }
     .top { column-gap: var(--space-2); }
