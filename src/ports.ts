@@ -1,6 +1,6 @@
 /**
- * The ports the run talks to the world through: a model, a search, two fetchers, and a clock. The run does no I/O of its own;
- * the CLI builds real adapters, tests pass fakes.
+ * The ports the run talks to the world through: a model, a search, two fetchers, and a clock.
+ * The run does no I/O of its own; the CLI builds real adapters, tests pass fakes.
  */
 
 export interface ChatMessage {

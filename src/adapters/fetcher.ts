@@ -40,6 +40,7 @@ export function createFetcher(): PlainFetcher {
   }
 
   const robotsFor = (url: URL) => memoized(robotsByOrigin, url.origin, loadRobots);
+  const robotsAllows = async (url: URL) => (await robotsFor(url)).isAllowed(url.href, PRODUCT) === true;
 
   // RFC 9309: a 4xx robots.txt means no rules; a 5xx or unreachable one means do not crawl.
   // We report the latter as a fetch failure rather than a block, since it is usually transient.
@@ -56,8 +57,7 @@ export function createFetcher(): PlainFetcher {
     let current = url;
     for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
       const target = new URL(current);
-      const robots = await robotsFor(target);
-      if (robots.isAllowed(target.href, PRODUCT) !== true) {
+      if (!(await robotsAllows(target))) {
         return { url, finalUrl: current, status: 0, body: "", robotsAllowed: false };
       }
       const response = await request(current, "manual");
@@ -74,7 +74,7 @@ export function createFetcher(): PlainFetcher {
 
   return {
     fetch: (url) => memoized(pages, url, fetchPage),
-    robotsAllows: async (url) => (await robotsFor(new URL(url))).isAllowed(url, PRODUCT) === true,
+    robotsAllows: (url) => robotsAllows(new URL(url)),
   };
 }
 
