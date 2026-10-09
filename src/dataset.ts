@@ -23,6 +23,8 @@ export const leadSchema = z.discriminatedUnion("lane", [
 const eventFields = z.strictObject({
   id: z.string().min(1),
   title: z.string().min(1),
+  /** What the page says the event is, in a sentence or two, written by extraction; absent when no reading has said more than the listing line. */
+  description: z.string().min(1).optional(),
   /** Absent for recurring events. */
   start: isoDateOrDateTime.optional(),
   /** Optional for one-offs on a single date; absent for recurring events. */

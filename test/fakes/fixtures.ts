@@ -49,6 +49,7 @@ export function candidateAt(at: Source, overrides: Record<string, unknown> = {})
     dateEvidence: "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM",
     venueEvidence: `${at.name}, 1 Main St`,
     notice: "none",
+    description: null,
     ...overrides,
   };
 }

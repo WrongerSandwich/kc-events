@@ -34,5 +34,8 @@ export type PublishedMeta = {
   timeZone: string;
 };
 
-/** What loadPublished returns; the generator writes `events` to src/generated/events.ts and the rest to meta.ts. */
-export type Published = PublishedMeta & { events: PublishedEvent[] };
+/** What the page says each event is, by event id, for the events that have one; only the event page reads it. */
+export type PublishedDescriptions = Record<string, string>;
+
+/** What loadPublished returns; the generator writes `events` to src/generated/events.ts, `descriptions` to descriptions.ts, and the rest to meta.ts. */
+export type Published = PublishedMeta & { events: PublishedEvent[]; descriptions: PublishedDescriptions };

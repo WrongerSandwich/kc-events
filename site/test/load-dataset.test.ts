@@ -32,6 +32,17 @@ describe("loadPublished", () => {
     expect(p.events[1]).not.toHaveProperty("eventUrl");
   });
 
+  it("keeps descriptions out of the events and hands them over by id, for published events only", () => {
+    const p = loadPublished(write(dataset([
+      activeEvent({ description: "A three-piece playing their first record." }),
+      activeEvent({ id: "evt_000000000002" }),
+      activeEvent({ id: "evt_000000000003", start: "2026-10-04", description: "Already over." }),
+    ])));
+    expect(p.events.map((e) => e.id)).toEqual(["evt_000000000001", "evt_000000000002"]);
+    expect(p.events[0]).not.toHaveProperty("description");
+    expect(p.descriptions).toEqual({ evt_000000000001: "A three-piece playing their first record." });
+  });
+
   it("maps a neighborhood that names a region to that region, and anything else unlisted to the catch-all", () => {
     const p = loadPublished(write(dataset([
       activeEvent({ neighborhood: "Johnson County" }),

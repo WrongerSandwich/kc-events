@@ -423,6 +423,14 @@ test("the site's page for an event sends the reader to the event's own page and 
   await expect(verified.getByRole("link", { name: "Wrong? Report it" })).toHaveAttribute("href", /Event%20page%3A%20https%3A%2F%2Ftickets.example.com%2Ffrizzi/);
 });
 
+test("an event page says what the event is when the job read a description, and nothing when it did not", async ({ page }) => {
+  await on(page, BUILD_DAY, "/e/evt_e2e000000001");
+  await expect(page.locator(".about")).toHaveText("The composer and his band play his scores for Lucio Fulci's films live, with clips on screen.");
+  await on(page, BUILD_DAY, "/e/evt_e2e000000002");
+  await expect(page.locator("article.event")).toBeVisible();
+  await expect(page.locator(".about")).toHaveCount(0);
+});
+
 test("an event with no page of its own links its primary page and says so", async ({ page }) => {
   await on(page, BUILD_DAY, "/e/evt_e2e000000002");
   await expect(page.getByRole("link", { name: "Details and tickets at example.com" })).toHaveAttribute("href", "https://example.com/westport/comedy");

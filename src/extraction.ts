@@ -62,6 +62,10 @@ export const candidateSchema = z.object({
   dateEvidence: z.string().nullable().describe("The exact text from the page body the dates and times were read from. Null when there is none."),
   venueEvidence: z.string().nullable().describe("The exact text from the page body the venue was read from. Null when there is none."),
   notice: z.enum(["none", "cancelled", "postponed"]).describe("Whether the page says the event is cancelled or postponed."),
+  description: z
+    .string()
+    .nullable()
+    .describe("One or two plain sentences on what the event is, from the page's own text only. Null when the page says nothing about it beyond its listing line."),
 });
 
 export const extractionReplySchema = z.object({ events: z.array(candidateSchema) });
@@ -223,7 +227,7 @@ export interface Sighting {
  * unverified. A recurring event's date is its schedule phrase, which it carries instead of a
  * start and end. A venue the page did not name stays absent rather than borrowing the source's.
  * The event's own page, when the model named one of the page's links by number, rides along
- * whatever the status; it is never fetched and plays no part in verifying.
+ * whatever the status, and so does the description; neither plays any part in verifying.
  */
 export function candidateToSighting(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Sighting {
   const { timezone } = context.config;
@@ -238,6 +242,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const dateEvidence = nonEmpty(candidate.dateEvidence);
   const venueEvidence = nonEmpty(candidate.venueEvidence);
   const venue = nonEmpty(candidate.venue);
+  const description = nonEmpty(candidate.description);
   const placement = toNeighborhood(candidate.neighborhood, context.neighborhoods);
 
   const verified =
@@ -250,6 +255,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const event: Event = {
     id: newEventId(primaryUrl, title, context.nowIso),
     title,
+    ...(description !== undefined ? { description } : {}),
     ...(when.start !== undefined ? { start: when.start } : {}),
     ...(when.end !== undefined ? { end: when.end } : {}),
     ...(when.schedule !== undefined ? { schedule: when.schedule } : {}),

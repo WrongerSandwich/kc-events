@@ -10,7 +10,7 @@ import { regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
 import { isValidDate } from "../lib/dates";
 import { isPast } from "../lib/events";
-import type { Published, PublishedEvent } from "../lib/types";
+import type { Published, PublishedDescriptions, PublishedEvent } from "../lib/types";
 
 /** Bumped by hand when the site is updated for a new dataset shape; a job-side bump fails the build until then. */
 export const SITE_EXPECTS_SCHEMA_VERSION = 1;
@@ -72,6 +72,10 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
     seen.add(e.id);
   }
   const events = active.map((e) => project(e, config)).filter((e) => !isPast(e, today));
+  // Only the event page shows a description, so they stay out of the events every island carries.
+  const published = new Set(events.map((e) => e.id));
+  const descriptions: PublishedDescriptions = {};
+  for (const e of active) if (e.description !== undefined && published.has(e.id)) descriptions[e.id] = e.description;
 
   const bytes = Buffer.byteLength(JSON.stringify(events));
   if (bytes > MAX_PAYLOAD_BYTES) throw new Error(`projected payload is ${bytes} bytes, over the ${MAX_PAYLOAD_BYTES} limit`);
@@ -85,6 +89,7 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
 
   return {
     events,
+    descriptions,
     kinds: config.kinds,
     regions: [...Object.keys(config.neighborhoods), ELSEWHERE_IN_THE_METRO],
     lastSuccessfulRun: dataset.lastSuccessfulRun,

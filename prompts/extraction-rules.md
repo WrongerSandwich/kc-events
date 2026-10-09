@@ -89,6 +89,13 @@ Every field you fill must come from the text of the page body you were given. No
 - Drop a presenter or promoter prefix: "Mammoth Presents: Stephen Day" is "Stephen Day", and "recordBar presents X" is "X". The presenter is not the event, and the same show must get the same title on every run.
 - When the page names both the act and a tour or show name ("Getting Killed Again Tour" above "Geese"), the title is the act. The tour name is not the event either. Use a tour name as the title only when the page gives no other name for the show.
 
+## Description
+
+- `description` is one or two plain sentences, at most about 200 characters, saying what the event is: what kind of show or exhibition, who is performing or showing, what happens there. It is for someone who does not recognize the title.
+- Use only what the page's own text says about this event. Nothing from what you know about the act, the venue, or the genre: if the page does not say it, leave it out. A description is a summary of the page, not a quotation, but every claim in it must be on the page.
+- Neutral voice. No hype ("don't miss", "an unforgettable night", "legendary"), no ticket, price, or sold-out talk, and do not repeat the date, time, or venue, which have their own fields.
+- Null when the page says nothing about the event beyond its listing line: the title, the date, the price, "Buy tickets". A calendar with one line per show will mostly give null, and that is correct. Never pad a listing line into a sentence ("Big Show performs live").
+
 ## Output
 
 Return the JSON object required by the response format: `{ "events": [ ... ] }`. An empty page, a page with no events, or a page you cannot read returns `{ "events": [] }`. Do not explain, apologize, or add fields.

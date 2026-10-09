@@ -8,6 +8,7 @@ import { slugify } from "../../lib/slugs";
 import EventPageIsland from "../../components/EventPageIsland.svelte";
 import { origin } from "../../build/origin";
 import { events } from "../../generated/events";
+import { descriptions } from "../../generated/descriptions";
 import { meta } from "../../generated/meta";
 import { formatDay, formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd } from "../../lib/event-meta";
@@ -21,6 +22,7 @@ export function getStaticPaths() {
 }
 const { event } = Astro.props as { event: PublishedEvent };
 
+const about = descriptions[event.id];
 const line = longDateLine(event, meta.buildToday);
 const description = eventDescription(event, meta.buildToday);
 // The reader lands on the event's own page when the job found one; the verified line still names the list it was read from.
@@ -47,6 +49,7 @@ const jsonLd = eventJsonLd(event);
       </div>
     </header>
     {event.whyLine && <p class="why">{event.whyLine}</p>}
+    {about && <p class="about">{about}</p>}
     <p class="primary"><a href={details}>Details and tickets at {hostOf(details)}</a></p>
     <div class="actions">
       <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} />
@@ -76,6 +79,7 @@ const jsonLd = eventJsonLd(event);
   .date { font-size: var(--text-lg); margin: 0; }
   .where { color: var(--fg-muted); margin: 0; }
   .why { margin: 0 0 var(--space-4); font-size: var(--text-lg); color: var(--fg-muted); max-width: 38rem; }
+  .about { margin: 0 0 var(--space-4); max-width: 38rem; }
   .primary { font-size: var(--text-lg); margin: 0 0 var(--space-4); }
   .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-bottom: var(--space-6); }
   /* Add to calendar as a button beside Save, the card's pair spelled out. */

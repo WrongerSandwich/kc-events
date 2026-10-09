@@ -12,7 +12,7 @@ function exported(path: string): any {
 }
 
 describe("writeGenerated", () => {
-  it("writes three modules, the don't-miss one holding only flagged events, and publishes the dataset byte for byte", () => {
+  it("writes four modules, the don't-miss one holding only flagged events, and publishes the dataset byte for byte", () => {
     const dir = mkdtempSync(join(tmpdir(), "kc-generate-"));
     const datasetPath = join(dir, "events.json");
     const configPath = join(dir, "research.config.yaml");
@@ -21,7 +21,7 @@ describe("writeGenerated", () => {
       JSON.stringify(
         dataset([
           activeEvent({ id: "evt_000000000001", dontMiss: true, whyLine: "A rare occasion." }),
-          activeEvent({ id: "evt_000000000002" }),
+          activeEvent({ id: "evt_000000000002", description: "A three-piece playing their first record." }),
           activeEvent({ id: "evt_000000000003", status: "expired", expiryReason: "past" }),
         ]),
         null,
@@ -40,6 +40,7 @@ describe("writeGenerated", () => {
     expect(meta).not.toHaveProperty("events");
     expect(exported(join(outDir, "events.ts")).map((e: { id: string }) => e.id)).toEqual(["evt_000000000001", "evt_000000000002"]);
     expect(exported(join(outDir, "dont-miss.ts")).map((e: { id: string }) => e.id)).toEqual(["evt_000000000001"]);
+    expect(exported(join(outDir, "descriptions.ts"))).toEqual({ evt_000000000002: "A three-piece playing their first record." });
     expect(readFileSync(join(publicDir, "events.json"), "utf8")).toBe(raw);
   });
 });

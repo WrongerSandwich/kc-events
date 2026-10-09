@@ -103,7 +103,7 @@ describe("dataset", () => {
   it("rejects an unknown schema version, unknown top-level fields, and unknown event fields", () => {
     expect(() => parseDataset({ ...emptyDataset(), schemaVersion: 2 })).toThrow();
     expect(() => parseDataset({ ...emptyDataset(), extra: true })).toThrow();
-    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, description: "copied blurb" }] })).toThrow();
+    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, blurb: "copied blurb" }] })).toThrow();
   });
 
   it("rejects an active event missing a cited date or venue, and accepts the same event held unverified", () => {
