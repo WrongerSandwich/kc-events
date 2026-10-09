@@ -536,7 +536,8 @@ function firstMonthPair(events: Event[]): [Event, Event] | undefined {
  * A known event re-read from a page: the new reading, under the known event's identity and
  * curation. A reading that makes it recurring drops its flag: recurring events are never on
  * the don't-miss list, and curation will not look at it again. A reading with no description keeps
- * the known one: a listing line that says nothing more does not wipe what a fuller page said.
+ * the known one: a listing line that says nothing more does not wipe what a fuller page said. Like
+ * every other field, the description is only taken from a verified reading.
  */
 function refresh(known: Event, sighting: Event): Event {
   const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };

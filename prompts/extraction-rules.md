@@ -92,7 +92,7 @@ Every field you fill must come from the text of the page body you were given. No
 ## Description
 
 - `description` is one or two plain sentences, at most about 200 characters, saying what the event is: what kind of show or exhibition, who is performing or showing, what happens there. It is for someone who does not recognize the title.
-- Use only what the page's own text says about this event. Nothing from what you know about the act, the venue, or the genre: if the page does not say it, leave it out. A description is a summary of the page, not a quotation, but every claim in it must be on the page.
+- Use only what the page's own text says about this event. Nothing from what you know about the act, the venue, or the genre: if the page does not say it, leave it out. Write it in your own words, never copying the page's sentences: it summarizes the page, and every claim in it must be on the page.
 - Neutral voice. No hype ("don't miss", "an unforgettable night", "legendary"), no ticket, price, or sold-out talk, and do not repeat the date, time, or venue, which have their own fields.
 - Null when the page says nothing about the event beyond its listing line: the title, the date, the price, "Buy tickets". A calendar with one line per show will mostly give null, and that is correct. Never pad a listing line into a sentence ("Big Show performs live").
 

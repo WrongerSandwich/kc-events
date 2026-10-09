@@ -49,6 +49,10 @@ _Avoid_: featured, top pick, interest score, rating
 The one sentence stating why an event carries the don't-miss flag.
 _Avoid_: blurb, description, summary
 
+**Description**:
+One or two sentences, in our own words, on what an event is, written by extraction from what its page says; absent when the page says nothing beyond the listing line. Not a judgment: that is the why-line. Never copied from the page (ADR 0001).
+_Avoid_: blurb, summary, synopsis
+
 **Kind**:
 The category of an event, from a fixed taxonomy.
 _Avoid_: type, category, genre
@@ -177,5 +181,5 @@ The page that lets a reader slice every active event by date, kind, region, don'
 _Avoid_: browse page, search page, list view
 
 **Event page**:
-The page for one active event, at `/e/<id>`: its date, venue, why-line when flagged, primary link, calendar file, last-verified stamp, and corrections link.
+The page for one active event, at `/e/<id>`: its date, venue, why-line when flagged, description when there is one, primary link, calendar file, last-verified stamp, and corrections link.
 _Avoid_: detail page, listing page

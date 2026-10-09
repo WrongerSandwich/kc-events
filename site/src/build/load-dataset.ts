@@ -71,11 +71,11 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
     if (seen.has(e.id)) throw new Error(`duplicate active event id ${e.id}`);
     seen.add(e.id);
   }
-  const events = active.map((e) => project(e, config)).filter((e) => !isPast(e, today));
+  const published = active.map((e) => ({ e, out: project(e, config) })).filter(({ out }) => !isPast(out, today));
+  const events = published.map(({ out }) => out);
   // Only the event page shows a description, so they stay out of the events every island carries.
-  const published = new Set(events.map((e) => e.id));
   const descriptions: PublishedDescriptions = {};
-  for (const e of active) if (e.description !== undefined && published.has(e.id)) descriptions[e.id] = e.description;
+  for (const { e } of published) if (e.description !== undefined) descriptions[e.id] = e.description;
 
   const bytes = Buffer.byteLength(JSON.stringify(events));
   if (bytes > MAX_PAYLOAD_BYTES) throw new Error(`projected payload is ${bytes} bytes, over the ${MAX_PAYLOAD_BYTES} limit`);

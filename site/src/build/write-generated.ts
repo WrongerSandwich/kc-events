@@ -1,7 +1,8 @@
 /**
  * Writes meta.ts, events.ts, dont-miss.ts, and descriptions.ts for the pages and islands to import (four modules so
- * each island ships only what it renders; descriptions go to the event page alone), and copies the dataset byte for byte to events.json in the public directory (the
- * published contract, never re-serialized). Paths are parameters so a test can write somewhere else.
+ * each island ships only what it renders; descriptions go to the event page alone), and copies the dataset byte for
+ * byte to events.json in the public directory (the published contract, never re-serialized). Paths are parameters so
+ * a test can write somewhere else.
  */
 import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

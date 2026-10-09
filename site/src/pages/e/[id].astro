@@ -22,9 +22,9 @@ export function getStaticPaths() {
 }
 const { event } = Astro.props as { event: PublishedEvent };
 
-const about = descriptions[event.id];
 const line = longDateLine(event, meta.buildToday);
-const description = eventDescription(event, meta.buildToday);
+const metaDescription = eventDescription(event, meta.buildToday);
+const description = descriptions[event.id];
 // The reader lands on the event's own page when the job found one; the verified line still names the list it was read from.
 const details = detailsUrl(event);
 const reportBody = [`Event: ${origin}/e/${event.id}`, `Primary page: ${event.primaryUrl}`, ...(event.eventUrl ? [`Event page: ${event.eventUrl}`] : []), "", "What is wrong:", ""].join("\n");
@@ -35,7 +35,7 @@ const moreLikeThis = events
   .slice(0, 5);
 const jsonLd = eventJsonLd(event);
 ---
-<Base title={event.title} description={description} jsonLd={jsonLd}>
+<Base title={event.title} description={metaDescription} jsonLd={jsonLd}>
   <article class={`event kind-${slugify(event.kind)}`}>
     <header class:list={["head", { dated: isDated(event) }]}>
       {/* The same tile as the front page's card, by the same view-transition name, so one glides into the other. */}
@@ -49,7 +49,7 @@ const jsonLd = eventJsonLd(event);
       </div>
     </header>
     {event.whyLine && <p class="why">{event.whyLine}</p>}
-    {about && <p class="about">{about}</p>}
+    {description && <p class="about">{description}</p>}
     <p class="primary"><a href={details}>Details and tickets at {hostOf(details)}</a></p>
     <div class="actions">
       <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} />
