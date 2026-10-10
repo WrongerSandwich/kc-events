@@ -21,6 +21,7 @@ import {
   CURATION_BATCH_SIZE,
   curationReplySchema,
   needsCuration,
+  whyLineOverCap,
   WHY_LINE_CAP,
   type CurationContext,
 } from "./curation.js";
@@ -29,7 +30,7 @@ import { findMatch, normalizeName, oneMonthOf, sameEvent, sameName, type VenueAl
 import type { Registry, Source } from "./registry.js";
 import type { FetchOptions, FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
 import { plural } from "./markdown.js";
-import type { EventRef, RunReport, SourceReport } from "./report.js";
+import type { CandidateTally, EventRef, RunReport, SourceReport } from "./report.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList, placeStored } from "./taxonomy.js";
 import { horizonEnd, toLocalDate, toLocalIso } from "./time.js";
@@ -358,7 +359,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     }
     addTally(tally, read.tally);
     if (read.sightings) sightings.push(...read.sightings);
-    else markUnread(page);
+    if (!readInFull(read)) markUnread(page);
     outcome.extracted += read.extracted;
     outcome.problems.push(...read.problems);
   }
@@ -366,22 +367,19 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   return { sightings, tally, pagesNotExtracted, bySource, unreadUrls };
 }
 
-/** Candidates a page's reading dropped or could not cite, by cause, for the report's counts. */
-interface CandidateTally {
-  /** Dropped: the page placed them outside the geography. */
-  outsideGeography: number;
-  /** Dropped: a field the model wrote ran past its cap. */
-  overCap: number;
-  /** Kept but uncitable: a date or time that does not exist, or an end before the start. */
-  unusableDates: number;
-}
-
 const noTally = (): CandidateTally => ({ outsideGeography: 0, overCap: 0, unusableDates: 0 });
 
 function addTally(into: CandidateTally, from: CandidateTally): void {
-  into.outsideGeography += from.outsideGeography;
-  into.overCap += from.overCap;
-  into.unusableDates += from.unusableDates;
+  for (const cause of Object.keys(into) as (keyof CandidateTally)[]) into[cause] += from[cause];
+}
+
+/**
+ * Whether a page's reading says everything the page lists: the reply was read and no candidate was
+ * dropped over a cap. Otherwise an event missing from the reading may still be on the page, so the
+ * page counts as unread for it and it is not struck.
+ */
+function readInFull(read: { sightings?: Sighting[]; tally: CandidateTally }): boolean {
+  return read.sightings !== undefined && read.tally.overCap === 0;
 }
 
 function sumTallies(...tallies: CandidateTally[]): CandidateTally {
@@ -432,9 +430,9 @@ async function extractPage(
       continue;
     }
     const sighting = candidateToSighting(candidate, candidateOrigin, context);
-    if (sighting.unusableDate !== undefined) {
+    if (sighting.dateProblem !== undefined) {
       tally.unusableDates++;
-      problems.push(`"${sighting.event.title}" on ${page.finalUrl} had ${sighting.unusableDate} and was held uncitable`);
+      problems.push(`"${sighting.event.title}" on ${page.finalUrl} had ${sighting.dateProblem} and was held uncitable`);
     }
     sightings.push(sighting);
   }
@@ -629,6 +627,8 @@ async function reverify(
   const sightingsAt = new Map<string, Sighting[]>();
   const outageAt = new Set<string>();
   const goneAt = new Set<string>();
+  /** Pages read with a candidate dropped over its cap: what is missing from the reading may be on the page. */
+  const partlyReadAt = new Set<string>();
   const lastDay = horizonEnd(context.today, context.config.horizonWeeks);
   const refreshed = new Set<string>();
   const tally = noTally();
@@ -673,6 +673,7 @@ async function reverify(
     addTally(tally, read.tally);
     problems.push(...read.problems);
     if (read.sightings) sightingsAt.set(url, read.sightings);
+    if (read.sightings && !readInFull(read)) partlyReadAt.add(url);
   }
 
   let heldThroughOutage = 0;
@@ -691,6 +692,7 @@ async function reverify(
     if (!sightings) return event;
     const sighting = sightings.find((s) => findMatch(s.event, [event], context.config.venueAliases));
     if (!sighting) {
+      if (partlyReadAt.has(event.primaryUrl)) return event;
       if (goneAt.has(event.primaryUrl) || !startsAfterHorizon(event, lastDay)) return strike(event);
       beyondHorizonUnstruck++;
       return event;
@@ -729,7 +731,7 @@ interface PageAttempts {
   outages: Set<string>;
   /** URLs that are gone (404, 410) or that robots.txt disallows: a strike for every event citing them. */
   gone: Set<string>;
-  /** Pages that came back but were not read: an unreadable reply, or the spend cap. */
+  /** Pages that came back but were not read, or not in full: an unreadable reply, the spend cap, or a candidate dropped over its cap. */
   unread: Set<string>;
 }
 
@@ -868,10 +870,8 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     report.pagesExtracted++;
     addTally(outcome.tally, read.tally);
     report.problems.push(...read.problems);
-    if (!read.sightings) {
-      for (const u of pageUrls) attempts.unread.add(u);
-      return;
-    }
+    if (!readInFull(read)) for (const u of pageUrls) attempts.unread.add(u);
+    if (!read.sightings) return;
     outcome.sightings.push(...read.sightings);
     const host = hostOf(page.finalUrl);
     if (host && !outcome.hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) outcome.hosts.set(host, pageUrls[1]!);
@@ -966,7 +966,8 @@ function markChanged(previous: Event[], events: Event[], nowIso: string): Event[
 /**
  * Curation: every event due for it (active, not recurring, new or changed since last judged) goes
  * to the curation model in batches with the curation prompt. A judgment is applied to the event it
- * names; an event the reply does not name, or names with a flag but no why-line or one past the cap, is left unjudged
+ * names; an event the reply does not name, or names with a flag but no why-line or one past the
+ * cap, is left unjudged
  * and comes up again next run (the second losing any flag it had, since a flag with no why-line is no flag), and a judgment naming no event in the batch is reported. A reply that cannot be read, or a call that throws, leaves its whole batch unjudged. Once
  * the spend cap is reached, events still to judge are not sent and are counted as not curated.
  */
@@ -1013,7 +1014,7 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
         unjudgedFlags.set(event.id, unflagged(event));
         continue;
       }
-      if (judgment.dontMiss && cleanWhyLine(judgment.why).length > WHY_LINE_CAP) {
+      if (whyLineOverCap(judgment)) {
         report.problems.push(`"${event.title}" was flagged with a why-line past the ${WHY_LINE_CAP}-character cap and was left unjudged`);
         continue;
       }

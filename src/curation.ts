@@ -27,6 +27,11 @@ export const curationReplySchema = z.object({ judgments: z.array(judgmentSchema)
  */
 export const WHY_LINE_CAP = 200;
 
+/** Whether the judgment flags its event with a why-line that, cleaned, runs past the cap. */
+export function whyLineOverCap(judgment: Judgment): boolean {
+  return judgment.dontMiss && cleanWhyLine(judgment.why).length > WHY_LINE_CAP;
+}
+
 export type Judgment = z.infer<typeof judgmentSchema>;
 
 /** The strict JSON schema sent as the response format on every curation call. */

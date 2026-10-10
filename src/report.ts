@@ -12,6 +12,16 @@ export interface SourceReport {
   detail?: string;
 }
 
+/** Candidates the run's page readings dropped or could not cite, by cause. */
+export interface CandidateTally {
+  /** Dropped because their page placed them outside the geography. */
+  outsideGeography: number;
+  /** Dropped because a field the model wrote ran past its length cap. */
+  overCap: number;
+  /** Held uncitable because a date or time the model wrote does not exist, or the end came before the start. */
+  unusableDates: number;
+}
+
 /** An event as the report names it: by title and primary page. */
 export interface EventRef {
   title: string;
@@ -25,7 +35,7 @@ export interface RunReport {
   startedAt: string;
   finishedAt: string;
   horizonWeeks: number;
-  counts: {
+  counts: CandidateTally & {
     found: number;
     new: number;
     updated: number;
@@ -39,12 +49,6 @@ export interface RunReport {
     unverifiedByOutageLimit: number;
     /** Active events made unverified this run because their page still lists them but a re-reading cited no date or venue. */
     unverifiedByUncitableReading: number;
-    /** Candidates dropped because their page placed them outside the geography. */
-    outsideGeography: number;
-    /** Candidates dropped because a field the model wrote ran past its length cap. */
-    overCap: number;
-    /** Candidates held uncitable because a date or time the model wrote does not exist, or the end came before the start. */
-    unusableDates: number;
     expired: Record<ExpiryReason, number>;
   };
   spend: {

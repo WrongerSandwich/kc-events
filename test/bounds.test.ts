@@ -5,7 +5,8 @@ import { newEventId } from "../src/extraction.js";
 import { renderReportMarkdown } from "../src/report.js";
 import { fakePorts } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
-import { candidateAt, costing, judging, PAGE, source, WEEK_1, WEEK_1_ISO } from "./fakes/fixtures.js";
+import { runWith } from "./fakes/run.js";
+import { candidateAt, costing, judging, knuckleheads, PAGE, reply, source, week, WEEK_1, WEEK_1_ISO } from "./fakes/fixtures.js";
 
 const recordBar = source("recordBar", { neighborhood: "Crossroads" });
 const CALENDAR_URL = recordBar.urls[0]!;
@@ -43,7 +44,7 @@ describe("dates and times the model wrote that do not exist", () => {
     expect(dataset.events[0]).not.toHaveProperty("end");
   });
 
-  it("a date that exists, an empty time, and an end later on the start's day are fine", async () => {
+  it("a date that exists, an empty time, a one-digit hour, and an end time before the start on the same date (past midnight) are fine", async () => {
     const { dataset, report } = await runOver([
       candidate({ title: "Leap", startDate: "2028-02-29", startTime: "", dateEvidence: "Feb 29" }),
       candidate({ title: "Late Set", startTime: "23:59", endDate: "2026-10-31", endTime: "23:00" }),
@@ -89,5 +90,40 @@ describe("length caps on what the model writes", () => {
     expect(dataset.events[0]).not.toHaveProperty("lastJudged");
     expect(report.curation.judged).toBe(0);
     expect(report.curation.problems).toContain('"Big Show" was flagged with a why-line past the 200-character cap and was left unjudged');
+  });
+});
+
+describe("a page whose reading dropped or could not date a candidate", () => {
+  const show = (overrides: Record<string, unknown> = {}) =>
+    candidateAt(knuckleheads, overrides);
+  const CAL = knuckleheads.urls[0]!;
+  const moved = { ...knuckleheads, urls: ["https://knuckleheads.test/shows"] };
+  const seen = () => runWith(WEEK_1, emptyDataset(), { sources: [knuckleheads], pages: { [CAL]: PAGE }, completions: [reply(show()), reply()] });
+  const misread = [
+    ["an over-cap field", { description: "d".repeat(301) }],
+    ["a date that does not exist", { startDate: "2026-02-30" }],
+  ] as const;
+
+  it.each(misread)("with %s, read by the registry lane, does not strike the event it would have matched", async (_, overrides) => {
+    const first = await seen();
+
+    const next = await runWith(week(2), first.dataset, { sources: [knuckleheads], pages: { [CAL]: PAGE }, completions: [reply(show(overrides)), reply()] });
+
+    expect(next.dataset.events[0]).toMatchObject({ id: first.dataset.events[0]!.id, verificationFailures: 0 });
+    expect(next.dataset.events[0]!.status).not.toBe("expired");
+  });
+
+  it.each(misread)("with %s, read by re-verification, does not strike the event it would have matched", async (_, overrides) => {
+    const first = await seen();
+
+    // Only re-verification reads the old page now.
+    const next = await runWith(week(2), first.dataset, {
+      sources: [moved],
+      pages: { [moved.urls[0]!]: PAGE, [CAL]: PAGE },
+      completions: [reply(), reply(show(overrides))],
+    });
+
+    expect(next.dataset.events[0]).toMatchObject({ id: first.dataset.events[0]!.id, verificationFailures: 0 });
+    expect(next.dataset.events[0]!.status).not.toBe("expired");
   });
 });

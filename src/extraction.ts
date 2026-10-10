@@ -240,7 +240,7 @@ export interface Sighting {
   cancelled: boolean;
   unmappable?: { proposed?: string };
   /** Why a date or time the model wrote could not be used, which made the candidate uncitable. */
-  unusableDate?: string;
+  dateProblem?: string;
 }
 
 /**
@@ -248,7 +248,8 @@ export interface Sighting {
  * the model quoted evidence there for both a usable date and a venue; anything less is held
  * unverified. A date or time that does not exist (February 30th, 24:00), or an end before the
  * start, makes the whole candidate uncitable, since the model misread something; only the unusable
- * value is left out of what is stored. A recurring event's date is its schedule phrase, which it
+ * value is left out of what is stored. An end is compared by date alone: a show that runs past
+ * midnight can be given an end time earlier than its start on the same date. A recurring event's date is its schedule phrase, which it
  * carries instead of a start and end. A venue the page did not name stays absent rather than borrowing the source's.
  * The event's own page, when the model named one of the page's links by number, rides along
  * whatever the status, and so does the description; neither plays any part in verifying.
@@ -263,7 +264,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const start = startAt.iso;
   const endsFirst = start !== undefined && endAt.iso !== undefined && endAt.iso.slice(0, 10) < start.slice(0, 10);
   const end = endsFirst ? undefined : endAt.iso;
-  const unusableDate = startAt.problem ?? endAt.problem ?? (endsFirst ? `an end (${endAt.iso!.slice(0, 10)}) before its start` : undefined);
+  const dateProblem = startAt.problem ?? endAt.problem ?? (endsFirst ? `an end (${endAt.iso!.slice(0, 10)}) before its start` : undefined);
   const schedule = nonEmpty(candidate.schedule);
   const recurrence = deriveRecurrence({ start, end, schedule, sportsSeason: candidate.sportsSeason });
   const when = recurrence === "recurring" ? { schedule } : { start, end };
@@ -274,7 +275,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const placement = toNeighborhood(candidate.neighborhood, context.neighborhoods);
 
   const verified =
-    unusableDate === undefined &&
+    dateProblem === undefined &&
     citedDate({ recurrence, ...when }) !== undefined &&
     dateEvidence !== undefined &&
     venue !== undefined &&
@@ -309,7 +310,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     event,
     cancelled: candidate.notice === "cancelled",
     ...("unmappable" in placement ? { unmappable: placement.unmappable } : {}),
-    ...(unusableDate !== undefined ? { unusableDate } : {}),
+    ...(dateProblem !== undefined ? { dateProblem } : {}),
   };
 }
 

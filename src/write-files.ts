@@ -1,9 +1,11 @@
 /**
  * Writing a run's files so a crash, a full disk, or a timeout mid-write never leaves one truncated:
  * each goes to a temporary file beside its target, flushed to disk, and only once every one exists
- * are they renamed into place. A rename within a directory replaces the target whole.
+ * are they renamed into place. A rename within a directory replaces the target whole; the renames
+ * follow one another, so they are as near together as the filesystem allows, not one step.
  */
 import { open, rename, rm } from "node:fs/promises";
+import { dirname } from "node:path";
 
 export interface FileToWrite {
   path: string;
@@ -35,4 +37,13 @@ export async function writeAllOrNothing(files: FileToWrite[], write: (path: stri
     throw error;
   }
   for (const [i, file] of files.entries()) await rename(temps[i]!, file.path);
+  // The renames live in the directories' entries; flushing those makes them survive a power cut.
+  for (const dir of new Set(files.map((f) => dirname(f.path)))) {
+    const handle = await open(dir, "r");
+    try {
+      await handle.sync();
+    } finally {
+      await handle.close();
+    }
+  }
 }

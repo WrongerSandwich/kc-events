@@ -1,7 +1,7 @@
 /**
  * The research command. Does all file I/O: loads config, prompts, registry, and dataset, builds
  * the adapters, calls the run, and writes the dataset and the run report (Markdown plus JSON twin):
- * only a dataset that validates, and all three files or none.
+ * only a dataset that validates, and none of the three truncated.
  * BROWSER_CHANNEL=chrome has the browser fetcher use an installed Chrome instead of Playwright's Chromium.
  *
  *   pnpm research [--horizon-weeks N] [--no-discovery]
@@ -11,9 +11,8 @@ import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { parse as parseYaml } from "yaml";
-import { z } from "zod";
 import { parseConfig } from "./config.js";
-import { datasetSchema, emptyDataset, parseDataset } from "./dataset.js";
+import { emptyDataset, parseDataset, type Dataset } from "./dataset.js";
 import { parseRegistry } from "./registry.js";
 import { renderReportMarkdown } from "./report.js";
 import { run } from "./run.js";
@@ -80,13 +79,17 @@ async function main() {
   }).finally(() => browserFetcher.close());
 
   // A dataset the next run could not load is not written, and neither is its report.
-  const checked = datasetSchema.safeParse(result.dataset);
-  if (!checked.success) throw new Error(`the run produced a dataset that does not validate; nothing was written:\n${z.prettifyError(checked.error)}`);
+  let checked: Dataset;
+  try {
+    checked = parseDataset(result.dataset);
+  } catch (error) {
+    throw new Error("the run produced a dataset that does not validate; nothing was written", { cause: error });
+  }
 
   await mkdir(RUNS_DIR, { recursive: true });
   const reportBase = join(RUNS_DIR, result.report.runDate);
   await writeAllOrNothing([
-    { path: DATASET_PATH, content: JSON.stringify(checked.data, null, 2) + "\n" },
+    { path: DATASET_PATH, content: JSON.stringify(checked, null, 2) + "\n" },
     { path: `${reportBase}.json`, content: JSON.stringify(result.report, null, 2) + "\n" },
     { path: `${reportBase}.md`, content: renderReportMarkdown(result.report) },
   ]);
