@@ -40,13 +40,17 @@ class FakePage {
     return this.current;
   }
   /** The page asks for a URL: through the context's route, as Chromium would. */
-  async request(url: string, { type = "fetch", navigation = false, frame = "main" as "main" | "child" } = {}): Promise<Outcome> {
+  async request(url: string, { type = "fetch", navigation = false, frame = "main" as "main" | "child" | "unborn" } = {}): Promise<Outcome> {
     const page = this;
     const request: FakeRequest = {
       url: () => url,
       resourceType: () => type,
       isNavigationRequest: () => navigation,
-      frame: () => (frame === "main" ? page.main : { page: () => page }),
+      frame: () => {
+        // As Playwright does for a navigation issued before its frame exists.
+        if (frame === "unborn") throw new Error("Frame for this navigation request is not available");
+        return frame === "main" ? page.main : { page: () => page };
+      },
       redirectedFrom: () => null,
     };
     this.context.emit("request", request);
@@ -222,12 +226,31 @@ describe("browser fetcher", () => {
     });
   });
 
-  it("fails the fetch when a request inside the page redirects to a private address", async () => {
+  it("aborts a navigation Playwright cannot place in a frame yet, and still answers its route", async () => {
+    const browser = browserRunning(async (page) => {
+      await page.request("https://ads.test/opened", { navigation: true, frame: "unborn" });
+    });
+
+    expect(await createBrowserFetcher(plainFetcher()).fetch(CALENDAR)).toMatchObject({ status: 200 });
+    expect(browser.contexts[0]!.outcomes.get("https://ads.test/opened")).toBe("abort");
+  });
+
+  it("fails the fetch when the page's own navigation redirects to a private address", async () => {
     browserRunning(async (page) => {
-      page.redirect("https://cdn.test/pixel", "http://192.168.1.1/admin");
+      page.redirect(CALENDAR, "http://192.168.1.1/admin", { navigation: true });
     });
 
     await expect(createBrowserFetcher(plainFetcher()).fetch(CALENDAR)).rejects.toThrow(/192\.168\.1\.1/);
+  });
+
+  it("warns, and still reads the page, when something the page loads redirects to a private address", async () => {
+    browserRunning(async (page) => {
+      page.redirect("https://cdn.test/pixel", "http://192.168.1.1/admin");
+    });
+    const warn = vi.fn();
+
+    expect(await createBrowserFetcher(plainFetcher(), { warn }).fetch(CALENDAR)).toMatchObject({ status: 200, robotsAllowed: true });
+    expect(warn).toHaveBeenCalledWith(expect.stringMatching(/^WARNING: .* redirected to http:\/\/192\.168\.1\.1\/admin/));
   });
 
   it("blocks a page whose own navigation redirects to a URL robots.txt disallows", async () => {
@@ -283,6 +306,14 @@ describe("browser fetcher", () => {
     const fetcher = createBrowserFetcher(plainFetcher(), { warn: () => undefined });
     await expect(fetcher.fetch(CALENDAR)).rejects.toThrow("the browser did not launch: Executable doesn't exist at /home/x/.cache/ms-playwright");
     await expect(fetcher.fetch("https://venue.test/films")).rejects.toThrow("the browser did not launch");
-    expect(launch).toHaveBeenCalledTimes(2); // the sandboxed try and the unsandboxed one, once for the run // the sandboxed try and the unsandboxed one, once for the run
+    expect(launch).toHaveBeenCalledOnce(); // not without the sandbox, which was not what failed; and once for the run
+  });
+
+  it("fails, saying the browser did not launch, when it launches neither in its sandbox nor out of it", async () => {
+    launch.mockRejectedValueOnce(new Error("No usable sandbox!")).mockRejectedValueOnce(new Error("Missing libnss3.so"));
+
+    await expect(createBrowserFetcher(plainFetcher(), { warn: () => undefined }).fetch(CALENDAR)).rejects.toThrow(
+      "the browser did not launch: Missing libnss3.so",
+    );
   });
 });

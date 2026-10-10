@@ -8,6 +8,8 @@ import { USER_AGENT } from "./identity.js";
 const SKIPPED_RESOURCES = new Set(["image", "media", "font"]);
 /** Launching Chromium is not part of a page's timeout, but is bounded too. */
 const LAUNCH_TIMEOUT_MS = 30_000;
+/** How Chromium says it could not start its sandbox ("No usable sandbox!", a user namespace it could not make). */
+const SANDBOX_FAILURE = /sandbox|namespace/i;
 /** Nothing a calendar needs: no extensions, no background requests of the browser's own, a bounded script heap. */
 export const LAUNCH_ARGS = ["--disable-extensions", "--disable-background-networking", "--js-flags=--max-old-space-size=512"];
 
@@ -39,8 +41,9 @@ export interface BrowserFetcherOptions {
  * provide one (a loud warning where it cannot), and a context of its own per fetch, with no
  * downloads, no service workers, and nothing kept from the page before. A popup is closed as it
  * opens and a frame's navigation is refused: neither is the page asked for, and only the main
- * frame's HTML is read. Playwright's route sees only the first URL of a redirect chain, so every hop
- * after it is checked as it is requested, and a hop the policy refuses fails the fetch.
+ * frame's HTML is read. Playwright's route sees only the first URL of a redirect chain, so a hop
+ * after it can only be checked once it has gone out: a hop of the page's own navigation that the
+ * checks refuse fails the fetch, and one of anything the page loads is logged as a warning.
  *
  * The page is read once the network has gone quiet, or, given a selector, once that selector is on
  * the page; a page that does neither in time is a failure, not a partial reading. The browser is
@@ -73,7 +76,25 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel, warn = cons
     let disallowed: string | undefined;
     let navigationFailure: unknown;
     const hopChecks: Promise<unknown>[] = [];
-    const isMainNavigation = (request: Request) => request.isNavigationRequest() && request.frame() === page?.mainFrame();
+    // Waits for every hop check so far, including any started while it waited.
+    const hopsChecked = async () => {
+      for (let done = 0; done < hopChecks.length; ) {
+        const pending = hopChecks.slice(done);
+        done = hopChecks.length;
+        await Promise.all(pending);
+      }
+    };
+    // Which of the page's frames made a request. One Playwright cannot place (a navigation that opens
+    // a popup, before its frame exists) is not the page's.
+    const madeBy = (request: Request): "main" | "frame" | "elsewhere" => {
+      try {
+        const frame = request.frame();
+        if (!page || frame.page() !== page) return "elsewhere";
+        return frame === page.mainFrame() ? "main" : "frame";
+      } catch {
+        return "elsewhere";
+      }
+    };
 
     // A navigation of the main frame: the policy, then robots.txt. A refusal is recorded, not thrown.
     async function navigationAllowed(target: string): Promise<boolean> {
@@ -90,23 +111,26 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel, warn = cons
     try {
       await context.route("**/*", async (route) => {
         const request = route.request();
+        const by = madeBy(request);
         let allowed: boolean;
         if (SKIPPED_RESOURCES.has(request.resourceType())) allowed = false;
-        else if (request.frame().page() !== page) allowed = false; // a popup's, closing anyway
-        else if (isMainNavigation(request)) allowed = await navigationAllowed(request.url());
-        else if (request.isNavigationRequest()) allowed = false; // a frame's, never read
+        else if (by === "elsewhere") allowed = false; // a popup's, closing anyway
+        else if (request.isNavigationRequest()) allowed = by === "main" && (await navigationAllowed(request.url())); // a frame's is never read
         else allowed = await subresourceAllowed(plain, request.url());
         // The page may have closed while the checks ran, and a closed page's route cannot be answered.
         await (allowed ? route.continue() : route.abort("blockedbyclient")).catch(() => undefined);
       });
-      // Every redirect hop after the first, which the route above never sees.
+      // Every redirect hop after the first, which the route above never sees and which has gone out by
+      // the time it is seen here. One of the page's own navigation is held to the route's checks; one of
+      // anything the page loads is only logged, since a tracker that redirects badly is not the page.
       context.on("request", (request) => {
         if (!request.redirectedFrom()) return;
-        if (isMainNavigation(request)) hopChecks.push(navigationAllowed(request.url()));
+        const hop = request.url();
+        if (request.isNavigationRequest() && madeBy(request) === "main") hopChecks.push(navigationAllowed(hop));
         else {
           hopChecks.push(
-            subresourceAllowed(plain, request.url()).then((allowed) => {
-              if (!allowed) navigationFailure ??= new Error(`a redirect inside the page went to ${request.url()}, which the fetch policy refuses`);
+            subresourceAllowed(plain, hop).then((allowed) => {
+              if (!allowed) warn(`WARNING: a request made by ${walked.finalUrl} was redirected to ${hop}, which the fetch policy refuses`);
             }),
           );
         }
@@ -122,7 +146,7 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel, warn = cons
         if (disallowed || navigationFailure) return null;
         throw error;
       });
-      await Promise.all(hopChecks);
+      await hopsChecked();
       if (disallowed) return blocked(disallowed);
       if (navigationFailure) throw navigationFailure;
       if (!response) throw new Error(`no response loading ${url}`);
@@ -134,10 +158,10 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel, warn = cons
       // The page's script may have navigated since it loaded, so where it is now is asked again.
       const ended = page.url();
       await navigationAllowed(ended);
-      await Promise.all(hopChecks);
+      const body = await page.content();
+      await hopsChecked();
       if (disallowed) return blocked(disallowed);
       if (navigationFailure) throw navigationFailure;
-      const body = await page.content();
       checkSize(body);
       return { url, finalUrl: withoutScriptFragment(ended, url), status, body, robotsAllowed: true };
     } finally {
@@ -171,19 +195,22 @@ async function subresourceAllowed(plain: PlainFetcher, target: string): Promise<
 /**
  * Chromium, sandboxed if the host allows it. A host without unprivileged user namespaces cannot give
  * it a sandbox; it then runs without one, and says so loudly, since a page's script would run as
- * the run's own user. A launch that fails both ways throws, and that is the reason every browser
- * fetch of the run reports.
+ * the run's own user. Any other failure, or one without the sandbox too, throws, and that is the
+ * reason every browser fetch of the run reports.
  */
 async function launch(channel: string | undefined, warn: (message: string) => void): Promise<Browser> {
   const options = { channel, timeout: LAUNCH_TIMEOUT_MS, args: LAUNCH_ARGS };
+  const didNotLaunch = (error: unknown) => new Error(`the browser did not launch: ${firstLine(error)}`, { cause: error });
   try {
     return await chromium.launch({ ...options, chromiumSandbox: true });
   } catch (sandboxed) {
+    // Only the sandbox failing is a reason to go without it: a launch that timed out or crashed is not.
+    if (!SANDBOX_FAILURE.test(String(sandboxed))) throw didNotLaunch(sandboxed);
     let browser: Browser;
     try {
       browser = await chromium.launch({ ...options, chromiumSandbox: false });
     } catch (error) {
-      throw new Error(`the browser did not launch: ${firstLine(error)}`, { cause: error });
+      throw didNotLaunch(error);
     }
     warn(
       `WARNING: Chromium's sandbox did not start (${firstLine(sandboxed)}), so pages from fetch: browser sources ` +
