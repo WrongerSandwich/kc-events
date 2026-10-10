@@ -73,20 +73,20 @@ export function fakePorts(now: Date, { pages = {}, completions = [], curations =
  * (`browser:<url>`, `browser robots-blocked:<url>`) and adds the selector it was told to wait for.
  */
 function cannedFetcher(pages: Record<string, CannedPage>, calls: string[], prefix: string): FetchPort {
-  const robots = (what: string, url: string) => calls.push(`${prefix ? `${prefix} ` : ""}${what}:${url}`);
+  const record = (what: string, url: string) => calls.push(`${prefix ? `${prefix} ` : ""}${what}:${url}`);
   return {
     async fetch(url, options): Promise<FetchResult> {
       const page = pages[url];
       if (page === "robots-blocked") {
-        robots("robots-blocked", url);
+        record("robots-blocked", url);
         return { url, finalUrl: url, status: 0, body: "", robotsAllowed: false };
       }
       if (page === "robots-unreachable") {
-        robots("robots-unreachable", url);
+        record("robots-unreachable", url);
         throw new Error("robots.txt unreachable (HTTP 503)");
       }
       if (page === "refused") {
-        robots("refused", url);
+        record("refused", url);
         throw new FetchRefused("fetch policy refuses content type application/pdf");
       }
       calls.push(`${prefix || "fetch"}:${url}${options?.waitFor ? ` waiting for ${options.waitFor}` : ""}`);

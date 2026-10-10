@@ -176,6 +176,20 @@ describe("fetch policy: bodies", () => {
     expect((await fetcher().plain.fetch(page)).body).toBe("listing");
   });
 
+  it("refuses a page that names no content type and turns out binary", async () => {
+    const pdf = new Uint8Array([...new TextEncoder().encode("%PDF-1.7\n"), 0x00, 0xe2, 0xe3]);
+    stubNetwork(withRobots(() => new Response(pdf)));
+
+    await expect(fetcher().plain.fetch(page)).rejects.toThrow("no content type that is not text");
+  });
+
+  it("reads UTF-16 text that names no content type, NULs and all", async () => {
+    const utf16 = new Uint8Array([0xff, 0xfe, ...[..."Fall"].flatMap((c) => [c.charCodeAt(0), 0])]);
+    stubNetwork(withRobots(() => new Response(utf16)));
+
+    expect((await fetcher().plain.fetch(page)).body).toBe("Fall");
+  });
+
   it("does not read the body of a failing status", async () => {
     stubNetwork(withRobots(() => new Response("Not here", { status: 404, headers: { "content-type": "application/json" } })));
 

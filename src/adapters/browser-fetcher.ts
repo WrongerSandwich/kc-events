@@ -1,6 +1,6 @@
 import { chromium, type Browser, type BrowserContext } from "playwright";
 import type { FetchOptions, FetchPort, FetchResult } from "../ports.js";
-import { FetchRefused, MAX_BODY_BYTES } from "./fetch-policy.js";
+import { checkSize } from "./fetch-policy.js";
 import { memoized, TIMEOUT_MS, type PlainFetcher } from "./fetcher.js";
 import { USER_AGENT } from "./identity.js";
 
@@ -101,7 +101,7 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel }: { channel
       if (disallowed) return blocked(disallowed);
       if (navigationFailure) throw navigationFailure;
       const body = await page.content();
-      if (Buffer.byteLength(body) > MAX_BODY_BYTES) throw new FetchRefused(`fetch policy refuses a rendered page over ${MAX_BODY_BYTES} bytes`);
+      checkSize(body);
       return { url, finalUrl: withoutScriptFragment(page.url(), url), status, body, robotsAllowed: true };
     } finally {
       // A page that will not close (the browser crashed) must not hide why the fetch failed.

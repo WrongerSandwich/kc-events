@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import type { FetchPort, FetchResult } from "../ports.js";
-import { checkContentType, createFetchPolicy, decodeBody, readCapped, type FetchPolicy, type FetchPolicyOptions } from "./fetch-policy.js";
+import { createFetchPolicy, readCapped, readText, type FetchPolicy, type FetchPolicyOptions } from "./fetch-policy.js";
 import { PRODUCT, USER_AGENT } from "./identity.js";
 
 const MAX_REDIRECTS = 5;
@@ -57,58 +57,47 @@ export function createFetcher(options: FetchPolicyOptions = {}): PlainFetcher {
   // Its redirects are followed (five, as the RFC asks) through the policy, like a page's.
   async function loadRobots(origin: string): Promise<Robots> {
     const robotsUrl = `${origin}/robots.txt`;
-    let current = robotsUrl;
-    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-      const response = await request(current);
-      const next = redirectOf(response, current);
-      if (next) {
-        await response.body?.cancel();
-        current = next;
-        continue;
-      }
-      if (response.status >= 500) {
-        await response.body?.cancel();
-        throw new Error(`robots.txt unreachable (HTTP ${response.status})`);
-      }
-      let body = "";
-      if (response.ok) body = new TextDecoder("utf-8").decode(await readCapped(response));
-      else await response.body?.cancel();
-      const robots = robotsParser(robotsUrl, body);
-      policy.setCrawlDelay(origin, robots.getCrawlDelay(PRODUCT));
-      return robots;
+    const { response } = await walk(robotsUrl, async () => true);
+    if (response!.status >= 500) {
+      await response!.body?.cancel();
+      throw new Error(`robots.txt unreachable (HTTP ${response!.status})`);
     }
-    throw new Error(`robots.txt unreachable (more than ${MAX_REDIRECTS} redirects)`);
+    let body = "";
+    if (response!.ok) body = new TextDecoder("utf-8").decode(await readCapped(response!));
+    else await response!.body?.cancel();
+    const robots = robotsParser(robotsUrl, body);
+    policy.setCrawlDelay(origin, robots.getCrawlDelay(PRODUCT));
+    return robots;
   }
 
   async function fetchPage(url: string): Promise<FetchResult> {
+    const { at, response } = await walk(url, async (hop) => {
+      // The policy before robots.txt: a refused host's robots.txt is not requested either.
+      await policy.check(hop);
+      return robotsAllows(hop);
+    });
+    if (!response) return { url, finalUrl: at, status: 0, body: "", robotsAllowed: false };
+    // A failing status is the whole reading; nothing reads its body, so it is not downloaded.
+    if (!response.ok) {
+      await response.body?.cancel();
+      return { url, finalUrl: at, status: response.status, body: "", robotsAllowed: true };
+    }
+    return { url, finalUrl: at, status: response.status, body: await readText(response), robotsAllowed: true };
+  }
+
+  /**
+   * Requests the URL and follows its redirects, five at most, every hop through the policy. A hop
+   * `allowed` turns down ends the walk there unrequested, with no response.
+   */
+  async function walk(url: string, allowed: (hop: URL) => Promise<boolean>): Promise<{ at: string; response?: Response }> {
     let current = url;
     for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-      const target = new URL(current);
-      // The policy before robots.txt: a refused host's robots.txt is not requested either.
-      await policy.check(target);
-      if (!(await robotsAllows(target))) {
-        return { url, finalUrl: current, status: 0, body: "", robotsAllowed: false };
-      }
+      if (!(await allowed(new URL(current)))) return { at: current };
       const response = await request(current);
       const next = redirectOf(response, current);
-      if (next) {
-        await response.body?.cancel();
-        current = next;
-        continue;
-      }
-      // A failing status is the whole reading; nothing reads its body, so it is not downloaded.
-      if (!response.ok) {
-        await response.body?.cancel();
-        return { url, finalUrl: current, status: response.status, body: "", robotsAllowed: true };
-      }
-      try {
-        checkContentType(response);
-      } catch (error) {
-        await response.body?.cancel();
-        throw error;
-      }
-      const body = decodeBody(await readCapped(response),response.headers.get("content-type"));
-      return { url, finalUrl: current, status: response.status, body, robotsAllowed: true };
+      if (!next) return { at: current, response };
+      await response.body?.cancel();
+      current = next;
     }
     throw new Error(`more than ${MAX_REDIRECTS} redirects`);
   }

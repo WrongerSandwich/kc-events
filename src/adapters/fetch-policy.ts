@@ -2,15 +2,15 @@ import { lookup as dnsLookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 
+// What both fetchers will and will not fetch, and how they read what comes back. A URL is checked
+// before every request, redirect hops included: http(s) only, and never a host on the machine's
+// own network, so a link a discovered page carries cannot point the job at the home LAN. A body
+// is read within a byte budget, only in a content type the job can read, and decoded in the
+// charset it declares. Requests to one origin are spaced by its robots.txt `Crawl-delay`.
+
 /**
- * What both fetchers will and will not fetch, and how they read what comes back. A URL is checked
- * before every request, redirect hops included: http(s) only, and never a host on the machine's
- * own network, so a link a discovered page carries cannot point the job at the home LAN. A body
- * is read within a byte budget, only in a content type the job can read, and decoded in the
- * charset it declares. Requests to one origin are spaced by its robots.txt `Crawl-delay`.
- *
- * A refusal is a `FetchRefused` thrown in place of the request, which the run counts as an outage
- * like any other failed fetch: the page was not read, so nothing on it is struck.
+ * A request the fetch policy refused, thrown in place of the request. The run counts it as an
+ * outage like any other failed fetch: the page was not read, so nothing on it is struck.
  */
 export class FetchRefused extends Error {
   override name = "FetchRefused";
@@ -140,12 +140,22 @@ function isPrivate(address: string, family: number): boolean {
   return PRIVATE_ADDRESSES.check(address, "ipv4");
 }
 
-/** Throws `FetchRefused` unless the response's content type is one the job reads. A response that names none is read. */
-export function checkContentType(response: Response): void {
-  const header = response.headers.get("content-type");
-  if (!header) return;
-  const type = header.split(";")[0]!.trim().toLowerCase();
-  if (!READABLE_TYPES.has(type)) throw new FetchRefused(`fetch policy refuses content type ${type}`);
+/**
+ * A successful response's body as text, or `FetchRefused`: a content type off the allow-list is
+ * refused unread; one that names no content type is read, and refused if it turns out binary.
+ */
+export async function readText(response: Response): Promise<string> {
+  const contentType = response.headers.get("content-type");
+  const type = contentType?.split(";")[0]!.trim().toLowerCase();
+  if (type !== undefined && !READABLE_TYPES.has(type)) {
+    await response.body?.cancel();
+    throw new FetchRefused(`fetch policy refuses content type ${type}`);
+  }
+  const bytes = await readCapped(response);
+  // Text holds no NUL unless it is UTF-16 (which marks itself); a PDF, ZIP or MP3 has one within its first kilobyte.
+  const binary = !bomCharset(bytes)?.startsWith("utf-16") && bytes.subarray(0, 1024).includes(0);
+  if (type === undefined && binary) throw new FetchRefused("fetch policy refuses a body with no content type that is not text");
+  return decodeBody(bytes, contentType);
 }
 
 /**
@@ -153,11 +163,10 @@ export function checkContentType(response: Response): void {
  * more is cancelled and refused. The budget counts bytes after decompression, so a small gzip
  * transfer cannot inflate without bound.
  */
-export async function readCapped(response: Response, maxBytes = MAX_BODY_BYTES): Promise<Uint8Array> {
-  const tooLarge = () => new FetchRefused(`fetch policy refuses a body over ${maxBytes} bytes`);
+export async function readCapped(response: Response): Promise<Uint8Array> {
   // Content-Length counts the transfer, which is never more than the decompressed body.
   const declared = Number(response.headers.get("content-length"));
-  if (declared > maxBytes) {
+  if (declared > MAX_BODY_BYTES) {
     await response.body?.cancel();
     throw tooLarge();
   }
@@ -169,7 +178,7 @@ export async function readCapped(response: Response, maxBytes = MAX_BODY_BYTES):
     const { done, value } = await reader.read();
     if (done) break;
     total += value.byteLength;
-    if (total > maxBytes) {
+    if (total > MAX_BODY_BYTES) {
       await reader.cancel();
       throw tooLarge();
     }
@@ -178,12 +187,19 @@ export async function readCapped(response: Response, maxBytes = MAX_BODY_BYTES):
   return Buffer.concat(chunks);
 }
 
+/** Throws `FetchRefused` if a page already in hand (a browser's rendered DOM) is over the byte budget. */
+export function checkSize(body: string): void {
+  if (Buffer.byteLength(body) > MAX_BODY_BYTES) throw tooLarge();
+}
+
+const tooLarge = () => new FetchRefused(`fetch policy refuses a body over ${MAX_BODY_BYTES} bytes`);
+
 /**
  * The body as text, in the charset it declares: the content-type header's, else a byte order mark,
  * else a `<meta charset>` or `http-equiv` in the first kilobyte, else UTF-8. A charset the decoder
  * does not know is read as UTF-8.
  */
-export function decodeBody(bytes: Uint8Array, contentType: string | null): string {
+function decodeBody(bytes: Uint8Array, contentType: string | null): string {
   const charset = headerCharset(contentType) ?? bomCharset(bytes) ?? metaCharset(bytes) ?? "utf-8";
   try {
     return new TextDecoder(charset).decode(bytes);
