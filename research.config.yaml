@@ -140,6 +140,7 @@ discovery:
     - festivalguidesandreviews.com
     - wanderistan.com
     - kcstudio.org # an arts magazine's calendar
+    - inkansascity.com # a magazine's calendar; the 2026-10-10 hand run read Nerman exhibitions from it
   ignoredHosts: # never followed: social media and the like, which carry no primary page
     - facebook.com
     - instagram.com
