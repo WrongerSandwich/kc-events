@@ -257,8 +257,17 @@ say "Registry sources marked fetch: browser are loaded in headless Chromium, whi
 say "in its own cache (~/.cache/ms-playwright), not on the system. The weekly run re-runs this install,"
 say "which does nothing unless a Playwright upgrade needs a new Chromium."
 (cd "$RUN_DIR" && pnpm exec playwright install --only-shell chromium)
-if (cd "$RUN_DIR" && node -e 'import("playwright").then(({ chromium }) => chromium.launch()).then((b) => b.close())' 2>/dev/null); then
-  say "Chromium launches."
+chromium_launches() {
+  (cd "$RUN_DIR" && node -e "import('playwright').then(({ chromium }) => chromium.launch({ chromiumSandbox: $1 })).then((b) => b.close())" 2>/dev/null)
+}
+if chromium_launches true; then
+  say "Chromium launches, inside its sandbox."
+elif chromium_launches false; then
+  warn "Chromium launches, but not inside its sandbox: this host does not allow unprivileged user namespaces"
+  say "The run still reads the browser sources, but their pages' script runs as you, next to the keys,"
+  say "and every run's log says so. On Debian: sudo sysctl -w kernel.unprivileged_userns_clone=1; on Ubuntu"
+  say "24.04 and later: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 (persist either in /etc/sysctl.d)."
+  SKIPPED+=("let Chromium sandbox itself: allow unprivileged user namespaces (see the browser stage)")
 else
   warn "Chromium is installed but does not launch, most likely for want of system libraries"
   step "Install them with: cd $RUN_DIR && sudo pnpm exec playwright install-deps chromium"

@@ -1,4 +1,4 @@
-import { chromium, type Browser, type BrowserContext } from "playwright";
+import { chromium, type Browser, type Page, type Request } from "playwright";
 import type { FetchOptions, FetchPort, FetchResult } from "../ports.js";
 import { checkSize } from "./fetch-policy.js";
 import { memoized, TIMEOUT_MS, type PlainFetcher } from "./fetcher.js";
@@ -8,10 +8,19 @@ import { USER_AGENT } from "./identity.js";
 const SKIPPED_RESOURCES = new Set(["image", "media", "font"]);
 /** Launching Chromium is not part of a page's timeout, but is bounded too. */
 const LAUNCH_TIMEOUT_MS = 30_000;
+/** Nothing a calendar needs: no extensions, no background requests of the browser's own, a bounded script heap. */
+export const LAUNCH_ARGS = ["--disable-extensions", "--disable-background-networking", "--js-flags=--max-old-space-size=512"];
 
 export interface BrowserFetcher extends FetchPort {
   /** Closes the browser, if a fetch launched one. */
   close(): Promise<void>;
+}
+
+export interface BrowserFetcherOptions {
+  /** An installed browser ("chrome") over Playwright's own Chromium. */
+  channel?: string;
+  /** Where a warning goes that the run's log should carry (the browser runs without its sandbox). */
+  warn?: (message: string) => void;
 }
 
 /**
@@ -19,16 +28,24 @@ export interface BrowserFetcher extends FetchPort {
  * in headless Chromium and returns the rendered DOM's HTML as the body. Its manners are the plain
  * fetcher's: that fetcher requests the URL first and walks its redirects, robots.txt and all, and the
  * browser loads the page they end on; robots.txt is asked again, through the same cache, before any
- * navigation the page's script makes and for the URL the page ends on (what the page itself loads,
- * its scripts and data, is not a page the job asked for). The plain fetcher's policy holds too: no
- * request the page makes goes to a host on the machine's own network, the load waits its origin's
- * crawl delay, and a rendered page over the byte budget is refused. It identifies itself with the job's user
- * agent, not a stock browser's; one attempt within the same timeout, cached by URL and selector.
+ * navigation the page's script makes, at every redirect hop of one, and for the URL the page ends on
+ * (what the page itself loads, its scripts and data, is not a page the job asked for). The plain
+ * fetcher's policy holds too: no request the page makes goes to a host on the machine's own network,
+ * the load waits its origin's crawl delay, and a rendered page over the byte budget is refused. It
+ * identifies itself with the job's user agent, not a stock browser's; one attempt within the same
+ * timeout, cached by URL and selector.
+ *
+ * The page runs a stranger's script, so it is given little: Chromium's sandbox wherever the host can
+ * provide one (a loud warning where it cannot), and a context of its own per fetch, with no
+ * downloads, no service workers, and nothing kept from the page before. A popup is closed as it
+ * opens and a frame's navigation is refused: neither is the page asked for, and only the main
+ * frame's HTML is read. Playwright's route sees only the first URL of a redirect chain, so every hop
+ * after it is checked as it is requested, and a hop the policy refuses fails the fetch.
  *
  * The page is read once the network has gone quiet, or, given a selector, once that selector is on
  * the page; a page that does neither in time is a failure, not a partial reading. The browser is
- * launched on the first fetch, so a run with no browser source never starts one. `channel` picks
- * an installed browser ("chrome") over Playwright's own Chromium.
+ * launched on the first fetch, so a run with no browser source never starts one; a launch that fails
+ * is not tried again, and every browser fetch of that run fails saying so.
  *
  * The URL it reports the page ended on drops a fragment the page's script set (a schedule that
  * writes today's date into the hash, say): that is the page's state, not where it is, and it would
@@ -36,60 +53,76 @@ export interface BrowserFetcher extends FetchPort {
  *
  * Build one per run, and close it when the run is done.
  */
-export function createBrowserFetcher(plain: PlainFetcher, { channel }: { channel?: string } = {}): BrowserFetcher {
+export function createBrowserFetcher(plain: PlainFetcher, { channel, warn = console.warn }: BrowserFetcherOptions = {}): BrowserFetcher {
   const pages = new Map<string, Promise<FetchResult>>();
-  let context: Promise<BrowserContext> | undefined;
   let browser: Promise<Browser> | undefined;
-
-  const contextFor = () =>
-    (context ??= (async () => {
-      browser = chromium.launch({ channel, timeout: LAUNCH_TIMEOUT_MS });
-      return (await browser).newContext({ userAgent: USER_AGENT });
-    })());
 
   async function fetchPage(url: string, options: FetchOptions): Promise<FetchResult> {
     const blocked = (at: string): FetchResult => ({ url, finalUrl: at, status: 0, body: "", robotsAllowed: false });
     // The plain fetcher walks the redirects first, asking robots.txt at every hop, so the browser goes
-    // straight to where they end: a browser follows a redirect without letting anyone check the hop.
+    // straight to where they end.
     const walked = await plain.fetch(url);
     if (!walked.robotsAllowed) return blocked(walked.finalUrl);
-    const page = await (await contextFor()).newPage();
+    browser ??= launch(channel, warn);
+    const context = await (await browser).newContext({ userAgent: USER_AGENT, acceptDownloads: false, serviceWorkers: "block" });
     const deadline = Date.now() + TIMEOUT_MS;
     const remaining = () => Math.max(1, deadline - Date.now());
-    // Why the page's own navigation stopped, if the route below stopped it: a disallowed URL, or a
+    let page: Page | undefined;
+    // Why the page's own navigation stopped, if a check below stopped it: a disallowed URL, or a
     // robots.txt that could not be read, or a URL the fetch policy refuses.
     let disallowed: string | undefined;
     let navigationFailure: unknown;
+    const hopChecks: Promise<unknown>[] = [];
+    const isMainNavigation = (request: Request) => request.isNavigationRequest() && request.frame() === page?.mainFrame();
+
+    // A navigation of the main frame: the policy, then robots.txt. A refusal is recorded, not thrown.
+    async function navigationAllowed(target: string): Promise<boolean> {
+      try {
+        await plain.policy.check(new URL(target));
+        if (await plain.robotsAllows(target)) return true;
+        disallowed ??= target;
+      } catch (error) {
+        navigationFailure ??= error;
+      }
+      return false;
+    }
+
     try {
-      await page.route("**/*", async (route) => {
+      await context.route("**/*", async (route) => {
         const request = route.request();
-        if (SKIPPED_RESOURCES.has(request.resourceType())) return route.abort();
-        const mainNavigation = request.isNavigationRequest() && request.frame() === page.mainFrame();
-        // Whatever the page loads, it loads nothing from the machine's own network.
-        const target = new URL(request.url());
-        if (mainNavigation || target.protocol === "http:" || target.protocol === "https:") {
-          try {
-            await plain.policy.check(target);
-          } catch (error) {
-            if (mainNavigation) navigationFailure ??= error;
-            return route.abort("blockedbyclient");
-          }
-        }
-        if (!mainNavigation) return route.continue();
-        try {
-          if (await plain.robotsAllows(request.url())) return route.continue();
-          disallowed ??= request.url();
-          return route.abort("blockedbyclient");
-        } catch (error) {
-          navigationFailure ??= error;
-          return route.abort("failed");
+        let allowed: boolean;
+        if (SKIPPED_RESOURCES.has(request.resourceType())) allowed = false;
+        else if (request.frame().page() !== page) allowed = false; // a popup's, closing anyway
+        else if (isMainNavigation(request)) allowed = await navigationAllowed(request.url());
+        else if (request.isNavigationRequest()) allowed = false; // a frame's, never read
+        else allowed = await subresourceAllowed(plain, request.url());
+        // The page may have closed while the checks ran, and a closed page's route cannot be answered.
+        await (allowed ? route.continue() : route.abort("blockedbyclient")).catch(() => undefined);
+      });
+      // Every redirect hop after the first, which the route above never sees.
+      context.on("request", (request) => {
+        if (!request.redirectedFrom()) return;
+        if (isMainNavigation(request)) hopChecks.push(navigationAllowed(request.url()));
+        else {
+          hopChecks.push(
+            subresourceAllowed(plain, request.url()).then((allowed) => {
+              if (!allowed) navigationFailure ??= new Error(`a redirect inside the page went to ${request.url()}, which the fetch policy refuses`);
+            }),
+          );
         }
       });
+      page = await context.newPage();
+      const ours = page;
+      context.on("page", (opened) => {
+        if (opened !== ours) void opened.close().catch(() => undefined);
+      });
+
       await plain.policy.pace(new URL(walked.finalUrl));
       const response = await page.goto(walked.finalUrl, { waitUntil: "domcontentloaded", timeout: remaining() }).catch((error: unknown) => {
         if (disallowed || navigationFailure) return null;
         throw error;
       });
+      await Promise.all(hopChecks);
       if (disallowed) return blocked(disallowed);
       if (navigationFailure) throw navigationFailure;
       if (!response) throw new Error(`no response loading ${url}`);
@@ -98,14 +131,18 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel }: { channel
         if (options.waitFor) await page.waitForSelector(options.waitFor, { state: "attached", timeout: remaining() });
         else await page.waitForLoadState("networkidle", { timeout: remaining() });
       }
+      // The page's script may have navigated since it loaded, so where it is now is asked again.
+      const ended = page.url();
+      await navigationAllowed(ended);
+      await Promise.all(hopChecks);
       if (disallowed) return blocked(disallowed);
       if (navigationFailure) throw navigationFailure;
       const body = await page.content();
       checkSize(body);
-      return { url, finalUrl: withoutScriptFragment(page.url(), url), status, body, robotsAllowed: true };
+      return { url, finalUrl: withoutScriptFragment(ended, url), status, body, robotsAllowed: true };
     } finally {
-      // A page that will not close (the browser crashed) must not hide why the fetch failed.
-      await page.close().catch(() => undefined);
+      // A context that will not close (the browser crashed) must not hide why the fetch failed.
+      await context.close().catch(() => undefined);
     }
   }
 
@@ -117,6 +154,47 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel }: { channel
       await launched?.close();
     },
   };
+}
+
+/** Whether the page may load a subresource: an http(s) URL the fetch policy allows, or one with no host to ask about (`data:`). */
+async function subresourceAllowed(plain: PlainFetcher, target: string): Promise<boolean> {
+  const parsed = new URL(target);
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return true;
+  try {
+    await plain.policy.check(parsed);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Chromium, sandboxed if the host allows it. A host without unprivileged user namespaces cannot give
+ * it a sandbox; it then runs without one, and says so loudly, since a page's script would run as
+ * the run's own user. A launch that fails both ways throws, and that is the reason every browser
+ * fetch of the run reports.
+ */
+async function launch(channel: string | undefined, warn: (message: string) => void): Promise<Browser> {
+  const options = { channel, timeout: LAUNCH_TIMEOUT_MS, args: LAUNCH_ARGS };
+  try {
+    return await chromium.launch({ ...options, chromiumSandbox: true });
+  } catch (sandboxed) {
+    let browser: Browser;
+    try {
+      browser = await chromium.launch({ ...options, chromiumSandbox: false });
+    } catch (error) {
+      throw new Error(`the browser did not launch: ${firstLine(error)}`, { cause: error });
+    }
+    warn(
+      `WARNING: Chromium's sandbox did not start (${firstLine(sandboxed)}), so pages from fetch: browser sources ` +
+        "run unsandboxed as this user. Enable unprivileged user namespaces; scripts/home-run-setup.sh checks for them.",
+    );
+    return browser;
+  }
+}
+
+function firstLine(error: unknown): string {
+  return (error instanceof Error ? error.message : String(error)).split("\n")[0]!;
 }
 
 /** The URL the page ended on, less any fragment the requested URL did not carry. */
