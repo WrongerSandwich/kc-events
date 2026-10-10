@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { parse } from "yaml";
 import { describe, expect, it } from "vitest";
 import { run } from "../src/run.js";
 import { emptyDataset, parseDataset } from "../src/dataset.js";
@@ -66,7 +67,10 @@ describe("recurrence, kind, geography, and neighborhood", () => {
 
   it("a series a page titles month by month with only days and times is one recurring event, and a month-titled entry with dates keeps them", async () => {
     // The shape of the National WWI Museum's calendar, which splits its standing tours into one entry per month.
-    const museum = source("National WWI Museum and Memorial", { kind: "other", neighborhood: "Crossroads" });
+    // The folding rule is that source's check hint (#97 moved it out of the rules every page gets), so the test reads it from the registry.
+    const registry = parse(readFileSync(new URL("../data/registry.yaml", import.meta.url), "utf8")) as { sources: { name: string; checkHints?: string }[] };
+    const hints = registry.sources.find((s) => s.name === "National WWI Museum and Memorial")!.checkHints;
+    const museum = source("National WWI Museum and Memorial", { kind: "other", neighborhood: "Crossroads", checkHints: hints });
     const url = museum.urls[0]!;
     const page = `<html><body>
       <p>Monday, Friday-Saturday</p><p>Select times</p><h3>Main Gallery Tours (Oct. 2026)</h3>
@@ -95,8 +99,9 @@ describe("recurrence, kind, geography, and neighborhood", () => {
       ports: fakes.ports,
     });
 
-    // The rules the model reads say to fold undated month-titled entries, and still say a stated end makes a limited run.
+    // The source hint the model reads says to fold undated month-titled entries, and the rules still say a stated end makes a limited run.
     const system = fakes.requests.find((r) => r.model === "test/extraction")!.messages[0]!.content;
+    expect(system).toContain("Source hints:");
     expect(system).toContain("with the month in the title");
     expect(system).toContain("is not recurring: give its `startDate` and `endDate`");
 

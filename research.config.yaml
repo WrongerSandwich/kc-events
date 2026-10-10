@@ -55,12 +55,22 @@ neighborhoods:
     - East Bottoms
     - Berkley Riverfront
     - Northeast
+    - Waldo
+    - Brookside
   South KC:
     - South Kansas City
     - Swope Park
     - Truman Sports Complex
-  Northland:
+  Northland: # the cities first; "Northland" itself for an address in none of them
     - Northland
+    - North Kansas City
+    - Gladstone
+    - Parkville
+    - Riverside
+    - Liberty
+    - Kearney
+    - Excelsior Springs
+    - Platte City
   Kansas City, Kansas:
     - Kansas City, Kansas
     - Bonner Springs
@@ -73,11 +83,13 @@ neighborhoods:
     - Leawood
     - Shawnee
     - Fairway
+    - Gardner
   Eastern Jackson County:
     - Independence
     - Lee's Summit
     - Blue Springs
     - Raytown
+    - Kingsville # Powell Gardens
   Lawrence:
     - Lawrence
 
@@ -121,6 +133,13 @@ discovery:
     - concertfix.com
     - concerts50.com # #16: the 2026-10-03 hand run read three Midland shows from its listing page
     - kidsoutandabout.com # #53: a family-events listing site, read as a primary page by discovery through 2026-10-06
+    - fairsandfestivals.net # #95: listing sites the 2026-10-09 dataset carried as primary pages; they list, never host
+    - gonorthkc.com # a tourism board's calendar
+    - applebaumkc.com # a realtor's "festivals around Kansas City" blog posts
+    - kclivearts.org
+    - festivalguidesandreviews.com
+    - wanderistan.com
+    - kcstudio.org # an arts magazine's calendar
   ignoredHosts: # never followed: social media and the like, which carry no primary page
     - facebook.com
     - instagram.com

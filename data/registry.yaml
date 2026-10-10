@@ -49,7 +49,8 @@ sources:
     kind: music
     neighborhood: Crossroads
     checkHints: Most concerts are in Helzberg Hall at the Kauffman Center; date ranges like "OCT 23-25" are one run of the same program.
-    status: active
+    status: excluded
+    reason: The page names no hall, so under cite-or-drop every concert stays unverified or duplicates the Kauffman Center's listing of the same program (five runs, 2026-10-10). The Kauffman Center source carries the hall.
 
   - name: recordBar
     urls: [https://www.therecordbar.com/shows]
@@ -74,19 +75,20 @@ sources:
     status: active
 
   - name: The Truman
-    urls: [https://www.thetruman.com/]
+    urls: [https://www.thetrumankc.com/]
     kind: music
     neighborhood: Midtown
     checkHints: Club at 608 E 31st St; the homepage carries the full show list.
     status: active
-    notes: Extracted cleanly in the 2026-10-02 demo; on 2026-10-03 its TLS handshake failed for every client, so watch the failing-sources report.
+    notes: Was thetruman.com, which stopped resolving in October 2026 (eleven failed fetches); thetrumankc.com answers with the same show list (checked 2026-10-10).
 
   - name: Azura Amphitheater
     urls: [https://www.azuraamp.com/kansas-city-concert-and-events-calendar.html]
     kind: music
     neighborhood: Bonner Springs
     checkHints: Outdoor amphitheater, season roughly May to October.
-    status: active
+    status: excluded
+    reason: Off-season. The calendar was empty three runs running (checked 2026-10-10). Activate it again in April 2027.
 
   - name: Folly Theater
     urls: [https://follytheater.org/events/]
@@ -207,14 +209,16 @@ sources:
     kind: theater/dance
     neighborhood: Crown Center
     checkHints: The homepage carries the season with dates. Performances are at the Kauffman Center; the Bolender Center (500 W Pershing Rd) hosts smaller ones.
-    status: active
+    status: excluded
+    reason: The homepage names no hall for its performances, so none verified in five runs (2026-10-10). The Kauffman Center source carries them with the hall.
 
   - name: Kansas City Repertory Theatre
     urls: [https://kcrep.org/]
     kind: theater/dance
     neighborhood: Plaza & Museum District
     checkHints: The homepage carries the season; its calendar page has no dates. Productions are at the Spencer Theatre at UMKC, 4949 Cherry St, and Copaken Stage downtown.
-    status: active
+    status: excluded
+    reason: The homepage names no theatre for its productions, so one of four verified in five runs (2026-10-10); the production pages name Copaken and Spencer but the run reads only the listed page. Revisit if a season page with venues appears.
 
   - name: Unicorn Theatre
     urls: [https://unicorntheatre.org/]
@@ -229,6 +233,7 @@ sources:
     neighborhood: Crown Center
     checkHints: The page lists every season, past ones included; only productions that have not closed matter. Venues vary by show (City Stage at Union Station, Spencer Theatre), so read the venue from each listing.
     status: active
+    notes: Zero events in October 2026 is right, not a fault; the next production opens 2027-01-27, beyond the horizon.
 
   - name: American Theatre Guild (Broadway in Kansas City)
     urls:
@@ -252,7 +257,8 @@ sources:
     kind: theater/dance
     neighborhood: Midtown
     checkHints: The homepage is the festival's front page. Annual festival in July across several venues, plus smaller events through the year; read the venue from each listing.
-    status: active
+    status: excluded
+    reason: Off-season. Nothing dated on the page three runs running (checked 2026-10-10). Activate it again in May 2027.
 
   # --- Comedy ------------------------------------------------------------------------------------
 
@@ -263,21 +269,41 @@ sources:
     checkHints: Club at 1130 W 103rd St.
     status: active
 
+  - name: The Bird Comedy Theater
+    urls: [https://thebirdkc.com/]
+    kind: comedy
+    neighborhood: Crossroads
+    checkHints: The homepage carries the show list. Improv and stand-up; a troupe's weekly show is a recurring event, a named headliner's date a one-off.
+    status: active
+    notes: Discovery read its shows from the homepage before it was a source (2026-10-10).
+
   # --- Art, museums, exhibitions -----------------------------------------------------------------
 
   - name: Nelson-Atkins Museum of Art
     urls: [https://www.nelson-atkins.org/events/]
     kind: art/exhibitions
     neighborhood: Plaza & Museum District
-    checkHints: Museum at 4525 Oak St. Exhibitions are limited runs; talks, performances and festivals are listed too. Tivoli film screenings are their own source.
+    checkHints: Museum at 4525 Oak St. Exhibitions are limited runs; talks, performances and festivals are listed too. The Tivoli cinema screens inside the museum and its films are on this page, kind film; first-run screenings repeat daily, special series and one-night screenings are one-offs.
     status: active
+    notes: The Tivoli's own page (/events/tivoli/) was a second source until 2026-10-10; it repeats this page's films, so each was stored twice and duplicate-expired weekly.
 
-  - name: Tivoli Cinemas
-    urls: [https://www.nelson-atkins.org/events/tivoli/]
+  - name: Stray Cat Film Center
+    urls: [https://www.straycatfilmcenter.com/screeningsandevents]
     kind: film
-    neighborhood: Plaza & Museum District
-    checkHints: The Tivoli now screens at the Nelson-Atkins. First-run screenings repeat daily; special series and one-night screenings are one-offs.
+    neighborhood: Crossroads
+    checkHints: Microcinema at 1662 Broadway Blvd. Each screening is a one-off; a series listed by its dates is one event per date span.
     status: active
+    notes: Discovery read seven events from it before it was a source (2026-10-10).
+
+  - name: Screenland Armour
+    urls: [https://www.screenland.com/calendar]
+    kind: film
+    neighborhood: North Kansas City
+    checkHints: Cinema at 408 Armour Rd, North Kansas City. A first-run film's daily showtimes are one limited run; a live commentary, live score, anniversary print, or series night (Friday Night Frights, Backyard Movies) is a one-off on its date.
+    fetch: browser
+    waitFor: button.showing
+    status: active
+    notes: The calendar renders by script and never goes network-quiet (checked 2026-10-10). Discovery read its HUMP! festival listing off a ticketing page before it was a source.
 
   - name: Kemper Museum of Contemporary Art
     urls: [https://www.kemperart.org/]
@@ -352,18 +378,34 @@ sources:
     checkHints: Bookstore at 2706 W 53rd St, Fairway; author events are often at other venues (Unity Temple on the Plaza and others), so read the venue from each listing.
     status: active
 
+  - name: Johnson County Library
+    urls: [https://jocolibrary.bibliocommons.com/v2/events]
+    kind: talks/readings
+    neighborhood: Overland Park
+    checkHints: Branches across Johnson County, so read the venue (the branch) from each listing. Skip online events. Author talks, lectures and workshops are the events; a weekly storytime is recurring.
+    status: active
+    notes: jocolibrary.org/events redirects here. The page is long; the first weeks of listings are what fit.
+
+  - name: Truman Library
+    urls: [https://www.trumanlibrary.gov/events]
+    kind: talks/readings
+    neighborhood: Independence
+    checkHints: Presidential library at 500 W US Hwy 24, Independence; some talks are held in Kansas City, so read the venue from each listing. Skip online programs.
+    status: active
+
   - name: Heartland Book Festival
     urls: [https://www.heartlandbookfest.org/schedule]
     kind: talks/readings
     neighborhood: Downtown
     checkHints: Annual book festival, held at the Central Library and other venues.
-    status: active
+    status: excluded
+    reason: Over for the year. The schedule page carries only the past festival's sessions (23 past records; checked 2026-10-10). Activate it again in August 2027.
 
   - name: National WWI Museum and Memorial
     urls: [https://www.theworldwar.org/events]
     kind: talks/readings
     neighborhood: Crown Center
-    checkHints: Museum at 2 Memorial Dr; lectures, exhibitions and commemorations.
+    checkHints: Museum at 2 Memorial Dr; lectures, exhibitions and commemorations. The page lists some things under one name per month, with the month in the title ("Main Gallery Tours (Oct. 2026)", "Main Gallery Tours (Nov. 2026)") and entries that give only days and times ("Monday, Friday-Saturday, Select times"); that is one recurring event, titled without the month and scheduled from any one entry. An entry that gives its own dates ("Wednesdays, Oct. 7-28, 2026") is read by those dates.
     status: active
 
   # --- Sports ------------------------------------------------------------------------------------
@@ -409,6 +451,14 @@ sources:
     checkHints: Entertainment district; KC Live! block concerts and festivals. Watch parties and its bars' and restaurants' standing nights are promotions, not events.
     status: active
 
+  - name: Crown Center
+    urls: [https://www.crowncenter.com/events]
+    kind: other
+    neighborhood: Crown Center
+    checkHints: The district's calendar, 2450 Grand Blvd; exhibits in the shops, events on the square, and shows by its theaters. Read the kind from each listing; a Musical Theater Heritage or Coterie run listed here is theater/dance.
+    status: active
+    notes: Discovery read eleven events from this page before it was a source (2026-10-10).
+
   - name: Kansas City Convention Center
     urls: [https://kcconvention.com/events/]
     kind: other
@@ -418,11 +468,12 @@ sources:
     notes: ICS feed at https://kcconvention.com/events/?ical=1
 
   - name: City Market
-    urls: [https://thecitymarket.org/events/]
+    urls: [https://thecitymarketkc.org/events/]
     kind: festivals/markets
     neighborhood: River Market
     checkHints: The farmers market is recurring (weekends); seasonal markets and festivals are limited runs or one-offs.
     status: active
+    notes: Was thecitymarket.org, which now redirects to thecitymarketkc.org (checked 2026-10-10).
 
   - name: American Royal
     urls: [https://americanroyal.com/calendar/]
@@ -503,11 +554,12 @@ sources:
     reason: Cloudflare blocks every non-interactive client with HTTP 403, a headless browser and a browser's user agent included (checked 2026-10-08). Only the club allowing the job's user agent would change that; its acts often play Comedy Club KC and recordBar, which are sources.
 
   - name: Kansas City Museum
-    urls: [https://www.kansascitymuseum.org/events]
+    urls: [https://museumofkansascity.org/events/]
     kind: art/exhibitions
     neighborhood: Northeast
-    status: excluded
-    reason: Cloudflare answers every non-interactive client with its "Just a moment" JavaScript challenge (HTTP 403), a headless browser included (checked 2026-10-08). Getting past it would take disguising the browser, which ADR 0011 rules out; only the museum allowing the job's user agent would change that.
+    checkHints: Museum in Corinthian Hall, 3218 Gladstone Blvd. Exhibitions are limited runs; a film series, Día de los Muertos and other one-offs are listed too.
+    status: active
+    notes: kansascitymuseum.org sits behind a Cloudflare challenge (HTTP 403 to every non-interactive client; checked 2026-10-08), but museumofkansascity.org is the museum's own site and fetches plainly; discovery read six events from it before it was a source (2026-10-10).
 
   - name: Union Station
     urls: [https://unionstation.org/events/]

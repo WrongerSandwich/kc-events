@@ -7,7 +7,7 @@ A weekly-researched, ad-free picture of what is worth doing in Kansas City, buil
 ### Dataset
 
 **Event**:
-A single thing happening at a venue over a date range, recorded once in the dataset regardless of how many sources mention it. Its identity is its primary page plus its title, so a date can move without making a new event.
+A single public, in-person thing happening at a venue over a date range, recorded once in the dataset regardless of how many sources mention it. Its identity is its primary page plus its title, so a date can move without making a new event. What the public cannot simply attend (a gala, a graduation, an annual meeting, a members-only business) and what is held only online are not events; extraction skips them.
 _Avoid_: item, listing, entry
 
 **Published dataset**:
@@ -35,14 +35,14 @@ An event that happens over a bounded span with a known end date, such as an exhi
 An event that repeats indefinitely on a schedule, such as a monthly market, First Fridays, or a museum's weekly tour.
 
 **Promotion**:
-A business's own standing night, or a bar's watch party, listed as if it were an event: a happy hour, a food or drink special, a themed or DJ night, trivia, karaoke, a game-day party. Never an event, whatever it offers; extraction skips it. A recurring event is bigger than one business's night. A class or workshop is never a promotion, wherever it is held.
+A business's own standing night, or a bar's watch party, listed as if it were an event: a happy hour, a food or drink special, a themed or DJ night, trivia, karaoke, a game-day party. Never an event, whatever it offers; extraction skips it. A recurring event is bigger than one business's night. A DJ date with a named headliner, ticketed on its own, is a show, not the venue's standing night. A class or workshop is never a promotion, wherever it is held.
 _Avoid_: special, deal
 
 **Schedule phrase**:
 How a recurring event repeats, in a few words from its page ("Every Tuesday, 7pm"). A recurring event carries it instead of a start and end date. A sports team's season is one recurring event with a schedule phrase, not a one-off per game.
 
 **Don't-miss flag**:
-The editorial call that a one-off or limited run is worth going out of your way for. Never applied to recurring events.
+The editorial call that a one-off or limited run is worth going out of your way for. Never applied to recurring events. The curation prompt names a density, on the order of 30 to 50 flags across an eight-week horizon of about 500 events: a calibration for the threshold, never a quota for a batch.
 _Avoid_: featured, top pick, interest score, rating
 
 **Why-line**:
@@ -77,7 +77,7 @@ The place an event happens. A venue is not the same as a source, even when the v
 _Avoid_: location, room (when meaning the venue as a whole)
 
 **Neighborhood**:
-The part of the metro a venue is in, from a controlled list, shown on the site in place of a street address: the most specific place name people use, a district in the core ("Crossroads") or a city in the suburbs ("Olathe"). The list is the config's, grouped by region, plus the catch-all "elsewhere in the metro", which is in no region; an address that maps to nothing lands there and is flagged as unmappable in the run report. A stored neighborhood the list no longer holds (a region name from before regions, a renamed neighborhood) is placed again in any run in which no page re-reads the event: the list's spelling, the event's registry source's neighborhood for the name of the region that lists it, or else the catch-all; the run report names each such value. A registry source's neighborhood must be on the list.
+The part of the metro a venue is in, from a controlled list, shown on the site in place of a street address: the most specific place name people use, a district in the core ("Crossroads") or a city in the suburbs ("Olathe"). The list is the config's, grouped by region, plus the catch-all "elsewhere in the metro", which is in no region. A region may list its own name ("Northland") beside its cities, for an address in none of them; an address that maps to nothing lands there and is flagged as unmappable in the run report. A stored neighborhood the list no longer holds (a region name from before regions, a renamed neighborhood) is placed again in any run in which no page re-reads the event: the list's spelling, the event's registry source's neighborhood for the name of the region that lists it, or else the catch-all; the run report names each such value. A registry source's neighborhood must be on the list.
 
 ### Research
 
@@ -88,7 +88,7 @@ One execution of the research job: check sources, discover, extract, verify, cur
 The committed record of one run: counts, spend against the cap, per-source results, sources failing repeatedly, unmappable neighborhoods, and promotion suggestions.
 
 **Promotion**:
-Moving a source that the discovery lane has found events on in two runs into the registry. The run tracks discovery sources by host (a ticketing platform is no one source and is never suggested). Always a suggestion in the run report, acted on by hand; never automatic.
+Moving a source that the discovery lane has found events on in two runs into the registry. The run tracks discovery sources by host (a ticketing platform is no one source and is never suggested). Always a suggestion in the run report, acted on by hand; never automatic. Promoting a host releases the events held for promotion from it on the next run (ADR 0012).
 
 **Source**:
 A venue, institution, or organizer whose page or feed the research job checks. A source produces leads; it is not an event.
@@ -133,7 +133,11 @@ The exact text, quoted verbatim from the primary page, that a date or venue was 
 _Avoid_: citation, quote, proof
 
 **Discovery lane**:
-The part of a run that uses web search to find events outside the registry.
+The part of a run that uses web search to find events outside the registry. It finds; it does not admit: a new event from a host that is neither a registry source nor a ticketing platform is **held for promotion** until a person promotes the host (ADR 0012), and a host the registry excludes is never followed.
+
+**Held for promotion**:
+The state of an event the discovery lane found on a host nobody has looked at: stored unverified, marked, never rendered on the site, until the host is promoted into the registry. Released by promotion, not by time.
+_Avoid_: quarantined, pending, draft
 
 **Aggregator**:
 A third-party events listing site. Read only as an index of leads, never as a source of published text or facts.
