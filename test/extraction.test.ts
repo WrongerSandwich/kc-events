@@ -83,24 +83,6 @@ describe("extraction over the registry lane", () => {
     expect(report.counts).toMatchObject({ found: 1, new: 1, heldUnverified: 1 });
   });
 
-  it("a candidate pointing at a primary page that was not fetched is held unverified even with a date and venue", async () => {
-    const { ports } = fakePorts(WEEK_1, {
-      pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Big Show</body></html>" } },
-      completions: [costing(0.01, candidate({ primaryUrl: "https://knuckleheads.test/events/big-show" }))],
-    });
-
-    const { dataset, report } = await runOver(ports);
-
-    expect(dataset.events[0]).toMatchObject({
-      status: "unverified",
-      primaryUrl: "https://knuckleheads.test/events/big-show",
-      start: "2026-10-31T20:00:00-05:00",
-      evidence: { date: "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM", venue: "Knuckleheads, 1 Main St" },
-    });
-    expect(dataset.events[0]).not.toHaveProperty("lastVerified");
-    expect(report.counts).toMatchObject({ found: 1, heldUnverified: 1 });
-  });
-
   it("a multi-night listing yields one active event with a start and an end", async () => {
     const { ports } = fakePorts(WEEK_1, {
       pages: { [CALENDAR_URL]: { status: 200, body: "<html><body>Two Nights</body></html>" } },

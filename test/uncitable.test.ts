@@ -111,20 +111,15 @@ describe("an uncitable re-reading", () => {
     expect(only(both.dataset)).toMatchObject({ status: "active", lastVerified: weekIso(2) });
     expect(both.report.counts.unverifiedByUncitableReading).toBe(0);
   });
-  it("an event whose own page is its primary page, listed by a calendar this run, is re-read from its own page and stays active", async () => {
+  it("an event whose own page is its primary page, listed by a calendar this run, is verified by the calendar's reading and stays active", async () => {
     const EVENT_URL = "https://knuckleheads.test/shows/big-show";
     const first = await seen();
     const ownPage = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, primaryUrl: EVENT_URL })) };
 
-    // The calendar names the event's own page, which the lane did not fetch, so its reading there cites nothing.
-    const second = await runAt(week(2), ownPage, { [CALENDAR_URL]: PAGE, [EVENT_URL]: PAGE }, [
-      reply(candidate({ primaryUrl: EVENT_URL })),
-      reply(candidate({ primaryUrl: EVENT_URL })),
-      reply(),
-    ]);
+    // The calendar's reading is keyed to the calendar, which the lane fetched, so it cites.
+    const second = await runAt(week(2), ownPage, { [CALENDAR_URL]: PAGE, [EVENT_URL]: PAGE }, [reply(candidate()), reply()]);
 
-    expect(second.calls).toContain(`fetch:${EVENT_URL}`);
     expect(only(second.dataset)).toMatchObject({ status: "active", lastVerified: weekIso(2) });
-    expect(second.report.counts).toMatchObject({ reverified: 1, unverifiedByUncitableReading: 0 });
+    expect(second.report.counts).toMatchObject({ unverifiedByUncitableReading: 0 });
   });
 });

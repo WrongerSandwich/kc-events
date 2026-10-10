@@ -53,7 +53,6 @@ export const candidateSchema = z.object({
     ),
   outsideGeography: z.boolean().describe("True when the page places the event outside the Geography under This run."),
   kind: z.string().describe("One kind from the Kinds list under This run; other when none fits."),
-  primaryUrl: z.string().describe("The URL on the Page URL line, exactly as given."),
   eventLink: z
     .number()
     .int()
@@ -204,7 +203,7 @@ export function newEventId(primaryUrl: string, title: string, nowIso: string): s
 
 /** Where a candidate came from: how its page was found, and the page itself. */
 export type CandidateOrigin = PageOrigin & {
-  /** The page this candidate was read from, normalized; the fallback primary URL. */
+  /** The page this candidate was read from, normalized, and so its primary URL. */
   pageUrl: string;
   /** What the page's numbered links lead to, as `readPage` gave them. */
   links: string[];
@@ -231,7 +230,7 @@ export interface Sighting {
  */
 export function candidateToSighting(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Sighting {
   const { timezone } = context.config;
-  const primaryUrl = normalizeUrl(candidate.primaryUrl, origin.pageUrl);
+  const primaryUrl = origin.pageUrl;
   const eventUrl = linkedPage(candidate.eventLink, origin.links, primaryUrl);
   const title = candidate.title.trim();
   const start = localIso(candidate.startDate, candidate.startTime, timezone);

@@ -172,16 +172,6 @@ describe("discovery lane", () => {
     });
   });
 
-  it("a candidate citing an aggregator page as its primary page is expired as index-page", async () => {
-    const { dataset } = await discoverAt(WEEK_1, emptyDataset(), {
-      searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
-      pages: { [PROMOTER_PAGE]: PAGE },
-      completions: [costing(0.01, candidateAt(PROMOTER, { primaryUrl: "https://listings.test/kc/event/123" }))],
-    });
-
-    expect(dataset.events.map((e) => [e.primaryUrl, e.status, e.expiryReason])).toEqual([["https://listings.test/kc/event/123", "expired", "index-page"]]);
-  });
-
   it("an event found by both lanes is one record, keeping its registry lead", async () => {
     const venue = source("The Truman", { neighborhood: "Westport" });
     const { dataset, report } = await discoverAt(WEEK_1, emptyDataset(), {
@@ -214,7 +204,7 @@ describe("discovery lane", () => {
       searches: { [LATER_QUERY]: [lead(otherShow)] },
       pages: { [otherShow]: PAGE, [PROMOTER_PAGE]: PAGE },
       completions: [
-        costing(0.01, candidateAt(PROMOTER, { title: "Other Show", primaryUrl: otherShow })),
+        costing(0.01, candidateAt(PROMOTER, { title: "Other Show" })),
         // Re-verification of the first run's event against its own page.
         costing(0.01, candidateAt(PROMOTER, { title: "Big Show" })),
       ],
@@ -253,7 +243,7 @@ describe("discovery lane", () => {
       pages: { [PROMOTER_PAGE]: PAGE, [otherShow]: PAGE },
       completions: [
         costing(0.01, candidateAt(PROMOTER, { title: "Big Show" })),
-        costing(0.01, candidateAt(PROMOTER, { title: "Other Show", primaryUrl: otherShow })),
+        costing(0.01, candidateAt(PROMOTER, { title: "Other Show" })),
       ],
     });
 
@@ -269,14 +259,14 @@ describe("discovery lane", () => {
         sources: [venue],
         searches: { [query]: [lead(showPage)] },
         pages: { [venue.urls[0]!]: PAGE, [showPage]: PAGE },
-        completions: [costing(0.01), costing(0.01, candidateAt(venue, { primaryUrl: showPage }))],
+        completions: [costing(0.01), costing(0.01, candidateAt(venue))],
       }));
     }
     const { report } = await discoverAt(WEEK_3, dataset, {
       sources: [venue],
       searches: { [LATER_QUERY]: [lead(showPage)] },
       pages: { [venue.urls[0]!]: PAGE, [showPage]: PAGE },
-      completions: [costing(0.01), costing(0.01, candidateAt(venue, { primaryUrl: showPage }))],
+      completions: [costing(0.01), costing(0.01, candidateAt(venue))],
     });
 
     expect(report.discovery.pagesExtracted).toBe(1);
@@ -288,15 +278,15 @@ describe("discovery lane", () => {
     const first = await discoverAt(WEEK_1, emptyDataset(), {
       searches: { [QUERY]: [lead(ticketPage(1))] },
       pages: { [ticketPage(1)]: PAGE },
-      completions: [costing(0.01, candidateAt(PROMOTER, { title: "Show 1", primaryUrl: ticketPage(1) }))],
+      completions: [costing(0.01, candidateAt(PROMOTER, { title: "Show 1" }))],
       discovery: { platformHosts: ["tickets.test"] },
     });
     const second = await discoverAt(WEEK_2, first.dataset, {
       searches: { [LATER_QUERY]: [lead(ticketPage(2))] },
       pages: { [ticketPage(1)]: PAGE, [ticketPage(2)]: PAGE },
       completions: [
-        costing(0.01, candidateAt(PROMOTER, { title: "Show 2", primaryUrl: ticketPage(2) })),
-        costing(0.01, candidateAt(PROMOTER, { title: "Show 1", primaryUrl: ticketPage(1) })),
+        costing(0.01, candidateAt(PROMOTER, { title: "Show 2" })),
+        costing(0.01, candidateAt(PROMOTER, { title: "Show 1" })),
       ],
       discovery: { platformHosts: ["tickets.test"] },
     });
