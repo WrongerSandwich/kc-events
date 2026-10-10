@@ -75,32 +75,52 @@ describe("DontMissList", () => {
     expect(screen.queryByText("Tuesday show")).toBeNull(); // past
   });
 
-  it("reads the clock again when the tab comes back: Today, then Started and dimmed, then the next day", async () => {
+  it("reads the clock again when the tab comes back: Today, then folded away as started, then the next day", async () => {
     // The visitor's machine is a zone away; the cards still go by Kansas City time.
     await inTimeZone("Asia/Tokyo", async () => {
       vi.useFakeTimers({ now: new Date("2026-10-07T00:30:00Z") }); // 7:30 pm Tuesday in Chicago, Wednesday in Tokyo
       render(DontMissList);
       await tick();
-      const card = () => screen.getByRole("heading", { name: "Tuesday show" }).closest("article")!;
-      expect(card()).not.toHaveClass("started");
-      expect(card().querySelector(".tile")).toHaveClass("today");
-      expect(card().querySelector(".tile .top")).toHaveTextContent("Today");
-      expect(within(card()).getByText("Today, 8:00 pm.")).toBeInTheDocument();
+      const card = () => screen.queryByRole("heading", { name: "Tuesday show" })?.closest("article");
+      expect(card()!.querySelector(".tile")).toHaveClass("today");
+      expect(card()!.querySelector(".tile .top")).toHaveTextContent("Today");
+      expect(within(card()!).getByText("Today, 8:00 pm.")).toBeInTheDocument();
+      expect(document.querySelector("details.started")).toBeNull();
 
       vi.setSystemTime(new Date("2026-10-07T01:05:00Z")); // 8:05 pm: no timer notices
       await tick();
-      expect(card()).not.toHaveClass("started");
+      expect(card()).toBeTruthy();
       document.dispatchEvent(new Event("visibilitychange"));
       await tick();
-      expect(card()).toHaveClass("started");
-      expect(within(card()).getByText("Started 8:00 pm")).toBeInTheDocument();
-      expect(within(card()).getByText("Today, started 8:00 pm.")).toBeInTheDocument();
+      // Started: no longer a card, but a row in the one-line fold at the section's end, after what is still to come.
+      expect(card()).toBeFalsy();
+      const fold = document.querySelector("details.started")!;
+      expect(fold).not.toHaveAttribute("open");
+      expect(fold.querySelector("summary")).toHaveTextContent("1 already started today");
+      expect(within(fold as HTMLElement).getByRole("link", { name: "Tuesday show, music" })).toHaveAttribute("href", "/e/a");
+      expect(within(fold as HTMLElement).getByText("8:00 pm")).toBeInTheDocument();
+      const week = screen.getAllByRole("region")[0]!;
+      expect(within(week).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Closing run", "Wednesday show"]);
+      expect(week.lastElementChild?.previousElementSibling).toBe(fold); // the explorer link follows it
 
       vi.setSystemTime(new Date("2026-10-07T15:00:00Z")); // Wednesday morning: the show is gone
       document.dispatchEvent(new Event("visibilitychange"));
       await tick();
       expect(screen.queryByText("Tuesday show")).toBeNull();
     });
+  });
+
+  it("opens the fold when a link jumps to a started pick", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-07T01:05:00Z") }); // 8:05 pm Tuesday: the show has started
+    render(DontMissList);
+    await tick();
+    const fold = document.querySelector("details.started") as HTMLDetailsElement;
+    expect(fold.open).toBe(false);
+    Element.prototype.scrollIntoView ??= () => {};
+    location.hash = "#pick-a";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+    expect(fold.open).toBe(true);
+    location.hash = "";
   });
 
   describe("a section's kind filter", () => {
@@ -211,6 +231,25 @@ describe("DontMissList", () => {
     await tick();
     expect(within(week()).getByRole("button", { name: "1 art/exhibitions" })).toHaveAttribute("aria-pressed", "false");
     expect(within(week()).getByRole("link", { name: "These picks in the explorer" })).not.toHaveAttribute("href", expect.stringContaining("kind="));
+  });
+
+  it("never calls a day empty while a run is open, and follows the kind filter", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") }); // Monday; the closing run is open all week
+    render(DontMissList);
+    await tick();
+    const strip = screen.getByRole("navigation", { name: "This week by day" });
+    const days = () => [...strip.querySelectorAll(".day")].map((d) => d.getAttribute("aria-label"));
+    expect(days()).toEqual([
+      "Mon 5: nothing new, 1 running", "Tue 6: 1 pick, 1 running", "Wed 7: 1 pick, 1 running", "Thu 8: nothing new, 1 running",
+      "Fri 9: nothing new, 1 running", "Sat 10: nothing new, 1 running", "Sun 11: 1 pick, 1 running",
+    ]);
+    // A day with only the run open jumps to the run's card, and draws its band.
+    expect(within(strip).getByRole("link", { name: "Mon 5: nothing new, 1 running" })).toHaveAttribute("href", "#pick-b");
+    expect(strip.querySelectorAll(".day:first-child .lane.open")).toHaveLength(1);
+    within(screen.getAllByRole("region")[0]!).getByRole("button", { name: "2 music" }).click();
+    await tick();
+    expect(days()[0]).toBe("Mon 5: no picks");
+    expect(days()[1]).toBe("Tue 6: 1 pick");
   });
 
   it("says so and points at the explorer when nothing is picked", async () => {

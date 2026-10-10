@@ -15,8 +15,8 @@ const count = events.length;
 <Base title={siteConfig.name} description={siteConfig.tagline}>
   <h1>What's on in Kansas City</h1>
   <p class="lede">
-    A short list of what's worth going out of your way for, each with a line on why. Every date is read from the
-    event's own page; <a href="/about">here's how</a>.
+    The picks worth going out of your way for, each with a line on why. Every date is read from the event's own
+    page; <a href="/about">here's how</a>.
   </p>
 
   <DontMissList client:load />
@@ -39,6 +39,11 @@ const count = events.length;
 
 <style>
   h1 { margin-top: var(--space-8); }
+  /* Phones: the heading steps down a size and sits closer, so the first section starts on the first screen. */
+  @media (max-width: 30rem) {
+    h1 { font-size: var(--text-2xl); margin-top: var(--space-6); }
+    .lede { font-size: var(--text-sm); }
+  }
   .lede { color: var(--fg-muted); margin-top: var(--space-2); max-width: 36rem; }
   .note { color: var(--fg-muted); margin-top: var(--space-1); }
   .always { list-style: none; padding: 0; margin: var(--space-2) 0 0; }

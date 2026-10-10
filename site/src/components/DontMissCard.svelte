@@ -20,7 +20,7 @@
 
 <!-- The kind's colour fills the date tile and the chip; everything else on the card is ink. The id is the week
      strip's jump target. -->
-<article class={`card kind-${slugify(event.kind)}`} class:started={tile.started} id={`pick-${event.id}`}>
+<article class={`card kind-${slugify(event.kind)}`} id={`pick-${event.id}`}>
   <DateTile {tile} id={event.id} />
   <div class="body">
     <h3 style={`view-transition-name: title-${event.id}`}><a href={`/e/${event.id}`}>{event.title}</a></h3>
@@ -39,7 +39,7 @@
   <div class="actions">
     <SaveButton id={event.id} title={event.title} large />
     <!-- A plain link to the event's .ics file: it works with or without JavaScript. -->
-    <a class="ics" href={`/e/${event.id}.ics`} download aria-label={`Add ${event.title} to your calendar`} title="Add to calendar"><UiIcon name="calendar-plus" /></a>
+    <a class="ics" href={`/e/${event.id}.ics`} download aria-label={`Add ${event.title} to your calendar`} title="Add to calendar"><UiIcon name="calendar-plus" /><span class="ics-label" aria-hidden="true">Calendar</span></a>
   </div>
 </article>
 
@@ -71,17 +71,15 @@
   }
   .ics:hover { color: var(--fg); border-color: var(--fg-faint); text-decoration: none; }
   @media (prefers-reduced-motion: reduce) { .ics { transition: none; } }
-  /* Started: dimmed, not hidden (the site knows no end times). Not by opacity or a filter, which would take text
-     below AA and which axe cannot measure: the title steps down to the muted ink, and the tile and chip take the grey
-     "other" kind's shades, both pairings tokens.css holds at AA in each scheme. No transition: the change lands
-     while the tab is away. */
-  .started, .started :global(.chip) { --hue: var(--kind-other); --hue-tint: var(--kind-other-tint); }
-  .started h3 a { color: var(--fg-muted); }
-  /* Phones: the actions stack under the tile, so the title gets the width. */
+  .ics-label { display: none; }
+  /* Phones: the title gets the width beside the tile, and Save and the calendar link sit in a row under the words,
+     each labelled, since a phone shows no tooltip. */
   @media (max-width: 30rem) {
-    .card { grid-template-columns: 3.5rem minmax(0, 1fr); grid-template-rows: auto 1fr; column-gap: var(--space-3); }
-    .body { grid-column: 2; grid-row: 1 / span 2; }
-    .actions { grid-column: 1; grid-row: 2; min-width: 0; flex-direction: column; margin-top: var(--space-2); }
-    .actions :global(button), .ics { width: 100%; min-width: 0; padding-inline: 0; }
+    .card { grid-template-columns: 3.5rem minmax(0, 1fr); column-gap: var(--space-3); }
+    .actions { grid-column: 2; min-width: 0; justify-content: flex-start; margin-top: var(--space-3); }
+    .actions :global(.save) { white-space: nowrap; }
+    .ics { width: auto; gap: 0.4em; padding-inline: var(--space-3); font-size: var(--text-sm); font-weight: var(--weight-medium); }
+    .ics :global(.ui-icon) { font-size: var(--text-lg); }
+    .ics-label { display: inline; }
   }
 </style>

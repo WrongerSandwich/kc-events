@@ -34,7 +34,7 @@ test.describe("a visitor's browser in Tokyo", () => {
   // Already Wednesday there; the page still goes by Kansas City time.
   test.use({ timezoneId: "Asia/Tokyo" });
 
-  test("a pick today reads Today, and Started once its start has passed", async ({ page }) => {
+  test("a pick today reads Today, then folds into the started line once its start has passed", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.clock.install({ time: new Date("2026-10-06T23:00:00Z") }); // 6:00 pm Tuesday in Chicago
     await page.goto("/");
@@ -44,8 +44,14 @@ test.describe("a visitor's browser in Tokyo", () => {
     await expect(card).toContainText("7:00 pm");
     await page.clock.setFixedTime(new Date("2026-10-07T00:05:00Z")); // 7:05 pm
     await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
-    await expect(card).toHaveClass(/started/);
-    await expect(card).toContainText("Started 7:00 pm");
+    // No longer a card: a row in the fold at the section's end, which the week strip's Today opens.
+    await expect(card).not.toHaveClass(/card/);
+    const fold = page.locator("details.started");
+    await expect(fold.locator("summary")).toHaveText("1 already started today");
+    await expect(card).toBeHidden();
+    await page.goto("/#pick-evt_e2e000000001"); // a link straight to it opens the fold
+    await expect(card).toBeVisible();
+    await expect(card).toContainText("7:00 pm");
   });
 });
 

@@ -81,6 +81,8 @@ p a, .prose a { text-decoration: underline; }
   /* Sections sit twice as far apart as the cards inside them, so a heading reads as the start of a group. */
   margin: var(--space-16) 0 0;
 }
+/* Phones: a screen holds less, so the gap between sections closes a step. */
+@media (max-width: 30rem) { .section-heading { margin-top: var(--space-12); } }
 
 /* The explorer's group, a day or a venue: smaller, and stuck just under the result bar (the explorer measures the bar
    into --bar-height; --tap is the one-line bar: the export button's 28 px plus its padding). */
