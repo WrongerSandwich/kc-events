@@ -19,6 +19,18 @@ describe("weekDays", () => {
     expect(days.map((d) => d.picks.map((e) => e.id))).toEqual([[], [], [], ["opens"], [], ["closes"], []]);
   });
 
+  it("lists every run open on a day as running, opening and closing days included", () => {
+    const opens = event({ id: "opens", recurrence: "limited-run", start: "2026-10-08", end: "2026-10-25" });
+    const closes = event({ id: "closes", recurrence: "limited-run", start: "2026-09-01", end: "2026-10-10" });
+    const lingers = event({ id: "lingers", recurrence: "limited-run", start: undefined, end: "2026-12-13" });
+    const show = event({ id: "show", start: "2026-10-06T20:00:00-05:00" });
+    const days = weekDays([opens, closes, lingers, show], "2026-10-05", "2026-10-11");
+    expect(days.map((d) => d.running.map((e) => e.id))).toEqual([
+      ["closes", "lingers"], ["closes", "lingers"], ["closes", "lingers"], ["opens", "closes", "lingers"],
+      ["opens", "closes", "lingers"], ["opens", "closes", "lingers"], ["opens", "lingers"],
+    ]);
+  });
+
   it("is one day on a Sunday", () => {
     expect(weekDays([], "2026-10-11", "2026-10-11").map((d) => d.date)).toEqual(["2026-10-11"]);
   });

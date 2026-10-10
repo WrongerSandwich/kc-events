@@ -1,19 +1,21 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { flip } from "svelte/animate";
   import { quartOut } from "svelte/easing";
   import { fade } from "svelte/transition";
   // dont-miss, not events: the front page ships only the flagged events (its budget is 50 KB; the full list is about 26).
   import { dontMiss } from "../generated/dont-miss";
   import { meta } from "../generated/meta";
-  import { addDays, formatDay, formatShort, localDate, nowIn } from "../lib/dates";
+  import { addDays, formatDay, formatShort, formatTime, localDate, nowIn } from "../lib/dates";
   import { firstDay, isMultiDay, lastDay } from "../lib/events";
   import { bucketDontMiss, horizonBounds, horizonHeading, HORIZONS, type Horizon } from "../lib/horizon";
   import { slugify } from "../lib/slugs";
+  import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
   import DontMissCard from "./DontMissCard.svelte";
   import KindChip from "./KindChip.svelte";
   import KindIcon from "./KindIcon.svelte";
+  import UiIcon from "./UiIcon.svelte";
   import WeekStrip from "./WeekStrip.svelte";
 
   const emptyLines = {
@@ -39,10 +41,24 @@
         }
       }
     };
+    // A jump to a pick that has started (the week strip's Today, a shared link) opens the fold it sits in.
+    const unfold = () => {
+      const target = location.hash.length > 1 ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+      const fold = target?.closest("details");
+      if (fold && !fold.open) {
+        fold.open = true;
+        target!.scrollIntoView();
+      }
+    };
     read();
     hydrated = true;
     document.addEventListener("visibilitychange", read);
-    return () => document.removeEventListener("visibilitychange", read);
+    window.addEventListener("hashchange", unfold);
+    tick().then(unfold); // arriving with the hash: the fold exists once the visitor's clock has rendered
+    return () => {
+      document.removeEventListener("visibilitychange", read);
+      window.removeEventListener("hashchange", unfold);
+    };
   });
   let buckets = $derived(bucketDontMiss(dontMiss, today));
   let total = $derived(HORIZONS.reduce((n, h) => n + buckets[h].length, 0));
@@ -81,6 +97,12 @@
     announced[h] = next === undefined ? `Showing all ${n} ${picks}` : `Showing ${n} ${next} ${picks}`;
   }
 
+  /**
+   * A timed pick today whose start has passed. Known only once the visitor's clock is read, so the built page never
+   * folds one away. The section leads with what can still be gone to; these fold into one line at its end.
+   */
+  const hasStarted = (e: PublishedEvent) => now !== undefined && dateTile(e, today, now).started === true;
+
   /** A motion's length in ms, or none where the visitor asks for none (or there is no media query to ask, as in tests). */
   const motionMs = (ms: number) => (typeof matchMedia === "function" && !matchMedia("(prefers-reduced-motion: reduce)").matches ? ms : 0);
 
@@ -112,7 +134,7 @@
             </li>
           {/each}
         </ul>
-        <p class="more"><a href="/explore?dontmiss=1">All the picks, with why, in the explorer</a></p>
+        <p class="more"><a href="/explore?dontmiss=1">Every pick in the explorer</a></p>
       {:else}
         {@const kind = chosen[h]}
         <ul class="kinds" aria-label="Picks by kind">
@@ -127,16 +149,34 @@
           {/each}
         </ul>
         <p role="status" class="visually-hidden">{announced[h] ?? ""}</p>
+        {@const shown = picksOf(h, kind)}
+        {@const upcoming = shown.filter((e) => !hasStarted(e))}
+        {@const started = shown.filter(hasStarted)}
         {#if h === "through-sunday" && horizonBounds(today).sunday >= addDays(today, 2)}
-          <!-- Three days or more left in the week: enough for a strip to say something. -->
-          <WeekStrip picks={buckets[h]} {today} sunday={horizonBounds(today).sunday} />
+          <!-- Three days or more left in the week: enough for a strip to say something. It follows the kind filter,
+               and lists started picks last, so a day jumps to one that can still be gone to. -->
+          <WeekStrip picks={[...upcoming, ...started]} {today} sunday={horizonBounds(today).sunday} />
         {/if}
         <!-- Filtered, the kept cards slide into place and the others fade. -->
-        {#each picksOf(h, kind) as event (event.id)}
+        {#each upcoming as event (event.id)}
           <div class="pick" animate:flip={{ duration: motionMs(250), easing: quartOut }} transition:fade={{ duration: motionMs(150) }}>
             <DontMissCard {event} {today} {now} />
           </div>
         {/each}
+        {#if started.length > 0}
+          <details class="started" class:alone={upcoming.length === 0}>
+            <summary><UiIcon name="chevron-right" />{started.length} already started today</summary>
+            <ul class="later">
+              {#each started as event (event.id)}
+                <li class={`kind-${slugify(event.kind)}`} id={`pick-${event.id}`}>
+                  <span class="when">{formatTime(event.start!)}</span>
+                  <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {event.kind}</span></a>
+                  <span class="where">{event.venue}</span>
+                </li>
+              {/each}
+            </ul>
+          </details>
+        {/if}
         <p class="more"><a href={explorerHref(h, kind)}>These picks in the explorer</a></p>
       {/if}
     </section>
@@ -171,16 +211,32 @@
   }
   .more { margin-top: var(--space-3); }
   /* Under a run of cards, the link stands off them as far as one card stands off the next. */
-  .pick + .more { margin-top: var(--space-6); }
+  .pick + .more, .started + .more { margin-top: var(--space-6); }
+  /* Started picks: one line under the cards, open on request. No tile and no actions: there is nothing left to plan.
+     The rows are the later list's; the titles step down to the muted ink, the kind icons keep their colour. */
+  .started { margin-top: var(--space-6); border-top: 1px solid var(--rule); padding-top: var(--space-2); }
+  .started.alone { border-top: 0; margin-top: var(--space-2); }
+  .started summary {
+    display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); width: fit-content;
+    color: var(--fg-muted); font-size: var(--text-sm); font-weight: var(--weight-medium); cursor: pointer; list-style: none;
+  }
+  .started summary::-webkit-details-marker { display: none; }
+  .started summary:hover { color: var(--fg); }
+  .started summary :global(.ui-icon) { transition: transform 150ms var(--ease-out); }
+  .started[open] summary :global(.ui-icon) { transform: rotate(90deg); }
+  .started .later { margin-top: 0; }
+  .started .later a { color: var(--fg-muted); }
   /* What kind of week it is, at a glance; each chip narrows the section to those picks (links to the explorer
-     without JavaScript). Pressed, it takes the kind's ring, the one a Today tile wears. */
+     without JavaScript). */
   .kinds { list-style: none; padding: 0; margin: var(--space-3) 0 var(--space-2); display: flex; flex-wrap: wrap; gap: var(--space-2); }
   .kinds :global(.chip) {
     font: inherit; font-size: var(--text-sm); font-weight: var(--weight-medium); line-height: 1.6;
     padding: var(--space-1) var(--space-3); border: 0; cursor: pointer; text-decoration: none; transition: filter 150ms var(--ease-out);
   }
   .kinds :global(.chip:hover) { filter: brightness(0.96) saturate(1.2); }
-  .kinds :global(.chip[aria-pressed="true"]) { box-shadow: inset 0 0 0 1.5px var(--hue); }
+  /* Pressed, the chip fills with the kind's strong shade, the words in the page's colour: the same pair, reversed, so
+     it clears AA wherever the chip does. */
+  .kinds :global(.chip[aria-pressed="true"]) { background: var(--hue); color: var(--bg-raised); }
   /* A kind's icon before a title in the one-line list, in the kind's colour. */
   .icon { flex: none; color: var(--hue); margin-right: var(--space-2); }
   @media (prefers-reduced-motion: reduce) { .kinds :global(.chip) { transition: none; } }
