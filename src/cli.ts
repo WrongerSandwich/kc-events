@@ -1,20 +1,23 @@
 /**
  * The research command. Does all file I/O: loads config, prompts, registry, and dataset, builds
- * the adapters, calls the run, and writes the dataset and the run report (Markdown plus JSON twin).
+ * the adapters, calls the run, and writes the dataset and the run report (Markdown plus JSON twin):
+ * only a dataset that validates, and all three files or none.
  * BROWSER_CHANNEL=chrome has the browser fetcher use an installed Chrome instead of Playwright's Chromium.
  *
  *   pnpm research [--horizon-weeks N] [--no-discovery]
  */
 import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { parse as parseYaml } from "yaml";
+import { z } from "zod";
 import { parseConfig } from "./config.js";
-import { emptyDataset, parseDataset } from "./dataset.js";
+import { datasetSchema, emptyDataset, parseDataset } from "./dataset.js";
 import { parseRegistry } from "./registry.js";
 import { renderReportMarkdown } from "./report.js";
 import { run } from "./run.js";
+import { writeAllOrNothing } from "./write-files.js";
 import { systemClock } from "./adapters/system.js";
 import { createBrowserFetcher } from "./adapters/browser-fetcher.js";
 import { createFetcher } from "./adapters/fetcher.js";
@@ -76,11 +79,17 @@ async function main() {
     },
   }).finally(() => browserFetcher.close());
 
+  // A dataset the next run could not load is not written, and neither is its report.
+  const checked = datasetSchema.safeParse(result.dataset);
+  if (!checked.success) throw new Error(`the run produced a dataset that does not validate; nothing was written:\n${z.prettifyError(checked.error)}`);
+
   await mkdir(RUNS_DIR, { recursive: true });
   const reportBase = join(RUNS_DIR, result.report.runDate);
-  await writeFile(DATASET_PATH, JSON.stringify(result.dataset, null, 2) + "\n");
-  await writeFile(`${reportBase}.json`, JSON.stringify(result.report, null, 2) + "\n");
-  await writeFile(`${reportBase}.md`, renderReportMarkdown(result.report));
+  await writeAllOrNothing([
+    { path: DATASET_PATH, content: JSON.stringify(checked.data, null, 2) + "\n" },
+    { path: `${reportBase}.json`, content: JSON.stringify(result.report, null, 2) + "\n" },
+    { path: `${reportBase}.md`, content: renderReportMarkdown(result.report) },
+  ]);
 
   const { counts, spend, discovery, curation, promotionSuggestions } = result.report;
   const expired = Object.values(counts.expired).reduce((sum, n) => sum + n, 0);

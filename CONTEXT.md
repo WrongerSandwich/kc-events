@@ -102,7 +102,7 @@ _Avoid_: whitelist, seed list
 The part of a run that checks every registry source directly.
 
 **Candidate**:
-One event as the extraction model reports it from a single page, before cite-or-drop decides whether it becomes an active or unverified event. A candidate is not yet in the dataset.
+One event as the extraction model reports it from a single page, before cite-or-drop decides whether it becomes an active or unverified event. A candidate is not yet in the dataset; one with a field past its length cap (a runaway title or evidence quote) never gets there, and is counted in the run report.
 _Avoid_: result, hit, extraction
 
 **Sighting**:
@@ -147,7 +147,7 @@ A page read only for its links to events, never as a primary page: every page on
 _Avoid_: listing page, directory page (when meaning this)
 
 **Cite-or-drop**:
-The rule that an event publishes only if its date and venue were read from its fetched primary page. Anything less is held as `unverified` and never rendered.
+The rule that an event publishes only if its date and venue were read from its fetched primary page. Anything less is held as `unverified` and never rendered. A date or time that does not exist (February 30th, 24:00), or an end before the start, is a misreading, not a read date: the candidate is held uncitable and counted.
 
 **Two-strike expiry**:
 The rule that an active event which takes a strike on two consecutive runs becomes `expired` on the site while staying in the dataset. Outages do not count toward it.

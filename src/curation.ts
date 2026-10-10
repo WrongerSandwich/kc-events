@@ -21,6 +21,12 @@ export const judgmentSchema = z.object({
 
 export const curationReplySchema = z.object({ judgments: z.array(judgmentSchema) });
 
+/**
+ * The longest a why-line may be once cleaned; a flag with a longer one is not applied. Checked per
+ * judgment rather than in the response format, so one long line costs only its own event.
+ */
+export const WHY_LINE_CAP = 200;
+
 export type Judgment = z.infer<typeof judgmentSchema>;
 
 /** The strict JSON schema sent as the response format on every curation call. */

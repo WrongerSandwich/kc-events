@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { checkSchemaVersion, loadPublished, MAX_PAYLOAD_BYTES, SITE_EXPECTS_SCHEMA_VERSION } from "../src/build/load-dataset";
+import { parseConfig } from "../../src/config";
+import type { Event } from "../../src/dataset";
+import { checkSchemaVersion, loadPublished, MAX_PAYLOAD_BYTES, project, SITE_EXPECTS_SCHEMA_VERSION } from "../src/build/load-dataset";
 import { activeEvent, dataset, write } from "./fixtures/dataset";
 
 describe("loadPublished", () => {
@@ -69,6 +71,14 @@ describe("loadPublished", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  it.each(["javascript:alert(1)", "data:text/html,hi", "https://www.therecordbar.com/a\nb"])("refuses %j as a link, in the dataset and in the projection", (url) => {
+    expect(() => loadPublished(write(dataset([activeEvent({ eventUrl: url })])))).toThrow(/http/);
+    const e = { ...activeEvent(), consecutiveOutages: 0 } as Event;
+    expect(() => project({ ...e, primaryUrl: url }, parseConfig({}))).toThrow(/http or https/);
+    expect(() => project({ ...e, eventUrl: url }, parseConfig({}))).toThrow(/http or https/);
+    expect(project(e, parseConfig({})).primaryUrl).toBe(e.primaryUrl);
   });
 
   it("refuses a duplicate id among active events even when one is past", () => {

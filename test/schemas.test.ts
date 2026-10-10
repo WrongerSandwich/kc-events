@@ -127,4 +127,29 @@ describe("dataset", () => {
   it("rejects dates without a timezone offset", () => {
     expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, start: "2026-10-10T20:00:00" }] })).toThrow();
   });
+
+  it.each(["javascript:alert(1)", "data:text/html,hi", "ftp://knuckleheadskc.com/", "mailto:a@b.test", "https://knuckleheadskc.com/a\nb"])(
+    "rejects %j as a primary or event URL",
+    (url) => {
+      expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, primaryUrl: url }] })).toThrow(/http/);
+      expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, eventUrl: url }] })).toThrow(/http/);
+    },
+  );
+
+  it("accepts http and https URLs", () => {
+    const http = { ...event, primaryUrl: "http://knuckleheadskc.com/", eventUrl: "HTTPS://knuckleheadskc.com/e/1" };
+    expect(parseDataset({ ...emptyDataset(), events: [http] }).events[0]).toEqual(http);
+  });
+
+  it("an expired event carries its reason, and nothing else carries one", () => {
+    const expired = { ...event, status: "expired", expiryReason: "past" };
+    expect(parseDataset({ ...emptyDataset(), events: [expired] }).events[0]).toEqual(expired);
+    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, status: "expired" }] })).toThrow(/expiryReason/);
+    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...event, expiryReason: "past" }] })).toThrow(/expiryReason/);
+  });
+
+  it("rejects two events with one id, whatever their status", () => {
+    const twin = { ...event, title: "Other Show", status: "expired", expiryReason: "duplicate" };
+    expect(() => parseDataset({ ...emptyDataset(), events: [event, twin] })).toThrow(/unique.*evt_1/);
+  });
 });

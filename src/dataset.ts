@@ -6,6 +6,14 @@ export const DATASET_SCHEMA_VERSION = 1;
 /** ISO 8601 date (YYYY-MM-DD) or date-time with offset, as read in local time. */
 const isoDateOrDateTime = z.union([z.iso.date(), z.iso.datetime({ offset: true })]);
 const isoDateTime = z.iso.datetime({ offset: true });
+/**
+ * A link the site can put in an href: http or https only, with no control character. Checked
+ * before `z.url()`, which strips a newline from the value rather than rejecting it.
+ */
+const httpUrl = z
+  .string()
+  .regex(/^https?:[^\u0000-\u001f\u007f]*$/i, { message: "must be an http or https URL with no control characters" })
+  .pipe(z.url());
 
 export const RECURRENCE_CLASSES = ["one-off", "limited-run", "recurring"] as const;
 export const EVENT_STATUSES = ["active", "unverified", "expired"] as const;
@@ -34,9 +42,9 @@ const eventFields = z.strictObject({
   /** Absent only while unverified: the page named no venue that could be cited. */
   venue: z.string().min(1).optional(),
   neighborhood: z.string().min(1),
-  primaryUrl: z.url(),
+  primaryUrl: httpUrl,
   /** The event's own page, linked from the primary page: where the site sends the reader. Never fetched; absent when the primary page links to none. */
-  eventUrl: z.url().optional(),
+  eventUrl: httpUrl.optional(),
   kind: z.string().min(1),
   recurrence: z.enum(RECURRENCE_CLASSES),
   dontMiss: z.boolean(),
@@ -48,6 +56,7 @@ const eventFields = z.strictObject({
   /** The run that last judged the event for don't-miss; absent until curation has seen it. */
   lastJudged: isoDateTime.optional(),
   status: z.enum(EVENT_STATUSES),
+  /** Present exactly when the event is expired. */
   expiryReason: z.enum(EXPIRY_REASONS).optional(),
   verificationFailures: z.number().int().nonnegative(),
   /** Consecutive runs in which the event's primary page could not be loaded; absent in datasets older than the field. */
@@ -88,6 +97,9 @@ export const eventSchema = eventFields
   )
   .refine((e) => !e.dontMiss || (e.recurrence !== "recurring" && e.whyLine !== undefined), {
     message: "a don't-miss flag needs a why-line and is never on a recurring event",
+  })
+  .refine((e) => (e.status === "expired") === (e.expiryReason !== undefined), {
+    message: "an expired event has an expiryReason; no other event has one",
   });
 
 export const sourceStateSchema = z.strictObject({
@@ -108,7 +120,13 @@ export const datasetSchema = z.strictObject({
   generatedAt: isoDateTime.nullable(),
   /** When the last run completed; null only before the first run. */
   lastSuccessfulRun: isoDateTime.nullable(),
-  events: z.array(eventSchema),
+  events: z.array(eventSchema).superRefine((events, ctx) => {
+    const seen = new Set<string>();
+    for (const { id } of events) {
+      if (seen.has(id)) ctx.addIssue({ code: "custom", message: `event ids must be unique; ${id} appears more than once` });
+      seen.add(id);
+    }
+  }),
   /** Keyed by registry source name. */
   sourceState: z.record(z.string(), sourceStateSchema),
   /** Keyed by host, without "www.". */

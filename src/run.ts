@@ -6,12 +6,24 @@ import {
   candidateToSighting,
   extractionReplySchema,
   normalizeUrl,
+  overCap,
   readPage,
   type ExtractionContext,
   type PageOrigin,
   type Sighting,
 } from "./extraction.js";
-import { applyJudgment, buildCurationRequest, cleanStoredWhyLine, cleanWhyLine, unflagged, CURATION_BATCH_SIZE, curationReplySchema, needsCuration, type CurationContext } from "./curation.js";
+import {
+  applyJudgment,
+  buildCurationRequest,
+  cleanStoredWhyLine,
+  cleanWhyLine,
+  unflagged,
+  CURATION_BATCH_SIZE,
+  curationReplySchema,
+  needsCuration,
+  WHY_LINE_CAP,
+  type CurationContext,
+} from "./curation.js";
 import { discoveryQueries, hostOf, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { findMatch, normalizeName, oneMonthOf, sameEvent, sameName, type VenueAliases } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
@@ -126,7 +138,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       beyondHorizonUnstruck: reverified.beyondHorizonUnstruck,
       unverifiedByOutageLimit: reverified.outageLimited.length,
       unverifiedByUncitableReading: uncitable.length,
-      outsideGeography: extraction.outsideGeography + discovery.outsideGeography + reverified.outsideGeography,
+      ...sumTallies(extraction.tally, discovery.tally, reverified.tally),
       expired: countExpired(dataset.events, events),
     },
     spend: {
@@ -322,7 +334,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   const sightings: Sighting[] = [];
   const bySource = new Map<string, SourceExtraction>();
   const unreadUrls = new Set<string>();
-  let outsideGeography = 0;
+  const tally = noTally();
   let pagesNotExtracted = 0;
   const markUnread = (page: FetchResult) => {
     for (const url of [page.url, page.finalUrl]) unreadUrls.add(normalizeUrl(url, url));
@@ -344,52 +356,89 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
       outcome.problems.push(`${page.finalUrl} not extracted: ${error instanceof SpendCapReached ? "spend cap reached" : modelFailed(error)}`);
       continue;
     }
-    outsideGeography += read.outsideGeography;
+    addTally(tally, read.tally);
     if (read.sightings) sightings.push(...read.sightings);
     else markUnread(page);
     outcome.extracted += read.extracted;
     outcome.problems.push(...read.problems);
   }
 
-  return { sightings, outsideGeography, pagesNotExtracted, bySource, unreadUrls };
+  return { sightings, tally, pagesNotExtracted, bySource, unreadUrls };
+}
+
+/** Candidates a page's reading dropped or could not cite, by cause, for the report's counts. */
+interface CandidateTally {
+  /** Dropped: the page placed them outside the geography. */
+  outsideGeography: number;
+  /** Dropped: a field the model wrote ran past its cap. */
+  overCap: number;
+  /** Kept but uncitable: a date or time that does not exist, or an end before the start. */
+  unusableDates: number;
+}
+
+const noTally = (): CandidateTally => ({ outsideGeography: 0, overCap: 0, unusableDates: 0 });
+
+function addTally(into: CandidateTally, from: CandidateTally): void {
+  into.outsideGeography += from.outsideGeography;
+  into.overCap += from.overCap;
+  into.unusableDates += from.unusableDates;
+}
+
+function sumTallies(...tallies: CandidateTally[]): CandidateTally {
+  const sum = noTally();
+  for (const t of tallies) addTally(sum, t);
+  return sum;
 }
 
 /**
  * One extraction call over one page. Sightings are absent when the reply could not be read. A
- * candidate with no title cannot be an event; one outside the geography is dropped and counted.
+ * candidate with no title cannot be an event; one outside the geography, or with a field past its
+ * length cap, is dropped and counted. One with a date or time that cannot be used is kept, held
+ * uncitable, counted, and reported.
  */
 async function extractPage(
   page: FetchResult,
   origin: PageOrigin,
   model: ModelPort,
   context: ExtractionContext,
-): Promise<{ sightings?: Sighting[]; extracted: number; outsideGeography: number; problems: string[] }> {
+): Promise<{ sightings?: Sighting[]; extracted: number; tally: CandidateTally; problems: string[] }> {
   const reading = readPage(page, context.config);
   const reply = await model.complete(buildExtractionRequest(page, reading, origin, context));
   const parsed = extractionReplySchema.safeParse(reply.value);
   if (!parsed.success) {
     return {
       extracted: 0,
-      outsideGeography: 0,
+      tally: noTally(),
       problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`],
     };
   }
   const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl), links: reading.links };
   const sightings: Sighting[] = [];
   const problems: string[] = [];
-  let outsideGeography = 0;
+  const tally = noTally();
   for (const candidate of parsed.data.events) {
     if (candidate.title.trim() === "") {
       problems.push(`a candidate on ${page.finalUrl} had no title and was skipped`);
       continue;
     }
     if (candidate.outsideGeography) {
-      outsideGeography++;
+      tally.outsideGeography++;
       continue;
     }
-    sightings.push(candidateToSighting(candidate, candidateOrigin, context));
+    const capped = overCap(candidate);
+    if (capped) {
+      tally.overCap++;
+      problems.push(`a candidate on ${page.finalUrl} ran past the ${capped.cap}-character cap on ${capped.field} and was dropped`);
+      continue;
+    }
+    const sighting = candidateToSighting(candidate, candidateOrigin, context);
+    if (sighting.unusableDate !== undefined) {
+      tally.unusableDates++;
+      problems.push(`"${sighting.event.title}" on ${page.finalUrl} had ${sighting.unusableDate} and was held uncitable`);
+    }
+    sightings.push(sighting);
   }
-  return { sightings, extracted: parsed.data.events.length, outsideGeography, problems };
+  return { sightings, extracted: parsed.data.events.length, tally, problems };
 }
 
 function withExtraction(report: SourceReport, extraction: SourceExtraction | undefined): SourceReport {
@@ -582,7 +631,7 @@ async function reverify(
   const goneAt = new Set<string>();
   const lastDay = horizonEnd(context.today, context.config.horizonWeeks);
   const refreshed = new Set<string>();
-  let outsideGeography = 0;
+  const tally = noTally();
   let notReverified = 0;
 
   for (const url of new Set(pending.map((e) => e.primaryUrl))) {
@@ -621,7 +670,8 @@ async function reverify(
       problems.push(`${url} not re-read: ${modelFailed(error)}; ${plural(onPage.length, "event")} left unchanged`);
       continue;
     }
-    outsideGeography += read.outsideGeography;
+    addTally(tally, read.tally);
+    problems.push(...read.problems);
     if (read.sightings) sightingsAt.set(url, read.sightings);
   }
 
@@ -655,7 +705,7 @@ async function reverify(
     events: checked,
     reverified: refreshed.size,
     notReverified,
-    outsideGeography,
+    tally,
     heldThroughOutage,
     beyondHorizonUnstruck,
     outageLimited,
@@ -740,7 +790,7 @@ interface DiscoveryLaneOutcome {
   /** Host to an example page, for every host whose page yielded an active event this run. */
   hosts: Map<string, string>;
   report: RunReport["discovery"];
-  outsideGeography: number;
+  tally: CandidateTally;
   pagesNotExtracted: number;
   queriesNotSearched: number;
   leadsNotFollowed: number;
@@ -762,7 +812,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     attempts: noAttempts(),
     hosts: new Map(),
     report: { enabled: config.discovery.enabled, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [] },
-    outsideGeography: 0,
+    tally: noTally(),
     pagesNotExtracted: 0,
     queriesNotSearched: 0,
     leadsNotFollowed: 0,
@@ -816,7 +866,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
       return;
     }
     report.pagesExtracted++;
-    outcome.outsideGeography += read.outsideGeography;
+    addTally(outcome.tally, read.tally);
     report.problems.push(...read.problems);
     if (!read.sightings) {
       for (const u of pageUrls) attempts.unread.add(u);
@@ -916,7 +966,7 @@ function markChanged(previous: Event[], events: Event[], nowIso: string): Event[
 /**
  * Curation: every event due for it (active, not recurring, new or changed since last judged) goes
  * to the curation model in batches with the curation prompt. A judgment is applied to the event it
- * names; an event the reply does not name, or names with a flag but no why-line, is left unjudged
+ * names; an event the reply does not name, or names with a flag but no why-line or one past the cap, is left unjudged
  * and comes up again next run (the second losing any flag it had, since a flag with no why-line is no flag), and a judgment naming no event in the batch is reported. A reply that cannot be read, or a call that throws, leaves its whole batch unjudged. Once
  * the spend cap is reached, events still to judge are not sent and are counted as not curated.
  */
@@ -961,6 +1011,10 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
       if (judgment.dontMiss && cleanWhyLine(judgment.why) === "") {
         report.problems.push(`"${event.title}" was flagged with no why-line and was left unjudged`);
         unjudgedFlags.set(event.id, unflagged(event));
+        continue;
+      }
+      if (judgment.dontMiss && cleanWhyLine(judgment.why).length > WHY_LINE_CAP) {
+        report.problems.push(`"${event.title}" was flagged with a why-line past the ${WHY_LINE_CAP}-character cap and was left unjudged`);
         continue;
       }
       judged.set(event.id, applyJudgment(event, judgment, nowIso));

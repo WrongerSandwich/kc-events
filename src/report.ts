@@ -41,6 +41,10 @@ export interface RunReport {
     unverifiedByUncitableReading: number;
     /** Candidates dropped because their page placed them outside the geography. */
     outsideGeography: number;
+    /** Candidates dropped because a field the model wrote ran past its length cap. */
+    overCap: number;
+    /** Candidates held uncitable because a date or time the model wrote does not exist, or the end came before the start. */
+    unusableDates: number;
     expired: Record<ExpiryReason, number>;
   };
   spend: {
@@ -123,6 +127,8 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
 | Dropped: outside geography | ${counts.outsideGeography} |
+| Dropped: a field past its length cap | ${counts.overCap} |
+| Uncitable: a date or time that does not exist, or an end before the start | ${counts.unusableDates} |
 | Stored neighborhoods off the list, placed again | ${report.offListNeighborhoods.reduce((n, r) => n + r.events, 0)} |
 ${EXPIRY_REASONS.map((reason) => `| Expired: ${reason} | ${counts.expired[reason]} |`).join("\n")}
 

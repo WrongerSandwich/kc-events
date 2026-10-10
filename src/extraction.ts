@@ -26,7 +26,8 @@ const ANCHOR = /<a\b((?:\s+[^\s<>"'=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s<>"']+))?
 const HREF = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))/i;
 
 const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const LOCAL_TIME = /^\d{2}:\d{2}$/;
+/** A clock time, 00:00 to 23:59; a one-digit hour is padded before use. */
+const LOCAL_TIME = /^([01]?\d|2[0-3]):[0-5]\d$/;
 
 /**
  * What the extraction model returns for one page. Everything is required and nullable rather
@@ -68,6 +69,28 @@ export const candidateSchema = z.object({
 });
 
 export const extractionReplySchema = z.object({ events: z.array(candidateSchema) });
+
+/**
+ * The longest each free-text field the model writes may be, so one runaway page cannot grow the
+ * dataset past what the site will build. Checked candidate by candidate rather than in the response
+ * format, so one long candidate costs only itself and no provider's strict mode has to accept a
+ * length keyword.
+ */
+export const cappedCandidateSchema = candidateSchema.extend({
+  title: z.string().max(200),
+  venue: z.string().max(150).nullable(),
+  description: z.string().max(300).nullable(),
+  dateEvidence: z.string().max(500).nullable(),
+  venueEvidence: z.string().max(500).nullable(),
+  schedule: z.string().max(200).nullable(),
+});
+
+/** The first field of the candidate that runs past its cap, and the cap, or undefined when none does. */
+export function overCap(candidate: Candidate): { field: string; cap: number } | undefined {
+  const parsed = cappedCandidateSchema.safeParse(candidate);
+  const issue = parsed.success ? undefined : parsed.error.issues.find((i) => i.code === "too_big");
+  return issue ? { field: String(issue.path[0]), cap: Number(issue.maximum) } : undefined;
+}
 
 export type Candidate = z.infer<typeof candidateSchema>;
 
@@ -216,13 +239,17 @@ export interface Sighting {
   event: Event;
   cancelled: boolean;
   unmappable?: { proposed?: string };
+  /** Why a date or time the model wrote could not be used, which made the candidate uncitable. */
+  unusableDate?: string;
 }
 
 /**
  * Cite-or-drop: the candidate is keyed to the page it was read from, and becomes active only when
  * the model quoted evidence there for both a usable date and a venue; anything less is held
- * unverified. A recurring event's date is its schedule phrase, which it carries instead of a
- * start and end. A venue the page did not name stays absent rather than borrowing the source's.
+ * unverified. A date or time that does not exist (February 30th, 24:00), or an end before the
+ * start, makes the whole candidate uncitable, since the model misread something; only the unusable
+ * value is left out of what is stored. A recurring event's date is its schedule phrase, which it
+ * carries instead of a start and end. A venue the page did not name stays absent rather than borrowing the source's.
  * The event's own page, when the model named one of the page's links by number, rides along
  * whatever the status, and so does the description; neither plays any part in verifying.
  */
@@ -231,8 +258,12 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const primaryUrl = origin.pageUrl;
   const eventUrl = linkedPage(candidate.eventLink, origin.links, primaryUrl);
   const title = candidate.title.trim();
-  const start = localIso(candidate.startDate, candidate.startTime, timezone);
-  const end = localIso(candidate.endDate, candidate.endTime, timezone);
+  const startAt = localIso(candidate.startDate, candidate.startTime, timezone);
+  const endAt = localIso(candidate.endDate, candidate.endTime, timezone);
+  const start = startAt.iso;
+  const endsFirst = start !== undefined && endAt.iso !== undefined && endAt.iso.slice(0, 10) < start.slice(0, 10);
+  const end = endsFirst ? undefined : endAt.iso;
+  const unusableDate = startAt.problem ?? endAt.problem ?? (endsFirst ? `an end (${endAt.iso!.slice(0, 10)}) before its start` : undefined);
   const schedule = nonEmpty(candidate.schedule);
   const recurrence = deriveRecurrence({ start, end, schedule, sportsSeason: candidate.sportsSeason });
   const when = recurrence === "recurring" ? { schedule } : { start, end };
@@ -243,6 +274,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const placement = toNeighborhood(candidate.neighborhood, context.neighborhoods);
 
   const verified =
+    unusableDate === undefined &&
     citedDate({ recurrence, ...when }) !== undefined &&
     dateEvidence !== undefined &&
     venue !== undefined &&
@@ -273,7 +305,12 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
       ...(venueEvidence !== undefined ? { venue: venueEvidence } : {}),
     },
   };
-  return { event, cancelled: candidate.notice === "cancelled", ...("unmappable" in placement ? { unmappable: placement.unmappable } : {}) };
+  return {
+    event,
+    cancelled: candidate.notice === "cancelled",
+    ...("unmappable" in placement ? { unmappable: placement.unmappable } : {}),
+    ...(unusableDate !== undefined ? { unusableDate } : {}),
+  };
 }
 
 /** Link number n on the page, when there is one and it is not the primary page itself. */
@@ -292,10 +329,24 @@ export function normalizeUrl(url: string, fallback: string): string {
   }
 }
 
-/** A malformed date or time from the model counts as none: it cannot be cited. */
-function localIso(date: string | null, time: string | null, timezone: string): string | undefined {
-  if (date === null || !LOCAL_DATE.test(date) || Number.isNaN(Date.parse(date))) return undefined;
-  return fromLocal(date, time !== null && LOCAL_TIME.test(time) ? time : undefined, timezone);
+/**
+ * A local date and optional time from the model as an ISO string, or why it cannot be used. A date
+ * must be a real calendar date (it survives a round trip through Date unchanged) and a time a real
+ * clock time; a blank one counts as none given. A date with an unusable time keeps the date.
+ */
+function localIso(date: string | null, time: string | null, timezone: string): { iso?: string; problem?: string } {
+  const day = nonEmpty(date);
+  const clock = nonEmpty(time);
+  if (day === undefined) return {};
+  if (!realDate(day)) return { problem: `"${day}" is not a real date` };
+  if (clock !== undefined && !LOCAL_TIME.test(clock)) return { iso: fromLocal(day, undefined, timezone), problem: `"${clock}" is not a real time` };
+  return { iso: fromLocal(day, clock?.padStart(5, "0"), timezone) };
+}
+
+function realDate(date: string): boolean {
+  if (!LOCAL_DATE.test(date)) return false;
+  const parsed = new Date(date);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(date);
 }
 
 function nonEmpty(text: string | null): string | undefined {

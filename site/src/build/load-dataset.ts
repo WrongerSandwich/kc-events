@@ -32,21 +32,30 @@ export function regionFor(neighborhood: string, config: RunConfig): string {
   return named ?? ELSEWHERE_IN_THE_METRO;
 }
 
+/**
+ * A URL as an href the browser will follow: only http or https, with no control character. The job
+ * schema already refuses anything else; this holds the line here if that ever loosens.
+ */
+function href(url: string, e: Event): string {
+  if (!/^https?:[^\u0000-\u001f\u007f]*$/i.test(url)) throw new Error(`event ${e.id} has a link that is not a plain http or https URL: ${JSON.stringify(url)}`);
+  return url;
+}
+
 /** The non-null assertions on venue and lastVerified hold because the job schema's refine (src/dataset.ts) requires both on every active event. */
-function project(e: Event, config: RunConfig): PublishedEvent {
+export function project(e: Event, config: RunConfig): PublishedEvent {
   const out: PublishedEvent = {
     id: e.id,
     title: e.title,
     venue: e.venue!,
     neighborhood: e.neighborhood,
     region: regionFor(e.neighborhood, config),
-    primaryUrl: e.primaryUrl,
+    primaryUrl: href(e.primaryUrl, e),
     kind: e.kind,
     recurrence: e.recurrence,
     dontMiss: e.dontMiss,
     lastVerified: e.lastVerified!,
   };
-  if (e.eventUrl !== undefined) out.eventUrl = e.eventUrl;
+  if (e.eventUrl !== undefined) out.eventUrl = href(e.eventUrl, e);
   if (e.start !== undefined) out.start = e.start;
   if (e.end !== undefined) out.end = e.end;
   if (e.schedule !== undefined) out.schedule = e.schedule;
