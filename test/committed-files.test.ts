@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { parseConfig } from "../src/config.js";
 import { parseDataset } from "../src/dataset.js";
-import { onHost } from "../src/discovery.js";
+import { onHost } from "../src/hosts.js";
 import { parseRegistry } from "../src/registry.js";
 import { neighborhoodList, regionOf } from "../src/taxonomy.js";
 
@@ -16,7 +16,7 @@ describe("committed config and registry", () => {
   it("loads the committed dataset", () => {
     const raw = JSON.parse(readFileSync(new URL("../data/events.json", import.meta.url), "utf8"));
     // Loading fills fields newer than the file with their defaults and changes nothing else.
-    expect(parseDataset(raw)).toEqual({ ...raw, events: raw.events.map((e: object) => ({ consecutiveOutages: 0, ...e })) });
+    expect(parseDataset(raw, { platformHosts: config.discovery.platformHosts })).toEqual({ ...raw, events: raw.events.map((e: object) => ({ consecutiveOutages: 0, ...e })) });
   });
 
   it("gives every source a kind from the taxonomy", () => {

@@ -59,7 +59,7 @@ async function main() {
   };
   const registry = parseRegistry(parseYaml(await readFile(REGISTRY_PATH, "utf8")));
   const dataset = existsSync(DATASET_PATH)
-    ? parseDataset(JSON.parse(await readFile(DATASET_PATH, "utf8")))
+    ? parseDataset(JSON.parse(await readFile(DATASET_PATH, "utf8")), { platformHosts: config.discovery.platformHosts })
     : emptyDataset();
 
   const fetcher = createFetcher();
@@ -81,7 +81,7 @@ async function main() {
   // A dataset the next run could not load is not written, and neither is its report.
   let checked: Dataset;
   try {
-    checked = parseDataset(result.dataset);
+    checked = parseDataset(result.dataset, { platformHosts: config.discovery.platformHosts });
   } catch (error) {
     throw new Error("the run produced a dataset that does not validate; nothing was written", { cause: error });
   }

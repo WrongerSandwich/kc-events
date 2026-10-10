@@ -22,6 +22,7 @@ function report(overrides: Partial<RunReport> = {}): RunReport {
     promotionSuggestions: [],
     outageLimited: [],
     uncitableReadings: [],
+    cancellationsFromElsewhere: [],
     ...overrides,
   };
 }

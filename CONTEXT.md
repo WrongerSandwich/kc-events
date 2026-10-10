@@ -18,8 +18,12 @@ _Avoid_: database, feed, API
 The page on the event's own web presence (venue calendar, promoter page, organizer site) from which its date and venue were read. Verification and identity hang on it.
 _Avoid_: official page, canonical URL, source page
 
+**Site**:
+The web presence a page belongs to: its registrable domain, the public suffix plus one label ("knuckleheadskc.com" for "tickets.knuckleheadskc.com"). An event's site is its primary page's. The job has no public suffix list, so a hosted platform's tenants count as one site.
+_Avoid_: domain (when meaning this), host (which is the full hostname)
+
 **Own page**:
-The event's own page (`eventUrl`), when the primary page links one: its details or its tickets, on the venue's site or a ticketing platform. Where the site's "Details and tickets" sends the reader. Named by the extractor as a link number, resolved by the job against the page's own anchors, never fetched, and no part of verifying; an event whose primary page links none sends the reader to the primary page instead.
+The event's own page (`eventUrl`), when the primary page links one: its details or its tickets, on the primary page's site or a ticketing platform the config lists; a link anywhere else is no own page (ADR 0009). Where the site's "Details and tickets" sends the reader. Named by the extractor as a link number, resolved by the job against the page's own anchors, never fetched, and no part of verifying; an event whose primary page links none sends the reader to the primary page instead.
 _Avoid_: event page (the site's page for the event), ticket link, link-out
 
 **Recurrence class**:
@@ -106,8 +110,12 @@ One event as the extraction model reports it from a single page, before cite-or-
 _Avoid_: result, hit, extraction
 
 **Sighting**:
-A candidate after cite-or-drop has made it an active or unverified event, together with whether its page says it is cancelled. A run matches each sighting against the dataset by event identity.
+A candidate after cite-or-drop has made it an active or unverified event, together with whether its page says it is cancelled. A run matches each sighting against the dataset by event identity; what it may then do to the event depends on whether its page speaks for it.
 _Avoid_: match, hit
+
+**Speaks for**:
+A page speaks for a known event when it is the registry lane's (a source a person admitted) or on the event's own site (ADR 0008, amended #75). Only such a page's sighting can cancel the event or refresh its reading; only the event's own primary page can hide it on an uncitable re-reading. A sighting from any other page **confirms** the event at most: its strikes and outages clear and nothing else changes. A cancellation from any other page is a line in the run report and leaves the event alone.
+_Avoid_: trusted, authoritative
 
 **Strike**:
 One run in which an active event's primary page loaded and no longer listed it, or told the job it is gone (not found) or may not be read (its `robots.txt` now disallows it). A page that loaded without an event starting after the weeks the run researches (`horizonWeeks` in the config, not the site's horizon buckets) is not a strike: extraction is asked only for events within those weeks, so leaving it out says nothing. Any run that lists the event clears its strikes; the second consecutive strike is two-strike expiry.
@@ -133,7 +141,7 @@ The exact text, quoted verbatim from the primary page, that a date or venue was 
 _Avoid_: citation, quote, proof
 
 **Discovery lane**:
-The part of a run that uses web search to find events outside the registry. It finds; it does not admit: a new event from a host that is neither a registry source nor a ticketing platform is **held for promotion** until a person promotes the host (ADR 0012), and a host the registry excludes is never followed.
+The part of a run that uses web search to find events outside the registry. It finds; it does not admit: a new event from a host that is neither a registry source nor a ticketing platform is **held for promotion** until a person promotes the host (ADR 0012), and a host the registry excludes is never followed. A page it finds speaks for a known event only when it is on the event's own site; otherwise it can confirm the event and nothing more.
 
 **Held for promotion**:
 The state of an event the discovery lane found on a host nobody has looked at: stored unverified, marked, never rendered on the site, until the host is promoted into the registry. Released by promotion, not by time.

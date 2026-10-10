@@ -109,6 +109,11 @@ export interface RunReport {
   outageLimited: EventRef[];
   /** The events unverified by an uncitable re-reading this run; a model wobble shows up here. Re-checked each run until a reading is verified again. */
   uncitableReadings: EventRef[];
+  /**
+   * Cancellations the run did not apply: a page off the event's own site, found by discovery, said a
+   * known event is cancelled (ADR 0008, amended #75). The event was left as it was; its own page decides.
+   */
+  cancellationsFromElsewhere: (EventRef & { reportedBy: string })[];
 }
 
 export function renderReportMarkdown(report: RunReport): string {
@@ -195,6 +200,10 @@ ${eventList(report.outageLimited)}
 ## Unverified by an uncitable re-reading
 
 ${eventList(report.uncitableReadings)}
+
+## Cancellations from elsewhere
+
+${markdownList(report.cancellationsFromElsewhere.map((c) => `${c.reportedBy} says ${c.title} (${c.primaryUrl}) is cancelled; the event was left as it was`))}
 
 ## Promotion suggestions
 

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { DEFAULT_PLATFORM_HOSTS } from "./config.js";
+import { onHost, sameSite } from "./hosts.js";
 
 /** Bump when the published dataset's shape changes; downstream readers key on it. */
 export const DATASET_SCHEMA_VERSION = 1;
@@ -77,30 +79,47 @@ export function citedDate(e: { recurrence: RecurrenceClass; start?: string; end?
 }
 
 /**
+ * Where an event's own page may be (ADR 0009, amended #75): on its primary page's site, meaning the
+ * same registrable domain, or on one of the ticketing platforms the config lists. The page the
+ * reader is sent to is then one the venue chose or one everyone sells through, never one a page
+ * the job found chose.
+ */
+export function ownPageAllowed(eventUrl: string, primaryUrl: string, platformHosts: readonly string[]): boolean {
+  return sameSite(eventUrl, primaryUrl) || onHost(eventUrl, platformHosts);
+}
+
+/**
  * Cite-or-drop as a schema invariant: an active event has a cited date and venue and a
  * last-verified stamp. A recurring event carries its schedule instead of a start and end;
- * nothing else carries a schedule.
+ * nothing else carries a schedule. An own page is on the primary page's site or a ticketing
+ * platform, which is why the schema takes the config's platform list.
  */
-export const eventSchema = eventFields
-  .refine((e) => (e.recurrence === "recurring" ? e.start === undefined && e.end === undefined : e.schedule === undefined), {
-    message: "a recurring event has a schedule instead of a start and end; other events have no schedule",
-  })
-  .refine(
-    (e) =>
-      e.status !== "active" ||
-      (citedDate(e) !== undefined &&
-        e.venue !== undefined &&
-        e.lastVerified !== undefined &&
-        e.evidence.date !== undefined &&
-        e.evidence.venue !== undefined),
-    { message: "an active event needs a cited date (a schedule when recurring), venue, lastVerified, and evidence for both date and venue" },
-  )
-  .refine((e) => !e.dontMiss || (e.recurrence !== "recurring" && e.whyLine !== undefined), {
-    message: "a don't-miss flag needs a why-line and is never on a recurring event",
-  })
-  .refine((e) => (e.status === "expired") === (e.expiryReason !== undefined), {
-    message: "an expired event has an expiryReason; no other event has one",
-  });
+export const eventSchemaFor = (platformHosts: readonly string[]) =>
+  eventFields
+    .refine((e) => (e.recurrence === "recurring" ? e.start === undefined && e.end === undefined : e.schedule === undefined), {
+      message: "a recurring event has a schedule instead of a start and end; other events have no schedule",
+    })
+    .refine(
+      (e) =>
+        e.status !== "active" ||
+        (citedDate(e) !== undefined &&
+          e.venue !== undefined &&
+          e.lastVerified !== undefined &&
+          e.evidence.date !== undefined &&
+          e.evidence.venue !== undefined),
+      { message: "an active event needs a cited date (a schedule when recurring), venue, lastVerified, and evidence for both date and venue" },
+    )
+    .refine((e) => !e.dontMiss || (e.recurrence !== "recurring" && e.whyLine !== undefined), {
+      message: "a don't-miss flag needs a why-line and is never on a recurring event",
+    })
+    .refine((e) => (e.status === "expired") === (e.expiryReason !== undefined), {
+      message: "an expired event has an expiryReason; no other event has one",
+    })
+    .refine((e) => e.eventUrl === undefined || ownPageAllowed(e.eventUrl, e.primaryUrl, platformHosts), {
+      message: "an event's own page is on its primary page's site or a ticketing platform",
+    });
+
+export const eventSchema = eventSchemaFor(DEFAULT_PLATFORM_HOSTS);
 
 export const sourceStateSchema = z.strictObject({
   consecutiveFailures: z.number().int().nonnegative(),
@@ -114,31 +133,40 @@ export const discoveryHostStateSchema = z.strictObject({
   lastSeen: isoDateTime,
 });
 
-export const datasetSchema = z.strictObject({
-  schemaVersion: z.literal(DATASET_SCHEMA_VERSION),
-  /** When this file was written; null only before the first run. */
-  generatedAt: isoDateTime.nullable(),
-  /** When the last run completed; null only before the first run. */
-  lastSuccessfulRun: isoDateTime.nullable(),
-  events: z.array(eventSchema).superRefine((events, ctx) => {
-    const seen = new Set<string>();
-    for (const { id } of events) {
-      if (seen.has(id)) ctx.addIssue({ code: "custom", message: `event ids must be unique; ${id} appears more than once` });
-      seen.add(id);
-    }
-  }),
-  /** Keyed by registry source name. */
-  sourceState: z.record(z.string(), sourceStateSchema),
-  /** Keyed by host, without "www.". */
-  discoveryState: z.record(z.string(), discoveryHostStateSchema).default({}),
-});
+export const datasetSchemaFor = (platformHosts: readonly string[]) =>
+  z.strictObject({
+    schemaVersion: z.literal(DATASET_SCHEMA_VERSION),
+    /** When this file was written; null only before the first run. */
+    generatedAt: isoDateTime.nullable(),
+    /** When the last run completed; null only before the first run. */
+    lastSuccessfulRun: isoDateTime.nullable(),
+    events: z.array(eventSchemaFor(platformHosts)).superRefine((events, ctx) => {
+      const seen = new Set<string>();
+      for (const { id } of events) {
+        if (seen.has(id)) ctx.addIssue({ code: "custom", message: `event ids must be unique; ${id} appears more than once` });
+        seen.add(id);
+      }
+    }),
+    /** Keyed by registry source name. */
+    sourceState: z.record(z.string(), sourceStateSchema),
+    /** Keyed by host, without "www.". */
+    discoveryState: z.record(z.string(), discoveryHostStateSchema).default({}),
+  });
+
+export const datasetSchema = datasetSchemaFor(DEFAULT_PLATFORM_HOSTS);
 
 export type Event = z.infer<typeof eventSchema>;
 export type SourceState = z.infer<typeof sourceStateSchema>;
 export type Dataset = z.infer<typeof datasetSchema>;
 
-export function parseDataset(raw: unknown): Dataset {
-  return datasetSchema.parse(raw);
+/** What parsing a dataset needs from the config; the defaults stand in where there is no config. */
+export interface DatasetOptions {
+  /** The ticketing platforms an event's own page may be on when it is off the primary page's site. */
+  platformHosts?: readonly string[];
+}
+
+export function parseDataset(raw: unknown, { platformHosts = DEFAULT_PLATFORM_HOSTS }: DatasetOptions = {}): Dataset {
+  return datasetSchemaFor(platformHosts).parse(raw);
 }
 
 /** The dataset before any run has happened. */

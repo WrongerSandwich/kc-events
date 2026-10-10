@@ -66,7 +66,7 @@ export function project(e: Event, config: RunConfig): PublishedEvent {
 export function loadPublished(opts: { datasetPath: string; configPath: string; today?: string }): Published {
   const config = parseConfig(parseYaml(readFileSync(opts.configPath, "utf8")));
   checkSchemaVersion(DATASET_SCHEMA_VERSION);
-  const dataset = parseDataset(JSON.parse(readFileSync(opts.datasetPath, "utf8")));
+  const dataset = parseDataset(JSON.parse(readFileSync(opts.datasetPath, "utf8")), { platformHosts: config.discovery.platformHosts });
   if (dataset.lastSuccessfulRun === null) throw new Error("the dataset records no successful run; nothing to publish");
   const today = opts.today ?? process.env.SITE_TODAY ?? toLocalDate(new Date(), config.timezone);
   if (!isValidDate(today)) {

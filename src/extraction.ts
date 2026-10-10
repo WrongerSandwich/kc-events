@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
-import { citedDate, type Event } from "./dataset.js";
+import { citedDate, ownPageAllowed, type Event } from "./dataset.js";
 import { linkTarget } from "./discovery.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
@@ -257,7 +257,7 @@ export interface Sighting {
 export function candidateToSighting(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Sighting {
   const { timezone } = context.config;
   const primaryUrl = origin.pageUrl;
-  const eventUrl = linkedPage(candidate.eventLink, origin.links, primaryUrl);
+  const eventUrl = linkedPage(candidate.eventLink, origin.links, primaryUrl, context.config.discovery.platformHosts);
   const title = candidate.title.trim();
   const startAt = localIso(candidate.startDate, candidate.startTime, timezone);
   const endAt = localIso(candidate.endDate, candidate.endTime, timezone);
@@ -314,11 +314,17 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   };
 }
 
-/** Link number n on the page, when there is one and it is not the primary page itself. */
-function linkedPage(n: number | null, links: string[], primaryUrl: string): string | undefined {
+/**
+ * Link number n on the page, when there is one, it is not the primary page itself, and it stays on
+ * the primary page's site or goes to a ticketing platform (#75). A link anywhere else is no event
+ * page: the site would send its readers wherever a page the job found chose, so the event falls
+ * back to its primary page instead.
+ */
+function linkedPage(n: number | null, links: string[], primaryUrl: string, platformHosts: readonly string[]): string | undefined {
   if (n === null || !Number.isInteger(n) || n < 1 || n > links.length) return undefined;
   const link = links[n - 1]!;
-  return samePage(link, primaryUrl) ? undefined : link;
+  if (samePage(link, primaryUrl) || !ownPageAllowed(link, primaryUrl, platformHosts)) return undefined;
+  return link;
 }
 
 /** The URL in canonical form, or the fallback when it does not parse. */

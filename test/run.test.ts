@@ -61,6 +61,7 @@ describe("run", () => {
     expect(report.promotionSuggestions).toEqual([]);
     expect(report.outageLimited).toEqual([]);
     expect(report.uncitableReadings).toEqual([]);
+    expect(report.cancellationsFromElsewhere).toEqual([]);
   });
 });
 

@@ -154,6 +154,15 @@ function sameTitleWithSeries(a: string, b: string): boolean {
   return [...longer.matchAll(TITLE_SEPARATOR)].some((m) => sameOrCutShort(short, normalizeName(longer.slice(m.index + m[0].length))));
 }
 
+/**
+ * Whether two titles are two forms of one title under the rules above, the same cut short or with a
+ * series name in front, without being the same title (#75). A page may give an event's title in
+ * full one week and its lead title the next; a refresh keeps the stored form rather than flap.
+ */
+export function variantTitles(a: string, b: string): boolean {
+  return !sameName(a, b) && (sameOrShortenedTitle(a, b) || sameTitleWithSeries(a, b));
+}
+
 function sameOrCutShort(shorter: string, longer: string): boolean {
   return longer === shorter || longer.startsWith(`${shorter} `);
 }

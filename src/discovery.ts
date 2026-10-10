@@ -1,15 +1,17 @@
 /**
  * The discovery lane's pure parts: the search queries a run makes, which pages are index pages and
  * which hosts are ignored, the outbound links read off an index page, and which discovery hosts to
- * suggest for promotion. The lane itself, which searches and fetches through the ports, lives in the run.
- * Which links a reader could follow (`linkTarget`) is decided here once, for index pages and for the
- * links extraction numbers on a primary page.
+ * suggest for promotion. The lane itself, which searches and fetches through the ports, lives in the
+ * run; which host and site a URL is on is `hosts.ts`. Which links a reader could follow
+ * (`linkTarget`) is decided here once, for index pages and for the links extraction numbers on a
+ * primary page.
  */
 import type { RunConfig } from "./config.js";
 import type { Dataset } from "./dataset.js";
 import type { Registry } from "./registry.js";
 import type { FetchResult } from "./ports.js";
 import type { RunReport } from "./report.js";
+import { hostOf, onHost } from "./hosts.js";
 import { horizonEnd } from "./time.js";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -44,26 +46,6 @@ function monthSpan(start: Date, end: Date): string {
   if (startYear !== endYear) return `${startMonth} ${startYear} to ${endMonth} ${endYear}`;
   if (startMonth === endMonth) return `${startMonth} ${startYear}`;
   return `${startMonth} to ${endMonth} ${startYear}`;
-}
-
-/** The URL's host without a leading "www.", lowercased; undefined when it does not parse. */
-export function hostOf(url: string): string | undefined {
-  try {
-    return bareHost(new URL(url).hostname);
-  } catch {
-    return undefined;
-  }
-}
-
-function bareHost(host: string): string {
-  return host.toLowerCase().replace(/^www\./, "");
-}
-
-/** Whether the URL is on one of the hosts or a subdomain of one. */
-export function onHost(url: string, hosts: readonly string[]): boolean {
-  const host = hostOf(url);
-  if (host === undefined) return false;
-  return hosts.map(bareHost).some((listed) => host === listed || host.endsWith(`.${listed}`));
 }
 
 /**

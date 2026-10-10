@@ -8,12 +8,15 @@ import { existsSync } from "node:fs";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
+import { parse as parseYaml } from "yaml";
+import { parseConfig } from "./config.js";
 import { parseDataset } from "./dataset.js";
 import { renderGrading } from "./grading.js";
 import type { RunReport } from "./report.js";
 
 const ROOT = process.cwd();
 const RUNS_DIR = join(ROOT, "data", "runs");
+const CONFIG_PATH = join(ROOT, "research.config.yaml");
 const DATASET_PATH = join(ROOT, "data", "events.json");
 const GRADING_PATH = join(ROOT, "docs", "milestone-one-grading.md");
 
@@ -34,7 +37,8 @@ async function main() {
   if (!existsSync(reportPath)) throw new Error(`no run report at ${reportPath}`);
 
   const report = JSON.parse(await readFile(reportPath, "utf8")) as RunReport;
-  const dataset = parseDataset(JSON.parse(await readFile(DATASET_PATH, "utf8")));
+  const config = parseConfig(parseYaml(await readFile(CONFIG_PATH, "utf8")) ?? {});
+  const dataset = parseDataset(JSON.parse(await readFile(DATASET_PATH, "utf8")), { platformHosts: config.discovery.platformHosts });
   const existing = existsSync(GRADING_PATH) ? await readFile(GRADING_PATH, "utf8") : undefined;
 
   await writeFile(GRADING_PATH, renderGrading({ report, dataset, existing }));

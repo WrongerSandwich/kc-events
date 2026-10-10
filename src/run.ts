@@ -25,8 +25,9 @@ import {
   WHY_LINE_CAP,
   type CurationContext,
 } from "./curation.js";
-import { discoveryQueries, hostOf, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
-import { findMatch, normalizeName, oneMonthOf, sameEvent, sameName, type VenueAliases } from "./identity.js";
+import { discoveryQueries, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
+import { hostOf, sameSite } from "./hosts.js";
+import { findMatch, normalizeName, oneMonthOf, sameEvent, sameName, variantTitles, type VenueAliases } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import type { FetchOptions, FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
 import { plural } from "./markdown.js";
@@ -159,6 +160,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     promotionSuggestions: promotion.promotionSuggestions,
     outageLimited: reverified.outageLimited.map(titleAndUrl),
     uncitableReadings: uncitable.map(titleAndUrl),
+    cancellationsFromElsewhere: merged.cancellationsFromElsewhere,
   };
 
   return {
@@ -447,12 +449,14 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
 
 /**
  * Folds this run's sightings into the dataset, registry lane first. A sighting matching a known
- * event (ADR 0007) is applied to it, unless the event was already read verified this run; an
- * unmatched one is new, unless it is cancelled or already past: nothing
+ * event (ADR 0007) is applied to it, unless the event was already read verified this run by a page
+ * that speaks for it; an unmatched one is new, unless it is cancelled or already past: nothing
  * to publish. Matching includes expired events, so a page listing one again revives it under
  * its old id rather than starting a duplicate; all but those expired as index-page, which were
  * never read from an event's own page, so a reading of the real page starts a new event, and those
- * expired as duplicate, whose sightings belong to the record they were folded into.
+ * expired as duplicate, whose sightings belong to the record they were folded into. A cancellation
+ * from a page that cannot speak for the event is not a sighting of it at all: the event is left as
+ * it was, for re-verification to check its own page, and the report says who said what.
  */
 function mergeSightings(existing: Event[], sightings: Sighting[], today: string, aliases: VenueAliases) {
   const events = [...existing];
@@ -461,6 +465,7 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
   const created = new Set<string>();
   const readVerified = new Set<string>();
   const uncitable = new Set<string>();
+  const cancellationsFromElsewhere: RunReport["cancellationsFromElsewhere"] = [];
 
   for (const { event, cancelled } of sightings) {
     const known = findMatch(event, events.filter(matchable), aliases);
@@ -472,11 +477,16 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
       if (event.status === "active") readVerified.add(event.id);
       continue;
     }
+    const standing = standingOf(event, known);
+    if (cancelled && !standing.speaksFor) {
+      cancellationsFromElsewhere.push({ ...titleAndUrl(known), reportedBy: event.primaryUrl });
+      continue;
+    }
     // The first verified reading this run stands; a later page listing the same event, citably or not, only confirms it.
     if (readVerified.has(known.id) && !cancelled) continue;
     touched.add(known.id);
-    if (event.status === "active") readVerified.add(known.id);
-    const applied = applySighting(known, { event, cancelled }, event.primaryUrl === known.primaryUrl);
+    if (event.status === "active" && standing.speaksFor) readVerified.add(known.id);
+    const applied = applySighting(known, { event, cancelled }, standing);
     events[events.indexOf(known)] = applied.event;
     if (applied.refreshed && !created.has(known.id)) refreshed.add(known.id);
     if (applied.uncitable) uncitable.add(known.id);
@@ -484,8 +494,28 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
 
   // Events this run made unverified are counted on their own, not as held.
   const heldUnverified = events.filter((e) => touched.has(e.id) && !uncitable.has(e.id) && e.status === "unverified").length;
-  return { events, touched, uncitable, counts: { found: touched.size, new: created.size, updated: refreshed.size, heldUnverified } };
+  return { events, touched, uncitable, cancellationsFromElsewhere, counts: { found: touched.size, new: created.size, updated: refreshed.size, heldUnverified } };
 }
+
+/**
+ * How far a sighting's page may speak for the known event it matched (ADR 0008, amended #75). A
+ * page speaks for the event when it is the registry lane's, a source a person admitted, or is on
+ * the event's own site, its primary page's registrable domain: a ticket subdomain of the venue can
+ * cancel its show, a page the search ranked cannot. The event's own primary page can do one thing
+ * more: hide the event when its re-reading cites nothing (#16).
+ */
+interface Standing {
+  fromOwnPage: boolean;
+  speaksFor: boolean;
+}
+
+function standingOf(sighting: Event, known: Event): Standing {
+  const fromOwnPage = sighting.primaryUrl === known.primaryUrl;
+  return { fromOwnPage, speaksFor: fromOwnPage || sighting.lead.lane === "registry" || sameSite(sighting.primaryUrl, known.primaryUrl) };
+}
+
+/** The standing of the event's own primary page, which re-verification reads. */
+const OWN_PAGE: Standing = { fromOwnPage: true, speaksFor: true };
 
 /** A known event a sighting can be matched to: not one expired as index-page or as duplicate. */
 function matchable(event: Event): boolean {
@@ -493,22 +523,25 @@ function matchable(event: Event): boolean {
 }
 
 /**
- * What a sighting of a known event does to it: a page saying cancelled expires it (an event
- * already expired keeps its reason); a verified reading refreshes it; a reading of the event's own
- * primary page with nothing citable makes an active event unverified, keeping its old reading and
- * curation, since the rules no longer support publishing it, and leaves any other event's status
- * alone. Another page with nothing citable, such as one that names no venue, cannot speak for the
- * event, to cancel it or to hide it: it was matched on title and date alone. Short of a cancellation,
- * the page still lists the event, so it is not missing and any strike and any run of outages is cleared.
+ * What a sighting of a known event does to it, by the standing of its page. One that speaks for the
+ * event (see Standing): saying cancelled expires it (an event already expired keeps its reason); a
+ * verified reading refreshes it; a reading of the event's own primary page with nothing citable
+ * makes an active event unverified, keeping its old reading and curation, since the rules no longer
+ * support publishing it, and leaves any other event's status alone. Another page with nothing
+ * citable, such as one that names no venue, cannot cancel or hide the event: it was matched on
+ * title and date alone. A page that does not speak for the event, one found by discovery off the
+ * event's site, confirms it at most: a verified reading there moves nothing, not the primary page,
+ * the dates, or the title. Short of a cancellation, the page still lists the event, so it is not
+ * missing and any strike and any run of outages is cleared.
  */
 function applySighting(
   known: Event,
   { event, cancelled }: Sighting,
-  fromOwnPage: boolean,
+  { fromOwnPage, speaksFor }: Standing,
 ): { event: Event; refreshed: boolean; uncitable: boolean } {
-  const speaksForEvent = fromOwnPage || event.status === "active";
-  if (cancelled && speaksForEvent) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
-  if (event.status === "active") return { event: refresh(known, event), refreshed: true, uncitable: false };
+  const mayCancel = speaksFor && (fromOwnPage || event.status === "active");
+  if (cancelled && mayCancel) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
+  if (event.status === "active" && speaksFor) return { event: refresh(known, event), refreshed: true, uncitable: false };
   const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
   if (known.status === "active" && fromOwnPage) return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
   const cleared = known.verificationFailures === 0 && known.consecutiveOutages === 0;
@@ -576,13 +609,16 @@ function firstMonthPair(events: Event[]): [Event, Event] | undefined {
  * curation. A reading that makes it recurring drops its flag: recurring events are never on
  * the don't-miss list, and curation will not look at it again. A reading with no description keeps
  * the known one: a listing line that says nothing more does not wipe what a fuller page said. Like
- * every other field, the description is only taken from a verified reading.
+ * every other field, the description is only taken from a verified reading. The stored title is
+ * kept when the new one is a form of it, cut short or with a series name in front (#75): the page
+ * billed the same event two ways, and the site should not flap between them.
  */
 function refresh(known: Event, sighting: Event): Event {
   const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };
   return {
     ...(known.description !== undefined ? { description: known.description } : {}),
     ...sighting,
+    ...(variantTitles(known.title, sighting.title) ? { title: known.title } : {}),
     id: known.id,
     firstSeen: known.firstSeen,
     lead: known.lead,
@@ -698,7 +734,7 @@ async function reverify(
       return event;
     }
     // The page read here is the event's primary page, whatever page the sighting cites.
-    const applied = applySighting(event, sighting, true);
+    const applied = applySighting(event, sighting, OWN_PAGE);
     if (applied.refreshed) refreshed.add(event.id);
     if (applied.uncitable) uncitable.add(event.id);
     return applied.event;

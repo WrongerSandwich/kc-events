@@ -23,6 +23,6 @@ export async function runWith(
 ) {
   const fakes = fakePorts(now, { pages, completions });
   const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports });
-  expect(parseDataset(result.dataset)).toEqual(result.dataset);
+  expect(parseDataset(result.dataset, { platformHosts: config.discovery.platformHosts })).toEqual(result.dataset);
   return { ...result, calls: fakes.calls, requests: fakes.requests };
 }

@@ -71,6 +71,28 @@ describe("the event's own page", () => {
     expect(dataset.events[0]).not.toHaveProperty("eventUrl");
   });
 
+  describe("where the event's own page may be (#75)", () => {
+    const listing = (href: string) => ({ status: 200, body: `<html><body><div><a href="${href}">Big Show</a> Sat, Oct 31</div></body></html>` });
+
+    it("a link on the primary page's site, its ticketing subdomain included, is the event's page", async () => {
+      const { dataset } = await runAt(WEEK_1, emptyDataset(), [reply(candidate({ eventLink: 1 }))], { [CALENDAR_URL]: listing("https://tickets.knuckleheads.test/e/big-show") });
+      expect(dataset.events[0]!.eventUrl).toBe("https://tickets.knuckleheads.test/e/big-show");
+    });
+
+    it("a link to a ticketing platform the config lists is the event's page", async () => {
+      const config = testConfig();
+      const platformed = { ...config, discovery: { ...config.discovery, platformHosts: ["tickets.test"] } };
+      const { dataset } = await runAt(WEEK_1, emptyDataset(), [reply(candidate({ eventLink: 1 }))], { [CALENDAR_URL]: listing("https://www.tickets.test/e/big-show") }, platformed);
+      expect(dataset.events[0]!.eventUrl).toBe("https://www.tickets.test/e/big-show");
+    });
+
+    it("a link anywhere else is no event page: the event falls back to its primary page", async () => {
+      const { dataset } = await runAt(WEEK_1, emptyDataset(), [reply(candidate({ eventLink: 1 }))], { [CALENDAR_URL]: listing("https://kc-shows.test/big-show") });
+      expect(dataset.events[0]).toMatchObject({ status: "active", primaryUrl: CALENDAR_URL });
+      expect(dataset.events[0]).not.toHaveProperty("eventUrl");
+    });
+  });
+
   it("a re-reading that links a different page moves the eventUrl without a new id or a change for curation", async () => {
     const first = await runAt(WEEK_1);
     expect(first.dataset.events[0]).toMatchObject({ eventUrl: "https://knuckleheads.test/shows/big-show", lastChanged: WEEK_1_ISO });
