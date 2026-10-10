@@ -83,8 +83,6 @@ export interface ExtractionContext {
   today: string;
   /** The run's start, stamped as first-seen and last-verified. */
   nowIso: string;
-  /** Every URL fetched this run, normalized; a candidate's primary page must be among them to verify. */
-  fetchedUrls: Set<string>;
   /** The controlled neighborhood list: every region's neighborhoods, then the catch-all. */
   neighborhoods: string[];
 }
@@ -221,8 +219,8 @@ export interface Sighting {
 }
 
 /**
- * Cite-or-drop: the candidate becomes active only when its primary page was fetched this run
- * and the model quoted evidence for both a usable date and a venue; anything less is held
+ * Cite-or-drop: the candidate is keyed to the page it was read from, and becomes active only when
+ * the model quoted evidence there for both a usable date and a venue; anything less is held
  * unverified. A recurring event's date is its schedule phrase, which it carries instead of a
  * start and end. A venue the page did not name stays absent rather than borrowing the source's.
  * The event's own page, when the model named one of the page's links by number, rides along
@@ -245,7 +243,6 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const placement = toNeighborhood(candidate.neighborhood, context.neighborhoods);
 
   const verified =
-    context.fetchedUrls.has(primaryUrl) &&
     citedDate({ recurrence, ...when }) !== undefined &&
     dateEvidence !== undefined &&
     venue !== undefined &&

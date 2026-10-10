@@ -61,19 +61,11 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const model = countOutcomes(capSpend(ports.model, config.spendCapUsd));
   const registryLane = await checkRegistry(registry, dataset.sourceState, ports);
   assertSomethingFetched(registryLane.sourceReports);
-  // An index page is never a primary page, so nothing can be cited to one even if the registry fetched it.
-  const fetchedUrls = new Set(
-    registryLane.pages
-      .flatMap(({ page }) => [page.url, page.finalUrl])
-      .map((u) => normalizeUrl(u, u))
-      .filter((u) => !isIndexPage(u, config)),
-  );
   const extractionContext: ExtractionContext = {
     config,
     rules: prompts.extractionRules,
     today,
     nowIso: startedIso,
-    fetchedUrls,
     neighborhoods,
   };
   const extraction = await extractFromPages(registryLane.pages, model, extractionContext);
@@ -557,8 +549,8 @@ function refresh(known: Event, sighting: Event): Event {
  * Re-verification: every active event neither lane sighted is checked against its primary page,
  * and so is every event hidden since it was verified (by outages, ADR 0008, or an uncitable
  * re-reading), each run until it is past. A hidden event a lane sighted is checked too when the
- * lanes did not try its primary page: a calendar that lists an event under its own page cites
- * nothing for it, and only that page can bring it back. An event citing an index page has already
+ * lanes did not try its primary page: a lane's reading is keyed to the page it read, so an event
+ * keyed to another page that the lane's reading did not match stays as it was. An event citing an index page has already
  * expired, so none is fetched here. A page either lane already tried this run is not fetched
  * again; it counts as that attempt ended. A page that loaded and no longer lists the event is a
  * strike, unless the event starts after the horizon: extraction was not asked for it, so leaving it
@@ -621,10 +613,9 @@ async function reverify(
       continue;
     }
     const { page } = fetched;
-    const pageUrls = new Set([url, normalizeUrl(page.finalUrl, url)]);
     let read: Awaited<ReturnType<typeof extractPage>>;
     try {
-      read = await extractPage(page, origin, ports.model, { ...context, fetchedUrls: pageUrls });
+      read = await extractPage(page, origin, ports.model, context);
     } catch (error) {
       if (error instanceof SpendCapReached) throw error;
       problems.push(`${url} not re-read: ${modelFailed(error)}; ${plural(onPage.length, "event")} left unchanged`);
@@ -817,7 +808,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     for (const u of pageUrls) attempts.tried.add(u);
     let read: Awaited<ReturnType<typeof extractPage>>;
     try {
-      read = await extractPage(page, { lane: "discovery", query }, ports.model, { ...context, fetchedUrls: new Set([...context.fetchedUrls, ...pageUrls]) });
+      read = await extractPage(page, { lane: "discovery", query }, ports.model, context);
     } catch (error) {
       for (const u of pageUrls) attempts.unread.add(u);
       if (error instanceof SpendCapReached) outcome.pagesNotExtracted++;

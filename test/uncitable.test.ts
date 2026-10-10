@@ -111,7 +111,7 @@ describe("an uncitable re-reading", () => {
     expect(only(both.dataset)).toMatchObject({ status: "active", lastVerified: weekIso(2) });
     expect(both.report.counts.unverifiedByUncitableReading).toBe(0);
   });
-  it("an event whose own page is its primary page, listed by a calendar this run, is verified by the calendar's reading and stays active", async () => {
+  it("an event whose own page is its primary page, listed by a calendar this run, is verified by the calendar's reading, keyed to the calendar, and not re-read", async () => {
     const EVENT_URL = "https://knuckleheads.test/shows/big-show";
     const first = await seen();
     const ownPage = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, primaryUrl: EVENT_URL })) };
@@ -119,7 +119,8 @@ describe("an uncitable re-reading", () => {
     // The calendar's reading is keyed to the calendar, which the lane fetched, so it cites.
     const second = await runAt(week(2), ownPage, { [CALENDAR_URL]: PAGE, [EVENT_URL]: PAGE }, [reply(candidate()), reply()]);
 
-    expect(only(second.dataset)).toMatchObject({ status: "active", lastVerified: weekIso(2) });
+    expect(only(second.dataset)).toMatchObject({ id: first.dataset.events[0]!.id, primaryUrl: CALENDAR_URL, status: "active", lastVerified: weekIso(2) });
+    expect(second.calls).not.toContain(`fetch:${EVENT_URL}`);
     expect(second.report.counts).toMatchObject({ unverifiedByUncitableReading: 0 });
   });
 });
