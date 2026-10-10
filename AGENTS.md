@@ -16,6 +16,12 @@ The five canonical triage roles use their default names (`needs-triage`, `needs-
 
 Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, created lazily as terms and decisions get settled. See `docs/agents/domain.md`.
 
+## Concurrent sessions: one worktree per ticket
+
+More than one agent session works this repository at a time (the lanes on #102), so every session works in its own git worktree and never in the main checkout, which stays on `main` and clean. In Claude Code, call `EnterWorktree` as the first step of a ticket, named after it (`71-cap-skipped-leads`): it makes `.claude/worktrees/<name>` on a fresh branch from `origin/main` and moves the session there. Elsewhere, `git worktree add ../kc-events-<ticket> -b <ticket>-<slug> origin/main`. In the worktree, `pnpm install --frozen-lockfile` once (the store is shared, so it is quick); tests and typecheck need no secrets, and a hand run needs the gitignored `.env`, copied from the main checkout and never committed.
+
+Landing from a worktree: a serial-lane ticket (`run.ts`, adapters) rebases on `origin/main` after review and pushes its branch straight to `main` (`git push origin HEAD:main`); a site ticket, or anything running beside another session on the same files, opens a pull request from the branch. Remove the worktree when the ticket closes (`ExitWorktree` with remove, or `git worktree remove`). The weekly cron runs in its own clone (`~/kc-this-week-run`), so no worktree can collide with it.
+
 ## Commands
 
 - `pnpm test`: the full vitest suite. `pnpm vitest run <file>` for one file.
