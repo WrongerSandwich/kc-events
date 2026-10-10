@@ -18,7 +18,8 @@
 #
 # Secrets come from the clone's gitignored .env (OPENROUTER_API_KEY, TAVILY_API_KEY).
 
-set -Eeuo pipefail
+# No errtrace (-E): the ERR trap would run inside every $(...) as well, and report one failure twice.
+set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kc-this-week"
@@ -44,10 +45,11 @@ report() {
   if [[ -z "$issue" ]]; then
     gh label create "$HEALTH_LABEL" --color 0e8a16 --force \
       --description "The home weekly run's record: one line per success, the log's tail per failure" >/dev/null || true
-    gh issue create --label "$HEALTH_LABEL" --title "Weekly run health" \
-      --body "Each run of scripts/weekly-run.sh on the home machine comments here: one line on success, the end of its log on a failure. #64 is where notifications go; this is the record. Keep this issue open, or the next run opens another." \
-      >/dev/null || { echo "could not open the health issue; see the log"; return 0; }
-    issue=$(gh issue list --label "$HEALTH_LABEL" --state open --limit 1 --json number --jq '.[0].number // empty') || return 0
+    # gh prints the new issue's URL, which ends in its number.
+    issue=$(gh issue create --label "$HEALTH_LABEL" --title "Weekly run health" \
+      --body "Each run of scripts/weekly-run.sh on the home machine comments here: one line on success, the end of its log on a failure. #64 is where notifications go; this is the record. Keep this issue open, or the next run opens another.") \
+      || { echo "could not open the health issue; see the log"; return 0; }
+    issue=${issue##*/}
   fi
   gh issue comment "$issue" --body "$1" >/dev/null || echo "could not comment on the health issue; see the log"
 }
@@ -60,7 +62,7 @@ redact() {
 }
 
 fail() {
-  trap - ERR
+  trap - ERR TERM HUP INT
   local why=$1
   echo "weekly run failed: $why"
   # tee is still writing the log; give it a moment so the tail holds the error.
@@ -72,6 +74,7 @@ fail() {
   exit 1
 }
 trap 'fail "line $LINENO exited $?"' ERR
+trap 'fail "the script was stopped by a signal"' TERM HUP INT
 
 # Two runs at once would race to commit the same files; a second one gives up rather than wait, and
 # says so, since a lock that stays busy for a week means something is stuck holding it.
@@ -94,7 +97,8 @@ git fetch --quiet origin main
 git checkout --quiet --force -B main origin/main
 git clean --quiet -fd -- data
 
-# The manual workflow refuses on the same check, so the two never both commit one date.
+# The manual workflow refuses on the same check, so neither starts for a date the other has
+# committed. Two started within the same run time can still both commit; the later one wins.
 recent=$(git log --format=%s -n 100 origin/main)
 if grep -q -E "^Weekly research run $TODAY( |$)" <<<"$recent"; then
   fail "origin/main already has a weekly research run for $TODAY"
@@ -157,6 +161,8 @@ if ! git merge-base --is-ancestor origin/main HEAD; then
   false
 fi
 git push --quiet origin HEAD:main
+# The run is delivered; nothing after this can make it a failure.
+trap - ERR TERM HUP INT
 
 # shellcheck disable=SC2016 # the ${} are JavaScript's
 summary=$(node -e '

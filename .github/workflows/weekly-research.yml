@@ -39,8 +39,8 @@ jobs:
         with:
           fetch-depth: 100 # enough history to see today's run, below
 
-      # The home run (scripts/weekly-run.sh) refuses on the same check, so the two never both commit
-      # one date. The CLI dates a run in Kansas City's timezone, not the runner's UTC.
+      # The home run (scripts/weekly-run.sh) refuses on the same check, so neither starts for a date
+      # the other has committed. The CLI dates a run in Kansas City's timezone, not the runner's UTC.
       - name: Refuse a second run for today
         run: |
           today=$(TZ=America/Chicago date +%F)
