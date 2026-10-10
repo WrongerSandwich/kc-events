@@ -1,8 +1,8 @@
 /**
  * Hosts and sites: which host a URL is on, whether that host is one of a list (or under one), and
  * which site it belongs to, meaning its registrable domain (the public suffix plus one label:
- * "knuckleheadskc.com" for "tickets.knuckleheadskc.com"). The trust boundary between pages is
- * drawn here (ADR 0008, amended #75): a page speaks for an event only from the event's own site.
+ * "knuckleheadskc.com" for "tickets.knuckleheadskc.com"). The site is what the trust boundary
+ * between pages is drawn with (ADR 0008, amended #75; `standingOf` in the run draws it).
  */
 
 /** The URL's host without a leading "www.", lowercased; undefined when it does not parse. */

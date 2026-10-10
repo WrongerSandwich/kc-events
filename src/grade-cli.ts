@@ -38,7 +38,7 @@ async function main() {
 
   const report = JSON.parse(await readFile(reportPath, "utf8")) as RunReport;
   const config = parseConfig(parseYaml(await readFile(CONFIG_PATH, "utf8")) ?? {});
-  const dataset = parseDataset(JSON.parse(await readFile(DATASET_PATH, "utf8")), { platformHosts: config.discovery.platformHosts });
+  const dataset = parseDataset(JSON.parse(await readFile(DATASET_PATH, "utf8")), config);
   const existing = existsSync(GRADING_PATH) ? await readFile(GRADING_PATH, "utf8") : undefined;
 
   await writeFile(GRADING_PATH, renderGrading({ report, dataset, existing }));

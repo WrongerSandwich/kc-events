@@ -2,13 +2,15 @@ import { expect } from "vitest";
 import { run } from "../../src/run.js";
 import type { RunConfig } from "../../src/config.js";
 import { parseDataset, type Dataset } from "../../src/dataset.js";
+import type { SearchResult } from "../../src/ports.js";
 import type { Source } from "../../src/registry.js";
 import { fakePorts, type CannedPage, type ScriptedReply } from "./ports.js";
 import { testConfig, testPrompts } from "./config.js";
 
 /**
  * One run over these registry sources with canned pages and scripted model replies, under the test
- * config unless another is given. The dataset it returns must parse; the fake ports' calls come back
+ * config unless another is given, and with these search results by query when the config turns
+ * discovery on. The dataset it returns must parse; the fake ports' calls come back
  * and model requests come back with the run's output.
  */
 export async function runWith(
@@ -19,10 +21,11 @@ export async function runWith(
     pages,
     completions,
     config = testConfig(),
-  }: { sources: Source[]; pages: Record<string, CannedPage>; completions: ScriptedReply[]; config?: RunConfig },
+    searches,
+  }: { sources: Source[]; pages: Record<string, CannedPage>; completions: ScriptedReply[]; config?: RunConfig; searches?: Record<string, SearchResult[] | Error> },
 ) {
-  const fakes = fakePorts(now, { pages, completions });
+  const fakes = fakePorts(now, { pages, completions, ...(searches ? { searches } : {}) });
   const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports });
-  expect(parseDataset(result.dataset, { platformHosts: config.discovery.platformHosts })).toEqual(result.dataset);
+  expect(parseDataset(result.dataset, config)).toEqual(result.dataset);
   return { ...result, calls: fakes.calls, requests: fakes.requests };
 }

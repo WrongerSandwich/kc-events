@@ -41,7 +41,7 @@ async function discoverAt(
   const config = testConfig({ spendCapUsd });
   const discovering = { ...config, discovery: { ...config.discovery, enabled: true, aggregatorHosts: ["listings.test"], ...discovery } };
   const result = await run({ config: discovering, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports });
-  expect(parseDataset(result.dataset, { platformHosts: discovering.discovery.platformHosts })).toEqual(result.dataset);
+  expect(parseDataset(result.dataset, discovering)).toEqual(result.dataset);
   return { ...result, calls: fakes.calls, requests: fakes.requests };
 }
 

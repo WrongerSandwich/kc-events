@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseConfig } from "../src/config.js";
 import { parseRegistry } from "../src/registry.js";
 import { parseDataset, emptyDataset } from "../src/dataset.js";
+import { testConfig } from "./fakes/config.js";
 
 describe("config", () => {
   it("defaults match the spec", () => {
@@ -141,14 +142,17 @@ describe("dataset", () => {
     expect(parseDataset({ ...emptyDataset(), events: [http] }).events[0]).toEqual(http);
   });
 
-  it("an event's own page is on its primary page's site or a ticketing platform; the config's platform list widens the default", () => {
+  it("an event's own page is on its primary page's site or a ticketing platform; a config's platform list replaces the default", () => {
     const own = { ...event, eventUrl: "https://tickets.knuckleheadskc.com/e/1" };
     expect(parseDataset({ ...emptyDataset(), events: [own] }).events[0]).toEqual(own);
     const platform = { ...event, eventUrl: "https://www.eventbrite.com/e/1" };
     expect(parseDataset({ ...emptyDataset(), events: [platform] }).events[0]).toEqual(platform);
     const elsewhere = { ...event, eventUrl: "https://kc-shows.test/e/1" };
     expect(() => parseDataset({ ...emptyDataset(), events: [elsewhere] })).toThrow(/own page/);
-    expect(parseDataset({ ...emptyDataset(), events: [elsewhere] }, { platformHosts: ["kc-shows.test"] }).events[0]).toEqual(elsewhere);
+    const config = testConfig();
+    const platformed = { ...config, discovery: { ...config.discovery, platformHosts: ["kc-shows.test"] } };
+    expect(parseDataset({ ...emptyDataset(), events: [elsewhere] }, platformed).events[0]).toEqual(elsewhere);
+    expect(() => parseDataset({ ...emptyDataset(), events: [platform] }, platformed)).toThrow(/own page/);
   });
 
   it("an expired event carries its reason, and nothing else carries one", () => {

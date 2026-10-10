@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_PLATFORM_HOSTS } from "./config.js";
+import { DEFAULT_PLATFORM_HOSTS, type RunConfig } from "./config.js";
 import { onHost, sameSite } from "./hosts.js";
 
 /** Bump when the published dataset's shape changes; downstream readers key on it. */
@@ -119,7 +119,7 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
       message: "an event's own page is on its primary page's site or a ticketing platform",
     });
 
-export const eventSchema = eventSchemaFor(DEFAULT_PLATFORM_HOSTS);
+const eventSchema = eventSchemaFor(DEFAULT_PLATFORM_HOSTS);
 
 export const sourceStateSchema = z.strictObject({
   consecutiveFailures: z.number().int().nonnegative(),
@@ -153,20 +153,18 @@ export const datasetSchemaFor = (platformHosts: readonly string[]) =>
     discoveryState: z.record(z.string(), discoveryHostStateSchema).default({}),
   });
 
-export const datasetSchema = datasetSchemaFor(DEFAULT_PLATFORM_HOSTS);
+const datasetSchema = datasetSchemaFor(DEFAULT_PLATFORM_HOSTS);
 
 export type Event = z.infer<typeof eventSchema>;
 export type SourceState = z.infer<typeof sourceStateSchema>;
 export type Dataset = z.infer<typeof datasetSchema>;
 
-/** What parsing a dataset needs from the config; the defaults stand in where there is no config. */
-export interface DatasetOptions {
-  /** The ticketing platforms an event's own page may be on when it is off the primary page's site. */
-  platformHosts?: readonly string[];
-}
-
-export function parseDataset(raw: unknown, { platformHosts = DEFAULT_PLATFORM_HOSTS }: DatasetOptions = {}): Dataset {
-  return datasetSchemaFor(platformHosts).parse(raw);
+/**
+ * Parses a dataset under the run config, which names the ticketing platforms an event's own page
+ * may be on; without a config, the default platform list stands in.
+ */
+export function parseDataset(raw: unknown, config?: Pick<RunConfig, "discovery">): Dataset {
+  return datasetSchemaFor(config?.discovery.platformHosts ?? DEFAULT_PLATFORM_HOSTS).parse(raw);
 }
 
 /** The dataset before any run has happened. */

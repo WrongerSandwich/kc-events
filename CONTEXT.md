@@ -19,7 +19,7 @@ The page on the event's own web presence (venue calendar, promoter page, organiz
 _Avoid_: official page, canonical URL, source page
 
 **Site**:
-The web presence a page belongs to: its registrable domain, the public suffix plus one label ("knuckleheadskc.com" for "tickets.knuckleheadskc.com"). An event's site is its primary page's. The job has no public suffix list, so a hosted platform's tenants count as one site.
+The web presence a page belongs to: its registrable domain, approximately the public suffix plus one label ("knuckleheadskc.com" for "tickets.knuckleheadskc.com"). An event's site is its primary page's. The job has no public suffix list, so a hosted platform's tenants count as one site, except that a ticketing platform the config lists is no one's site.
 _Avoid_: domain (when meaning this), host (which is the full hostname)
 
 **Own page**:

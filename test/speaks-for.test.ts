@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { run } from "../src/run.js";
 import type { RunConfig } from "../src/config.js";
 import { discoveryQueries } from "../src/discovery.js";
 import { toLocalDate } from "../src/time.js";
-import { emptyDataset, parseDataset, type Dataset, type Event } from "../src/dataset.js";
+import { emptyDataset, type Dataset, type Event } from "../src/dataset.js";
 import type { CompletionResult, SearchResult } from "../src/ports.js";
 import type { Source } from "../src/registry.js";
 import { renderReportMarkdown } from "../src/report.js";
-import { fakePorts, type CannedPage } from "./fakes/ports.js";
-import { testConfig, testPrompts } from "./fakes/config.js";
+import type { CannedPage } from "./fakes/ports.js";
+import { testConfig } from "./fakes/config.js";
 import { candidateAt, knuckleheads, PAGE, reply, source, WEEK_1, WEEK_1_ISO, WEEK_2, WEEK_2_ISO } from "./fakes/fixtures.js";
 import { runWith } from "./fakes/run.js";
 
@@ -22,24 +21,24 @@ const ELSEWHERE_URL = "https://kc-shows.test/this-week";
 /** A promoter's page found by discovery, which an event cites as its primary page, and another page on that site. */
 const PROMOTER_URL = "https://promoter.test/shows/big-show";
 const PROMOTER_OTHER_URL = "https://promoter.test/shows/big-show-moved";
+/** An organizer's page on a ticketing platform the config lists, and another organizer's page there. */
+const PLATFORM_URL = "https://www.tickets.test/e/big-show";
+const PLATFORM_OTHER_URL = "https://www.tickets.test/e/big-show-by-someone-else";
 
 const lead = (url: string): SearchResult => ({ url, title: "A lead", snippet: "Something on in Kansas City" });
 /** A candidate for the Big Show at Knuckleheads on a page at `url`, far enough out not to be past. */
 const at = (url: string, overrides: Record<string, unknown> = {}) =>
   candidateAt(source("Knuckleheads", { urls: [url], neighborhood: "East Bottoms" }), { startDate: "2026-12-12", dateEvidence: "Sat, Dec 12 · Show 8:00 PM", ...overrides });
 
-/** One run with discovery on: the registry lane over `sources`, then one search whose results are `leads`. */
-async function runAt(
+/** One run with discovery on and tickets.test a ticketing platform: the registry lane over `sources`, then one search whose results are `leads`. */
+function runAt(
   now: Date,
   dataset: Dataset,
   { sources = [], leads = [], pages, completions }: { sources?: Source[]; leads?: string[]; pages: Record<string, CannedPage>; completions: CompletionResult[] },
 ) {
   const base = testConfig();
-  const config = { ...base, discovery: { ...base.discovery, enabled: true } };
-  const fakes = fakePorts(now, { pages, completions, searches: { [queryAt(config, now)]: leads.map(lead) } });
-  const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports });
-  expect(parseDataset(result.dataset, { platformHosts: config.discovery.platformHosts })).toEqual(result.dataset);
-  return { ...result, calls: fakes.calls };
+  const config = { ...base, discovery: { ...base.discovery, enabled: true, platformHosts: [...base.discovery.platformHosts, "tickets.test"] } };
+  return runWith(now, dataset, { sources, pages, completions, config, searches: { [queryAt(config, now)]: leads.map(lead) } });
 }
 
 const only = (dataset: Dataset): Event => {
@@ -96,6 +95,20 @@ describe("a cancellation counts only from a page that speaks for the event", () 
 
     expect(only(second.dataset)).toMatchObject({ status: "expired", expiryReason: "cancelled" });
     expect(second.report.cancellationsFromElsewhere).toEqual([]);
+  });
+
+  it("a ticketing platform is no one's site: another organizer's page there cannot cancel an event whose primary page is on it", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), { leads: [PLATFORM_URL], pages: { [PLATFORM_URL]: PAGE }, completions: [reply(at(PLATFORM_URL))] });
+
+    // The other page says cancelled; re-verification then reads the event's own page, which still lists it.
+    const second = await runAt(WEEK_2, first.dataset, {
+      leads: [PLATFORM_OTHER_URL],
+      pages: { [PLATFORM_OTHER_URL]: PAGE, [PLATFORM_URL]: PAGE },
+      completions: [reply(at(PLATFORM_OTHER_URL, { notice: "cancelled" })), reply(at(PLATFORM_URL))],
+    });
+
+    expect(only(second.dataset)).toMatchObject({ id: first.dataset.events[0]!.id, status: "active", primaryUrl: PLATFORM_URL, lastVerified: WEEK_2_ISO });
+    expect(second.report.cancellationsFromElsewhere).toEqual([{ title: "Big Show", primaryUrl: PLATFORM_URL, reportedBy: PLATFORM_OTHER_URL }]);
   });
 
   it("a registry source's page on another site can cancel it: a person admitted that source", async () => {
