@@ -563,8 +563,8 @@ function refresh(known: Event, sighting: Event): Event {
  * again; it counts as that attempt ended. A page that loaded and no longer lists the event is a
  * strike, unless the event starts after the horizon: extraction was not asked for it, so leaving it
  * out says nothing and the event is left as it was. A page that is gone or that robots.txt now
- * disallows is a strike whatever the event's date. A page that could not be loaded
- * is an outage (see fetchReadable): it holds an active event as it was, up to the outage limit. A
+ * disallows is a strike whatever the event's date. A page that could not be loaded (see
+ * fetchReadable), or a discovery lead whose redirects ended on an index page, is an outage: it holds an active event as it was, up to the outage limit. A
  * page that does list the event applies the sighting as in the registry lane, which revives a
  * hidden event whose reading is verified and hides an active one whose reading is not. When the
  * model's reply about a page could not be read, or the call threw, nothing is known either way and
@@ -682,13 +682,13 @@ interface LaneOutcome {
 
 /** The pages a lane tried this run and how each attempt ended, all as normalized URLs. */
 interface PageAttempts {
-  /** Every URL requested or redirected to, whether or not it came back; never one the spend cap kept from being requested. */
+  /** Every URL requested or redirected to that said something about its page; never one the spend cap kept from being requested, nor a lead that led to an index page. */
   tried: Set<string>;
-  /** URLs that could not be loaded: an outage, not a reading. */
+  /** URLs that could not be loaded, or that led discovery to an index page: an outage, not a reading. */
   outages: Set<string>;
   /** URLs that are gone (404, 410) or that robots.txt disallows: a strike for every event citing them. */
   gone: Set<string>;
-  /** Pages that came back but were not read: an unreadable reply, the spend cap, or a lead that led to an index page. */
+  /** Pages that came back but were not read: an unreadable reply, or the spend cap. */
   unread: Set<string>;
 }
 
@@ -795,18 +795,22 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     return undefined;
   };
 
-  // A lead is tried only once its fetch has said something about the page: it loaded, it is gone,
-  // or it could not be loaded. One the cap skipped, or one that led to an index page, is no reading,
-  // so re-verification must not take it for one and strike the events citing it.
+  /**
+   * A lead's page read as a primary page. A lead counts as tried only once its fetch has said
+   * something about the page: it loaded, or it is gone. One the cap skipped is no reading, so
+   * re-verification is left to judge it, and one that could not be loaded is an outage. One whose
+   * redirects end on an index page cannot be read as a primary page either; it is an outage too, so
+   * the events citing it are held up to the outage limit rather than struck.
+   */
   const readPrimaryPage = async (url: string, query: string) => {
     const page = await follow(url);
     if (!page) {
-      if (attempts.gone.has(url) || attempts.outages.has(url)) attempts.tried.add(url);
+      if (attempts.gone.has(url)) attempts.tried.add(url);
       return;
     }
     const pageUrls = [url, normalizeUrl(page.finalUrl, url)];
     if (isIndexPage(page.finalUrl, config)) {
-      attempts.unread.add(url);
+      attempts.outages.add(url);
       report.problems.push(`${url} led to an index page and was not extracted`);
       return;
     }

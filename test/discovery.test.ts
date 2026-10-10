@@ -492,13 +492,19 @@ describe("discovery lane", () => {
       expect(report.spend).toMatchObject({ capHit: true, shortfall: { leadsNotFollowed: 1, eventsNotReverified: 1 } });
     });
 
-    it("a lead that redirects to an index page does not strike the known event citing the lead's URL", async () => {
+    it("a lead that redirects to an index page does not strike the known event citing the lead's URL; it is held as an outage", async () => {
       const { dataset, report } = await discoverAt(WEEK_2, await foundLastWeek(), {
         searches: { [LATER_QUERY]: [lead(OTHER_SHOW)] },
         pages: { [OTHER_SHOW]: { ...PAGE, finalUrl: LISTING } },
       });
 
-      expect(dataset.events.find((e) => e.title === "Other Show")).toMatchObject({ status: "active", verificationFailures: 0, lastVerified: WEEK_1_ISO });
+      expect(dataset.events.find((e) => e.title === "Other Show")).toMatchObject({
+        status: "active",
+        verificationFailures: 0,
+        consecutiveOutages: 1,
+        lastVerified: WEEK_1_ISO,
+      });
+      expect(report.counts).toMatchObject({ heldThroughOutage: 1 });
       expect(report.discovery.problems).toContain(`${OTHER_SHOW} led to an index page and was not extracted`);
     });
   });
