@@ -465,6 +465,44 @@ describe("discovery lane", () => {
     expect(report.spend).toMatchObject({ capHit: true, shortfall: { queriesNotSearched: 0, leadsNotFollowed: 1 } });
   });
 
+  describe("a lead that yields no reading is not one for re-verification", () => {
+    const OTHER_SHOW = "https://promoter.test/shows/other-show";
+    const OTHER = source("Other", { urls: [OTHER_SHOW], neighborhood: "Westport" });
+
+    /** Week one: discovery finds Other Show on its own page. */
+    const foundLastWeek = async () =>
+      (
+        await discoverAt(WEEK_1, emptyDataset(), {
+          searches: { [QUERY]: [lead(OTHER_SHOW)] },
+          pages: { [OTHER_SHOW]: PAGE },
+          completions: [costing(0.01, candidateAt(OTHER, { title: "Other Show" }))],
+        })
+      ).dataset;
+
+    it("a lead the cap skipped does not strike the known event citing it; the event counts as not re-verified", async () => {
+      const { calls, dataset, report } = await discoverAt(WEEK_2, await foundLastWeek(), {
+        searches: { [LATER_QUERY]: [lead(PROMOTER_PAGE), lead(OTHER_SHOW)] },
+        pages: { [PROMOTER_PAGE]: PAGE, [OTHER_SHOW]: PAGE },
+        completions: [costing(0.06, candidateAt(PROMOTER))],
+        spendCapUsd: 0.05,
+      });
+
+      expect(calls).not.toContain(`fetch:${OTHER_SHOW}`);
+      expect(dataset.events.find((e) => e.title === "Other Show")).toMatchObject({ status: "active", verificationFailures: 0, lastVerified: WEEK_1_ISO });
+      expect(report.spend).toMatchObject({ capHit: true, shortfall: { leadsNotFollowed: 1, eventsNotReverified: 1 } });
+    });
+
+    it("a lead that redirects to an index page does not strike the known event citing the lead's URL", async () => {
+      const { dataset, report } = await discoverAt(WEEK_2, await foundLastWeek(), {
+        searches: { [LATER_QUERY]: [lead(OTHER_SHOW)] },
+        pages: { [OTHER_SHOW]: { ...PAGE, finalUrl: LISTING } },
+      });
+
+      expect(dataset.events.find((e) => e.title === "Other Show")).toMatchObject({ status: "active", verificationFailures: 0, lastVerified: WEEK_1_ISO });
+      expect(report.discovery.problems).toContain(`${OTHER_SHOW} led to an index page and was not extracted`);
+    });
+  });
+
   it("is off unless the config enables it", async () => {
     const fakes = fakePorts(WEEK_1, { searches: { [QUERY]: [lead(PROMOTER_PAGE)] } });
     const { report } = await run({ config: testConfig(), prompts: testPrompts(), dataset: emptyDataset(), registry: { sources: [] }, ports: fakes.ports });

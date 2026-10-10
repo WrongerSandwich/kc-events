@@ -14,10 +14,10 @@ function nothingFlagged(request: CompletionRequest): CompletionResult {
 }
 
 /**
- * A canned response: a page with a status, a robots.txt block, a robots.txt that cannot be reached
+ * A canned response: a page with a status (and where its redirects ended, if anywhere else), a robots.txt block, a robots.txt that cannot be reached
  * (thrown, as the real fetcher does), or a network failure.
  */
-export type CannedPage = { status: number; body: string } | "robots-blocked" | "robots-unreachable" | Error;
+export type CannedPage = { status: number; body: string; finalUrl?: string } | "robots-blocked" | "robots-unreachable" | Error;
 
 /** A scripted model reply, or an Error the call throws, as a connection reset partway through would. */
 export type ScriptedReply = CompletionResult | Error;
@@ -85,7 +85,7 @@ function cannedFetcher(pages: Record<string, CannedPage>, calls: string[], prefi
       calls.push(`${prefix || "fetch"}:${url}${options?.waitFor ? ` waiting for ${options.waitFor}` : ""}`);
       if (page === undefined) throw new Error(`fake fetcher has no canned page for ${url}`);
       if (page instanceof Error) throw page;
-      return { url, finalUrl: url, status: page.status, body: page.body, robotsAllowed: true };
+      return { url, finalUrl: page.finalUrl ?? url, status: page.status, body: page.body, robotsAllowed: true };
     },
   };
 }

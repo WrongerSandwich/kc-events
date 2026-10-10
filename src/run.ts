@@ -682,13 +682,13 @@ interface LaneOutcome {
 
 /** The pages a lane tried this run and how each attempt ended, all as normalized URLs. */
 interface PageAttempts {
-  /** Every URL requested or redirected to, whether or not it came back. */
+  /** Every URL requested or redirected to, whether or not it came back; never one the spend cap kept from being requested. */
   tried: Set<string>;
   /** URLs that could not be loaded: an outage, not a reading. */
   outages: Set<string>;
   /** URLs that are gone (404, 410) or that robots.txt disallows: a strike for every event citing them. */
   gone: Set<string>;
-  /** Pages that came back but were not read: an unreadable reply, or the spend cap. */
+  /** Pages that came back but were not read: an unreadable reply, the spend cap, or a lead that led to an index page. */
   unread: Set<string>;
 }
 
@@ -795,12 +795,18 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     return undefined;
   };
 
+  // A lead is tried only once its fetch has said something about the page: it loaded, it is gone,
+  // or it could not be loaded. One the cap skipped, or one that led to an index page, is no reading,
+  // so re-verification must not take it for one and strike the events citing it.
   const readPrimaryPage = async (url: string, query: string) => {
-    if (!followed.has(url) && !registryTried.has(url)) attempts.tried.add(url);
     const page = await follow(url);
-    if (!page) return;
+    if (!page) {
+      if (attempts.gone.has(url) || attempts.outages.has(url)) attempts.tried.add(url);
+      return;
+    }
     const pageUrls = [url, normalizeUrl(page.finalUrl, url)];
     if (isIndexPage(page.finalUrl, config)) {
+      attempts.unread.add(url);
       report.problems.push(`${url} led to an index page and was not extracted`);
       return;
     }
