@@ -50,6 +50,7 @@ describe("outages", () => {
     ["HTTP 429", { status: 429, body: "Too Many Requests" }],
     ["HTTP 503", { status: 503, body: "Service Unavailable" }],
     ["an unreachable robots.txt", "robots-unreachable"],
+    ["a page the fetch policy refuses", "refused"],
   ])("%s holds an active event as it was, with one outage and no strike", async (_, page) => {
     const first = await seen();
 

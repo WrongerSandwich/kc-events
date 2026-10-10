@@ -1,5 +1,6 @@
 import { chromium, type Browser, type BrowserContext } from "playwright";
 import type { FetchOptions, FetchPort, FetchResult } from "../ports.js";
+import { FetchRefused, MAX_BODY_BYTES } from "./fetch-policy.js";
 import { memoized, TIMEOUT_MS, type PlainFetcher } from "./fetcher.js";
 import { USER_AGENT } from "./identity.js";
 
@@ -19,7 +20,9 @@ export interface BrowserFetcher extends FetchPort {
  * fetcher's: that fetcher requests the URL first and walks its redirects, robots.txt and all, and the
  * browser loads the page they end on; robots.txt is asked again, through the same cache, before any
  * navigation the page's script makes and for the URL the page ends on (what the page itself loads,
- * its scripts and data, is not a page the job asked for). It identifies itself with the job's user
+ * its scripts and data, is not a page the job asked for). The plain fetcher's policy holds too: no
+ * request the page makes goes to a host on the machine's own network, the load waits its origin's
+ * crawl delay, and a rendered page over the byte budget is refused. It identifies itself with the job's user
  * agent, not a stock browser's; one attempt within the same timeout, cached by URL and selector.
  *
  * The page is read once the network has gone quiet, or, given a selector, once that selector is on
@@ -53,29 +56,42 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel }: { channel
     const page = await (await contextFor()).newPage();
     const deadline = Date.now() + TIMEOUT_MS;
     const remaining = () => Math.max(1, deadline - Date.now());
-    // Why the page's own navigation stopped, if the route below stopped it: a disallowed URL, or a robots.txt that could not be read.
+    // Why the page's own navigation stopped, if the route below stopped it: a disallowed URL, or a
+    // robots.txt that could not be read, or a URL the fetch policy refuses.
     let disallowed: string | undefined;
-    let robotsFailure: unknown;
+    let navigationFailure: unknown;
     try {
       await page.route("**/*", async (route) => {
         const request = route.request();
         if (SKIPPED_RESOURCES.has(request.resourceType())) return route.abort();
-        if (!request.isNavigationRequest() || request.frame() !== page.mainFrame()) return route.continue();
+        const mainNavigation = request.isNavigationRequest() && request.frame() === page.mainFrame();
+        // Whatever the page loads, it loads nothing from the machine's own network.
+        const target = new URL(request.url());
+        if (mainNavigation || target.protocol === "http:" || target.protocol === "https:") {
+          try {
+            await plain.policy.check(target);
+          } catch (error) {
+            if (mainNavigation) navigationFailure ??= error;
+            return route.abort("blockedbyclient");
+          }
+        }
+        if (!mainNavigation) return route.continue();
         try {
           if (await plain.robotsAllows(request.url())) return route.continue();
           disallowed ??= request.url();
           return route.abort("blockedbyclient");
         } catch (error) {
-          robotsFailure ??= error;
+          navigationFailure ??= error;
           return route.abort("failed");
         }
       });
+      await plain.policy.pace(new URL(walked.finalUrl));
       const response = await page.goto(walked.finalUrl, { waitUntil: "domcontentloaded", timeout: remaining() }).catch((error: unknown) => {
-        if (disallowed || robotsFailure) return null;
+        if (disallowed || navigationFailure) return null;
         throw error;
       });
       if (disallowed) return blocked(disallowed);
-      if (robotsFailure) throw robotsFailure;
+      if (navigationFailure) throw navigationFailure;
       if (!response) throw new Error(`no response loading ${url}`);
       const status = response.status();
       if (status >= 200 && status < 300) {
@@ -83,8 +99,10 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel }: { channel
         else await page.waitForLoadState("networkidle", { timeout: remaining() });
       }
       if (disallowed) return blocked(disallowed);
-      if (robotsFailure) throw robotsFailure;
-      return { url, finalUrl: withoutScriptFragment(page.url(), url), status, body: await page.content(), robotsAllowed: true };
+      if (navigationFailure) throw navigationFailure;
+      const body = await page.content();
+      if (Buffer.byteLength(body) > MAX_BODY_BYTES) throw new FetchRefused(`fetch policy refuses a rendered page over ${MAX_BODY_BYTES} bytes`);
+      return { url, finalUrl: withoutScriptFragment(page.url(), url), status, body, robotsAllowed: true };
     } finally {
       // A page that will not close (the browser crashed) must not hide why the fetch failed.
       await page.close().catch(() => undefined);

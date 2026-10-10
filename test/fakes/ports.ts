@@ -1,4 +1,5 @@
 import type { CompletionRequest, CompletionResult, FetchPort, FetchResult, Ports, SearchResult } from "../../src/ports.js";
+import { FetchRefused } from "../../src/adapters/fetch-policy.js";
 import { EVENTS_TO_JUDGE } from "../../src/curation.js";
 import { TEST_MODELS } from "./config.js";
 
@@ -14,10 +15,12 @@ function nothingFlagged(request: CompletionRequest): CompletionResult {
 }
 
 /**
- * A canned response: a page with a status (and where its redirects ended, if anywhere else), a robots.txt block, a robots.txt that cannot be reached
- * (thrown, as the real fetcher does), or a network failure.
+ * A canned response: a page with a status (and where its redirects ended, if anywhere else), a
+ * robots.txt block, a robots.txt that cannot be reached (thrown, as the real fetcher does), a page
+ * the fetch policy refuses (a private host, a body over budget, an unreadable content type: a
+ * `FetchRefused` thrown), or a network failure.
  */
-export type CannedPage = { status: number; body: string; finalUrl?: string } | "robots-blocked" | "robots-unreachable" | Error;
+export type CannedPage = { status: number; body: string; finalUrl?: string } | "robots-blocked" | "robots-unreachable" | "refused" | Error;
 
 /** A scripted model reply, or an Error the call throws, as a connection reset partway through would. */
 export type ScriptedReply = CompletionResult | Error;
@@ -66,7 +69,7 @@ export function fakePorts(now: Date, { pages = {}, completions = [], curations =
 
 /**
  * A fetcher over the canned pages, recording each call. The plain one records `fetch:<url>`,
- * `robots-blocked:<url>`, and `robots-unreachable:<url>`; the browser one puts `browser` in front
+ * `robots-blocked:<url>`, `robots-unreachable:<url>`, and `refused:<url>`; the browser one puts `browser` in front
  * (`browser:<url>`, `browser robots-blocked:<url>`) and adds the selector it was told to wait for.
  */
 function cannedFetcher(pages: Record<string, CannedPage>, calls: string[], prefix: string): FetchPort {
@@ -81,6 +84,10 @@ function cannedFetcher(pages: Record<string, CannedPage>, calls: string[], prefi
       if (page === "robots-unreachable") {
         robots("robots-unreachable", url);
         throw new Error("robots.txt unreachable (HTTP 503)");
+      }
+      if (page === "refused") {
+        robots("refused", url);
+        throw new FetchRefused("fetch policy refuses content type application/pdf");
       }
       calls.push(`${prefix || "fetch"}:${url}${options?.waitFor ? ` waiting for ${options.waitFor}` : ""}`);
       if (page === undefined) throw new Error(`fake fetcher has no canned page for ${url}`);

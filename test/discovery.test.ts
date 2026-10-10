@@ -420,6 +420,17 @@ describe("discovery lane", () => {
     expect(report.discovery.problems).toEqual([`robots.txt disallows ${PROMOTER_PAGE}`]);
   });
 
+  it("a lead the fetch policy refuses (a private host, say) is not extracted, and is reported once however often it turns up", async () => {
+    const { calls, dataset, report } = await discoverAt(WEEK_1, emptyDataset(), {
+      searches: { [QUERY]: [lead(PROMOTER_PAGE), lead(PROMOTER_PAGE, "The same lead again")] },
+      pages: { [PROMOTER_PAGE]: "refused" },
+    });
+
+    expect(calls).toEqual([`search:${QUERY}`, `refused:${PROMOTER_PAGE}`]);
+    expect(dataset.events).toEqual([]);
+    expect(report.discovery.problems).toEqual([`${PROMOTER_PAGE}: fetch policy refuses content type application/pdf`]);
+  });
+
   it("a failed search is reported and the run goes on", async () => {
     const { report } = await discoverAt(WEEK_1, emptyDataset(), { searches: { [QUERY]: new Error("Tavily HTTP 432") } });
 
