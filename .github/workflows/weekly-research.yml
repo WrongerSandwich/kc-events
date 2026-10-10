@@ -36,6 +36,19 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 100 # enough history to see today's run, below
+
+      # The home run (scripts/weekly-run.sh) refuses on the same check, so the two never both commit
+      # one date. The CLI dates a run in Kansas City's timezone, not the runner's UTC.
+      - name: Refuse a second run for today
+        run: |
+          today=$(TZ=America/Chicago date +%F)
+          recent=$(git log --format=%s -n 100)
+          if grep -q -E "^Weekly research run $today( |$)" <<<"$recent"; then
+            echo "::error::this branch already has a weekly research run for $today; nothing to do"
+            exit 1
+          fi
 
       - uses: pnpm/action-setup@v6 # version from packageManager in package.json
 

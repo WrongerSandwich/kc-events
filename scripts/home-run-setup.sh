@@ -319,8 +319,8 @@ if confirm "Run it now?"; then
   if "$RUN_DIR/scripts/weekly-run.sh"; then
     say "The run passed and pushed. Pull it with: git pull"
   else
-    warn "the run failed; it opened an issue with the log's tail, and the full log is under ~/.local/state/kc-this-week/"
-    SKIPPED+=("read the failed run's issue and log, fix what it names, then re-run $RUN_DIR/scripts/weekly-run.sh")
+    warn "the run failed; it commented the log's tail on the open \"Weekly run health\" issue, and the full log is under ~/.local/state/kc-this-week/"
+    SKIPPED+=("read the failure on the \"Weekly run health\" issue and the log, fix what it names, then re-run $RUN_DIR/scripts/weekly-run.sh")
   fi
 else
   SKIPPED+=("wait for Monday, or run $RUN_DIR/scripts/weekly-run.sh by hand")
