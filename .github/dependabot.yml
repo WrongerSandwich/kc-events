@@ -1,0 +1,22 @@
+# Weekly bumps, one grouped pull request per ecosystem. pnpm-workspace.yaml's minimumReleaseAge
+# (seven days) still applies when a bump is installed, so a version published this week waits.
+version: 2
+updates:
+  - package-ecosystem: npm
+    # The workspace root: its lockfile covers both packages (the job and site/).
+    directories:
+      - /
+      - /site
+    schedule:
+      interval: weekly
+    groups:
+      npm:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
