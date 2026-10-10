@@ -2,3 +2,6 @@ packages:
   - site
 # The root package (the research job) is a workspace member too, so `pnpm -r test` runs both suites.
 includeWorkspaceRoot: true
+# A version is installable only once it is seven days old (the value is minutes), so a freshly
+# published malicious release is usually pulled before a bump can reach it.
+minimumReleaseAge: 10080

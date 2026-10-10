@@ -1,0 +1,24 @@
+# Weekly bumps, one grouped pull request per ecosystem. A version is proposed only once it is seven
+# days old (cooldown), the same wait pnpm-workspace.yaml's minimumReleaseAge puts on an install.
+version: 2
+updates:
+  - package-ecosystem: npm
+    # The workspace root only: its one lockfile covers both packages (the job and site/).
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      npm:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
