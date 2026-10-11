@@ -23,6 +23,9 @@ export const MAX_PAYLOAD_BYTES = 400_000;
 /** How far the build's today may be from the last successful run's day, either way, before it is taken for a wrong clock or SITE_TODAY. */
 export const MAX_DAYS_FROM_RUN = 14;
 
+/** The SITE_TODAY (or today option) that means the last successful run's local day. */
+export const LAST_RUN = "last-run";
+
 /** The job's event ids; the sitemap and `view-transition-name` take them as they are. */
 const EVENT_ID = /^evt_[0-9a-f]{12}$/;
 
@@ -112,7 +115,10 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
   checkSchemaVersion(DATASET_SCHEMA_VERSION);
   const dataset = parseDataset(JSON.parse(readFileSync(opts.datasetPath, "utf8")), config);
   if (dataset.lastSuccessfulRun === null) throw new Error("the dataset records no successful run; nothing to publish");
-  const today = opts.today ?? process.env.SITE_TODAY ?? toLocalDate(new Date(), config.timezone);
+  const runDay = localDate(dataset.lastSuccessfulRun);
+  // `SITE_TODAY=last-run` builds as of the run's own day: what the site tests build with, so they never depend on real today.
+  const asked = opts.today ?? process.env.SITE_TODAY;
+  const today = asked === LAST_RUN ? runDay : (asked ?? toLocalDate(new Date(), config.timezone));
   if (!isValidDate(today)) {
     const source = opts.today !== undefined ? "the today option" : "SITE_TODAY";
     throw new Error(`the build's today must be a real YYYY-MM-DD date, got "${today}" (from ${source})`);
@@ -121,7 +127,6 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
   if (isProductionBuild() && knownOrigin() === undefined) {
     throw new Error("a production build needs its origin for canonical links and the sitemap: set SITE_ORIGIN (or build on Vercel, which sets VERCEL_PROJECT_PRODUCTION_URL)");
   }
-  const runDay = localDate(dataset.lastSuccessfulRun);
   if (today > addDays(runDay, MAX_DAYS_FROM_RUN) || today < addDays(runDay, -MAX_DAYS_FROM_RUN)) {
     throw new Error(`the build's today, ${today}, is more than ${MAX_DAYS_FROM_RUN} days from the last successful run, ${runDay}: check SITE_TODAY or the weekly run`);
   }

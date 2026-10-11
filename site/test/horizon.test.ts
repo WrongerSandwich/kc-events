@@ -89,18 +89,20 @@ describe("horizon", () => {
     expect(horizon(event({ start: "2027-01-14" }), today)).toBe("further-out");
   });
 
-  it("is total over every non-past dated event in the committed dataset for a week of todays", () => {
-    for (let i = 0; i < 7; i++) {
-      const today = addDays(meta.buildToday, i);
-      let checked = 0;
-      for (const e of events) {
-        if (!isDated(e) || isPast(e, today)) continue;
-        expect(HORIZONS).toContain(horizon(e, today));
-        checked++;
+  describe("committed data", () => {
+    it("is total over every non-past dated event in the committed dataset for a week of todays", () => {
+      for (let i = 0; i < 7; i++) {
+        const today = addDays(meta.buildToday, i);
+        let checked = 0;
+        for (const e of events) {
+          if (!isDated(e) || isPast(e, today)) continue;
+          expect(HORIZONS).toContain(horizon(e, today));
+          checked++;
+        }
+        // A dataset with nothing dated in the week after its run would otherwise pass this test having checked nothing.
+        expect(checked, `events checked for ${today}`).toBeGreaterThan(0);
       }
-      // A dataset gone stale would otherwise pass this test having checked nothing.
-      expect(checked, `events checked for ${today}`).toBeGreaterThan(0);
-    }
+    });
   });
 
   it("groups and sorts the don't-miss events, leaving empty buckets present", () => {

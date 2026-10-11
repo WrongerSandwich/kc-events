@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseConfig } from "../../src/config";
 import type { Event } from "../../src/dataset";
-import { checkSchemaVersion, loadPublished, MAX_PAYLOAD_BYTES, project, SITE_EXPECTS_SCHEMA_VERSION } from "../src/build/load-dataset";
+import { checkSchemaVersion, LAST_RUN, loadPublished, MAX_PAYLOAD_BYTES, project, SITE_EXPECTS_SCHEMA_VERSION } from "../src/build/load-dataset";
 import { activeEvent, configYaml, dataset, write } from "./fixtures/dataset";
 
 describe("loadPublished", () => {
@@ -234,6 +234,19 @@ venueAliases:
         expect(loadPublished(files).buildToday).toBe("2026-10-12");
         vi.stubEnv("SITE_TODAY", undefined);
         expect(loadPublished(files).buildToday).toBe("2026-10-19");
+      } finally {
+        vi.unstubAllEnvs();
+        vi.useRealTimers();
+      }
+    });
+
+    it("is the last successful run's local day for SITE_TODAY=last-run, whatever the clock says (the site tests' build)", () => {
+      vi.useFakeTimers({ now: new Date("2027-06-01T12:00:00Z") });
+      try {
+        vi.stubEnv("SITE_TODAY", LAST_RUN);
+        expect(loadPublished(files).buildToday).toBe("2026-10-05");
+        vi.stubEnv("SITE_TODAY", undefined);
+        expect(loadPublished({ ...files, today: LAST_RUN }).buildToday).toBe("2026-10-05");
       } finally {
         vi.unstubAllEnvs();
         vi.useRealTimers();

@@ -209,7 +209,9 @@ test.describe("the explorer's active slice at 390 px", () => {
     await on(page, BUILD_DAY, "/explore?when=weekend&kind=music");
     await expect(page.getByRole("status")).toHaveText("2 events");
     await expect(page.getByRole("region", { name: "Events" })).toBeVisible();
-    await page.waitForTimeout(300);
+    // Any shift the hydrated render causes is laid out and observed by the second frame after load.
+    await page.waitForLoadState("load");
+    await page.evaluate(() => new Promise<void>((done) => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
     expect(await page.evaluate(() => (window as unknown as { shifts: number }).shifts)).toBeLessThan(0.1);
   });
 

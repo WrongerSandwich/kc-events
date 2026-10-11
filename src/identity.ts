@@ -15,13 +15,16 @@ import { hostOf, samePage } from "./hosts.js";
 const FUZZY_DATE_WINDOW_DAYS = 3;
 const DAY_MS = 86_400_000;
 
-/** Case, punctuation, whitespace, and a leading "the" do not make a different title or venue. */
+/**
+ * Case, punctuation, whitespace, and a leading "the" do not make a different title or venue. Every
+ * leading "the" goes, so a normalized name normalizes to itself ("The The Band" is "band" either way).
+ */
 export function normalizeName(title: string): string {
   return title
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
-    .replace(/^the /, "");
+    .replace(/^(?:the )+/, "");
 }
 
 /**

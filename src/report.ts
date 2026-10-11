@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { EXPIRY_REASONS, type ExpiryReason } from "./dataset.js";
 import { ARCHIVE_AFTER_WEEKS } from "./archive.js";
 import { markdownList, plural, tableCell } from "./markdown.js";
@@ -148,6 +149,88 @@ export interface RunReport {
   cancellationsFromElsewhere: (EventRef & { reportedBy: string })[];
   /** Events whose title or primary page changed this run, as they are now and as they were (#82): a flap shows here the week it happens. */
   identityChurn: (EventRef & { was: EventRef })[];
+}
+
+const count = z.number().int().nonnegative();
+/** A count, or a list, that a report written before it existed does not carry: zero, or empty. */
+const countSince = count.default(0);
+const listSince = <T extends z.ZodType>(item: T) => z.array(item).default([]);
+const eventRef = z.strictObject({ title: z.string(), primaryUrl: z.string() });
+const hostEvents = z.strictObject({ host: z.string(), events: count });
+const servedBy = z.strictObject({ model: z.string(), provider: z.string().optional(), generationId: z.string() });
+
+/**
+ * The JSON twin as committed in `data/runs/`. A field added after the first run defaults to zero or
+ * empty, as a report written before it would have counted it, so every committed report parses into
+ * today's `RunReport`; a key this does not name is refused, so a renamed field fails here first.
+ */
+export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
+  runDate: z.iso.date(),
+  startedAt: z.iso.datetime({ offset: true }),
+  finishedAt: z.iso.datetime({ offset: true }),
+  horizonWeeks: z.number().int().positive(),
+  counts: z.strictObject({
+    found: count,
+    new: count,
+    updated: count,
+    reverified: count,
+    heldUnverified: count,
+    heldThroughOutage: countSince,
+    heldSourceExcluded: countSince,
+    beyondHorizonUnstruck: countSince,
+    beyondListingUnstruck: countSince,
+    unverifiedByOutageLimit: countSince,
+    unverifiedByUncitableReading: countSince,
+    venuelessAmbiguous: countSince,
+    heldForPromotion: countSince,
+    releasedForPromotion: countSince,
+    outsideGeography: count,
+    skippedPromotion: countSince,
+    skippedNotPublic: countSince,
+    overCap: countSince,
+    unusableDates: countSince,
+    quoteNotOnPage: countSince,
+    expired: z.strictObject(Object.fromEntries(EXPIRY_REASONS.map((r) => [r, countSince])) as Record<ExpiryReason, typeof countSince>),
+    archived: countSince,
+  }),
+  spend: z.strictObject({
+    totalUsd: z.number().nonnegative(),
+    capUsd: z.number().positive(),
+    capHit: z.boolean(),
+    shortfall: z.strictObject({ pagesNotExtracted: count, eventsNotReverified: count, queriesNotSearched: count, leadsNotFollowed: count, eventsNotCurated: count }),
+    modelCalls: listSince(
+      z.union([
+        z.strictObject({ model: z.string(), servedBy: servedBy.optional(), costUsd: z.number().nonnegative() }),
+        z.strictObject({ model: z.string(), servedBy: servedBy.optional(), costUsd: z.number().nonnegative().optional(), error: z.string() }),
+      ]),
+    ),
+  }),
+  discovery: z.strictObject({
+    enabled: z.boolean(),
+    queries: count,
+    aggregatorPages: count,
+    pagesExtracted: count,
+    problems: z.array(z.string()),
+    leadsOnExcludedSources: listSince(z.strictObject({ source: z.string(), reason: z.string(), leads: count })),
+  }),
+  reverification: z.strictObject({ problems: z.array(z.string()) }).default({ problems: [] }),
+  curation: z.strictObject({ calls: count, judged: count, flagged: count, problems: z.array(z.string()) }),
+  sources: z.array(z.strictObject({ name: z.string(), result: z.enum(["fetched", "failed", "blocked", "excluded"]), extracted: count, detail: z.string().optional() })),
+  failingSources: z.array(z.string()),
+  offListNeighborhoods: listSince(z.strictObject({ stored: z.string(), placed: z.string(), events: count })),
+  unmappableNeighborhoods: z.array(z.strictObject({ eventTitle: z.string(), venue: z.string().optional(), proposed: z.string().optional() })),
+  promotionSuggestions: z.array(z.strictObject({ host: z.string(), runsSeen: count, exampleUrl: z.string(), heldEvents: countSince })),
+  heldForPromotion: listSince(hostEvents),
+  releasedForPromotion: listSince(hostEvents),
+  outageLimited: listSince(eventRef),
+  uncitableReadings: listSince(eventRef),
+  cancellationsFromElsewhere: listSince(eventRef.extend({ reportedBy: z.string() })),
+  identityChurn: listSince(eventRef.extend({ was: eventRef })),
+});
+
+/** Reads a committed JSON twin, filling the fields it predates. */
+export function parseRunReport(raw: unknown): RunReport {
+  return runReportSchema.parse(raw);
 }
 
 export function renderReportMarkdown(report: RunReport): string {

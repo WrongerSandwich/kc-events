@@ -30,7 +30,9 @@ describe("pickAlwaysThere", () => {
     const e = recurring({ title: "Triviality night", primaryUrl: "https://www.replaylounge.com/" });
     expect(pickAlwaysThere([e], [{ title: "Trivia", host: "replaylounge.com" }])).toEqual([]);
   });
+});
 
+describe("committed data", () => {
   it("finds all but one of the hand-kept picks whose source is up, in the committed dataset", () => {
     // A guard against the list rotting silently: venues retitle and sources change. A pick whose host has no published
     // event at all is a source that is down (the run report flags that; the registry fixes it), not a rotten pick, so

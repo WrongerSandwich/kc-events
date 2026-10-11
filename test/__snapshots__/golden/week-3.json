@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-10-16T22:15:00-05:00",
+  "lastSuccessfulRun": "2026-10-16T22:15:00-05:00",
+  "events": [
+    {
+      "id": "evt_0416dfbe3fa1",
+      "title": "Big Show",
+      "start": "2026-10-31T20:00:00-05:00",
+      "venue": "Knuckleheads",
+      "neighborhood": "East Bottoms",
+      "primaryUrl": "https://knuckleheads.test/calendar",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": true,
+      "firstSeen": "2026-10-02T22:15:00-05:00",
+      "lastVerified": "2026-10-16T22:15:00-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "consecutiveOutages": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Knuckleheads"
+      },
+      "evidence": {
+        "date": "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM",
+        "venue": "Knuckleheads, 1 Main St"
+      },
+      "whyLine": "A rare club date from a band that plays arenas.",
+      "lastChanged": "2026-10-02T22:15:00-05:00",
+      "lastJudged": "2026-10-02T22:15:00-05:00"
+    },
+    {
+      "id": "evt_e98d443bf1c5",
+      "title": "Gone Show",
+      "start": "2026-11-07T20:00:00-06:00",
+      "venue": "Knuckleheads",
+      "neighborhood": "East Bottoms",
+      "primaryUrl": "https://knuckleheads.test/calendar",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-10-02T22:15:00-05:00",
+      "lastVerified": "2026-10-02T22:15:00-05:00",
+      "status": "expired",
+      "verificationFailures": 2,
+      "consecutiveOutages": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Knuckleheads"
+      },
+      "evidence": {
+        "date": "Sat, Nov 7 · 8:00 PM",
+        "venue": "Knuckleheads, 1 Main St"
+      },
+      "lastChanged": "2026-10-16T22:15:00-05:00",
+      "lastJudged": "2026-10-02T22:15:00-05:00",
+      "expiryReason": "two-strike"
+    },
+    {
+      "id": "evt_3152dac17b2e",
+      "title": "Season Closer",
+      "start": "2026-11-28T20:00:00-06:00",
+      "venue": "Knuckleheads",
+      "neighborhood": "East Bottoms",
+      "primaryUrl": "https://knuckleheads.test/calendar",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-10-02T22:15:00-05:00",
+      "lastVerified": "2026-10-16T22:15:00-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "consecutiveOutages": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Knuckleheads"
+      },
+      "evidence": {
+        "date": "Sat, Nov 28 · 8:00 PM",
+        "venue": "Knuckleheads, 1 Main St"
+      },
+      "lastChanged": "2026-10-02T22:15:00-05:00",
+      "lastJudged": "2026-10-02T22:15:00-05:00"
+    },
+    {
+      "id": "evt_9a46e1894f69",
+      "title": "Late Set",
+      "start": "2026-10-24T22:00:00-05:00",
+      "venue": "Recordbar",
+      "neighborhood": "Crossroads",
+      "primaryUrl": "https://recordbar.test/events",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-10-02T22:15:00-05:00",
+      "lastVerified": "2026-10-16T22:15:00-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "consecutiveOutages": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Recordbar"
+      },
+      "evidence": {
+        "date": "Sat Oct 24, 10pm",
+        "venue": "Recordbar, 1 Main St"
+      },
+      "lastChanged": "2026-10-02T22:15:00-05:00",
+      "lastJudged": "2026-10-02T22:15:00-05:00"
+    },
+    {
+      "id": "evt_7409c864e7c5",
+      "title": "Arena Night",
+      "start": "2026-11-14T20:00:00-06:00",
+      "venue": "Midland",
+      "neighborhood": "Crossroads",
+      "primaryUrl": "https://midland.test/calendar",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-10-02T22:15:00-05:00",
+      "lastVerified": "2026-10-16T22:15:00-05:00",
+      "status": "active",
+      "verificationFailures": 0,
+      "consecutiveOutages": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "Midland"
+      },
+      "evidence": {
+        "date": "November 14, 2026 at 8 PM",
+        "venue": "Midland, 1 Main St"
+      },
+      "lastChanged": "2026-10-02T22:15:00-05:00",
+      "lastJudged": "2026-10-02T22:15:00-05:00"
+    },
+    {
+      "id": "evt_4bf8a7f13e74",
+      "title": "Promoter Night",
+      "start": "2026-11-01T20:00:00-06:00",
+      "venue": "The Truman",
+      "neighborhood": "Westport",
+      "primaryUrl": "https://promoter.test/shows/promoter-night",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-10-02T22:15:00-05:00",
+      "lastVerified": "2026-10-02T22:15:00-05:00",
+      "status": "unverified",
+      "verificationFailures": 0,
+      "consecutiveOutages": 0,
+      "lead": {
+        "lane": "discovery",
+        "query": "music events in Kansas City, October to November 2026"
+      },
+      "evidence": {
+        "date": "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM",
+        "venue": "The Truman, 801 Westport Rd"
+      },
+      "heldForPromotion": true,
+      "lastChanged": "2026-10-02T22:15:00-05:00"
+    }
+  ],
+  "sourceState": {
+    "Knuckleheads": {
+      "consecutiveFailures": 0
+    },
+    "Recordbar": {
+      "consecutiveFailures": 0
+    },
+    "Midland": {
+      "consecutiveFailures": 0
+    }
+  },
+  "discoveryState": {
+    "promoter.test": {
+      "runsSeen": 1,
+      "lastSeen": "2026-10-02T22:15:00-05:00",
+      "runsUnseen": 2
+    }
+  }
+}
