@@ -52,7 +52,7 @@ describe("run", () => {
       unusableDates: 0,
       expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0 },
     });
-    expect(report.spend).toEqual({ totalUsd: 0, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 }, calls: [] });
+    expect(report.spend).toEqual({ totalUsd: 0, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 }, modelCalls: [] });
     expect(report.sources).toEqual([]);
     expect(report.failingSources).toEqual([]);
     expect(report.unmappableNeighborhoods).toEqual([]);

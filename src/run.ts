@@ -150,7 +150,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       // Hit means the cap cut something; a last call that merely crossed it cut nothing.
       capHit: Object.values(shortfall).some((n) => n > 0),
       shortfall,
-      calls: model.calls(),
+      modelCalls: model.calls(),
     },
     discovery: discovery.report,
     reverification: { problems: reverified.problems },

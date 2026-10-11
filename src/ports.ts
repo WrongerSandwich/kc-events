@@ -31,8 +31,31 @@ export interface CompletionResult {
   value: unknown;
   /** Cost in USD as reported by the provider for this call. */
   costUsd: number;
-  /** Who served the call, as the provider names it, so spend can be reconciled against its own records. */
-  servedBy?: { model?: string; provider?: string; generationId?: string };
+  /** Who served the call, so spend can be reconciled against the provider's own records. */
+  servedBy?: ServedBy;
+}
+
+/** A model call as the provider records it: the model that answered, the upstream provider, and the id its activity page lists. */
+export interface ServedBy {
+  model: string;
+  provider?: string;
+  generationId: string;
+}
+
+/**
+ * A call whose reply came back but could not be used. It was still billed, so it carries who
+ * served it and, when the reply said, the cost, for the spend cap and the run's record of calls.
+ */
+export class ModelReplyUnusable extends Error {
+  override name = "ModelReplyUnusable";
+  constructor(
+    message: string,
+    readonly servedBy: ServedBy,
+    readonly costUsd?: number,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+  }
 }
 
 export interface ModelPort {

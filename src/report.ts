@@ -65,7 +65,7 @@ export interface RunReport {
      */
     shortfall: { pagesNotExtracted: number; eventsNotReverified: number; queriesNotSearched: number; leadsNotFollowed: number; eventsNotCurated: number };
     /** Every model call that went out, with what OpenRouter's activity page lists it by; the JSON twin only. */
-    calls: ModelCall[];
+    modelCalls: ModelCall[];
   };
   /** The discovery lane this run; all zero when it is disabled. */
   discovery: {

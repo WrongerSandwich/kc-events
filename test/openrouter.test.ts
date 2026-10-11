@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createOpenRouterModel } from "../src/adapters/openrouter.js";
-import type { CompletionRequest } from "../src/ports.js";
+import { ModelReplyUnusable, type CompletionRequest } from "../src/ports.js";
 
 const REQUEST: CompletionRequest = {
   model: "vendor/model",
@@ -61,6 +61,29 @@ describe("OpenRouter model adapter", () => {
       new Promise<Response>((_, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal?.reason)))) as typeof globalThis.fetch;
 
     await expect(createOpenRouterModel({ apiKey: "key", fetch }).complete({ ...REQUEST, timeoutMs: 20 })).rejects.toThrow(/timed out/i);
+  });
+
+  it("abandons a reply whose body stalls past the request's timeout", async () => {
+    const stalled = () =>
+      new Response(new ReadableStream({ start: (controller) => controller.enqueue(new TextEncoder().encode('{"id":')) }), {
+        headers: { "content-type": "application/json" },
+      });
+    const { fetch } = cannedFetch(stalled);
+
+    await expect(createOpenRouterModel({ apiKey: "key", fetch }).complete({ ...REQUEST, timeoutMs: 20 })).rejects.toThrow(/timed out/i);
+  });
+
+  it("a reply that came back unusable throws with its cost and who served it, since it was billed", async () => {
+    const refused = { ...completion(), choices: [{ index: 0, finish_reason: "stop", message: { role: "assistant", content: null, refusal: "no" } }] };
+    const { fetch } = cannedFetch(json(refused));
+
+    const error = await createOpenRouterModel({ apiKey: "key", fetch }).complete(REQUEST).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ModelReplyUnusable);
+    expect(error).toMatchObject({
+      message: "vendor/model refused: no",
+      costUsd: 0.0042,
+      servedBy: { model: "vendor/model-2026-09", provider: "Vendor", generationId: "gen-123" },
+    });
   });
 
   it("throws when the reply carries no cost", async () => {

@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming, ChatCompletionMessageParam } from "openai/resources/chat/completions";
-import type { CompletionRequest, CompletionResult, ModelPort } from "../ports.js";
+import { ModelReplyUnusable, type CompletionRequest, type CompletionResult, type ModelPort, type ServedBy } from "../ports.js";
 import { REPO_URL } from "./identity.js";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
@@ -73,35 +73,35 @@ export function createOpenRouterModel({ apiKey, fetch }: { apiKey: string | unde
 
       const completion = await clientOrThrow().chat.completions.create(params, { timeout: request.timeoutMs });
 
+      const { provider } = completion as typeof completion & OpenRouterCompletion;
+      // The generation id is what OpenRouter's activity page and generation lookup key on.
+      const servedBy: ServedBy = { model: completion.model, ...(provider !== undefined ? { provider } : {}), generationId: completion.id };
+
       const cost = (completion.usage as (typeof completion.usage & OpenRouterUsage) | undefined)?.cost;
       if (typeof cost !== "number" || (cost === 0 && !isFreeModel(request.model))) {
         const carried = typeof cost === "number" ? "a usage.cost of 0" : "no usage.cost";
-        throw new Error(`OpenRouter response for ${request.model} carried ${carried}; the spend cap cannot be enforced without it`);
+        throw new ModelReplyUnusable(`OpenRouter response for ${request.model} carried ${carried}; the spend cap cannot be enforced without it`, servedBy);
       }
+      // Past here the reply was billed at a known cost, so a reply that cannot be used still reports it.
+      const unusable = (message: string, options?: ErrorOptions) => new ModelReplyUnusable(message, servedBy, cost, options);
 
       const message = completion.choices[0]?.message;
-      if (!message) throw new Error(`OpenRouter response for ${request.model} had no choices`);
-      if (message.refusal) throw new Error(`${request.model} refused: ${message.refusal}`);
+      if (!message) throw unusable(`OpenRouter response for ${request.model} had no choices`);
+      if (message.refusal) throw unusable(`${request.model} refused: ${message.refusal}`);
       if (message.tool_calls && message.tool_calls.length > 0) {
-        throw new Error(`${request.model} replied with a tool call; the model port does not run tool loops yet`);
+        throw unusable(`${request.model} replied with a tool call; the model port does not run tool loops yet`);
       }
       if (typeof message.content !== "string" || message.content.trim() === "") {
-        throw new Error(`${request.model} returned no content (finish reason ${completion.choices[0]?.finish_reason})`);
+        throw unusable(`${request.model} returned no content (finish reason ${completion.choices[0]?.finish_reason})`);
       }
 
       let value: unknown;
       try {
         value = JSON.parse(message.content);
       } catch (error) {
-        throw new Error(`${request.model} returned content that is not JSON despite the strict response format`, { cause: error });
+        throw unusable(`${request.model} returned content that is not JSON despite the strict response format`, { cause: error });
       }
-      const { provider } = completion as typeof completion & OpenRouterCompletion;
-      return {
-        value,
-        costUsd: cost,
-        // The generation id is what OpenRouter's activity page and generation lookup key on.
-        servedBy: { model: completion.model, ...(provider !== undefined ? { provider } : {}), generationId: completion.id },
-      };
+      return { value, costUsd: cost, servedBy };
     },
   };
 }

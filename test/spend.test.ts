@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { run } from "../src/run.js";
 import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
 import { renderReportMarkdown } from "../src/report.js";
-import type { CompletionResult } from "../src/ports.js";
+import { ModelReplyUnusable, type CompletionResult } from "../src/ports.js";
 import type { Source } from "../src/registry.js";
 import { fakePorts, type CannedPage, type ScriptedReply } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
@@ -33,18 +33,26 @@ async function runAt(
 
 describe("spend cap", () => {
   it("records every call that went out: who served it and its cost, or the error it threw", async () => {
-    const served = { ...costing(0.02, show(ALPHA)), servedBy: { model: "vendor/model-v2", provider: "Vendor", generationId: "gen-1" } };
+    const servedBy = { model: "vendor/model-v2", provider: "Vendor", generationId: "gen-1" };
+    const unusableBy = { model: "vendor/model-v2", generationId: "gen-2" };
     const { report } = await runAt(WEEK_1, emptyDataset(), {
-      sources: [ALPHA, BRAVO],
-      pages: pagesOf(ALPHA, BRAVO),
-      completions: [served, new Error("Request timed out.")],
+      sources: [ALPHA, BRAVO, CHARLIE],
+      pages: pagesOf(ALPHA, BRAVO, CHARLIE),
+      completions: [
+        { ...costing(0.02, show(ALPHA)), servedBy },
+        new Error("Request timed out."),
+        new ModelReplyUnusable("test/extraction refused: no", unusableBy, 0.005),
+      ],
       spendCapUsd: 5,
     });
 
-    expect(report.spend.calls.slice(0, 2)).toEqual([
-      { model: "test/extraction", servedModel: "vendor/model-v2", provider: "Vendor", generationId: "gen-1", costUsd: 0.02 },
+    expect(report.spend.modelCalls.slice(0, 3)).toEqual([
+      { model: "test/extraction", servedBy, costUsd: 0.02 },
       { model: "test/extraction", error: "Request timed out." },
+      { model: "test/extraction", servedBy: unusableBy, costUsd: 0.005, error: "test/extraction refused: no" },
     ]);
+    // A reply that came back unusable was billed, so it counts against the cap.
+    expect(report.spend.totalUsd).toBeCloseTo(0.025 + report.spend.modelCalls.slice(3).reduce((sum, c) => sum + (c.costUsd ?? 0), 0));
     expect(renderReportMarkdown(report)).not.toContain("gen-1");
   });
 
@@ -63,7 +71,7 @@ describe("spend cap", () => {
       capUsd: 0.05,
       capHit: true,
       shortfall: { pagesNotExtracted: 1, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 2 },
-      calls: [
+      modelCalls: [
         { model: "test/extraction", costUsd: 0.03 },
         { model: "test/extraction", costUsd: 0.03 },
       ],
