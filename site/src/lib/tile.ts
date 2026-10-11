@@ -28,15 +28,21 @@ export function dateTile(e: PublishedEvent, today: string, now?: string): Tile {
   }
   if (now !== undefined && first === localDate(now)) return todayTile(e, today, now);
   const weekday = formatDay(first!).split(" ")[0]!;
-  if (isMultiDay(e)) return { top: weekday, ...parts(first!), detail: closingLine(e, today), label: closingLine(e, today) };
+  if (isMultiDay(e)) return { top: weekday, ...parts(first!), detail: closingLine(e, today), label: spanLabel(e, formatDay(first!)) };
   const time = isDateOnly(e.start!) ? undefined : formatTime(e.start!);
   return { top: weekday, ...parts(first!), detail: time, label: time ? `${formatDay(first!)}, ${time}` : formatDay(first!) };
+}
+
+/** A multi-day one-off in words, from `day`: "Fri Oct 9, 8:30 pm, through Sat Oct 10", "Today through Sun Oct 11". */
+function spanLabel(e: PublishedEvent, day: string): string {
+  const time = isDateOnly(e.start!) ? "" : `, ${formatTime(e.start!)},`;
+  return `${day}${time} through ${formatDay(lastDay(e)!)}`;
 }
 
 /** A one-off whose first day is the visitor's today. */
 function todayTile(e: PublishedEvent, today: string, now: string): Tile {
   const tile = { top: "Today", ...parts(firstDay(e)!), today: true as const };
-  if (isMultiDay(e)) return { ...tile, detail: closingLine(e, today), label: `Today through ${formatDay(lastDay(e)!)}` };
+  if (isMultiDay(e)) return { ...tile, detail: closingLine(e, today), label: spanLabel(e, "Today") };
   if (isDateOnly(e.start!)) return { ...tile, detail: undefined, label: "Today" };
   const time = formatTime(e.start!);
   // Both are wall time in the site's zone, so the strings compare; the dataset's offset is not needed.

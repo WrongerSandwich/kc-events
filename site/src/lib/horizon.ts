@@ -1,5 +1,5 @@
-import { addDays, comingSunday, formatDay, formatRange, formatShort, isDateOnly, weekday } from "./dates";
-import { firstDay, isDated, isPast, isUnderway, lastDay } from "./events";
+import { addDays, comingSunday, formatDay, formatRange, formatShort, formatTime, isDateOnly, weekday } from "./dates";
+import { firstDay, isDated, isOnNow, isPast, isUnderway, lastDay } from "./events";
 import type { PublishedEvent } from "./types";
 
 export type Horizon = "through-sunday" | "next-two-weeks" | "further-out";
@@ -61,7 +61,7 @@ export function bucketDontMiss(events: PublishedEvent[], today: string): Record<
   const { sunday, twoWeeks } = horizonBounds(today);
   const end: Record<Horizon, string> = { "through-sunday": sunday, "next-two-weeks": twoWeeks, "further-out": "9999-12-31" };
   for (const h of HORIZONS) {
-    const lingers = (e: PublishedEvent) => (e.recurrence === "limited-run" && isUnderway(e, today) && lastDay(e)! > end[h] ? 1 : 0);
+    const lingers = (e: PublishedEvent) => (isOnNow(e, today) && lastDay(e)! > end[h] ? 1 : 0);
     out[h].sort(
       (a, b) =>
         lingers(a) - lingers(b) ||
@@ -73,7 +73,7 @@ export function bucketDontMiss(events: PublishedEvent[], today: string): Record<
   return out;
 }
 
-/** The date line for anything with a span: a run's open/close, or a multi-day one-off's range. */
+/** The date line for anything with a span: a run's open/close, or a multi-day one-off's time and last day (throughLine). */
 export function closingLine(e: PublishedEvent, today: string): string {
   const first = firstDay(e);
   const last = lastDay(e)!;
@@ -81,7 +81,16 @@ export function closingLine(e: PublishedEvent, today: string): string {
   if (e.recurrence === "limited-run") {
     return isUnderway(e, today) ? `On now, closes ${formatDay(last)}` : `Opens ${formatDay(first!)}, runs through ${formatDay(last)}`;
   }
-  return isUnderway(e, today) ? `On now, through ${formatDay(last)}` : `${formatDay(first!)}–${formatDay(last)}`;
+  return throughLine(e);
+}
+
+/**
+ * A multi-day one-off's line on every day it is listed, underway or not (#90): "8:30 pm · through Sat Oct 10", or
+ * "Through Sun Oct 11" without a start time. The day it is under, a heading or a tile, says the rest.
+ */
+export function throughLine(e: PublishedEvent): string {
+  const last = formatDay(lastDay(e)!);
+  return isDateOnly(e.start!) ? `Through ${last}` : `${formatTime(e.start!)} · through ${last}`;
 }
 
 /** An event's start instant for ordering within a day; a date-only or missing start sorts first, as "all day". */

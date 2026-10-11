@@ -35,11 +35,19 @@ export function isMultiDay(e: PublishedEvent): boolean {
   return first === undefined || last > first;
 }
 
-/** On now: a multi-day span that includes today. Single-day events are never underway; they are listed under their day. */
+/**
+ * A multi-day span that includes today. Single-day events are never underway; they are listed under their day. Only a
+ * limited run is shown as "On now"; a multi-day one-off (three days at most) is listed under each of its days (#90).
+ */
 export function isUnderway(e: PublishedEvent, today: string): boolean {
   if (!isMultiDay(e)) return false;
   const first = firstDay(e);
   return (first === undefined || first <= today) && lastDay(e)! >= today;
+}
+
+/** A limited run open today: what "On now" lists and the cards call "On now". */
+export function isOnNow(e: PublishedEvent, today: string): boolean {
+  return e.recurrence === "limited-run" && isUnderway(e, today);
 }
 
 /** "therecordbar.com" for a link label; the input when it is not a URL. */

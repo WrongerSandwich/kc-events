@@ -10,8 +10,15 @@ describe("dateTile", () => {
     expect(dateTile(event({ start: "2026-10-10" }), today)).toEqual({ top: "Sat", day: "10", month: "Oct", detail: undefined, label: "Sat Oct 10" });
   });
 
-  it("shows a multi-day one-off by its first day, with the span as the detail", () => {
-    expect(dateTile(event({ start: "2026-10-09", end: "2026-10-11" }), today)).toMatchObject({ top: "Fri", day: "9", detail: "Fri Oct 9–Sun Oct 11" });
+  it("shows a multi-day one-off by its first day, with its time and last day as the detail, underway or not (#90)", () => {
+    const fair = event({ start: "2026-10-09", end: "2026-10-11" });
+    expect(dateTile(fair, today)).toEqual({ top: "Fri", day: "9", month: "Oct", detail: "Through Sun Oct 11", label: "Fri Oct 9 through Sun Oct 11" });
+    expect(dateTile(fair, "2026-10-10")).toMatchObject({ top: "Fri", day: "9", detail: "Through Sun Oct 11" });
+    const comedy = event({ start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" });
+    expect(dateTile(comedy, today)).toEqual({
+      top: "Fri", day: "9", month: "Oct", detail: "8:30 pm · through Sat Oct 10", label: "Fri Oct 9, 8:30 pm, through Sat Oct 10",
+    });
+    expect(dateTile(comedy, "2026-10-10", "2026-10-10T12:00")).toMatchObject({ top: "Fri", detail: "8:30 pm · through Sat Oct 10" });
   });
 
   it("shows a run on now by its close, and a run not yet open by its opening", () => {
@@ -33,7 +40,10 @@ describe("dateTile", () => {
         top: "Today", day: "5", month: "Oct", detail: "7:00 pm", label: "Today, 7:00 pm", today: true,
       });
       expect(dateTile(event({ start: "2026-10-05", end: "2026-10-07" }), today, now)).toMatchObject({
-        top: "Today", today: true, detail: "On now, through Wed Oct 7", label: "Today through Wed Oct 7",
+        top: "Today", today: true, detail: "Through Wed Oct 7", label: "Today through Wed Oct 7",
+      });
+      expect(dateTile(event({ start: "2026-10-05T20:30:00-05:00", end: "2026-10-06" }), today, now)).toMatchObject({
+        top: "Today", today: true, detail: "8:30 pm · through Tue Oct 6", label: "Today, 8:30 pm, through Tue Oct 6",
       });
     });
 

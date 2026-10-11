@@ -5,7 +5,7 @@
   import { todayIn } from "../lib/dates";
   import { downloadText } from "../lib/download";
   import { isDated } from "../lib/events";
-  import { groupResults } from "../lib/group";
+  import { groupResults, resultEvents } from "../lib/group";
   import { toIcs } from "../lib/ics";
   import { DEFAULT_FILTERS, filterPills, isDefault, parseQuery, toQuery, type Filters } from "../lib/query";
   import { saves } from "../lib/saves";
@@ -83,7 +83,8 @@
   }
 
   let groups = $derived(groupResults(events, filters, today, saved));
-  let count = $derived(groups.reduce((n, g) => n + g.events.length, 0));
+  let listed = $derived(resultEvents(groups));
+  let count = $derived(listed.length);
   let countText = $derived(`${count} ${count === 1 ? "event" : "events"}`);
   // The count on screen follows every keystroke; the live region waits until input settles, so a screen reader hears
   // one count per search, not one per letter. Every change restarts the wait, even one that leaves the count alone.
@@ -96,7 +97,7 @@
     return () => clearTimeout(settle);
   });
   let pills = $derived(filterPills(filters));
-  let exportable = $derived(groups.flatMap((g) => g.events).filter(isDated));
+  let exportable = $derived(listed.filter(isDated));
 
   function exportView() {
     // new Date() is fine here: this is a component, not lib/ (the no-clock grep covers lib only).

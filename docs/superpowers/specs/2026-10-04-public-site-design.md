@@ -129,7 +129,7 @@ All derivation is in `site/src/lib/`, pure functions over `PublishedEvent` and a
 - `localDate(iso)`: the `YYYY-MM-DD` of a dataset date. The job writes local wall time with its offset (`src/time.ts`, `fromLocal`), so this is `iso.slice(0, 10)` for both forms; the function exists so the rule lives in one place.
 - `isPast(event, today)`, as above.
 - `isMultiDay(event)`: `localDate(end) > localDate(start)` (52 one-offs today; none has a same-day end).
-- `isUnderway(event, today)`: a limited run or multi-day one-off whose span includes today; a limited run with no `start` is underway by definition (the job's `citedDate` rule).
+- `isUnderway(event, today)`: a limited run or multi-day one-off whose span includes today; a limited run with no `start` is underway by definition (the job's `citedDate` rule). `isOnNow` narrows it to limited runs: only a run is ever shown as "On now" (#90).
 - `horizon(event, today)`: section 5; total over every non-past dated event.
 - `matches(event, filters, today)`, `groupResults(events, filters, today)`: section 6.
 - `toIcs(events)`: section 7.
@@ -195,8 +195,8 @@ Semantics:
 
 Grouped and ordered, with sticky group headings:
 
-1. **On now**: events that are underway today (limited runs and multi-day one-offs, section 4), sorted by closing date, each row saying "closes Sun Oct 11." Present only if non-empty.
-2. **One group per day**, ascending, heading "Fri Oct 9," rows sorted by start time then title; date-only starts sort first and show "all day." A limited run or multi-day one-off that has not started appears once, under its opening day, with "opens; runs through Nov 14."
+1. **On now**: limited runs underway today (section 4), sorted by closing date, each row saying "closes Sun Oct 11." Present only if non-empty.
+2. **One group per day**, ascending, heading "Fri Oct 9," rows sorted by time of day then title; date-only starts sort first and show "all day." A limited run that has not started appears once, under its opening day, with "opens; runs through Nov 14." A multi-day one-off (three days at most) appears under each of its days from today, as "8:30 pm · through Sat Oct 10" (#90).
 3. **Always there**, only when the toggle is on: recurring events sorted by kind then title.
 
 With `sort=venue`, groups are replaced by one list sorted by venue then date; this is for "what is on at the Folly this month."
@@ -235,7 +235,7 @@ URLs are extensionless and without trailing slashes (`trailingSlash: "never"`, `
 
 - `UID` is `<id>@kc-events`, a fixed token rather than the host, so a later domain change does not duplicate entries in subscribers' calendars.
 - Times are emitted in UTC (`DTSTART:20261010T000000Z`), converted from the stored offset, so no `VTIMEZONE` component is needed and every client reads them correctly. The dataset carries both `-05:00` and `-06:00` offsets across the November change.
-- `DTSTART` and `DTEND` share one value type. If both are date-times, both are UTC date-times. If either is a date, both are `VALUE=DATE`: `DTSTART` is the start's local date and `DTEND` is the day *after* the end's local date (RFC 5545 date ends are exclusive). A single-day event with no end gets `DTEND` one day after `DTSTART` as a date, or `DTSTART` plus two hours as a date-time (a placeholder length; the description says the page has the details).
+- `DTSTART` and `DTEND` share one value type. If both are date-times, both are UTC date-times. If the start is a date, or a limited run's end is, both are `VALUE=DATE`: `DTSTART` is the start's local date and `DTEND` is the day *after* the end's local date (RFC 5545 date ends are exclusive). A single-day event with no end gets `DTEND` one day after `DTSTART` as a date, or `DTSTART` plus two hours as a date-time (a placeholder length; the description says the page has the details). A one-off with a timed start and a date end (a two-night stand) keeps its start time with the same two-hour placeholder, and its description begins "Through Sat Oct 10." (#90): an all-day block would hide the time.
 - A limited run with an end and no start (three today) is emitted as a single all-day event on its closing date, with the description beginning "Last day."
 - `SUMMARY` the title, `LOCATION` venue and neighborhood, `URL` the primary page, `DESCRIPTION` the why-line when present, then "Verified <date> by <site name>; details at <primary URL>."
 - Recurring events are skipped: turning a schedule phrase into an `RRULE` is a research-job question, and a calendar entry with no date is worse than none.

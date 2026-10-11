@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupResults, rowDateLine } from "../src/lib/group";
+import { groupResults, resultEvents, rowDateLine } from "../src/lib/group";
 import { DEFAULT_FILTERS, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
 
@@ -47,12 +47,36 @@ describe("groupResults", () => {
     ]);
   });
 
-  it("lists a multi-day one-off under On now while underway, and under its opening day before", () => {
-    const groups = groupResults([festNow, festLater], f(), today, none);
+  it("lists a multi-day one-off under each day of its span from today, never under On now, which is for runs (#90)", () => {
+    const groups = groupResults([festNow, festLater, onNow], f(), today, none);
     expect(groups.map((g) => [g.key, g.events.map((e) => e.id)])).toEqual([
-      ["on-now", ["festNow"]],
+      ["on-now", ["onNow"]],
+      ["2026-10-05", ["festNow"]],
+      ["2026-10-06", ["festNow"]],
+      ["2026-10-07", ["festNow"]],
       ["2026-10-29", ["fest"]],
+      ["2026-10-30", ["fest"]],
+      ["2026-10-31", ["fest"]],
     ]);
+  });
+
+  it("lists a multi-day one-off only under the days a when-filter covers", () => {
+    const comedy = event({ id: "comedy", title: "Stand-up", start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" });
+    expect(groupResults([comedy], f({ when: { from: "2026-10-10", to: "2026-10-10" } }), today, none).map((g) => g.key)).toEqual(["2026-10-10"]);
+    expect(groupResults([comedy], f({ when: { preset: "today" } }), "2026-10-10", none).map((g) => g.key)).toEqual(["2026-10-10"]);
+  });
+
+  it("orders a carried-over one-off among a day's rows by its time of day", () => {
+    const comedy = event({ id: "comedy", title: "Stand-up", start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" });
+    const sat = event({ id: "sat", title: "Matinee", start: "2026-10-10T14:00:00-05:00" });
+    const satAll = event({ id: "satAll", title: "Market", start: "2026-10-10" });
+    const groups = groupResults([comedy, sat, satAll], f(), today, none);
+    expect(groups.find((g) => g.key === "2026-10-10")!.events.map((e) => e.id)).toEqual(["satAll", "sat", "comedy"]);
+  });
+
+  it("counts and exports an event listed under several days once", () => {
+    const comedy = event({ id: "comedy", title: "Stand-up", start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" });
+    expect(resultEvents(groupResults([comedy, fri7], f(), today, none)).map((e) => e.id)).toEqual(["fri7", "comedy"]);
   });
 
   it("sorts the always-there group by kind, then title", () => {
@@ -105,11 +129,14 @@ describe("venue sort", () => {
 });
 
 describe("rowDateLine", () => {
-  it("keeps the start time of a timed multi-day one-off on its opening day, as a span short enough for the date column", () => {
+  it("gives a multi-day one-off its time and its last day on every day it is listed, underway or not (#90)", () => {
     const timed = event({ id: "timed", title: "Festival", start: "2026-10-29T18:00:00-05:00", end: "2026-10-31T22:00:00-05:00" });
-    expect(rowDateLine(timed, today)).toBe("6:00 pm–Sat Oct 31");
+    expect(rowDateLine(timed, today)).toBe("6:00 pm · through Sat Oct 31");
+    expect(rowDateLine(timed, "2026-10-30")).toBe("6:00 pm · through Sat Oct 31");
     expect(rowDateLine(timed, today, true)).toBe("Thu Oct 29, 6:00 pm–Sat Oct 31");
-    expect(rowDateLine(event({ ...timed, start: "2026-10-03T18:00:00-05:00", end: "2026-10-07T22:00:00-05:00" }), today)).toBe("Through Wed Oct 7");
+    expect(rowDateLine(timed, "2026-10-30", true)).toBe("Thu Oct 29, 6:00 pm–Sat Oct 31");
+    const comedy = event({ id: "comedy", title: "Stand-up", start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" });
+    expect(rowDateLine(comedy, "2026-10-10")).toBe("8:30 pm · through Sat Oct 10");
   });
 
   it("writes the time, all day, a span, or a schedule", () => {
@@ -119,7 +146,7 @@ describe("rowDateLine", () => {
     expect(rowDateLine(onNowSooner, today)).toBe("Closes Sun Oct 11");
     expect(rowDateLine(festNow, today)).toBe("Through Wed Oct 7");
     expect(rowDateLine(opensLater, today)).toBe("Runs through Sat Nov 14");
-    expect(rowDateLine(festLater, today)).toBe("Runs through Sat Oct 31");
+    expect(rowDateLine(festLater, today)).toBe("Through Sat Oct 31");
     expect(rowDateLine(trivia, today)).toBe("Tuesdays");
   });
 
@@ -128,7 +155,7 @@ describe("rowDateLine", () => {
     expect(rowDateLine(friAll, today, true)).toBe("Fri Oct 9 · all day");
     expect(rowDateLine(onNow, today, true)).toBe("Closes Tue Oct 20");
     expect(rowDateLine(onNowSooner, today, true)).toBe("Closes Sun Oct 11");
-    expect(rowDateLine(festNow, today, true)).toBe("Through Wed Oct 7");
+    expect(rowDateLine(festNow, today, true)).toBe("Sat Oct 3–Wed Oct 7");
     expect(rowDateLine(opensLater, today, true)).toBe("Tue Oct 20–Sat Nov 14");
     expect(rowDateLine(festLater, today, true)).toBe("Thu Oct 29–Sat Oct 31");
     expect(rowDateLine(trivia, today, true)).toBe("Tuesdays");

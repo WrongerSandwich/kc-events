@@ -330,7 +330,10 @@ for (const width of [1024, 1280, 1440]) {
           };
         }),
       );
-      expect(rows.length).toBe(9); // every active event but the always-there one, which the default filters leave out
+      // Every active event but the always-there one, which the default filters leave out; the date sort lists the
+      // three-day November festival under each of its days (#90).
+      expect(rows.length).toBe(path === "/explore" ? 11 : 9);
+      expect(new Set(rows.map((r) => r.title)).size).toBe(9);
       for (const row of rows) {
         if (row.dated) expect(row.dateFits, `${row.title}: date fits`).toBe(true);
         expect(row.hood, `${row.title}: neighborhood`).toMatch(/ · \S/);
@@ -359,7 +362,7 @@ for (const path of EXPLORER_SORTS) {
         };
       }),
     );
-    expect(rows.length).toBe(9); // every row is dated: the default filters leave out the always-there one
+    expect(rows.length).toBe(path === "/explore" ? 11 : 9); // every row is dated: the default filters leave out the always-there one; the festival is under each of its days
     const chipLeft = rows[0]!.chip.left;
     for (const r of rows) {
       expect(r.when.bottom, `${r.title}: date above title`).toBeLessThanOrEqual(r.heading.top + 0.5);
@@ -603,7 +606,10 @@ test("explorer rows read their dates relative to the day headings and the sort",
   const row = (title: string) => page.locator("article.row", { has: page.getByRole("heading", { name: title }) }).locator(".when");
   await expect(row("Closing exhibition")).toHaveText("Closes Sun Oct 11");
   await expect(row("Artboards")).toHaveText("Closes Thu Dec 31");
-  await expect(row("November festival")).toHaveText("Runs through Sun Nov 22");
+  // A multi-day one-off is under each of its days, never under On now (#90).
+  await expect(row("November festival")).toHaveText(["Through Sun Nov 22", "Through Sun Nov 22", "Through Sun Nov 22"]);
+  await expect(page.locator("details.collapsed article.row", { has: page.getByRole("heading", { name: "November festival" }) })).toHaveCount(0);
+  await expect(page.locator(".count")).toHaveText("9 events"); // the festival's three rows count once
   await expect(row("Haunted house")).toHaveText("10:00 am–Wed Nov 18");
   const verified = page.locator("article.row", { has: page.getByRole("heading", { name: "Fabio Frizzi plays Fulci" }) }).locator(".verified");
   await expect(verified.locator('[aria-hidden="true"]')).toHaveText("✓ Oct 3");

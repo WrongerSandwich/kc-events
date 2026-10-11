@@ -1,5 +1,5 @@
 import { addDays, formatDay } from "./dates";
-import { firstDay, isUnderway, lastDay } from "./events";
+import { firstDay, isOnNow, lastDay } from "./events";
 import type { PublishedEvent } from "./types";
 
 /** A day of the strip: `picks` happen on it; `running` are the limited runs open that day, its picks or not. */
@@ -18,7 +18,7 @@ export function weekDays(picks: readonly PublishedEvent[], today: string, sunday
     days.push({
       date, weekday: weekday!, day: day!,
       picks: picks.filter((e) => isOn(e, date)),
-      running: picks.filter((e) => e.recurrence === "limited-run" && isUnderway(e, date)),
+      running: picks.filter((e) => isOnNow(e, date)),
     });
   }
   return days;

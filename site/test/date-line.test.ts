@@ -12,6 +12,9 @@ describe("longDateLine", () => {
     expect(longDateLine(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }), today)).toBe("Through Saturday, October 31");
     expect(longDateLine(event({ recurrence: "limited-run", start: "2026-10-20", end: "2026-11-14" }), today)).toBe("Tuesday, October 20 through Saturday, November 14");
     expect(longDateLine(event({ start: "2026-10-09", end: "2026-10-11" }), today)).toBe("Friday, October 9 through Sunday, October 11");
+    // A multi-day one-off keeps its first day and time while underway (#90); only a run says just its close.
+    expect(longDateLine(event({ start: "2026-10-09", end: "2026-10-11" }), "2026-10-10")).toBe("Friday, October 9 through Sunday, October 11");
+    expect(longDateLine(event({ start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" }), "2026-10-10")).toBe("Friday, October 9, 8:30 pm through Saturday, October 10");
     expect(longDateLine(event({ recurrence: "recurring", start: undefined, schedule: "Every Tuesday, 7pm" }), today)).toBe("Every Tuesday, 7pm");
   });
 
