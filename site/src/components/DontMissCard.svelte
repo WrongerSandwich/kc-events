@@ -1,7 +1,7 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { hostOf, detailsUrl } from "../lib/events";
+  import { hostOf, detailsUrl, venueLine } from "../lib/events";
   import { slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
@@ -27,7 +27,7 @@
     <p class="info">
       <span class="visually-hidden">{tile.label}.</span>
       {#if tile.detail}<span class="fact" aria-hidden="true"><UiIcon name="clock" />{tile.detail}</span>{/if}
-      <span class="fact"><UiIcon name="map-pin" />{event.venue}, {event.neighborhood}</span>
+      <span class="fact"><UiIcon name="map-pin" />{venueLine(event)}, {event.neighborhood}</span>
     </p>
     {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
     <p class="tags">

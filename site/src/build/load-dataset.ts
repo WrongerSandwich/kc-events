@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { ELSEWHERE_IN_THE_METRO, parseConfig, type RunConfig } from "../../../src/config.ts";
 import { DATASET_SCHEMA_VERSION, parseDataset, type Event } from "../../../src/dataset.ts";
+import { genericVenueName, venueAndRoom } from "../../../src/identity.ts";
 import { regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
 import { isValidDate } from "../lib/dates";
@@ -41,12 +42,29 @@ function href(url: string, e: Event): string {
   return url;
 }
 
+/** A house number, then a street-type word: a heuristic for a warning, which a "1600 Genessee" slips past. */
+const STREET_ADDRESS = /^\d+\s+(?:\S+\s+)*?(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|ct|court|ln|lane|pkwy|parkway|pl|place|ter|terrace|hwy|highway|cir|circle|way|trail)\b/i;
+
+/** A published venue that names no one place: generic words only ("Galleries") or a street address. */
+function vagueVenue(venue: string): boolean {
+  return genericVenueName(venue) || STREET_ADDRESS.test(venue);
+}
+
+/** "A (2), B (1)": each value with how many times it occurs, in first-seen order. */
+function tally(values: string[]): string {
+  const counts = new Map<string, number>();
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
+  return [...counts].map(([v, c]) => `${v} (${c})`).join(", ");
+}
+
 /** The non-null assertions on venue and lastVerified hold because the job schema's refine (src/dataset.ts) requires both on every active event. */
 export function project(e: Event, config: RunConfig): PublishedEvent {
+  const { venue, room } = venueAndRoom(e.venue!, config.venueAliases);
   const out: PublishedEvent = {
     id: e.id,
     title: e.title,
-    venue: e.venue!,
+    venue,
+    ...(room !== undefined && { room }),
     neighborhood: e.neighborhood,
     region: regionFor(e.neighborhood, config),
     primaryUrl: href(e.primaryUrl, e),
@@ -91,9 +109,12 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
 
   const unlisted = events.filter((e) => e.region === ELSEWHERE_IN_THE_METRO && e.neighborhood !== ELSEWHERE_IN_THE_METRO);
   if (unlisted.length > 0) {
-    const counts = new Map<string, number>();
-    for (const e of unlisted) counts.set(e.neighborhood, (counts.get(e.neighborhood) ?? 0) + 1);
-    console.warn(`site: ${unlisted.length} published events were mapped to the catch-all because no region lists their neighborhood: ${[...counts].map(([n, c]) => `${n} (${c})`).join(", ")}`);
+    console.warn(`site: ${unlisted.length} published events were mapped to the catch-all because no region lists their neighborhood: ${tally(unlisted.map((e) => e.neighborhood))}`);
+  }
+
+  const vague = events.filter((e) => vagueVenue(e.venue));
+  if (vague.length > 0) {
+    console.warn(`site: ${vague.length} published events name a room or a street address for their venue; add it to venueAliases in research.config.yaml if it is inside a known venue: ${tally(vague.map((e) => e.venue))}`);
   }
 
   return {

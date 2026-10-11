@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pageKey, samePage } from "../src/hosts.js";
-import { findMatch, matchSighting, nearDates, normalizeName, sameEvent, sameVenue } from "../src/identity.js";
+import { aliasedVenue, findMatch, genericVenueName, matchSighting, nearDates, normalizeName, sameEvent, sameVenue, venueAndRoom } from "../src/identity.js";
 
 const CALENDAR = "https://venue.test/calendar";
 
@@ -331,5 +331,44 @@ describe("one month of a recurring event (#77)", () => {
     expect(findMatch({ ...month, primaryUrl: "https://unionstation.org/" }, [recurring], {})).toBeUndefined();
     expect(findMatch(month, [{ ...recurring, status: "expired" as const }], {})).toBeUndefined();
     expect(matchSighting({ ...month, title: "Main Gallery Tours" }, [recurring], {})).toMatchObject({ rule: "page-and-title" });
+  });
+});
+
+describe("the venue an alias names (#91)", () => {
+  const aliases = {
+    "Kauffman Center for the Performing Arts": ["Kauffman Center", "Helzberg Hall"],
+    "Lied Center of Kansas": ["Main Auditorium", "Pavilion"],
+  };
+
+  it("names the venue for its own name, an alias, or either with a label added", () => {
+    expect(aliasedVenue("The Kauffman Center for the Performing Arts", aliases)).toBe("Kauffman Center for the Performing Arts");
+    expect(aliasedVenue("helzberg hall", aliases)).toBe("Kauffman Center for the Performing Arts");
+    expect(aliasedVenue("Helzberg Hall (Orchestra Level)", aliases)).toBe("Kauffman Center for the Performing Arts");
+    expect(aliasedVenue("Main Auditorium", aliases)).toBe("Lied Center of Kansas");
+  });
+
+  it("splits a room from its venue, but not the venue's own name or a form of it", () => {
+    expect(venueAndRoom("Helzberg Hall", aliases)).toEqual({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall" });
+    expect(venueAndRoom("The Kauffman Center for the Performing Arts", aliases)).toEqual({ venue: "Kauffman Center for the Performing Arts" });
+    expect(venueAndRoom("Kauffman Center", aliases)).toEqual({ venue: "Kauffman Center for the Performing Arts" });
+    expect(venueAndRoom("recordBar", aliases)).toEqual({ venue: "recordBar" });
+  });
+
+  it("names none for a name the list does not hold, or one shorter than an entry", () => {
+    expect(aliasedVenue("recordBar", aliases)).toBeUndefined();
+    expect(aliasedVenue("Kauffman", aliases)).toBeUndefined();
+  });
+
+  it("holds a generic alias to that name alone: another venue's pavilion is not the Lied Center's", () => {
+    expect(aliasedVenue("Pavilion", aliases)).toBe("Lied Center of Kansas");
+    expect(aliasedVenue("Swope Park Pavilion", aliases)).toBeUndefined();
+    expect(aliasedVenue("Folly Theater Main Auditorium", aliases)).toBeUndefined();
+    expect(sameVenue("Swope Park Pavilion", "Lied Center of Kansas", aliases)).toBe(false);
+    expect(sameVenue("Pavilion", "Lied Center of Kansas", aliases)).toBe(true);
+  });
+
+  it("calls a name generic when every word in it could be a room anywhere", () => {
+    expect(["Galleries", "Main Auditorium", "The Pavilion", "Online", "Plaza Branch"].filter((n) => genericVenueName(n))).toHaveLength(5);
+    expect(["Helzberg Hall", "Bloch Lobby", "recordBar", "Copaken Stage", ""].filter((n) => genericVenueName(n))).toEqual([]);
   });
 });

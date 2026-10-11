@@ -173,6 +173,36 @@ export function sameVenue(a: string, b: string, aliases: VenueAliases): boolean 
   });
 }
 
+/**
+ * The venue the alias list files a name under (#91): the display name whose own name or alias the
+ * name goes by (see aliasName), for the site to show in place of a room or a short form.
+ */
+export function aliasedVenue(name: string, aliases: VenueAliases): string | undefined {
+  const x = normalizeName(name);
+  return Object.entries(aliases).find(([venue, names]) => [venue, ...names].some((n) => aliasName(x, normalizeName(n))))?.[0];
+}
+
+/**
+ * A page's venue name as the site shows it: the venue the alias list files it under, else the name; and the name as
+ * the room when it was neither the venue's name nor a form of it ("Helzberg Hall", not "Kauffman Center").
+ */
+export function venueAndRoom(name: string, aliases: VenueAliases): { venue: string; room?: string } {
+  const venue = aliasedVenue(name, aliases);
+  if (venue === undefined) return { venue: name };
+  return oneVenueName(normalizeName(name), normalizeName(venue)) ? { venue } : { venue, room: name };
+}
+
+/** Words that name a room or a kind of place, not any one venue. */
+const GENERIC_VENUE_WORDS = new Set(
+  "main grand great upper lower east west north south central auditorium auditoriums hall halls gallery galleries pavilion lobby stage theater theatre ballroom studio room atrium courtyard lawn garden gardens plaza patio rooftop terrace chapel annex library branch park center centre amphitheater amphitheatre arena online virtual".split(" "),
+);
+
+/** A venue name made only of generic words ("Galleries", "Main Auditorium"): a room the page named without its building. */
+export function genericVenueName(name: string): boolean {
+  const words = normalizeName(name).split(" ");
+  return words[0] !== "" && words.every((w) => GENERIC_VENUE_WORDS.has(w));
+}
+
 /** Two normalized venue names that are one venue under any of sameVenue's three rules. */
 function oneVenueName(a: string, b: string): boolean {
   return sameOrContained(a, b) || sameWordsReordered(a, b);
@@ -182,10 +212,14 @@ function oneVenueName(a: string, b: string): boolean {
  * Whether a normalized venue name goes by an alias entry: the same name, the same words in another
  * order, or the entry with a label added ("Bartle Exhibit Hall (A – E)" for "Bartle Exhibit Hall").
  * Never a name shorter than the entry, though contained in it (#77): "Kansas City" would be every
- * entry that starts with it. A short form in use ("Kauffman Center") is an entry of its own.
+ * entry that starts with it. A short form in use ("Kauffman Center") is an entry of its own. A
+ * generic entry ("Pavilion", "Main Auditorium") is that name alone (#91): a name that contains it
+ * ("Swope Park Pavilion") is some other venue's room.
  */
 function aliasName(name: string, entry: string): boolean {
-  return name === entry || sameWordsReordered(name, entry) || (name.length > entry.length && sameOrContained(entry, name));
+  if (name === entry) return true;
+  if (genericVenueName(entry)) return false;
+  return sameWordsReordered(name, entry) || (name.length > entry.length && sameOrContained(entry, name));
 }
 
 function sameOrContained(a: string, b: string): boolean {

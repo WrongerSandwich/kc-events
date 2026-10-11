@@ -93,6 +93,15 @@ describe("venue sort", () => {
     const groups = groupResults([late, early], f({ sort: "venue" }), today, none);
     expect(groups[0]!.events.map((e) => e.id)).toEqual(["early", "late"]);
   });
+
+  it("puts every room of a venue under the venue's one heading (#91)", () => {
+    const kauffman = "Kauffman Center for the Performing Arts";
+    const hall = event({ id: "hall", title: "Symphony", start: "2026-10-09T19:00:00-05:00", venue: kauffman, room: "Helzberg Hall" });
+    const theatre = event({ id: "theatre", title: "Opera", start: "2026-10-10T19:00:00-05:00", venue: kauffman, room: "Muriel Kauffman Theatre" });
+    const lobby = event({ id: "lobby", title: "Open house", start: "2026-10-08T12:00:00-05:00", venue: kauffman });
+    const groups = groupResults([hall, theatre, lobby], f({ sort: "venue" }), today, none);
+    expect(groups.map((g) => [g.heading, g.events.map((e) => e.id)])).toEqual([[kauffman, ["lobby", "hall", "theatre"]]]);
+  });
 });
 
 describe("rowDateLine", () => {

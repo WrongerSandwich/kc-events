@@ -1,12 +1,12 @@
 import { longDateLine } from "./date-line";
-import { hasStartDay, detailsUrl } from "./events";
+import { hasStartDay, detailsUrl, venueLine } from "./events";
 import { siteConfig } from "../site.config";
 import type { PublishedEvent } from "./types";
 
 /** The page's meta description: the date line (when there is one), the place, and the why-line. */
 export function eventDescription(e: PublishedEvent, today: string): string {
   const line = longDateLine(e, today);
-  const where = `${e.venue}, ${e.neighborhood}.`;
+  const where = `${venueLine(e)}, ${e.neighborhood}.`;
   return `${line === "" ? `At ${where}` : `${line} at ${where}`}${e.whyLine ? ` ${e.whyLine}` : ""}`;
 }
 

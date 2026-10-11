@@ -9,7 +9,10 @@ export type PublishedEvent = {
   end?: string;
   /** Recurring events only, e.g. "Every Tuesday, 7pm". */
   schedule?: string;
+  /** The venue's display name: the page's name, or the venue research.config.yaml's venueAliases file it under. */
   venue: string;
+  /** The page's name when it was a room inside the venue ("Helzberg Hall"); see venueLine. */
+  room?: string;
   neighborhood: string;
   region: string;
   /** The page the date and venue were read from; what the verified line names. */

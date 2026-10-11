@@ -13,7 +13,7 @@ import { meta } from "../../generated/meta";
 import { formatDay, formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd } from "../../lib/event-meta";
 import { longDateLine } from "../../lib/date-line";
-import { firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl } from "../../lib/events";
+import { firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, venueLine } from "../../lib/events";
 import { siteConfig } from "../../site.config";
 import type { PublishedEvent } from "../../lib/types";
 
@@ -45,7 +45,7 @@ const jsonLd = eventJsonLd(event, { description, image: shareImage.url });
         <h1 style={`view-transition-name: title-${event.id}`}>{event.title}</h1>
         <p class="date">{line}</p>
         {/* A neighborhood that is its own region (Lawrence, Elsewhere in the metro) is named once. */}
-        <p class="where">{event.venue} · {event.neighborhood}{event.region !== event.neighborhood && ` · ${event.region}`}</p>
+        <p class="where">{venueLine(event)} · {event.neighborhood}{event.region !== event.neighborhood && ` · ${event.region}`}</p>
       </div>
     </header>
     {event.whyLine && <p class="why">{event.whyLine}</p>}
@@ -63,7 +63,7 @@ const jsonLd = eventJsonLd(event, { description, image: shareImage.url });
       <h2 id="more" class="section-heading">More like this</h2>
       <ul>
         {moreLikeThis.map((e) => (
-          <li><a href={`/e/${e.id}`}>{e.title}</a> <span>{formatDay(firstDay(e)!)} · {e.venue}</span></li>
+          <li><a href={`/e/${e.id}`}>{e.title}</a> <span>{formatDay(firstDay(e)!)} · {venueLine(e)}</span></li>
         ))}
       </ul>
     </section>

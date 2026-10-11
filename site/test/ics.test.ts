@@ -19,6 +19,11 @@ describe("toIcs", () => {
     expect(unfolded).not.toContain("https://www.therecordbar.com/shows\r\n");
   });
 
+  it("locates an event at its venue, not the room the page named (#91)", () => {
+    const ics = toIcs([event({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall", neighborhood: "Downtown" })], opts).replace(/\r\n[ \t]/g, "");
+    expect(ics).toContain("LOCATION:Kauffman Center for the Performing Arts\\, Downtown\r\n");
+  });
+
   it("writes a date-only event as all-day with an exclusive end", () => {
     expect(toIcs([event({ start: "2026-10-09" })], opts)).toBe(fixture("all-day"));
   });

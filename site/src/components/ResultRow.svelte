@@ -1,6 +1,6 @@
 <script lang="ts">
   import { formatShort, localDate } from "../lib/dates";
-  import { hostOf, detailsUrl } from "../lib/events";
+  import { hostOf, detailsUrl, venueLine } from "../lib/events";
   import { rowDateLine } from "../lib/group";
   import type { PublishedEvent } from "../lib/types";
   import KindChip from "./KindChip.svelte";
@@ -17,7 +17,7 @@
   <div class="title">
     <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="dont-miss">Don't miss</span>{/if}
   </div>
-  <span class="where" title={`${event.venue} · ${event.neighborhood}`}><span class="venue">{event.venue}</span><span class="hood">{` · ${event.neighborhood}`}</span></span>
+  <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><span class="venue">{venueLine(event)}</span><span class="hood">{` · ${event.neighborhood}`}</span></span>
   <KindChip kind={event.kind} />
   <!-- Out of the Tab order, so a row is two stops (title, Save); the event page links the source too. -->
   <a class="host" href={detailsUrl(event)} title={hostOf(detailsUrl(event))} tabindex="-1">{hostOf(detailsUrl(event))}</a>

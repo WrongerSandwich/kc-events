@@ -28,7 +28,7 @@ function inRange(e: PublishedEvent, range: { from: string; to: string }): boolea
 }
 
 function searchable(e: PublishedEvent): string {
-  return [e.title, e.venue, e.neighborhood, e.whyLine ?? ""].join(" ").toLowerCase();
+  return [e.title, e.venue, e.room ?? "", e.neighborhood, e.whyLine ?? ""].join(" ").toLowerCase();
 }
 
 /** The explorer's predicate: AND across filters, OR within kind and region, every search term somewhere. */

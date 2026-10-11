@@ -177,10 +177,19 @@ discovery:
 # Names are compared with case and punctuation ignored. A venue name goes by an entry when it is the
 # entry, the entry's words in another order, or the entry with a label added ("Bartle Exhibit Hall
 # (A – E)" is "Bartle Exhibit Hall"); a short form in use ("Kauffman Center") is an entry of its own,
-# since a name shorter than an entry never matches it. Hand-kept.
+# since a name shorter than an entry never matches it. An entry made only of generic words ("Pavilion",
+# "Main Auditorium") is that name alone: "Swope Park Pavilion" is not the Lied Center's. The list is not
+# per source, so a generic entry is any page's: "Galleries" anywhere is the Nelson-Atkins. List rooms of
+# one building only: the Public Library's branches are separate buildings, and under one name the same
+# storytime at Central and at Plaza would fold into one event. The site shows each event at its display
+# name, with the page's name after it when that was a room ("Kauffman Center for the Performing Arts ·
+# Helzberg Hall"). Hand-kept.
 venueAliases:
   Kauffman Center for the Performing Arts: [Kauffman Center, Muriel Kauffman Theatre, Helzberg Hall]
-  Nelson-Atkins Museum of Art: [Atkins Auditorium, Tivoli Cinema]
+  Nelson-Atkins Museum of Art: [Nelson-Atkins Museum, Atkins Auditorium, Tivoli Cinema, Galleries, Bloch Lobby]
+  Lied Center of Kansas: [Main Auditorium, Pavilion]
+  Museum of Kansas City: [JE Dunn Construction Theater]
+  Kansas City Repertory Theatre: [Copaken Stage]
   Kansas City Convention Center: [Bartle Hall, Bartle Exhibit Hall]
   Midwest Trust Center: [Yardley Hall, Polsky Theatre, Midwest Trust Center at Johnson County Community College]
   Kansas City Power & Light District: [Kansas City Power & Light, PBR Big Sky]

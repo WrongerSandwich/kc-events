@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { parseConfig } from "../../src/config";
 import type { Event } from "../../src/dataset";
 import { checkSchemaVersion, loadPublished, MAX_PAYLOAD_BYTES, project, SITE_EXPECTS_SCHEMA_VERSION } from "../src/build/load-dataset";
-import { activeEvent, dataset, write } from "./fixtures/dataset";
+import { activeEvent, configYaml, dataset, write } from "./fixtures/dataset";
 
 describe("loadPublished", () => {
   it("keeps active, non-past events and projects them with a region", () => {
@@ -71,6 +71,44 @@ describe("loadPublished", () => {
     } finally {
       warn.mockRestore();
     }
+  });
+
+  describe("venue aliases (#91)", () => {
+    const withAliases = `${configYaml}
+venueAliases:
+  Kauffman Center for the Performing Arts: [Kauffman Center, Helzberg Hall]
+  Lied Center of Kansas: [Main Auditorium]
+`;
+    const venues = (...names: string[]) => names.map((venue, i) => activeEvent({ id: `evt_${String(i + 1).padStart(12, "0")}`, venue }));
+
+    it("shows an aliased name at its venue, with the page's name as the room when that was a room", () => {
+      const p = loadPublished(write(dataset(venues("Helzberg Hall", "The Kauffman Center for the Performing Arts", "Kauffman Center", "Main Auditorium", "recordBar")), withAliases));
+      expect(p.events.map((e) => [e.venue, e.room])).toEqual([
+        ["Kauffman Center for the Performing Arts", "Helzberg Hall"],
+        ["Kauffman Center for the Performing Arts", undefined],
+        ["Kauffman Center for the Performing Arts", undefined],
+        ["Lied Center of Kansas", "Main Auditorium"],
+        ["recordBar", undefined],
+      ]);
+      expect(p.events[1]).not.toHaveProperty("room");
+    });
+
+    it("warns about a published venue that is only generic words or a street address, so the alias list can catch up", () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        loadPublished(write(dataset(venues("Main Auditorium", "Galleries", "Galleries", "1801 East 18th Street", "8216 N Michigan Ct, Kansas City, MO 64118", "1900 Building", "recordBar")), withAliases));
+        expect(warn).toHaveBeenCalledTimes(1);
+        const msg = String(warn.mock.calls[0]![0]);
+        expect(msg).toContain("Galleries (2)");
+        expect(msg).toContain("1801 East 18th Street (1)");
+        expect(msg).toContain("8216 N Michigan Ct, Kansas City, MO 64118 (1)");
+        expect(msg).not.toContain("Main Auditorium");
+        expect(msg).not.toContain("1900 Building");
+        expect(msg).not.toContain("recordBar");
+      } finally {
+        warn.mockRestore();
+      }
+    });
   });
 
   it.each(["javascript:alert(1)", "data:text/html,hi", "https://www.therecordbar.com/a\nb"])("refuses %j as a link, in the dataset and in the projection", (url) => {
