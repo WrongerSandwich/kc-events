@@ -15,6 +15,12 @@ import { loadPublished } from "./load-dataset.ts";
  */
 export const PUBLISHED_SCHEMA_VERSION = 2;
 
+/**
+ * The most don't-miss picks the front page was sized for: its code budget, measured on the fixture build, leaves room
+ * for this many (scripts/size-check.ts). A week over it is a warning, not a failed deploy.
+ */
+export const MAX_PICKS = 20;
+
 export function writeGenerated(opts: { datasetPath: string; configPath: string; outDir: string; publicDir: string; today?: string; now?: Date }): { eventCount: number; buildToday: string } {
   const { events, descriptions, ...meta } = loadPublished({ datasetPath: opts.datasetPath, configPath: opts.configPath, ...(opts.today === undefined ? {} : { today: opts.today }) });
 
@@ -23,7 +29,11 @@ export function writeGenerated(opts: { datasetPath: string; configPath: string; 
   writeFileSync(join(opts.outDir, "meta.ts"), `${header}import type { PublishedMeta } from "../lib/types";\nexport const meta: PublishedMeta = ${JSON.stringify(meta)};\n`);
   writeFileSync(join(opts.outDir, "events.ts"), `${header}import type { PublishedEvent } from "../lib/types";\nexport const events: PublishedEvent[] = ${JSON.stringify(events)};\n`);
   writeFileSync(join(opts.outDir, "descriptions.ts"), `${header}import type { PublishedDescriptions } from "../lib/types";\nexport const descriptions: PublishedDescriptions = ${JSON.stringify(descriptions)};\n`);
-  writeFileSync(join(opts.outDir, "dont-miss.ts"), `${header}import type { PublishedEvent } from "../lib/types";\nexport const dontMiss: PublishedEvent[] = ${JSON.stringify(events.filter((e) => e.dontMiss))};\n`);
+  const dontMiss = events.filter((e) => e.dontMiss);
+  writeFileSync(join(opts.outDir, "dont-miss.ts"), `${header}import type { PublishedEvent } from "../lib/types";\nexport const dontMiss: PublishedEvent[] = ${JSON.stringify(dontMiss)};\n`);
+  if (dontMiss.length > MAX_PICKS) {
+    console.warn(`site: ${dontMiss.length} don't-miss picks, over the ${MAX_PICKS} the front page's 50 KB budget was sized for; curation is flagging more than it should`);
+  }
 
   mkdirSync(opts.publicDir, { recursive: true });
   const published: PublishedDataset = {

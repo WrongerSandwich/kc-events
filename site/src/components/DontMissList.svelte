@@ -1,8 +1,5 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
-  import { flip } from "svelte/animate";
-  import { quartOut } from "svelte/easing";
-  import { fade } from "svelte/transition";
   // dont-miss, not events: the front page ships only the flagged events (its budget is 50 KB; the full list is about 26).
   import { dontMiss } from "../generated/dont-miss";
   import { meta } from "../generated/meta";
@@ -91,10 +88,17 @@
 
   function toggle(h: Horizon, kind: string) {
     const next = chosen[h] === kind ? undefined : kind;
-    chosen[h] = next;
-    const n = picksOf(h, next).length;
-    const picks = n === 1 ? "pick" : "picks";
-    announced[h] = next === undefined ? `Showing all ${n} ${picks}` : `Showing ${n} ${next} ${picks}`;
+    const update = () => {
+      chosen[h] = next;
+      const n = picksOf(h, next).length;
+      const picks = n === 1 ? "pick" : "picks";
+      announced[h] = next === undefined ? `Showing all ${n} ${picks}` : `Showing ${n} ${next} ${picks}`;
+      return tick();
+    };
+    // The kept cards slide into place and the others fade: the browser's view transition, by each card's name (its
+    // timing and the reduced-motion rule are in base.css). Where there is none, the list just changes.
+    if (typeof document.startViewTransition === "function") document.startViewTransition(update);
+    else update();
   }
 
   /**
@@ -102,9 +106,6 @@
    * folds one away. The section leads with what can still be gone to; these fold into one line at its end.
    */
   const hasStarted = (e: PublishedEvent) => now !== undefined && dateTile(e, today, now).started === true;
-
-  /** A motion's length in ms, or none where the visitor asks for none (or there is no media query to ask, as in tests). */
-  const motionMs = (ms: number) => (typeof matchMedia === "function" && !matchMedia("(prefers-reduced-motion: reduce)").matches ? ms : 0);
 
   /** The later list's one-line date: everything there starts after the next two weeks, so nothing is on now. */
   function shortWhen(e: PublishedEvent): string {
@@ -157,9 +158,9 @@
                and lists started picks last, so a day jumps to one that can still be gone to. -->
           <WeekStrip picks={[...upcoming, ...started]} {today} sunday={horizonBounds(today).sunday} />
         {/if}
-        <!-- Filtered, the kept cards slide into place and the others fade. -->
+        <!-- Named, so a filter's view transition (toggle) slides the kept cards into place. -->
         {#each upcoming as event (event.id)}
-          <div class="pick" animate:flip={{ duration: motionMs(250), easing: quartOut }} transition:fade={{ duration: motionMs(150) }}>
+          <div class="pick" style={`view-transition-name: pick-${event.id}`}>
             <DontMissCard {event} {today} {now} />
           </div>
         {/each}

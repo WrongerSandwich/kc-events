@@ -1,10 +1,13 @@
 // @vitest-environment node
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { BUDGETS, measure } from "../scripts/size-check";
+import { BUDGETS, FIXTURE_PICKS, FRONT_PAGE_BYTES, measure, PICK_BYTES } from "../scripts/size-check";
+import { loadPublished } from "../src/build/load-dataset";
+import { MAX_PICKS } from "../src/build/write-generated";
 
 describe("measure", () => {
   it("counts the page and every script and stylesheet it loads, following static chunk imports but not dynamic ones", () => {
@@ -33,8 +36,17 @@ describe("measure", () => {
 });
 
 describe("budgets", () => {
-  it("measures the explorer on the fixture build, so its budget tracks code and not the week's event count", () => {
+  it("measures the explorer and the front page on the fixture build, so their budgets track code and not the week's data", () => {
     expect(BUDGETS.find((b) => b.page === "explore.html")?.build).toBe("fixture");
-    expect(BUDGETS.find((b) => b.page === "index.html")?.build).toBe("real");
+    expect(BUDGETS.find((b) => b.page === "index.html")?.build).toBe("fixture");
+  });
+
+  it("leaves the front page room for a week at the pick ceiling, counting the picks the fixture build publishes", () => {
+    const site = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url));
+    const fixture = loadPublished({ datasetPath: site("e2e/fixtures/events.json"), configPath: site("../research.config.yaml"), today: "2026-10-05" });
+    expect(fixture.events.filter((e) => e.dontMiss)).toHaveLength(FIXTURE_PICKS);
+    expect(readFileSync(site("package.json"), "utf8")).toContain("SITE_TODAY=2026-10-05 SITE_DATASET=e2e/fixtures/events.json");
+    const front = BUDGETS.find((b) => b.page === "index.html")!.budget;
+    expect(front + (MAX_PICKS - FIXTURE_PICKS) * PICK_BYTES).toBe(FRONT_PAGE_BYTES);
   });
 });

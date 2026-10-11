@@ -140,8 +140,78 @@ venueAliases:
     expect(() => loadPublished(write(dataset(big)))).toThrow(/payload/i);
   });
 
+  describe("what the pages cannot render (#92)", () => {
+    it("refuses a one-off with no start, naming the event", () => {
+      expect(() => loadPublished(write(dataset([activeEvent({ start: undefined, end: "2026-10-09" })])))).toThrow(/evt_000000000001.*one-off.*start/);
+    });
+
+    it.each([
+      ["date before date", "2026-10-10", "2026-10-09"],
+      ["time before time on the same day", "2026-10-09T19:00:00-05:00", "2026-10-09T18:00:00-05:00"],
+      ["date before a timed start's day", "2026-10-09T19:00:00-05:00", "2026-10-08"],
+    ])("refuses an end before its start (%s)", (_, start, end) => {
+      expect(() => loadPublished(write(dataset([activeEvent({ recurrence: "limited-run", start, end })])))).toThrow(/evt_000000000001.*end.*before/);
+    });
+
+    it("accepts an end on its start's day, by date against a time, and a timed end equal to the start", () => {
+      const p = loadPublished(write(dataset([
+        activeEvent({ start: "2026-10-09T19:00:00-05:00", end: "2026-10-09" }),
+        activeEvent({ id: "evt_000000000002", start: "2026-10-09", end: "2026-10-09T23:00:00-05:00" }),
+        activeEvent({ id: "evt_000000000003", start: "2026-10-09T19:00:00-05:00", end: "2026-10-09T19:00:00-05:00" }),
+        activeEvent({ id: "evt_000000000004", recurrence: "limited-run", start: undefined, end: "2026-10-20" }),
+      ])));
+      expect(p.events).toHaveLength(4);
+    });
+
+    it("refuses a kind the config does not list", () => {
+      expect(() => loadPublished(write(dataset([activeEvent({ kind: "circus" })])))).toThrow(/evt_000000000001.*kind "circus"/);
+    });
+
+    it.each(["evt_1", "evt_00000000000G", "evt_0000000000001", "evt_00000000000a\"><x", "EVT_000000000001"])("refuses the id %j", (id) => {
+      expect(() => loadPublished(write(dataset([activeEvent({ id })])))).toThrow(/id/);
+    });
+
+    it("refuses to publish nothing when the dataset has active events, and allows it when it has none", () => {
+      expect(() => loadPublished(write(dataset([activeEvent({ start: "2026-10-01" })])))).toThrow(/no event to publish/);
+      expect(loadPublished(write(dataset([activeEvent({ status: "unverified", lastVerified: undefined, evidence: {} })]))).events).toEqual([]);
+    });
+
+    it("refuses a build date more than 14 days from the last successful run, either way", () => {
+      const files = write(dataset([activeEvent({ recurrence: "limited-run", start: "2026-09-01", end: "2026-12-31" })]));
+      expect(loadPublished({ ...files, today: "2026-10-19" }).buildToday).toBe("2026-10-19");
+      expect(loadPublished({ ...files, today: "2026-09-21" }).buildToday).toBe("2026-09-21");
+      expect(() => loadPublished({ ...files, today: "2026-10-20" })).toThrow(/2026-10-20.*14 days.*2026-10-05/);
+      expect(() => loadPublished({ ...files, today: "2026-09-20" })).toThrow(/14 days/);
+    });
+
+    describe("a production build with no known origin", () => {
+      const files = write(dataset([activeEvent()]));
+      const unset = () => {
+        for (const name of ["SITE_ORIGIN", "VERCEL_PROJECT_PRODUCTION_URL", "VERCEL", "NODE_ENV"]) vi.stubEnv(name, undefined);
+      };
+
+      it("throws on Vercel or under NODE_ENV=production, and passes once an origin is set", () => {
+        try {
+          unset();
+          expect(() => loadPublished(files)).not.toThrow();
+          vi.stubEnv("VERCEL", "1");
+          expect(() => loadPublished(files)).toThrow(/origin/);
+          vi.stubEnv("VERCEL_PROJECT_PRODUCTION_URL", "kc-this-week.vercel.app");
+          expect(() => loadPublished(files)).not.toThrow();
+          unset();
+          vi.stubEnv("NODE_ENV", "production");
+          expect(() => loadPublished(files)).toThrow(/SITE_ORIGIN/);
+          vi.stubEnv("SITE_ORIGIN", "https://www.kcthisweek.com");
+          expect(() => loadPublished(files)).not.toThrow();
+        } finally {
+          vi.unstubAllEnvs();
+        }
+      });
+    });
+  });
+
   describe("the build's date", () => {
-    const { today: _today, ...files } = write(dataset([activeEvent()]));
+    const { today: _today, ...files } = write(dataset([activeEvent({ recurrence: "limited-run", start: "2026-10-01", end: "2026-10-31" })]));
 
     it("refuses a malformed SITE_TODAY or explicit today rather than skewing the past filter", () => {
       try {

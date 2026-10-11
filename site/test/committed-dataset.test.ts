@@ -10,7 +10,9 @@ import { writeGenerated } from "../src/build/write-generated";
 describe("the committed dataset through the site's loader", () => {
   const datasetPath = fileURLToPath(new URL("../../data/events.json", import.meta.url));
   const configPath = fileURLToPath(new URL("../../research.config.yaml", import.meta.url));
-  const p = loadPublished({ datasetPath, configPath, today: "2026-10-05" });
+  // The run's own day: the loader refuses a today more than two weeks from it, and the committed run moves weekly.
+  const today = (JSON.parse(readFileSync(datasetPath, "utf8")) as { lastSuccessfulRun: string }).lastSuccessfulRun.slice(0, 10);
+  const p = loadPublished({ datasetPath, configPath, today });
 
   it("loads, with every event placed in a region and ids unique", () => {
     expect(p.events.length).toBeGreaterThan(0);
@@ -29,7 +31,7 @@ describe("the committed dataset through the site's loader", () => {
 
   it("publishes as /events.json only the projection: active events' public fields with descriptions, no job internals", () => {
     const dir = mkdtempSync(join(tmpdir(), "kc-committed-"));
-    writeGenerated({ datasetPath, configPath, outDir: join(dir, "generated"), publicDir: join(dir, "public"), today: "2026-10-05" });
+    writeGenerated({ datasetPath, configPath, outDir: join(dir, "generated"), publicDir: join(dir, "public"), today });
     const published = JSON.parse(readFileSync(join(dir, "public", "events.json"), "utf8"));
 
     expect(Object.keys(published).sort()).toEqual(["events", "generatedAt", "lastSuccessfulRun", "schemaVersion"]);

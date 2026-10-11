@@ -97,14 +97,24 @@ test.describe("a section's kind filter", () => {
     await expect(week.getByRole("link", { name: "These picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&dontmiss=1");
   });
 
-  /** Presses the week's music chip and, a frame later, counts the running animations and the week's cards. */
+  /**
+   * Presses the week's music chip, then watches frame by frame until the cards have changed: the most animations seen
+   * running and the week's cards. A view transition updates the list a frame or two after the press, not at it.
+   */
   async function pressMusic(page: Page): Promise<{ animations: number; cards: number }> {
     await on(page, BUILD_DAY, "/");
     // Pressed and measured in the page, so nothing has a chance to finish between the press and the count.
     return page.getByRole("region").nth(0).getByRole("button", { name: "1 music" }).evaluate(async (music) => {
+      const section = music.closest("section")!;
+      const before = section.querySelectorAll("article").length;
       (music as HTMLButtonElement).click();
-      await new Promise(requestAnimationFrame);
-      return { animations: document.getAnimations().length, cards: music.closest("section")!.querySelectorAll("article").length };
+      let animations = 0;
+      for (let frame = 0; frame < 30; frame++) {
+        await new Promise(requestAnimationFrame);
+        animations = Math.max(animations, document.getAnimations().length);
+        if (section.querySelectorAll("article").length !== before && frame > 2) break;
+      }
+      return { animations, cards: section.querySelectorAll("article").length };
     });
   }
 
