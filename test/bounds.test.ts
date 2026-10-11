@@ -83,7 +83,7 @@ describe("length caps on what the model writes", () => {
   });
 
   it("a flag whose why-line runs past 200 characters is not applied: left unjudged and reported", async () => {
-    const id = newEventId(CALENDAR_URL, "Big Show", WEEK_1_ISO);
+    const id = newEventId(CALENDAR_URL, "Big Show", WEEK_1_ISO, "2026-10-31");
     const { dataset, report } = await runOver([candidate()], [judging(0.01, { id, dontMiss: true, why: "w".repeat(201) })]);
 
     expect(dataset.events[0]).toMatchObject({ dontMiss: false });

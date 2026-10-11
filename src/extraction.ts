@@ -7,6 +7,7 @@ import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import { citedDate, ownPageAllowed, type Event } from "./dataset.js";
 import { linkTarget } from "./discovery.js";
+import { samePage } from "./hosts.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
 import type { Source } from "./registry.js";
@@ -171,11 +172,6 @@ export function readPage(page: FetchResult, config: RunConfig): PageReading {
   return { text: pageText(marked), links };
 }
 
-/** The same page but for a trailing slash; a query string makes a different page, since some sites keep their events behind one. */
-function samePage(a: string, b: string): boolean {
-  return normalizeUrl(a, a).replace(/\/$/, "") === normalizeUrl(b, b).replace(/\/$/, "");
-}
-
 function isHtml(body: string): boolean {
   return /<\s*(!doctype|html|body|div)\b/i.test(body);
 }
@@ -215,10 +211,11 @@ function decodeCharacterReference(reference: string, body: string): string {
 
 /**
  * A fresh id for an event first seen now. Opaque: it only has to be unique and never change, so
- * it is hashed from what makes this sighting distinct rather than from anything matching uses.
+ * it is hashed from what makes this sighting distinct rather than from anything matching uses: its
+ * page, title, calendar date (a page may list one title on two nights, #77), and the run.
  */
-export function newEventId(primaryUrl: string, title: string, nowIso: string): string {
-  const digest = createHash("sha256").update(`${primaryUrl}\n${title}\n${nowIso}`).digest("hex");
+export function newEventId(primaryUrl: string, title: string, nowIso: string, start?: string): string {
+  const digest = createHash("sha256").update(`${primaryUrl}\n${title}\n${start?.slice(0, 10) ?? ""}\n${nowIso}`).digest("hex");
   return `evt_${digest.slice(0, 12)}`;
 }
 
@@ -282,7 +279,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     venueEvidence !== undefined;
 
   const event: Event = {
-    id: newEventId(primaryUrl, title, context.nowIso),
+    id: newEventId(primaryUrl, title, context.nowIso, when.start),
     title,
     ...(description !== undefined ? { description } : {}),
     ...(when.start !== undefined ? { start: when.start } : {}),

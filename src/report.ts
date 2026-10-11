@@ -49,6 +49,8 @@ export interface RunReport {
     unverifiedByOutageLimit: number;
     /** Active events made unverified this run because their page still lists them but a re-reading cited no date or venue. */
     unverifiedByUncitableReading: number;
+    /** Venue-less sightings that fit two or more known events with none preferred, so no record was made: nothing publishable anyway (#77). */
+    venuelessAmbiguous: number;
     expired: Record<ExpiryReason, number>;
   };
   spend: {
@@ -135,6 +137,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Not struck: starts after the horizon | ${counts.beyondHorizonUnstruck} |
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
+| Not created: a venue-less sighting fitting more than one known event | ${counts.venuelessAmbiguous} |
 | Dropped: outside geography | ${counts.outsideGeography} |
 | Dropped: a field past its length cap | ${counts.overCap} |
 | Uncitable: a date or time that does not exist, or an end before the start | ${counts.unusableDates} |

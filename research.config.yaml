@@ -174,11 +174,13 @@ discovery:
 # Venue aliases (ADR 0007): a venue's display name, then the other names pages give it, a room inside
 # it or a program that runs there. Event identity treats them all as one venue, so the same show read
 # as "Helzberg Hall" on one page and "Kauffman Center for the Performing Arts" on another is one event.
-# Names are compared with case and punctuation ignored, and a name containing another at word
-# boundaries is the same name ("Bartle Exhibit Hall (A – E)" is "Bartle Exhibit Hall"). Hand-kept.
+# Names are compared with case and punctuation ignored. A venue name goes by an entry when it is the
+# entry, the entry's words in another order, or the entry with a label added ("Bartle Exhibit Hall
+# (A – E)" is "Bartle Exhibit Hall"); a short form in use ("Kauffman Center") is an entry of its own,
+# since a name shorter than an entry never matches it. Hand-kept.
 venueAliases:
-  Kauffman Center for the Performing Arts: [Muriel Kauffman Theatre, Helzberg Hall]
+  Kauffman Center for the Performing Arts: [Kauffman Center, Muriel Kauffman Theatre, Helzberg Hall]
   Nelson-Atkins Museum of Art: [Atkins Auditorium, Tivoli Cinema]
   Kansas City Convention Center: [Bartle Hall, Bartle Exhibit Hall]
-  Midwest Trust Center: [Yardley Hall, Midwest Trust Center at Johnson County Community College]
+  Midwest Trust Center: [Yardley Hall, Polsky Theatre, Midwest Trust Center at Johnson County Community College]
   Kansas City Power & Light District: [Kansas City Power & Light, PBR Big Sky]

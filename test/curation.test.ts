@@ -12,7 +12,7 @@ const recordbar = source("recordBar");
 const CALENDAR_URL = recordbar.urls[0]!;
 const candidate = (overrides: Record<string, unknown> = {}) => candidateAt(recordbar, overrides);
 const extracted = (...candidates: unknown[]) => costing(0.01, ...candidates);
-const SHOW_ID = newEventId(CALENDAR_URL, "Big Show", WEEK_1_ISO);
+const SHOW_ID = newEventId(CALENDAR_URL, "Big Show", WEEK_1_ISO, "2026-10-31");
 const trivia = candidate({ title: "Trivia", startDate: null, startTime: null, schedule: "every Tuesday", dateEvidence: "Trivia every Tuesday" });
 
 /** One run over the recordBar calendar with one scripted extraction reply and, when given, one scripted curation reply. */

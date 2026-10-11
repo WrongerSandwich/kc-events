@@ -54,3 +54,24 @@ export function sameSite(a: string, b: string): boolean {
   const site = registrableDomain(a);
   return site !== undefined && site === registrableDomain(b);
 }
+
+/**
+ * What identifies a page, whichever way its URL is written (#77): the host without "www.", the
+ * path without a trailing slash, and the query, which stays because some sites keep their events
+ * behind one. The scheme goes, so http and https are one page, and so does the fragment. A URL that
+ * does not parse is its own key. Stored URLs keep the form the page was fetched under; only
+ * comparisons go through the key.
+ */
+export function pageKey(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${bareHost(parsed.host)}${parsed.pathname.replace(/\/$/, "") || "/"}${parsed.search}`;
+  } catch {
+    return url;
+  }
+}
+
+/** Whether two URLs name one page, under pageKey. */
+export function samePage(a: string, b: string): boolean {
+  return pageKey(a) === pageKey(b);
+}

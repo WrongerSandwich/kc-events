@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { findMatch, normalizeName, sameEvent, sameVenue } from "../src/identity.js";
+import { pageKey, samePage } from "../src/hosts.js";
+import { findMatch, matchSighting, nearDates, normalizeName, sameEvent, sameVenue } from "../src/identity.js";
 
 const CALENDAR = "https://venue.test/calendar";
 
@@ -100,9 +101,9 @@ describe("event identity", () => {
   });
 });
 
-/** The seed alias list from the run config, as #16 gave it. */
+/** The seed alias list from the run config, as #16 gave it, with the Kauffman short form #77 added. */
 const ALIASES = {
-  "Kauffman Center for the Performing Arts": ["Muriel Kauffman Theatre", "Helzberg Hall"],
+  "Kauffman Center for the Performing Arts": ["Kauffman Center", "Muriel Kauffman Theatre", "Helzberg Hall"],
   "Nelson-Atkins Museum of Art": ["Atkins Auditorium", "Tivoli Cinema"],
   "Kansas City Convention Center": ["Bartle Hall", "Bartle Exhibit Hall"],
 };
@@ -125,9 +126,15 @@ describe("the same venue", () => {
     expect(sameVenue("Midlands Pub", "The Midland", {})).toBe(false);
   });
 
-  it("applies containment to alias entries too", () => {
+  it("goes by an alias entry with a label added, but a name shorter than the entry is not the entry (#77)", () => {
     expect(sameVenue("Bartle Exhibit Hall (A – E)", "Kansas City Convention Center", ALIASES)).toBe(true);
     expect(sameVenue("Kauffman Center", "Helzberg Hall", ALIASES)).toBe(true);
+    const shortForms = { ...ALIASES, "Kauffman Center for the Performing Arts": ["Muriel Kauffman Theatre", "Helzberg Hall"] };
+    expect(sameVenue("Kauffman Center", "Helzberg Hall", shortForms)).toBe(false);
+    // "Kansas City" is in two alias groups' names; before #77 it was every venue in both.
+    expect(sameVenue("Kansas City", "Bartle Hall", ALIASES)).toBe(false);
+    expect(sameVenue("Kansas City", "Kansas City Power & Light", { "Kansas City Power & Light District": ["Kansas City Power & Light", "PBR Big Sky"] })).toBe(true);
+    expect(sameVenue("Kansas City", "PBR Big Sky", { "Kansas City Power & Light District": ["Kansas City Power & Light", "PBR Big Sky"] })).toBe(false);
   });
 
   it("is the same words in another order, with no alias needed (#28)", () => {
@@ -185,5 +192,129 @@ describe("a sighting with no venue", () => {
   it("never matches a recurring event, which has no date", () => {
     const recurring = { primaryUrl: "https://bar.test/", title: "Trivia Night", venue: "Bar A" };
     expect(findMatch({ primaryUrl: "https://elsewhere.test/", title: "Trivia Night" }, [recurring], {})).toBeUndefined();
+  });
+});
+
+describe("one page under several URLs (#77)", () => {
+  const stored = { primaryUrl: "https://www.powerandlightdistrict.com/events", title: "PBR Outlaw Days Festival", venue: "PBR Big Sky", start: "2026-10-23T16:00:00-05:00" };
+
+  it.each([
+    ["without www.", "https://powerandlightdistrict.com/events"],
+    ["over http", "http://www.powerandlightdistrict.com/events"],
+    ["with a trailing slash", "https://www.powerandlightdistrict.com/events/"],
+    ["with a fragment", "https://www.powerandlightdistrict.com/events#list"],
+    ["in another case of host", "https://WWW.PowerAndLightDistrict.com/events"],
+  ])("matches the same title on the same page written %s, whatever the venue and date", (_how, primaryUrl) => {
+    const sighting = { primaryUrl, title: "PBR OUTLAW DAYS FESTIVAL", start: "2026-11-01" };
+    expect(findMatch(sighting, [stored], {})).toBe(stored);
+    expect(sameEvent(stored, { ...stored, primaryUrl }, [stored], {})).toBe(true);
+  });
+
+  it("keeps a query string and a path apart: some sites keep their events behind one", () => {
+    const sighting = { title: stored.title, start: "2026-11-01" };
+    expect(findMatch({ ...sighting, primaryUrl: "https://www.powerandlightdistrict.com/events?month=11" }, [stored], {})).toBeUndefined();
+    expect(findMatch({ ...sighting, primaryUrl: "https://www.powerandlightdistrict.com/events/all" }, [stored], {})).toBeUndefined();
+  });
+
+  it("takes an unparseable URL as its own page", () => {
+    expect(pageKey("not a url")).toBe("not a url");
+    expect(samePage("not a url", "not a url")).toBe(true);
+  });
+});
+
+describe("one title listed twice on one page (#77)", () => {
+  const page = "https://www.kcwineco.com/events/upcoming-events";
+  const early = { primaryUrl: page, title: "Dueling Pianos (FREE Show)", venue: "KC Wine Co", start: "2026-11-07T17:30:00-06:00" };
+  const late = { ...early, start: "2026-11-27T17:30:00-06:00" };
+
+  it("matches a sighting to the record whose date is nearest, and any record when none is near", () => {
+    expect(findMatch({ ...early, start: "2026-11-26" }, [early, late], {})).toBe(late);
+    expect(findMatch({ ...early, start: "2026-11-08" }, [late, early], {})).toBe(early);
+    expect(findMatch({ ...early, start: "2026-12-20" }, [early, late], {})).toBe(late);
+    expect(findMatch({ ...early, start: "2026-11-15" }, [late, early], {})).toBe(early);
+    expect(findMatch({ ...early, start: undefined }, [late, early], {})).toBe(late);
+  });
+
+  it("is two records when their dates are outside the fuzzy window, one when inside", () => {
+    expect(sameEvent(early, late, [early, late], {})).toBe(false);
+    expect(sameEvent(early, { ...early, start: "2026-11-09" }, [early], {})).toBe(true);
+    expect(sameEvent(early, { ...early, start: undefined }, [early], {})).toBe(true);
+  });
+
+  it("says whether two events' dates are near", () => {
+    expect(nearDates(early, { ...early, start: "2026-11-10" })).toBe(true);
+    expect(nearDates(early, { ...early, start: "2026-11-11" })).toBe(false);
+    expect(nearDates(early, { ...early, start: undefined })).toBe(true);
+  });
+});
+
+describe("a sighting with no venue and several candidates (#77)", () => {
+  const kauffman = { primaryUrl: "https://www.kauffmancenter.org/events/", title: "Interstellar Live", venue: "Helzberg Hall", start: "2026-10-23", eventUrl: "https://tickets.kauffmancenter.org/overview/25068" };
+  const twin = { primaryUrl: "https://www.kcsymphony.org/upcoming-events/", title: "Interstellar Live", start: "2026-10-23" };
+  const sighting = { primaryUrl: "https://kcsymphony.org/", title: "Interstellar Live", start: "2026-10-23" };
+
+  it("prefers the candidate on its own host, so a program's venue-less twin takes the program's sighting", () => {
+    expect(findMatch(sighting, [kauffman, twin], {})).toBe(twin);
+    expect(findMatch(sighting, [twin, kauffman], {})).toBe(twin);
+  });
+
+  it("then prefers the candidate with its own page", () => {
+    const linked = { ...sighting, primaryUrl: "https://kclivearts.org/", eventUrl: "http://tickets.kauffmancenter.org/overview/25068/" };
+    expect(findMatch(linked, [kauffman, twin], {})).toBe(kauffman);
+  });
+
+  it("is ambiguous when neither narrows the candidates to one, and matches none", () => {
+    const elsewhere = { ...sighting, primaryUrl: "https://kclivearts.org/" };
+    expect(findMatch(elsewhere, [kauffman, twin], {})).toBeUndefined();
+    expect(matchSighting(elsewhere, [kauffman, twin], {})).toEqual({ ambiguous: true });
+    const twins = [twin, { ...twin, primaryUrl: "https://www.kcsymphony.org/" }];
+    expect(matchSighting({ ...sighting, primaryUrl: "https://kcsymphony.org/concerts" }, [kauffman, ...twins], {})).toEqual({ ambiguous: true });
+    expect(matchSighting(sighting, [kauffman], {})).toEqual({ event: kauffman, rule: "venueless", ambiguous: false });
+    expect(matchSighting({ ...sighting, title: "Other" }, [kauffman, twin], {})).toEqual({ ambiguous: false });
+  });
+
+  it("folds the twin into the one candidate left once its own host's other twin is gone", () => {
+    const other = { ...twin, primaryUrl: "https://www.kcsymphony.org/" };
+    expect(sameEvent(twin, other, [kauffman, twin, other], {})).toBe(true);
+    expect(sameEvent(kauffman, twin, [kauffman, twin, other], {})).toBe(false);
+    expect(sameEvent(kauffman, twin, [kauffman, twin], {})).toBe(true);
+  });
+});
+
+describe("a record folded as a duplicate (#77)", () => {
+  const kept = { id: "evt_kept", primaryUrl: "https://www.kauffmancenter.org/events/", title: "Interstellar Live", venue: "Kauffman Center for the Performing Arts", start: "2026-10-23", status: "active" as const };
+  const duplicate = { id: "evt_dup", primaryUrl: "https://www.kcsymphony.org/upcoming-events/", title: "Interstellar Live", venue: "Helzberg Hall", start: "2026-10-23", status: "expired" as const, duplicateOf: "evt_kept" };
+  const sighting = { primaryUrl: "https://www.kcsymphony.org/upcoming-events/", title: "Interstellar Live", venue: "Symphony Hall", start: "2026-10-23" };
+
+  it("stands for the record it was folded into: a match on it is a match on that record", () => {
+    expect(findMatch(sighting, [duplicate, kept], {})).toBe(kept);
+    expect(matchSighting(sighting, [kept, duplicate], {}).rule).toBe("page-and-title");
+    expect(findMatch(sighting, [kept], {})).toBeUndefined();
+  });
+
+  it("follows a chain of folds, and matches nothing when the chain leaves the known events", () => {
+    const first = { ...kept, id: "evt_first", primaryUrl: "https://kcballet.org/", venue: "Kansas City Ballet" };
+    const chained = { ...kept, status: "expired" as const, duplicateOf: "evt_first" };
+    expect(findMatch(sighting, [duplicate, chained, first], {})).toBe(first);
+    expect(findMatch(sighting, [duplicate], {})).toBeUndefined();
+    expect(findMatch(sighting, [duplicate, { ...chained, duplicateOf: "evt_dup" }], {})).toBeUndefined();
+  });
+});
+
+describe("one month of a recurring event (#77)", () => {
+  const page = "https://www.theworldwar.org/events";
+  const recurring = { primaryUrl: page, title: "Main Gallery Tours", venue: "National WWI Museum and Memorial", recurrence: "recurring" as const, status: "active" as const };
+  const month = { primaryUrl: page, title: "Main Gallery Tours (Oct. 2026)", venue: "National WWI Museum and Memorial", start: "2026-10-09", recurrence: "limited-run" as const };
+
+  it("matches the recurring event on its page as a confirmation, after every other rule", () => {
+    expect(matchSighting(month, [recurring], {})).toEqual({ event: recurring, rule: "month", ambiguous: false });
+    const dated = { ...month, recurrence: "limited-run" as const, status: "active" as const };
+    expect(matchSighting(month, [recurring, dated], {}).rule).toBe("page-and-title");
+  });
+
+  it("matches no recurring event on another page and none expired; the untagged title is the page-and-title match it always was", () => {
+    expect(findMatch({ ...month, primaryUrl: "https://unionstation.org/" }, [recurring], {})).toBeUndefined();
+    expect(findMatch(month, [{ ...recurring, status: "expired" as const }], {})).toBeUndefined();
+    expect(matchSighting({ ...month, title: "Main Gallery Tours" }, [recurring], {}).rule).toBe("page-and-title");
   });
 });

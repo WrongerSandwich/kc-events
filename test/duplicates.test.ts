@@ -153,13 +153,13 @@ describe("folding duplicates", () => {
     expect(byId(dataset).get(verified.id)).toMatchObject({ status: "expired", expiryReason: "duplicate" });
   });
 
-  it("folds nothing that does not match: two venues, a venue-less record with two candidates, or two events in one series", async () => {
+  it("folds nothing that does not match: two venues, a venue-less record with two candidates on other hosts, or two events in one series", async () => {
     const separate = [
       event("Open Mic", "Bar A", "https://bara.test/", "2026-10-14"),
       event("Open Mic", "Bar B", "https://barb.test/", "2026-10-14"),
       event("Nutcracker", "Muriel Kauffman Theatre", KAUFFMAN, "2026-11-28", { recurrence: "limited-run" }),
-      event("Nutcracker", undefined, "https://kcballet.org/", "2026-11-28", { recurrence: "limited-run" }),
-      event("Nutcracker", undefined, "https://kcballet.org/performances/", "2026-11-28", { recurrence: "limited-run" }),
+      event("Nutcracker", undefined, "https://kccrossroads.org/", "2026-11-28", { recurrence: "limited-run" }),
+      event("Nutcracker", undefined, "https://www.inkansascity.com/arts/", "2026-11-28", { recurrence: "limited-run" }),
       event("Pershing Lecture Series | The Boer Wars", "National WWI Museum and Memorial", WWI, "2026-11-18T18:30:00-06:00"),
       event("Pershing Lecture Series | The Zulu War", "National WWI Museum and Memorial", WWI, "2026-11-18T18:30:00-06:00"),
     ];
@@ -298,5 +298,240 @@ describe("folding a month-titled dated event into its recurring event (#63)", ()
       expect({ name, status: byId(dataset).get(dated!.id)!.status }).toEqual({ name, status: "active" });
       expect({ name, duplicates: report.counts.expired.duplicate }).toEqual({ name, duplicates: 0 });
     }
+  });
+});
+
+describe("one page under several URLs (#77)", () => {
+  it("folds a record whose page is the same URL without www. and with a trailing slash, naming the record kept", async () => {
+    const www = event("PBR OUTLAW DAYS FESTIVAL", "PBR Big Sky", "https://www.powerandlightdistrict.com/events-and-entertainment/events", "2026-10-23T16:00:00-05:00");
+    const bare = event("PBR Outlaw Days Festival", undefined, "http://powerandlightdistrict.com/events-and-entertainment/events/", "2026-10-23T16:00:00-05:00", { firstSeen: RUN_TWO });
+
+    const { dataset, report } = await quietRun(withEvents([bare, www]));
+
+    expect(byId(dataset).get(www.id)).toMatchObject({ status: "active" });
+    expect(byId(dataset).get(bare.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: www.id });
+    expect(report.counts.expired.duplicate).toBe(1);
+  });
+});
+
+describe("venue-less twins (#77)", () => {
+  const kauffman = () => event("Interstellar Live", "Kauffman Center for the Performing Arts", KAUFFMAN, "2026-10-23");
+  const twin = (primaryUrl: string, firstSeen: string) => event("Interstellar Live", undefined, primaryUrl, "2026-10-23", { firstSeen });
+
+  it("fold into each other on their own host, then into the one event left", async () => {
+    const listed = kauffman();
+    const [first, second] = [twin(SYMPHONY, RUN_ONE), twin("https://www.kcsymphony.org/", RUN_TWO)];
+
+    const { dataset, report } = await quietRun(withEvents([listed, first, second]));
+
+    expect(byId(dataset).get(listed.id)).toMatchObject({ status: "active" });
+    expect(byId(dataset).get(first.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: listed.id });
+    expect(byId(dataset).get(second.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: first.id });
+    expect(report.counts.expired.duplicate).toBe(2);
+  });
+
+  it("take a venue-less sighting from their own host rather than start another record", async () => {
+    const listed = kauffman();
+    const existing = twin(SYMPHONY, RUN_ONE);
+    const symphony = source("Kansas City Symphony", { urls: ["https://www.kcsymphony.org/concerts/"] });
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([listed, existing]), {
+      sources: [symphony],
+      pages: { [symphony.urls[0]!]: PAGE },
+      completions: [reply(candidateAt(symphony, { title: "Interstellar Live", startDate: "2026-10-23", startTime: null, venue: null, venueEvidence: null }))],
+      config,
+    });
+
+    expect(report.counts).toMatchObject({ new: 0, found: 1, venuelessAmbiguous: 0 });
+    // The twin took the sighting, then folded into the one event left on its date.
+    expect(byId(dataset).get(existing.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: listed.id });
+    expect(dataset.events).toHaveLength(2);
+  });
+
+  it("a venue-less sighting fitting two events on other hosts creates nothing, and the report counts it", async () => {
+    const bars = [event("Open Mic", "Bar A", "https://bara.test/", "2026-10-14"), event("Open Mic", "Bar B", "https://barb.test/", "2026-10-14")];
+    const listings = source("Listings", { urls: ["https://listings.test/calendar"] });
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents(bars), {
+      sources: [listings],
+      pages: { [listings.urls[0]!]: PAGE },
+      completions: [reply(candidateAt(listings, { title: "Open Mic", startDate: "2026-10-14", startTime: null, venue: null, venueEvidence: null }))],
+      config,
+    });
+
+    expect(dataset.events.map((e) => e.id)).toEqual(bars.map((e) => e.id));
+    expect(report.counts).toMatchObject({ new: 0, found: 0, venuelessAmbiguous: 1 });
+    expect(renderReportMarkdown(report)).toContain("| Not created: a venue-less sighting fitting more than one known event | 1 |");
+  });
+});
+
+describe("one title listed twice on one page (#77)", () => {
+  const WINECO = "https://www.kcwineco.com/events/upcoming-events";
+  const wineco = source("KC Wine Co", { urls: [WINECO] });
+  const pianos = (startDate: string, overrides: Record<string, unknown> = {}) =>
+    candidateAt(wineco, { title: "Dueling Pianos (FREE Show)", startDate, startTime: "17:30", dateEvidence: `${startDate} 5:30 PM`, ...overrides });
+  const nov7 = () => event("Dueling Pianos (FREE Show)", "KC Wine Co", WINECO, "2026-11-07T17:30:00-06:00");
+
+  it("makes two records when the page lists a title on two dates outside the fuzzy window", async () => {
+    const { dataset, report } = await runWith(WEEK_1, emptyDataset(), {
+      sources: [wineco],
+      pages: { [WINECO]: PAGE },
+      completions: [reply(pianos("2026-11-07"), pianos("2026-11-27"), pianos("2026-11-08"))],
+      config,
+    });
+
+    expect(dataset.events.map((e) => [e.start, e.status])).toEqual([
+      ["2026-11-07T17:30:00-06:00", "active"],
+      ["2026-11-27T17:30:00-06:00", "active"],
+    ]);
+    expect(report.counts).toMatchObject({ new: 2, found: 2, expired: { duplicate: 0 } });
+  });
+
+  it("cancels only the record whose date is inside the window of the cancelled listing", async () => {
+    const first = await runWith(WEEK_1, emptyDataset(), { sources: [wineco], pages: { [WINECO]: PAGE }, completions: [reply(pianos("2026-11-07"), pianos("2026-11-27"))], config });
+
+    const second = await runWith(WEEK_2, first.dataset, {
+      sources: [wineco],
+      pages: { [WINECO]: PAGE },
+      completions: [reply(pianos("2026-11-07"), pianos("2026-11-27", { notice: "cancelled" }))],
+      config,
+    });
+
+    expect(second.dataset.events.map((e) => [e.start?.slice(0, 10), e.status])).toEqual([
+      ["2026-11-07", "active"],
+      ["2026-11-27", "expired"],
+    ]);
+    expect(second.report.counts.expired.cancelled).toBe(1);
+  });
+
+  it("leaves the known night alone when the page cancels another night of the same title", async () => {
+    const known = nov7();
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([known]), {
+      sources: [wineco],
+      pages: { [WINECO]: PAGE },
+      completions: [reply(pianos("2026-11-07"), pianos("2026-11-27", { notice: "cancelled" }))],
+      config,
+    });
+
+    expect(dataset.events).toEqual([expect.objectContaining({ id: known.id, status: "active", start: "2026-11-07T17:30:00-06:00" })]);
+    expect(report.counts).toMatchObject({ new: 0, expired: { cancelled: 0 } });
+  });
+
+  it("still takes a page that now lists the title only on another date as a date move", async () => {
+    const known = nov7();
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([known]), { sources: [wineco], pages: { [WINECO]: PAGE }, completions: [reply(pianos("2026-11-27"))], config });
+
+    expect(dataset.events).toEqual([expect.objectContaining({ id: known.id, status: "active", start: "2026-11-27T17:30:00-06:00" })]);
+    expect(report.counts).toMatchObject({ new: 0, updated: 1 });
+  });
+
+  describe("on re-verification", () => {
+    /** The known night, found by discovery, so no registry source lists its page: re-verification reads it. */
+    const found = () => ({ ...nov7(), lead: { lane: "discovery" as const, query: "food and drink" } });
+    const reverifying = (dataset: Dataset, ...listed: unknown[]) =>
+      runWith(WEEK_1, dataset, { sources: [knuckleheads], pages: { [knuckleheads.urls[0]!]: PAGE, [WINECO]: PAGE }, completions: [reply(), reply(...listed)], config });
+
+    it("takes the listing on the event's own night when the page lists the title twice, and lets a far night's cancellation pass", async () => {
+      const known = found();
+
+      const { dataset, report } = await reverifying(withEvents([known]), pianos("2026-11-27", { notice: "cancelled" }), pianos("2026-11-07"));
+
+      expect(dataset.events).toEqual([expect.objectContaining({ id: known.id, status: "active", start: "2026-11-07T17:30:00-06:00", verificationFailures: 0 })]);
+      expect(report.counts).toMatchObject({ reverified: 1, expired: { cancelled: 0 } });
+    });
+
+    it("strikes the event when the page lists its title only as another night, cancelled", async () => {
+      const known = found();
+
+      const { dataset } = await reverifying(withEvents([known]), pianos("2026-11-27", { notice: "cancelled" }));
+
+      expect(dataset.events).toEqual([expect.objectContaining({ id: known.id, status: "active", start: "2026-11-07T17:30:00-06:00", verificationFailures: 1 })]);
+    });
+  });
+});
+
+describe("a sighting of a record folded as a duplicate (#77)", () => {
+  const kept = () => event("Interstellar Live", "Kauffman Center for the Performing Arts", KAUFFMAN, "2026-10-23");
+  const folded = (into: Event | undefined) =>
+    event("Interstellar Live", "Helzberg Hall", SYMPHONY, "2026-10-23", {
+      firstSeen: RUN_TWO,
+      status: "expired",
+      expiryReason: "duplicate",
+      ...(into ? { duplicateOf: into.id } : {}),
+    });
+  const symphony = source("Kansas City Symphony", { urls: [SYMPHONY] });
+  // A venue no alias joins to the Kauffman Center: only the duplicate's page and title match this sighting.
+  const listing = () => candidateAt(symphony, { title: "Interstellar Live", startDate: "2026-10-23", startTime: null, venue: "Symphony Hall", venueEvidence: "Symphony Hall" });
+
+  it("goes to the record it was folded into, which takes the reading; the duplicate stays folded", async () => {
+    const [into, duplicate] = [kept(), folded(undefined)];
+    const pointed = { ...duplicate, duplicateOf: into.id };
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([into, pointed]), { sources: [symphony], pages: { [SYMPHONY]: PAGE }, completions: [reply(listing())], config });
+
+    expect(dataset.events).toHaveLength(2);
+    expect(byId(dataset).get(into.id)).toMatchObject({ status: "active", primaryUrl: SYMPHONY, venue: "Symphony Hall" });
+    expect(byId(dataset).get(pointed.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: into.id });
+    expect(report.counts).toMatchObject({ new: 0, found: 1, updated: 1 });
+  });
+
+  it("starts a record when the duplicate was folded before the pointer was kept, as before", async () => {
+    const [into, legacy] = [kept(), folded(undefined)];
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([into, legacy]), { sources: [symphony], pages: { [SYMPHONY]: PAGE }, completions: [reply(listing())], config });
+
+    expect(dataset.events).toHaveLength(3);
+    expect(report.counts).toMatchObject({ new: 1 });
+  });
+});
+
+describe("a dated sighting that is one month of a recurring event (#77)", () => {
+  const museum = source("National WWI Museum and Memorial", { kind: "other", neighborhood: "Crossroads", urls: [WWI] });
+  const VENUE = "National WWI Museum and Memorial";
+  const standing = (overrides: Partial<Event> = {}): Event => {
+    const { start: _start, ...e } = event("Main Gallery Tours", VENUE, WWI, "2026-10-05", {
+      recurrence: "recurring",
+      schedule: "Monday, Friday-Saturday, Select times",
+      verificationFailures: 1,
+      ...overrides,
+    });
+    return { ...e, evidence: { date: "Monday, Friday-Saturday Select times", venue: VENUE } };
+  };
+  const month = (overrides: Record<string, unknown> = {}) =>
+    candidateAt(museum, { title: "Main Gallery Tours (Oct. 2026)", startDate: "2026-10-09", startTime: null, endDate: "2026-10-10", endTime: null, dateEvidence: "Oct 9-10", venueEvidence: VENUE, ...overrides });
+
+  it("confirms the recurring event, clearing its strike, without a record of the month or a new reading", async () => {
+    const recurring = standing();
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([recurring]), { sources: [museum], pages: { [WWI]: PAGE }, completions: [reply(month())], config });
+
+    expect(dataset.events).toEqual([expect.objectContaining({ id: recurring.id, status: "active", recurrence: "recurring", title: "Main Gallery Tours", schedule: recurring.schedule, verificationFailures: 0 })]);
+    expect(report.counts).toMatchObject({ new: 0, found: 1, updated: 0, expired: { duplicate: 0 } });
+  });
+
+  it("cannot cancel the recurring event: a cancelled month is no listing of the standing event, so the page strikes it", async () => {
+    const recurring = standing({ verificationFailures: 0 });
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([recurring]), { sources: [museum], pages: { [WWI]: PAGE }, completions: [reply(month({ notice: "cancelled" }))], config });
+
+    expect(dataset.events).toEqual([expect.objectContaining({ id: recurring.id, status: "active", recurrence: "recurring", verificationFailures: 1 })]);
+    expect(report.counts).toMatchObject({ new: 0, found: 0, expired: { cancelled: 0 } });
+    expect(report.cancellationsFromElsewhere).toEqual([]);
+  });
+
+  it("confirms the recurring event on re-verification too, keeping it recurring", async () => {
+    const recurring = standing({ lead: { lane: "discovery", query: "museum tours" } });
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([recurring]), {
+      sources: [knuckleheads],
+      pages: { [knuckleheads.urls[0]!]: PAGE, [WWI]: PAGE },
+      completions: [reply(), reply(month())],
+      config,
+    });
+
+    expect(dataset.events).toEqual([expect.objectContaining({ id: recurring.id, status: "active", recurrence: "recurring", schedule: recurring.schedule, verificationFailures: 0 })]);
+    expect(report.counts).toMatchObject({ new: 0, reverified: 0, expired: { "two-strike": 0 } });
   });
 });

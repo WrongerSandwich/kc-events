@@ -15,7 +15,7 @@ The `events.json` the site publishes alongside its HTML. It is the interface bet
 _Avoid_: database, feed, API
 
 **Primary page**:
-The page on the event's own web presence (venue calendar, promoter page, organizer site) from which its date and venue were read. Verification and identity hang on it.
+The page on the event's own web presence (venue calendar, promoter page, organizer site) from which its date and venue were read. Verification and identity hang on it. It is the same page whichever way its URL is written (with or without `www.`, http or https, a trailing slash or a fragment); a query string makes another page.
 _Avoid_: official page, canonical URL, source page
 
 **Site**:
@@ -62,7 +62,7 @@ The category of an event, from a fixed taxonomy.
 _Avoid_: type, category, genre
 
 **Status**:
-Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, `index-page` (its primary page was an index page), or `duplicate` (another record turned out to be the same event and was seen first, or is the recurring event this one is one month of). A postponement with a new date is a date change, not an expiry.
+Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, `index-page` (its primary page was an index page), or `duplicate` (another record turned out to be the same event and was seen first, or is the recurring event this one is one month of). A duplicate names the record it was folded into (`duplicateOf`) and stands for it: a sighting that matches the duplicate is a sighting of that record. A postponement with a new date is a date change, not an expiry.
 
 **Last-verified**:
 The date of the most recent run that read the event's date and venue from its primary page. Shown on every published event.

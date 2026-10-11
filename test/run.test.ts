@@ -46,6 +46,7 @@ describe("run", () => {
       beyondHorizonUnstruck: 0,
       unverifiedByOutageLimit: 0,
       unverifiedByUncitableReading: 0,
+      venuelessAmbiguous: 0,
       outsideGeography: 0,
       overCap: 0,
       unusableDates: 0,

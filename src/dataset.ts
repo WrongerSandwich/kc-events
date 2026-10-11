@@ -60,6 +60,8 @@ const eventFields = z.strictObject({
   status: z.enum(EVENT_STATUSES),
   /** Present exactly when the event is expired. */
   expiryReason: z.enum(EXPIRY_REASONS).optional(),
+  /** For an event expired as duplicate: the id of the record it was folded into, which its sightings count for (#77). Absent on a duplicate folded before the pointer was kept. */
+  duplicateOf: z.string().min(1).optional(),
   verificationFailures: z.number().int().nonnegative(),
   /** Consecutive runs in which the event's primary page could not be loaded; absent in datasets older than the field. */
   consecutiveOutages: z.number().int().nonnegative().default(0),
@@ -114,6 +116,9 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     })
     .refine((e) => (e.status === "expired") === (e.expiryReason !== undefined), {
       message: "an expired event has an expiryReason; no other event has one",
+    })
+    .refine((e) => e.duplicateOf === undefined || e.expiryReason === "duplicate", {
+      message: "only an event expired as duplicate names the record it was folded into",
     })
     .refine((e) => e.eventUrl === undefined || ownPageAllowed(e.eventUrl, e.primaryUrl, platformHosts), {
       message: "an event's own page is on its primary page's site or a ticketing platform",

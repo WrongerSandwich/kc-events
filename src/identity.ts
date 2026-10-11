@@ -2,11 +2,14 @@
  * Event identity (ADR 0007): an event is its primary page plus its normalized title; failing
  * that, the same normalized title (or one cut short, or on the same date one with a series name in
  * front) at the same venue on a date within a few days, or, for a sighting that names no venue, on
- * the same date when only one known event qualifies. Ids are opaque and fixed at first-seen;
- * matching never looks at them.
+ * the same date the one known event that qualifies, or the one preferred among several; failing all
+ * of that, a dated sighting may be one month of a recurring event on the same page. Ids are opaque
+ * and fixed at first-seen; matching never compares them, and only follows one as a pointer from a
+ * record folded as a duplicate to the record it was folded into.
  */
 
-import type { EventStatus } from "./dataset.js";
+import type { EventStatus, RecurrenceClass } from "./dataset.js";
+import { hostOf, samePage } from "./hosts.js";
 
 /** How far apart two dates can be and still be the same event under the fuzzy match. */
 const FUZZY_DATE_WINDOW_DAYS = 3;
@@ -38,34 +41,91 @@ export interface EventIdentity {
   venue?: string;
   /** ISO date or date-time; its local calendar date is what the fuzzy match compares. */
   start?: string;
-  /** An expired known event is no candidate when a venue-less sighting needs exactly one. */
+  /** An expired known event is no candidate for a venue-less sighting. */
   status?: EventStatus;
+  /** The event's own page, when its primary page links one: a tie-breaker for a venue-less sighting. */
+  eventUrl?: string;
+  /** A recurring event has no date; a dated sighting may be one month of it. */
+  recurrence?: RecurrenceClass;
+  id?: string;
+  /** The id of the record this one was folded into as a duplicate; a match on this record is a match on that one. */
+  duplicateOf?: string;
+}
+
+/** Which rule matched a sighting to a known event. */
+export type MatchRule = "page-and-title" | "fuzzy" | "venueless" | "month";
+
+export interface Match<T> {
+  /** The known event the sighting is, when one is. */
+  event?: T;
+  rule?: MatchRule;
+  /** A venue-less sighting that fits two or more known events with none preferred: nothing can say which. */
+  ambiguous: boolean;
 }
 
 /**
- * The known event a sighting is, if any: an exact match on primary page and title first,
- * then the fuzzy match on title, venue, and nearby date, then for a sighting with no venue the one
- * known event, not expired, with its title on its date.
+ * The known event a sighting is, if any, and by which rule: the match on primary page and title
+ * first (among several such records, the one whose date is nearest), then the fuzzy match on
+ * title, venue, and nearby date, then for a sighting with no venue the known event with its title
+ * on its date, then a recurring event the sighting is one month of. A match on a record folded as a
+ * duplicate is a match on the record it was folded into, as far as that chain goes within `known`.
  */
+export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases): Match<T> {
+  const onPage = known.filter((k) => samePageAndTitle(sighting, k));
+  const direct = onPage.reduce<T | undefined>((nearest, k) => (nearest === undefined || daysApart(sighting, k) < daysApart(sighting, nearest) ? k : nearest), undefined);
+  if (direct) return followed(direct, "page-and-title", known);
+  const fuzzy = known.find((k) => sameEventFuzzily(sighting, k, aliases));
+  if (fuzzy) return followed(fuzzy, "fuzzy", known);
+  const venueless = candidateForVenueless(sighting, known);
+  if (venueless.event) return { event: venueless.event, rule: "venueless", ambiguous: false };
+  const month = known.find((k) => k.recurrence === "recurring" && k.status !== "expired" && oneMonthOf(sighting, k));
+  if (month) return { event: month, rule: "month", ambiguous: false };
+  return { ambiguous: venueless.ambiguous };
+}
+
+/** The known event a sighting is, if any; see matchSighting. */
 export function findMatch<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases): T | undefined {
-  return (
-    known.find((k) => sameEventExactly(sighting, k)) ??
-    known.find((k) => sameEventFuzzily(sighting, k, aliases)) ??
-    onlyCandidateForVenueless(sighting, known)
-  );
+  return matchSighting(sighting, known, aliases).event;
+}
+
+/** The match, taken through any chain of duplicate pointers to the record kept; none when the chain leaves `known`. */
+function followed<T extends EventIdentity>(matched: T, rule: MatchRule, known: readonly T[]): Match<T> {
+  const seen = new Set<T>();
+  let kept: T | undefined = matched;
+  while (kept !== undefined && kept.duplicateOf !== undefined && !seen.has(kept)) {
+    seen.add(kept);
+    const id: string = kept.duplicateOf;
+    kept = known.find((k) => k.id === id);
+  }
+  // A chain that leaves the known events, or that loops, points at no record.
+  return kept === undefined || kept.duplicateOf !== undefined ? { ambiguous: false } : { event: kept, rule, ambiguous: false };
 }
 
 /**
- * Whether two records in the dataset are the same event under the rules findMatch applies to a
- * sighting, either way round; `live` is every record not expired, for the venue-less rule's count.
+ * Whether two records in the dataset are the same event under the rules matchSighting applies to a
+ * sighting, either way round, but for the month rule, which folds on its own terms (see
+ * foldDuplicates in run); `live` is every record not expired, for the venue-less rule's count.
+ * Two records on one page with one title are the same event only when their dates are near: a
+ * page that lists a title twice, weeks apart, lists two shows.
  */
 export function sameEvent(a: EventIdentity, b: EventIdentity, live: readonly EventIdentity[], aliases: VenueAliases): boolean {
   return (
-    sameEventExactly(a, b) ||
+    (samePageAndTitle(a, b) && nearDates(a, b)) ||
     sameEventFuzzily(a, b, aliases) ||
-    onlyCandidateForVenueless(a, live) === b ||
-    onlyCandidateForVenueless(b, live) === a
+    venuelessTwins(a, b) ||
+    candidateForVenueless(a, live).event === b ||
+    candidateForVenueless(b, live).event === a
   );
+}
+
+/**
+ * Two venue-less records on one host with one title on one calendar date (#77): the host listed the
+ * event twice, naming no venue either time, so they are two readings of one listing. Without this,
+ * three such twins would each have two preferred candidates and none would ever fold.
+ */
+function venuelessTwins(a: EventIdentity, b: EventIdentity): boolean {
+  if (a.venue !== undefined || b.venue !== undefined || a.start === undefined) return false;
+  return calendarDate(a.start) === calendarDate(b.start) && onSameHost(a, b) && (sameOrShortenedTitle(a.title, b.title) || sameTitleWithSeries(a.title, b.title));
 }
 
 /**
@@ -82,7 +142,7 @@ const MONTH_TAG = /\s*\(\s*(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|m
  * reading may still give one month as a dated event.
  */
 export function oneMonthOf(dated: EventIdentity, recurring: EventIdentity): boolean {
-  if (dated.primaryUrl !== recurring.primaryUrl) return false;
+  if (!samePage(dated.primaryUrl, recurring.primaryUrl)) return false;
   const untagged = dated.title.replace(MONTH_TAG, "");
   return untagged !== dated.title && sameName(untagged, recurring.title);
 }
@@ -91,21 +151,30 @@ export function oneMonthOf(dated: EventIdentity, recurring: EventIdentity): bool
  * Two venue names are one venue when they normalize alike, when one contains the other at word
  * boundaries ("The Midland" in "The Midland Theatre - MO"), when they are the same words in another
  * order ("New American Royal Campus" is "American Royal New Campus"), or when the alias list names
- * both under one venue, by the same three rules ("Bartle Exhibit Hall (A – E)" is "Bartle Exhibit
- * Hall").
+ * both under one venue (see aliasName).
  */
 export function sameVenue(a: string, b: string, aliases: VenueAliases): boolean {
   const [x, y] = [normalizeName(a), normalizeName(b)];
   if (oneVenueName(x, y)) return true;
   return Object.entries(aliases).some(([venue, names]) => {
     const group = [venue, ...names].map(normalizeName);
-    return group.some((n) => oneVenueName(x, n)) && group.some((n) => oneVenueName(y, n));
+    return group.some((n) => aliasName(x, n)) && group.some((n) => aliasName(y, n));
   });
 }
 
 /** Two normalized venue names that are one venue under any of sameVenue's three rules. */
 function oneVenueName(a: string, b: string): boolean {
   return sameOrContained(a, b) || sameWordsReordered(a, b);
+}
+
+/**
+ * Whether a normalized venue name goes by an alias entry: the same name, the same words in another
+ * order, or the entry with a label added ("Bartle Exhibit Hall (A – E)" for "Bartle Exhibit Hall").
+ * Never a name shorter than the entry, though contained in it (#77): "Kansas City" would be every
+ * entry that starts with it. A short form in use ("Kauffman Center") is an entry of its own.
+ */
+function aliasName(name: string, entry: string): boolean {
+  return name === entry || sameWordsReordered(name, entry) || (name.length > entry.length && sameOrContained(entry, name));
 }
 
 function sameOrContained(a: string, b: string): boolean {
@@ -124,8 +193,9 @@ function sameWordsReordered(a: string, b: string): boolean {
   return x.join(" ") === y.join(" ");
 }
 
-function sameEventExactly(a: EventIdentity, b: EventIdentity): boolean {
-  return a.primaryUrl === b.primaryUrl && sameName(a.title, b.title);
+/** The same primary page, whichever way its URL is written, and the same title; the date is not looked at. */
+function samePageAndTitle(a: EventIdentity, b: EventIdentity): boolean {
+  return samePage(a.primaryUrl, b.primaryUrl) && sameName(a.title, b.title);
 }
 
 /** Where a series name in front of a title ends: a bar, a colon, a dash, or a spaced hyphen. */
@@ -176,6 +246,21 @@ function calendarDate(iso: string | undefined): string | undefined {
   return iso?.slice(0, 10);
 }
 
+/** Whole days between two events' calendar dates; none when either has no date, which is as near as can be. */
+function daysApart(a: EventIdentity, b: EventIdentity): number {
+  const [x, y] = [calendarDate(a.start), calendarDate(b.start)];
+  if (x === undefined || y === undefined) return 0;
+  return Math.abs(Date.parse(x) - Date.parse(y)) / DAY_MS;
+}
+
+/**
+ * Whether two events' dates are within the fuzzy window of each other, or either has none. Two
+ * dates apart by more are two occurrences: the same show on another night, not a date that moved.
+ */
+export function nearDates(a: EventIdentity, b: EventIdentity): boolean {
+  return daysApart(a, b) <= FUZZY_DATE_WINDOW_DAYS;
+}
+
 /**
  * A nearby date, the same or shortened title (or, on the same date, that title with a series name in
  * front), and the same venue. Dates are compared first, as the cheapest test: folding compares every
@@ -184,7 +269,7 @@ function calendarDate(iso: string | undefined): string | undefined {
 function sameEventFuzzily(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
   if (a.venue === undefined || b.venue === undefined || a.start === undefined || b.start === undefined) return false;
   return (
-    Math.abs(Date.parse(calendarDate(a.start)!) - Date.parse(calendarDate(b.start)!)) <= FUZZY_DATE_WINDOW_DAYS * DAY_MS &&
+    nearDates(a, b) &&
     (sameOrShortenedTitle(a.title, b.title) || (calendarDate(a.start) === calendarDate(b.start) && sameTitleWithSeries(a.title, b.title))) &&
     sameVenue(a.venue, b.venue, aliases)
   );
@@ -192,15 +277,34 @@ function sameEventFuzzily(a: EventIdentity, b: EventIdentity, aliases: VenueAlia
 
 /**
  * For a sighting that names no venue, the known event with the same or shortened title, with or
- * without a series name in front, on the same calendar date, when it is the only one not expired; with two or more, nothing can say which. A
- * recurring event has no date, so it never qualifies; the sighting itself, when it is a record among
- * the known, is no candidate either.
+ * without a series name in front, on the same calendar date, not expired. With one such event, it is
+ * the match. With two or more, the one on the sighting's host is preferred, then the one whose own
+ * page is the sighting's (#77): a program's calendar and its venue's list the same concert, and the
+ * venue-less twin the program's page made last week is on the program's host. Where neither narrows
+ * it to one, nothing can say which: the sighting is ambiguous. A recurring event has no date, so it
+ * never qualifies; the sighting itself, when it is a record among the known, is no candidate either.
  */
-function onlyCandidateForVenueless<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[]): T | undefined {
+function candidateForVenueless<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[]): { event?: T; ambiguous: boolean } {
   const date = calendarDate(sighting.start);
-  if (sighting.venue !== undefined || date === undefined) return undefined;
+  if (sighting.venue !== undefined || date === undefined) return { ambiguous: false };
   const candidates = known.filter(
     (k) => k !== sighting && k.status !== "expired" && calendarDate(k.start) === date && (sameOrShortenedTitle(sighting.title, k.title) || sameTitleWithSeries(sighting.title, k.title)),
   );
-  return candidates.length === 1 ? candidates[0] : undefined;
+  let pool = candidates;
+  for (const prefer of [onSameHost, sameOwnPage]) {
+    if (pool.length <= 1) break;
+    const narrowed = pool.filter((k) => prefer(sighting, k));
+    if (narrowed.length > 0) pool = narrowed;
+  }
+  if (pool.length === 1) return { event: pool[0]!, ambiguous: false };
+  return { ambiguous: candidates.length > 1 };
+}
+
+function onSameHost(a: EventIdentity, b: EventIdentity): boolean {
+  const host = hostOf(a.primaryUrl);
+  return host !== undefined && host === hostOf(b.primaryUrl);
+}
+
+function sameOwnPage(a: EventIdentity, b: EventIdentity): boolean {
+  return a.eventUrl !== undefined && b.eventUrl !== undefined && samePage(a.eventUrl, b.eventUrl);
 }
