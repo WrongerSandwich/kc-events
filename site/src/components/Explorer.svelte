@@ -151,9 +151,10 @@
         <p class="empty">No events to show right now.</p>
       {/if}
     {/if}
-    {#snippet rows(events: typeof groups[number]["events"], withDay: boolean)}
-      {#each events as event (event.id)}
-        <ResultRow {event} {today} {withDay} />
+    <!-- A row carries its day where no day heading does: the venue sort, and the saved view's passed saves. -->
+    {#snippet rows(g: typeof groups[number])}
+      {#each g.events as event (event.id)}
+        <ResultRow {event} {today} withDay={filters.sort === "venue" || g.key === PASSED_GROUP} />
       {/each}
     {/snippet}
     {#each groups as g (g.key)}
@@ -161,11 +162,11 @@
         <!-- A native disclosure, so it opens without JS and announces its state; closed, it is one line. -->
         <details class="collapsed">
           <summary><h2 class="heading">{g.heading}</h2> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
-          {@render rows(g.events, filters.sort === "venue" || g.key === PASSED_GROUP)}
+          {@render rows(g)}
         </details>
       {:else}
         <h2 class={`section-heading group${filters.sort === "venue" ? " venue" : ""}`}>{g.heading}</h2>
-        {@render rows(g.events, filters.sort === "venue" || g.key === PASSED_GROUP)}
+        {@render rows(g)}
       {/if}
     {/each}
   </section>

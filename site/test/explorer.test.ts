@@ -300,7 +300,7 @@ describe("Explorer", () => {
     const { default: source } = await import("../src/components/Explorer.svelte?raw");
     const { warnings } = compile(source, { filename: "Explorer.svelte" });
     expect(warnings.map((w) => w.code)).toEqual([]);
-  });
+  }, 20_000); // loading the compiler takes seconds when the whole suite runs at once
 
   it("leads with search, then a link that skips the filters to the results", () => {
     const { container } = render(Explorer);

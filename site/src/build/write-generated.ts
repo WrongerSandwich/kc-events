@@ -2,7 +2,8 @@
  * Writes meta.ts, events.ts, dont-miss.ts, descriptions.ts, and about.ts for the pages and islands to import (five
  * modules so each island ships only what it renders; descriptions go to the event page alone, and what the site says
  * about the job to the Astro pages), and events.json in the public directory: the published events with their
- * descriptions, never the job's raw file, whose evidence, leads, counters, and held-back records stay in git. Paths and the clock are parameters so a test can write somewhere else.
+ * descriptions, never the job's raw file, whose evidence, leads, counters, and held-back records stay in git. Paths and
+ * the clock are parameters so a test can write somewhere else.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";

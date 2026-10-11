@@ -55,7 +55,7 @@ export type PublishedAbout = {
   crawler: string;
   /** The job's user agent, verbatim. */
   userAgent: string;
-  /** research.config.yaml's geography: "Kansas City metro on both sides of the state line, plus Lawrence". */
+  /** research.config.yaml's `geography`, the footer's one sentence about where the list covers. */
   geography: string;
 };
 

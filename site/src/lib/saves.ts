@@ -8,6 +8,8 @@ type StorageLike = Pick<Storage, "getItem" | "setItem">;
 export type Saved = { id: string; last?: string };
 /** The saves keyed by id; the value is the event's last day. */
 export type SavedMap = ReadonlyMap<string, string | undefined>;
+/** Events' last days by id, as the dataset has them (undefined for a recurring event). */
+export type LastDays = ReadonlyMap<string, string | undefined>;
 
 export type Saves = {
   list(): string[];
@@ -18,7 +20,7 @@ export type Saves = {
    * Brings each save's last day up to the dataset's (a date can move between runs; a migrated save has none). Ids the
    * dataset does not have keep what they were saved with.
    */
-  refresh(lastDays: SavedMap): void;
+  refresh(lastDays: LastDays): void;
   /** Re-reads storage: another tab changed it. */
   reload(): void;
   /** Calls fn now and after every change; returns an unsubscribe. Shaped so Svelte can read it as $saves. */

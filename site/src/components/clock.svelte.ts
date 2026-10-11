@@ -3,7 +3,7 @@ import { meta } from "../generated/meta";
 import { localDate, nowIn } from "../lib/dates";
 
 /**
- * The visitor's clock, one for every island on the page: read when the first island mounts and again whenever the tab
+ * The visitor's clock, one for every island on the page: read as each island mounts and again whenever the tab
  * comes back into view, so a page left open overnight catches up. No timer.
  */
 let now = $state<string | undefined>(undefined);
