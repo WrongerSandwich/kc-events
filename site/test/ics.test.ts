@@ -28,8 +28,13 @@ describe("toIcs", () => {
     expect(toIcs([event({ start: "2026-10-09" })], opts)).toBe(fixture("all-day"));
   });
 
-  it("drops to all-day when the end is a date and the start a time", () => {
-    expect(toIcs([event({ start: "2026-10-02T18:00:00-05:00", end: "2026-10-03" })], opts)).toBe(fixture("mixed"));
+  it("keeps a one-off's start time when its end is a date: two hours from the start, the last day in the notes (#90)", () => {
+    expect(toIcs([event({ start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" })], opts)).toBe(fixture("timed-through"));
+  });
+
+  it("writes a run with a timed start and a date end as all-day, since two hours of a month-long run says nothing", () => {
+    const unfolded = toIcs([event({ recurrence: "limited-run", start: "2026-10-02T18:00:00-05:00", end: "2026-10-31" })], opts).replace(/\r\n[ \t]/g, "");
+    expect(unfolded).toContain("DTSTART;VALUE=DATE:20261002\r\nDTEND;VALUE=DATE:20261101\r\n");
   });
 
   it("writes a start-less run as its last day", () => {

@@ -1,4 +1,4 @@
-import { addDays, formatShort, isDateOnly, localDate } from "./dates";
+import { addDays, formatDay, formatShort, isDateOnly, localDate } from "./dates";
 import { firstDay, isDated, lastDay, detailsUrl } from "./events";
 import type { PublishedEvent } from "./types";
 
@@ -47,12 +47,16 @@ function vevent(e: PublishedEvent, siteName: string, stamp: string): string[] {
     // A run read after it began: the one day we can stand behind is its last.
     lines.push(`DTSTART;VALUE=DATE:${dateStamp(last)}`, `DTEND;VALUE=DATE:${dateStamp(addDays(last, 1))}`);
     notes.push("Last day.");
-  } else if (isDateOnly(e.start!) || (e.end !== undefined && isDateOnly(e.end))) {
-    // Any date-only side makes the whole event all-day; a date end is exclusive.
+  } else if (isDateOnly(e.start!) || (e.end !== undefined && isDateOnly(e.end) && e.recurrence === "limited-run")) {
+    // A date-only start, or a run's date end, makes the whole event all-day; a date end is exclusive.
     lines.push(`DTSTART;VALUE=DATE:${dateStamp(first)}`, `DTEND;VALUE=DATE:${dateStamp(addDays(last, 1))}`);
   } else {
-    const end = e.end ?? new Date(new Date(e.start!).getTime() + 2 * 3_600_000).toISOString();
+    // A one-off's date-only end does not say when it ends (#90): it keeps its start time, with the two-hour
+    // placeholder an end-less event gets, and its last day goes in the notes.
+    const timedEnd = e.end !== undefined && !isDateOnly(e.end) ? e.end : undefined;
+    const end = timedEnd ?? new Date(new Date(e.start!).getTime() + 2 * 3_600_000).toISOString();
     lines.push(`DTSTART:${utcStamp(e.start!)}`, `DTEND:${utcStamp(end)}`);
+    if (e.end !== undefined && timedEnd === undefined) notes.push(`Through ${formatDay(last)}.`);
   }
 
   lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.neighborhood}`)}`, `URL:${detailsUrl(e)}`);
