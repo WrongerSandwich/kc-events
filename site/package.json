@@ -15,9 +15,9 @@
     "build:e2e": "SITE_TODAY=2026-10-05 SITE_DATASET=e2e/fixtures/events.json SITE_OUT_DIR=dist-e2e pnpm generate-and-build",
     "preview": "astro preview",
     "preview:e2e": "SITE_OUT_DIR=dist-e2e astro preview --port 4321 --ignore-lock",
-    "typecheck": "pnpm generate && astro check",
-    "test": "pnpm generate && vitest run",
-    "test:coverage": "pnpm generate && vitest run --coverage",
+    "typecheck": "SITE_TODAY=last-run pnpm generate && astro check",
+    "test": "SITE_TODAY=last-run pnpm generate && vitest run",
+    "test:coverage": "SITE_TODAY=last-run pnpm generate && vitest run --coverage",
     "test:e2e": "playwright test"
   },
   "dependencies": {

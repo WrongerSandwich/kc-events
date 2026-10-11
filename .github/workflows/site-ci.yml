@@ -37,7 +37,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r typecheck
+      # Built as of the last run's day, as the tests generate it, so the built-output tests read the same events on any day.
       - run: pnpm --filter kc-events-site build
+        env:
+          SITE_TODAY: last-run
       - run: pnpm --filter kc-events-site build:e2e
       - run: pnpm --filter kc-events-site size
       # The tests, with coverage: reported for reading, with no threshold to fail on.

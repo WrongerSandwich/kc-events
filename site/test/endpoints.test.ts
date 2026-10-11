@@ -9,88 +9,92 @@ const dist = new URL("../dist/", import.meta.url);
 const has = (p: string) => existsSync(new URL(p, dist));
 const read = (p: string) => readFileSync(new URL(p, dist), "utf8");
 
-// The build in dist/ matches the generated modules when its llms.txt names the same run.
-const matchesGenerated = has("llms.txt") && read("llms.txt").includes(`Last run: ${meta.lastSuccessfulRun}.`);
+// The build in dist/ matches the generated modules when its llms.txt names the same run and the same count: a build
+// on another day than the tests' (SITE_TODAY=last-run) can leave out events that ended in between.
+const matchesGenerated = has("llms.txt") && read("llms.txt").includes(`Last run: ${meta.lastSuccessfulRun}. ${events.length} active events.`);
 
 it.runIf(process.env.CI !== undefined && !matchesGenerated)("has a build of the generated dataset to check (CI)", () => {
-  expect.fail("dist/ is missing or was built from another dataset; CI must run `pnpm build` before `pnpm test`");
+  expect.fail("dist/ is missing or was built from another dataset; CI must run `SITE_TODAY=last-run pnpm build` before `pnpm test`");
 });
 
-describe.skipIf(!matchesGenerated)("built output", () => {
-  it("emits a page and a calendar file per dated event, and none for anything else", () => {
-    const sample = events.find((e) => e.recurrence === "one-off")!;
-    expect(has(`e/${sample.id}.html`)).toBe(true);
-    expect(has(`e/${sample.id}.ics`)).toBe(true);
-    const recurring = events.find((e) => e.recurrence === "recurring");
-    if (recurring) expect(has(`e/${recurring.id}.ics`)).toBe(false);
-  });
+// What the build makes of the committed dataset: it needs a recurring event, a Lawrence one and a flag in it.
+describe("committed data", () => {
+  describe.skipIf(!matchesGenerated)("built output", () => {
+    it("emits a page and a calendar file per dated event, and none for anything else", () => {
+      const sample = events.find((e) => e.recurrence === "one-off")!;
+      expect(has(`e/${sample.id}.html`)).toBe(true);
+      expect(has(`e/${sample.id}.ics`)).toBe(true);
+      const recurring = events.find((e) => e.recurrence === "recurring");
+      if (recurring) expect(has(`e/${recurring.id}.ics`)).toBe(false);
+    });
 
-  it("publishes the projection, not the job's file", () => {
-    const published = JSON.parse(read("events.json"));
-    expect(published.lastSuccessfulRun).toBe(meta.lastSuccessfulRun);
-    expect(published.events.map((e: { id: string }) => e.id)).toEqual(events.map((e) => e.id));
-    expect(read("events.json")).not.toContain('"evidence"');
-  });
+    it("publishes the projection, not the job's file", () => {
+      const published = JSON.parse(read("events.json"));
+      expect(published.lastSuccessfulRun).toBe(meta.lastSuccessfulRun);
+      expect(published.events.map((e: { id: string }) => e.id)).toEqual(events.map((e) => e.id));
+      expect(read("events.json")).not.toContain('"evidence"');
+    });
 
-  it("writes llms.txt, robots.txt, the sitemap, and the 404", () => {
-    expect(read("llms.txt")).toContain("/events.json");
-    expect(read("robots.txt")).toContain("/sitemap.xml");
-    const sitemap = read("sitemap.xml");
-    expect(sitemap).toContain("<urlset");
-    expect(sitemap).toContain(`/e/${events[0]!.id}</loc><lastmod>${events[0]!.lastVerified}</lastmod>`);
-    const notFound = read("404.html");
-    expect(notFound).toContain("Nothing here");
-    expect(notFound).toContain('<meta name="robots" content="noindex">');
-    expect(notFound).not.toContain('rel="canonical"');
-  });
+    it("writes llms.txt, robots.txt, the sitemap, and the 404", () => {
+      expect(read("llms.txt")).toContain("/events.json");
+      expect(read("robots.txt")).toContain("/sitemap.xml");
+      const sitemap = read("sitemap.xml");
+      expect(sitemap).toContain("<urlset");
+      expect(sitemap).toContain(`/e/${events[0]!.id}</loc><lastmod>${events[0]!.lastVerified}</lastmod>`);
+      const notFound = read("404.html");
+      expect(notFound).toContain("Nothing here");
+      expect(notFound).toContain('<meta name="robots" content="noindex">');
+      expect(notFound).not.toContain('rel="canonical"');
+    });
 
-  it("carries Event JSON-LD and the share image on an event page", () => {
-    const sample = events.find((e) => e.dontMiss)!;
-    const html = read(`e/${sample.id}.html`);
-    expect(html).toContain('"@type":"Event"');
-    expect(html).toContain('"eventStatus":"https://schema.org/EventScheduled"');
-    expect(html).toContain('"addressCountry":"US"');
-    expect(html).toContain("/og.png");
-    expect(html).toContain('<meta property="og:image:width" content="1200">');
-    // Verified from the page linked above when the list is the event's own page, else from the list it was read from (#53).
-    expect(html).toMatch(/Date and venue verified .* from (the page linked above|<a [^>]*>the list at [^<]+<\/a>)\./);
-  });
+    it("carries Event JSON-LD and the share image on an event page", () => {
+      const sample = events.find((e) => e.dontMiss)!;
+      const html = read(`e/${sample.id}.html`);
+      expect(html).toContain('"@type":"Event"');
+      expect(html).toContain('"eventStatus":"https://schema.org/EventScheduled"');
+      expect(html).toContain('"addressCountry":"US"');
+      expect(html).toContain("/og.png");
+      expect(html).toContain('<meta property="og:image:width" content="1200">');
+      // Verified from the page linked above when the list is the event's own page, else from the list it was read from (#53).
+      expect(html).toMatch(/Date and venue verified .* from (the page linked above|<a [^>]*>the list at [^<]+<\/a>)\./);
+    });
 
-  it("declares the site, its search action, and the picks on the front page", () => {
-    const html = read("index.html");
-    expect(html).toContain('"@type":"WebSite"');
-    expect(html).toContain('"@type":"ItemList"');
-    expect(html).toContain("explore?q={search_term_string}");
-  });
+    it("declares the site, its search action, and the picks on the front page", () => {
+      const html = read("index.html");
+      expect(html).toContain('"@type":"WebSite"');
+      expect(html).toContain('"@type":"ItemList"');
+      expect(html).toContain("explore?q={search_term_string}");
+    });
 
-  it("gives a recurring event's page no Add to calendar link, and a dated one's page has it", () => {
-    const recurring = events.find((e) => e.recurrence === "recurring");
-    expect(recurring, "the committed dataset has a recurring event").toBeDefined();
-    expect(read(`e/${recurring!.id}.html`)).not.toContain("Add to calendar");
-    const dated = events.find((e) => e.recurrence === "one-off")!;
-    expect(read(`e/${dated.id}.html`)).toContain(`href="/e/${dated.id}.ics"`);
-  });
+    it("gives a recurring event's page no Add to calendar link, and a dated one's page has it", () => {
+      const recurring = events.find((e) => e.recurrence === "recurring");
+      expect(recurring, "the committed dataset has a recurring event").toBeDefined();
+      expect(read(`e/${recurring!.id}.html`)).not.toContain("Add to calendar");
+      const dated = events.find((e) => e.recurrence === "one-off")!;
+      expect(read(`e/${dated.id}.html`)).toContain(`href="/e/${dated.id}.ics"`);
+    });
 
-  it("names Lawrence once in a Lawrence event's location line", () => {
-    const lawrence = events.find((e) => e.region === "Lawrence" && e.neighborhood === "Lawrence");
-    expect(lawrence, "the committed dataset has an event whose neighborhood is Lawrence").toBeDefined();
-    const where = /<p class="where"[^>]*>([^<]*)<\/p>/.exec(read(`e/${lawrence!.id}.html`))![1]!;
-    expect(where).toBe(`${lawrence!.venue} · Lawrence`);
-  });
+    it("names Lawrence once in a Lawrence event's location line", () => {
+      const lawrence = events.find((e) => e.region === "Lawrence" && e.neighborhood === "Lawrence");
+      expect(lawrence, "the committed dataset has an event whose neighborhood is Lawrence").toBeDefined();
+      const where = /<p class="where"[^>]*>([^<]*)<\/p>/.exec(read(`e/${lawrence!.id}.html`))![1]!;
+      expect(where).toBe(`${lawrence!.venue} · Lawrence`);
+    });
 
-  it("gives pages extensionless canonical URLs that match the sitemap", () => {
-    const canonical = (p: string) => /rel="canonical" href="([^"]+)"/.exec(read(p))![1]!;
-    expect(canonical(`e/${events[0]!.id}.html`)).toMatch(new RegExp(`/e/${events[0]!.id}$`));
-    expect(canonical("index.html")).toMatch(/\/$/);
-    expect(canonical("about.html")).toMatch(/\/about$/);
-  });
-  it("links the ICO, the SVG, and the apple-touch-icon from every page, and serves the mark as /favicon.svg", () => {
-    expect(read("favicon.svg")).toBe(faviconSvg());
-    expect(has("apple-touch-icon.png")).toBe(true);
-    expect(has("favicon.ico")).toBe(true);
-    for (const page of ["index.html", "explore.html", "about.html", "404.html", `e/${events[0]!.id}.html`]) {
-      expect(read(page), page).toContain('<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/favicon.svg" type="image/svg+xml">');
-      expect(read(page), page).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">');
-    }
+    it("gives pages extensionless canonical URLs that match the sitemap", () => {
+      const canonical = (p: string) => /rel="canonical" href="([^"]+)"/.exec(read(p))![1]!;
+      expect(canonical(`e/${events[0]!.id}.html`)).toMatch(new RegExp(`/e/${events[0]!.id}$`));
+      expect(canonical("index.html")).toMatch(/\/$/);
+      expect(canonical("about.html")).toMatch(/\/about$/);
+    });
+    it("links the ICO, the SVG, and the apple-touch-icon from every page, and serves the mark as /favicon.svg", () => {
+      expect(read("favicon.svg")).toBe(faviconSvg());
+      expect(has("apple-touch-icon.png")).toBe(true);
+      expect(has("favicon.ico")).toBe(true);
+      for (const page of ["index.html", "explore.html", "about.html", "404.html", `e/${events[0]!.id}.html`]) {
+        expect(read(page), page).toContain('<link rel="icon" href="/favicon.ico" sizes="32x32"><link rel="icon" href="/favicon.svg" type="image/svg+xml">');
+        expect(read(page), page).toContain('<link rel="apple-touch-icon" href="/apple-touch-icon.png">');
+      }
+    });
   });
 });

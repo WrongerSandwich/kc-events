@@ -3,9 +3,22 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { loadPublished } from "../src/build/load-dataset";
 import { writeGenerated } from "../src/build/write-generated";
+
+// The one site test that reads the real clock: every other builds as of the run's day (SITE_TODAY=last-run), so a
+// dataset gone stale fails here, by name, and nowhere else.
+it("committed dataset is not stale", () => {
+  const datasetPath = fileURLToPath(new URL("../../data/events.json", import.meta.url));
+  const configPath = fileURLToPath(new URL("../../research.config.yaml", import.meta.url));
+  vi.stubEnv("SITE_TODAY", undefined);
+  try {
+    expect(() => loadPublished({ datasetPath, configPath }), "a build today would refuse data/events.json: has the weekly run missed?").not.toThrow();
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
 
 describe("the committed dataset through the site's loader", () => {
   const datasetPath = fileURLToPath(new URL("../../data/events.json", import.meta.url));
