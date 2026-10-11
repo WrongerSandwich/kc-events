@@ -42,7 +42,7 @@ describe("writeGenerated", () => {
     expect(exported(join(outDir, "descriptions.ts"))).toEqual({ evt_000000000002: "A three-piece playing their first record." });
     const published = JSON.parse(readFileSync(join(publicDir, "events.json"), "utf8"));
     expect(Object.keys(published)).toEqual(["schemaVersion", "generatedAt", "lastSuccessfulRun", "events"]);
-    expect(published).toMatchObject({ schemaVersion: 1, generatedAt: "2026-10-05T14:00:00.000Z", lastSuccessfulRun: "2026-10-05T06:30:00-05:00" });
+    expect(published).toMatchObject({ schemaVersion: 2, generatedAt: "2026-10-05T14:00:00.000Z", lastSuccessfulRun: "2026-10-05T06:30:00-05:00" });
     expect(published.events.map((e: { id: string }) => e.id)).toEqual(["evt_000000000001", "evt_000000000002"]);
     expect(published.events[0]).toEqual(exported(join(outDir, "events.ts"))[0]);
     expect(published.events[1]).toEqual({ ...exported(join(outDir, "events.ts"))[1], description: "A three-piece playing their first record." });

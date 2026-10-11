@@ -664,7 +664,7 @@ for (const path of ["/", "/explore?kind=music", "/e/evt_e2e000000001"]) {
     });
     await on(page, BUILD_DAY, path);
     await page.waitForLoadState("networkidle");
-    expect(await page.locator('meta[http-equiv="content-security-policy"]').getAttribute("content")).toContain("script-src 'self' 'sha256-");
+    expect(await page.locator('head > meta[http-equiv="content-security-policy"]').getAttribute("content")).toContain("script-src 'self' 'sha256-");
     // An island that hydrated proves its bootstrap ran.
     await expect(page.locator("astro-island:not([ssr])").first()).toBeAttached();
     expect(violations).toEqual([]);

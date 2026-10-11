@@ -110,11 +110,11 @@ The build-only code (parsing, projection, the generator) lives under `site/src/b
 
 `/events.json` is the dataset verbatim, unprojected, copied as a file and never re-serialized (the generator copies it to `site/public/events.json`, gitignored, which Astro copies into the output): it is the contract downstream readers and the hub push depend on, and the site is not the place to narrow it. It republishes the evidence snippets (short verbatim page text per event) that the repo already publishes; no new exposure.
 
-> Superseded 2026-10-10 by #89: `/events.json` is now the `PublishedEvent` projection (active, not past, with descriptions) plus `schemaVersion`, `generatedAt` and `lastSuccessfulRun`. Served with open CORS and called free to reuse, the raw file republished exactly what cite-or-drop withholds. The raw file stays in git for anyone who wants the job's working state.
+> Superseded 2026-10-10 by #89: `/events.json` is now the `PublishedEvent` projection (active, not past, with descriptions) plus `schemaVersion` (2; the raw file was 1), `generatedAt` and `lastSuccessfulRun`. Served with open CORS and called free to reuse, the raw file republished exactly what cite-or-drop withholds. The raw file stays in git for anyone who wants the job's working state.
 
 ### Which events exist to the site
 
-- `status === "active"` only. Unverified and expired events are not rendered anywhere, have no `/e/<id>` page, and are not in the explorer's data. They remain in `/events.json` because that file is verbatim. (No longer, since #89; see above.)
+- `status === "active"` only. Unverified and expired events are not rendered anywhere, have no `/e/<id>` page, and are not in the explorer's data. Since #89 they are not in `/events.json` either.
 - **Past events are dropped at build.** A one-off or limited run whose `end` (or `start` when there is no `end`) is before the build's date is omitted. This is the job's own `past` rule; the site does not wait for the next run to apply it.
 - Recurring events have no dates and are always current; they are never dropped for being past.
 

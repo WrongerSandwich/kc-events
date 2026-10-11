@@ -9,8 +9,11 @@ import { join } from "node:path";
 import type { PublishedDataset } from "../lib/types";
 import { loadPublished } from "./load-dataset.ts";
 
-/** The shape of the public events.json; bumped by hand when a field is removed or changes meaning. */
-export const PUBLISHED_SCHEMA_VERSION = 1;
+/**
+ * The shape of the public events.json; bumped by hand when a field is removed or changes meaning. It starts at 2
+ * because the job's raw file, version 1, was served at the same URL until #89.
+ */
+export const PUBLISHED_SCHEMA_VERSION = 2;
 
 export function writeGenerated(opts: { datasetPath: string; configPath: string; outDir: string; publicDir: string; today?: string; now?: Date }): { eventCount: number; buildToday: string } {
   const { events, descriptions, ...meta } = loadPublished({ datasetPath: opts.datasetPath, configPath: opts.configPath, ...(opts.today === undefined ? {} : { today: opts.today }) });

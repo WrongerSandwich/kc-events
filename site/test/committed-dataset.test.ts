@@ -33,7 +33,7 @@ describe("the committed dataset through the site's loader", () => {
     const published = JSON.parse(readFileSync(join(dir, "public", "events.json"), "utf8"));
 
     expect(Object.keys(published).sort()).toEqual(["events", "generatedAt", "lastSuccessfulRun", "schemaVersion"]);
-    expect(published.schemaVersion).toBe(1);
+    expect(published.schemaVersion).toBe(2);
     expect(new Date(published.generatedAt).toISOString()).toBe(published.generatedAt);
     expect(published.lastSuccessfulRun).toBe(p.lastSuccessfulRun);
     expect(published.events.map((e: { id: string }) => e.id)).toEqual(p.events.map((e) => e.id));
