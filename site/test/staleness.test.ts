@@ -37,6 +37,17 @@ describe("StalenessBanner", () => {
     expect(screen.getByRole("status")).toBeInTheDocument();
   });
 
+  it("appears when a tab left open comes back on the day the list goes stale (#93)", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-14T12:00:00Z") }); // 9 days
+    render(StalenessBanner);
+    await tick();
+    expect(screen.queryByRole("status")).toBeNull();
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z")); // 10 days
+    document.dispatchEvent(new Event("visibilitychange"));
+    await tick();
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
   it("is already there in the first render when the build itself is stale", () => {
     meta.buildToday = "2026-10-20";
     vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") }); // the visitor's clock would say fresh

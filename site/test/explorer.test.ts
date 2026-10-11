@@ -259,10 +259,47 @@ describe("Explorer", () => {
   });
 
   it("shows only saved events when asked", async () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(["c"]));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([{ id: "c", last: "2026-10-20" }]));
     render(Explorer);
     await fireEvent.click(screen.getByRole("checkbox", { name: "Saved only" }));
     expect(rows()).toEqual(["Later talk"]);
+  });
+
+  it("shows a save that has passed as passed in the saved view, and keeps it out of the export (#93)", async () => {
+    vi.setSystemTime(new Date("2026-10-10T17:00:00Z")); // Saturday: Friday jazz is over
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([{ id: "a", last: "2026-10-09" }]));
+    history.replaceState(null, "", "/explore?saved=1");
+    render(Explorer);
+    expect(rows()).toEqual(["Friday jazz"]);
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Already happened"]);
+    const row = screen.getByRole("article");
+    expect(within(row).getByText("Passed")).toBeInTheDocument();
+    expect(row.querySelector(".when")).toHaveTextContent("Fri Oct 9 · 7:00 pm"); // no day heading carries it
+    expect(screen.getByRole("button", { name: "Export this view" })).toBeDisabled();
+  });
+
+  it("brings saves' last days up to the dataset's on mount", () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([{ id: "c" }, { id: "gone", last: "2026-10-01" }]));
+    render(Explorer);
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!)).toEqual([{ id: "c", last: "2026-10-20" }, { id: "gone", last: "2026-10-01" }]);
+  });
+
+  it("moves to the visitor's new day when the tab comes back into view (#93)", async () => {
+    vi.setSystemTime(new Date("2026-10-09T17:00:00Z")); // Friday
+    history.replaceState(null, "", "/explore?when=today");
+    render(Explorer);
+    expect(rows()).toEqual(["Exhibition", "Friday jazz"]);
+    vi.setSystemTime(new Date("2026-10-10T17:00:00Z")); // reopened Saturday
+    document.dispatchEvent(new Event("visibilitychange"));
+    flushSync();
+    expect(rows()).toEqual(["Exhibition", "Saturday film"]);
+  });
+
+  it("compiles without a state_referenced_locally warning: the live region's seed is untracked on purpose", async () => {
+    const { compile } = await import("svelte/compiler");
+    const { default: source } = await import("../src/components/Explorer.svelte?raw");
+    const { warnings } = compile(source, { filename: "Explorer.svelte" });
+    expect(warnings.map((w) => w.code)).toEqual([]);
   });
 
   it("leads with search, then a link that skips the filters to the results", () => {

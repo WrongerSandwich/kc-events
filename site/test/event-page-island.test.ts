@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/svelte";
+import { tick } from "svelte";
 import { describe, expect, it, vi } from "vitest";
 
 // Literals only inside a vi.mock factory: vitest hoists the call above every import and declaration.
@@ -20,6 +21,17 @@ describe("EventPageIsland", () => {
   it("says so once the event has passed on the visitor's clock", () => {
     vi.useFakeTimers({ now: new Date("2026-10-12T12:00:00Z") });
     render(EventPageIsland, { id: "evt_1", title: "A show", lastDay: "2026-10-09" });
+    expect(screen.getByRole("status")).toHaveTextContent("This has already happened");
+    vi.useRealTimers();
+  });
+
+  it("says so when a tab left open comes back after the event has passed (#93)", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-09T23:00:00Z") }); // Friday evening: the show is tonight
+    render(EventPageIsland, { id: "evt_1", title: "A show", lastDay: "2026-10-09" });
+    expect(screen.queryByRole("status")).toBeNull();
+    vi.setSystemTime(new Date("2026-10-10T14:00:00Z")); // reopened Saturday morning
+    document.dispatchEvent(new Event("visibilitychange"));
+    await tick();
     expect(screen.getByRole("status")).toHaveTextContent("This has already happened");
     vi.useRealTimers();
   });

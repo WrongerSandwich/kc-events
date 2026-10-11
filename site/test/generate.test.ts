@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { PRODUCT, USER_AGENT } from "../../src/adapters/identity";
 import { MAX_PICKS, writeGenerated } from "../src/build/write-generated";
 import { activeEvent, configYaml, dataset } from "./fixtures/dataset";
 
@@ -40,6 +41,9 @@ describe("writeGenerated", () => {
     expect(exported(join(outDir, "events.ts")).map((e: { id: string }) => e.id)).toEqual(["evt_000000000001", "evt_000000000002"]);
     expect(exported(join(outDir, "dont-miss.ts")).map((e: { id: string }) => e.id)).toEqual(["evt_000000000001"]);
     expect(exported(join(outDir, "descriptions.ts"))).toEqual({ evt_000000000002: "A three-piece playing their first record." });
+    // The about page's user agent and the footer's geography come from the job, so they cannot drift from it (#93).
+    expect(exported(join(outDir, "about.ts"))).toEqual({ crawler: PRODUCT, userAgent: USER_AGENT, geography: "Kansas City metro on both sides of the state line, plus Lawrence" });
+    expect(meta).not.toHaveProperty("about");
     const published = JSON.parse(readFileSync(join(publicDir, "events.json"), "utf8"));
     expect(Object.keys(published)).toEqual(["schemaVersion", "generatedAt", "lastSuccessfulRun", "events"]);
     expect(published).toMatchObject({ schemaVersion: 2, generatedAt: "2026-10-05T14:00:00.000Z", lastSuccessfulRun: "2026-10-05T06:30:00-05:00" });

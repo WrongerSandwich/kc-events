@@ -1,28 +1,31 @@
 <script lang="ts">
   import { formatShort, localDate } from "../lib/dates";
-  import { hostOf, detailsUrl, venueLine } from "../lib/events";
+  import { hostOf, detailsUrl, isPast, lastDay, venueLine } from "../lib/events";
   import { rowDateLine } from "../lib/group";
   import type { PublishedEvent } from "../lib/types";
   import KindChip from "./KindChip.svelte";
   import SaveButton from "./SaveButton.svelte";
 
-  // withDay: the list has no day headings (the venue sort), so the date line carries the day.
+  // withDay: the list has no day headings (the venue sort, or the saved view's passed group), so the date line carries
+  // the day.
   let { event, today, withDay = false }: { event: PublishedEvent; today: string; withDay?: boolean } = $props();
   let dateLine = $derived(rowDateLine(event, today, withDay));
   let verifiedOn = $derived(formatShort(localDate(event.lastVerified)));
+  // Only a save is listed once it has passed (the saved view keeps it), and it says so.
+  let passed = $derived(isPast(event, today));
 </script>
 
-<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} class:with-day={withDay}>
+<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} class:with-day={withDay} class:passed>
   <span class="when">{dateLine}</span>
   <div class="title">
-    <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if event.dontMiss}<span class="dont-miss">Don't miss</span>{/if}
+    <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if passed}<span class="passed-tag">Passed</span>{:else if event.dontMiss}<span class="dont-miss">Don't miss</span>{/if}
   </div>
   <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><span class="venue">{venueLine(event)}</span><span class="hood">{` · ${event.neighborhood}`}</span></span>
   <KindChip kind={event.kind} />
   <!-- Out of the Tab order, so a row is two stops (title, Save); the event page links the source too. -->
   <a class="host" href={detailsUrl(event)} title={hostOf(detailsUrl(event))} tabindex="-1">{hostOf(detailsUrl(event))}</a>
   <span class="verified"><span aria-hidden="true">✓ {verifiedOn}</span><span class="visually-hidden">Verified {verifiedOn}</span></span>
-  <SaveButton id={event.id} title={event.title} large />
+  <SaveButton id={event.id} title={event.title} last={lastDay(event)} large />
   {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
 </article>
 
@@ -44,6 +47,9 @@
   .title a:hover { text-decoration: underline; }
   /* The don't-miss tag is base.css's; in a row it never gives way to the title. */
   .title :global(.dont-miss) { flex: none; }
+  /* A passed save: muted, with a quiet outlined tag where a pick has its red one. */
+  .passed .title h3, .passed .when { color: var(--fg-muted); }
+  .passed-tag { flex: none; font-size: var(--text-xs); font-weight: var(--weight-medium); line-height: 1.6; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: 0 var(--space-2); white-space: nowrap; }
   .where, .host, .verified { font-size: var(--text-xs); color: var(--fg-faint); }
   .where { grid-area: where; }
   /* The chip is KindChip's element, so the row reaches it with :global. */

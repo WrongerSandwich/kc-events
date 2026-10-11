@@ -123,6 +123,15 @@ describe("DontMissList", () => {
     location.hash = "";
   });
 
+  it("takes a malformed hash in its stride (#93)", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-07T01:05:00Z") });
+    render(DontMissList);
+    await tick();
+    location.hash = "#%E0";
+    expect(() => window.dispatchEvent(new HashChangeEvent("hashchange"))).not.toThrow();
+    location.hash = "";
+  });
+
   describe("a section's kind filter", () => {
     const titles = (section: HTMLElement) => within(section).queryAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     async function front() {

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { slugify, slugTable } from "../src/lib/slugs";
+import { hashId, slugify, slugTable } from "../src/lib/slugs";
 import { meta } from "../src/generated/meta";
+
+describe("hashId", () => {
+  it("decodes a hash to the id it names, and takes a malformed escape as written (#93)", () => {
+    expect(hashId("#pick-a")).toBe("pick-a");
+    expect(hashId("#caf%C3%A9")).toBe("café");
+    expect(hashId("#%E0")).toBe("%E0");
+    expect(hashId("")).toBe("");
+  });
+});
 
 describe("slugs", () => {
   it("makes URL-safe, stable slugs", () => {

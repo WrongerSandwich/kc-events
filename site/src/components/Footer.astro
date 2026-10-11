@@ -1,4 +1,5 @@
 ---
+import { about } from "../generated/about";
 import { siteConfig } from "../site.config";
 
 interface Props { wide?: boolean }
@@ -8,7 +9,7 @@ const { wide = false } = Astro.props;
   <div class:list={["inner", wide ? "wide" : "measure"]}>
     <div>
       <p>No ads, no accounts, no cookies.</p>
-      <p>Both sides of the state line, Lawrence included.</p>
+      <p>{about.geography.replace(/\.?$/, ".")}</p>
     </div>
     <ul>
       <li><a href="/about">How this is made</a></li>

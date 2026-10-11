@@ -2,11 +2,10 @@
   import { flushSync, onMount, tick } from "svelte";
   // dont-miss, not events: the front page ships only the flagged events (the full list would be about 26 KB more).
   import { dontMiss } from "../generated/dont-miss";
-  import { meta } from "../generated/meta";
-  import { addDays, formatDay, formatShort, formatTime, localDate, nowIn } from "../lib/dates";
+  import { addDays, formatDay, formatShort, formatTime } from "../lib/dates";
   import { firstDay, isMultiDay, lastDay, venueLine } from "../lib/events";
   import { bucketDontMiss, horizonBounds, horizonHeading, HORIZONS, type Horizon } from "../lib/horizon";
-  import { slugify } from "../lib/slugs";
+  import { hashId, slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
   import DontMissCard from "./DontMissCard.svelte";
@@ -14,48 +13,46 @@
   import KindIcon from "./KindIcon.svelte";
   import UiIcon from "./UiIcon.svelte";
   import WeekStrip from "./WeekStrip.svelte";
+  import { clock, watchClock } from "./clock.svelte";
 
   const emptyLines = {
     "through-sunday": "Nothing picked between now and Sunday.",
     "next-two-weeks": "Nothing picked for the next two weeks yet.",
     "further-out": "Nothing picked further out yet.",
   } as const;
-  // Server-rendered with the build's date and no clock; the visitor's clock takes over on mount (the hydration rule)
-  // and is read again whenever the tab comes back into view, so a page left open overnight catches up. No timer.
-  let now = $state<string | undefined>(undefined);
-  let today = $derived(now === undefined ? meta.buildToday : localDate(now));
+  // The visitor's clock, shared with every island (clock.svelte.ts): the build's date and no clock as rendered.
+  let now = $derived(clock.now);
+  let today = $derived(clock.today);
   // The kind counts are links to the explorer as rendered (and without JavaScript); hydrated, they filter in place.
   let hydrated = $state(false);
   onMount(() => {
-    const read = () => {
-      now = nowIn(meta.timeZone, new Date());
-      // A new day can take every pick of a section's chosen kind away. The filter goes with them, so it cannot come
-      // back on unpressed when a later pick of that kind moves into the section.
-      for (const h of HORIZONS) {
-        if (chosen[h] !== undefined && picksOf(h, chosen[h]).length === 0) {
-          chosen[h] = undefined;
-          announced[h] = undefined;
-        }
-      }
-    };
     // A jump to a pick that has started (the week strip's Today, a shared link) opens the fold it sits in.
     const unfold = () => {
-      const target = location.hash.length > 1 ? document.getElementById(decodeURIComponent(location.hash.slice(1))) : null;
+      const target = location.hash.length > 1 ? document.getElementById(hashId(location.hash)) : null;
       const fold = target?.closest("details");
       if (fold && !fold.open) {
         fold.open = true;
         target!.scrollIntoView();
       }
     };
-    read();
+    const unwatch = watchClock();
     hydrated = true;
-    document.addEventListener("visibilitychange", read);
     window.addEventListener("hashchange", unfold);
     tick().then(unfold); // arriving with the hash: the fold exists once the visitor's clock has rendered
     return () => {
-      document.removeEventListener("visibilitychange", read);
+      unwatch();
       window.removeEventListener("hashchange", unfold);
     };
+  });
+  // A new day can take every pick of a section's chosen kind away. The filter goes with them, so it cannot come back on
+  // unpressed when a later pick of that kind moves into the section.
+  $effect(() => {
+    for (const h of HORIZONS) {
+      if (chosen[h] !== undefined && picksOf(h, chosen[h]).length === 0) {
+        chosen[h] = undefined;
+        announced[h] = undefined;
+      }
+    }
   });
   let buckets = $derived(bucketDontMiss(dontMiss, today));
   let total = $derived(HORIZONS.reduce((n, h) => n + buckets[h].length, 0));

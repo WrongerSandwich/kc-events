@@ -49,5 +49,18 @@ export type PublishedDataset = {
   events: (PublishedEvent & { description?: string })[];
 };
 
-/** What loadPublished returns; the generator writes `events` to src/generated/events.ts, `descriptions` to descriptions.ts, and the rest to meta.ts. */
-export type Published = PublishedMeta & { events: PublishedEvent[]; descriptions: PublishedDescriptions };
+/** What the site says about the job, taken from the job so the words cannot drift from it; only Astro pages read it. */
+export type PublishedAbout = {
+  /** The product token in the user agent, which a robots.txt group names. */
+  crawler: string;
+  /** The job's user agent, verbatim. */
+  userAgent: string;
+  /** research.config.yaml's geography: "Kansas City metro on both sides of the state line, plus Lawrence". */
+  geography: string;
+};
+
+/**
+ * What loadPublished returns; the generator writes `events` to src/generated/events.ts, `descriptions` to
+ * descriptions.ts, `about` to about.ts, and the rest to meta.ts.
+ */
+export type Published = PublishedMeta & { events: PublishedEvent[]; descriptions: PublishedDescriptions; about: PublishedAbout };
