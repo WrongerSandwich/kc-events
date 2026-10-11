@@ -212,7 +212,7 @@ describe("discovery lane", () => {
 
   it.each<[string, CannedPage, number]>([
     ["loads without it, is left unstruck", PAGE, 0],
-    ["is gone, is struck", { status: 404, body: "Not Found" }, 1],
+    ["is gone, is struck", "gone", 1],
     ["robots.txt disallows, is struck", "robots-blocked", 1],
   ])("an event starting after the horizon whose page the lane leads to again, and which %s", async (_, page, strikes) => {
     const newYear = { title: "New Year Show", startDate: "2026-12-31", dateEvidence: "Thu, Dec 31 · Show 9:00 PM" };
@@ -388,7 +388,7 @@ describe("discovery lane", () => {
 
   it.each<[string, CannedPage, object]>([
     ["could not be loaded holds the event through an outage", { status: 403, body: "Forbidden" }, { verificationFailures: 0, consecutiveOutages: 1 }],
-    ["is gone strikes the event", { status: 404, body: "Not Found" }, { verificationFailures: 1, consecutiveOutages: 0 }],
+    ["is gone strikes the event", "gone", { verificationFailures: 1, consecutiveOutages: 0 }],
   ])("an active event's primary page that a discovery lead tried this run and %s, without fetching it again", async (_, page, counters) => {
     const known = (await discoverAt(WEEK_1, emptyDataset(), {
       searches: { [QUERY]: [lead(PROMOTER_PAGE)] },

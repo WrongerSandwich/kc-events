@@ -153,7 +153,7 @@ describe("outages", () => {
   });
 
   it.each<[string, CannedPage]>([
-    ["HTTP 404", { status: 404, body: "Not Found" }],
+    ["HTTP 404", "gone"],
     ["HTTP 410", { status: 410, body: "Gone" }],
     ["a robots.txt that now disallows the job", "robots-blocked"],
   ])("%s is a strike, not an outage", async (_, page) => {

@@ -81,7 +81,7 @@ describe("events that start after the horizon", () => {
   });
 
   it.each<[string, CannedPage]>([
-    ["HTTP 404", { status: 404, body: "Not Found" }],
+    ["HTTP 404", "gone"],
     ["a robots.txt that disallows the job", "robots-blocked"],
   ])("are struck when their primary page, read by the registry lane, is %s", async (_, page) => {
     const first = await firstRun();
@@ -95,7 +95,7 @@ describe("events that start after the horizon", () => {
   it("are struck when re-verification finds their primary page gone", async () => {
     const first = await firstRun();
 
-    const second = await runAt(week(2), first.dataset, { [moved.urls[0]!]: PAGE, [CALENDAR_URL]: { status: 404, body: "Not Found" } }, [reply(), reply()], moved);
+    const second = await runAt(week(2), first.dataset, { [moved.urls[0]!]: PAGE, [CALENDAR_URL]: "gone" }, [reply(), reply()], moved);
 
     expect(strikeState(byTitle(second.dataset, "New Year Show"))).toMatchObject({ status: "active", verificationFailures: 1 });
   });

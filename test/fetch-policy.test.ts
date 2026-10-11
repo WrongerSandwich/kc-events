@@ -1,15 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createFetchPolicy, FetchRefused, MAX_BODY_BYTES, type Lookup } from "../src/adapters/fetch-policy.js";
 import { createFetcher } from "../src/adapters/fetcher.js";
-
-/** A response for each URL the stubbed network knows; a fresh one per request, as a server's would be. */
-type Routes = Record<string, () => Response>;
-
-const html = (body: string | Uint8Array<ArrayBuffer>, headers: Record<string, string> = {}) => () =>
-  new Response(body, { headers: { "content-type": "text/html", ...headers } });
-const robots = (body: string) => () => new Response(body, { headers: { "content-type": "text/plain" } });
-const redirect = (location: string) => () => new Response(null, { status: 301, headers: { location } });
-const NO_ROBOTS = () => new Response("", { status: 404 });
+import { html, NO_ROBOTS, redirect, robots, routes, type Routes } from "./fakes/network.js";
 
 /** Every hostname resolves to a public address unless listed. */
 const resolvesTo =
@@ -23,14 +15,8 @@ let requested: string[];
 let slept: number[];
 let clock: number;
 
-function stubNetwork(routes: Routes) {
-  vi.stubGlobal("fetch", async (input: string | URL) => {
-    const url = String(input);
-    requested.push(url);
-    const route = routes[url];
-    if (!route) throw new Error(`no route for ${url}`);
-    return route();
-  });
+function stubNetwork(table: Routes) {
+  requested = routes(table).urls;
 }
 
 function fetcher(addresses: Record<string, string> = {}) {

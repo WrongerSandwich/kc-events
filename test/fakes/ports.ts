@@ -15,12 +15,12 @@ function nothingFlagged(request: CompletionRequest): CompletionResult {
 }
 
 /**
- * A canned response: a page with a status (and where its redirects ended, if anywhere else), a
- * robots.txt block, a robots.txt that cannot be reached (thrown, as the real fetcher does), a page
+ * A canned response: a page with a status (and where its redirects ended, if anywhere else), a page
+ * that is gone (a 404, read as the real fetcher reads one: no body), a robots.txt block, a robots.txt that cannot be reached (thrown, as the real fetcher does), a page
  * the fetch policy refuses (a private host, a body over budget, an unreadable content type: a
  * `FetchRefused` thrown), or a network failure.
  */
-export type CannedPage = { status: number; body: string; finalUrl?: string } | "robots-blocked" | "robots-unreachable" | "refused" | Error;
+export type CannedPage = { status: number; body: string; finalUrl?: string } | "gone" | "robots-blocked" | "robots-unreachable" | "refused" | Error;
 
 /** A scripted model reply, or an Error the call throws, as a connection reset partway through would. */
 export type ScriptedReply = CompletionResult | Error;
@@ -72,7 +72,7 @@ export function fakePorts(now: Date, { pages = {}, completions = [], curations =
  * `robots-blocked:<url>`, `robots-unreachable:<url>`, and `refused:<url>`; the browser one puts `browser` in front
  * (`browser:<url>`, `browser robots-blocked:<url>`) and adds the selector it was told to wait for.
  */
-function cannedFetcher(pages: Record<string, CannedPage>, calls: string[], prefix: string): FetchPort {
+export function cannedFetcher(pages: Record<string, CannedPage>, calls: string[] = [], prefix = ""): FetchPort {
   const record = (what: string, url: string) => calls.push(`${prefix ? `${prefix} ` : ""}${what}:${url}`);
   return {
     async fetch(url, options): Promise<FetchResult> {
@@ -92,6 +92,7 @@ function cannedFetcher(pages: Record<string, CannedPage>, calls: string[], prefi
       calls.push(`${prefix || "fetch"}:${url}${options?.waitFor ? ` waiting for ${options.waitFor}` : ""}`);
       if (page === undefined) throw new Error(`fake fetcher has no canned page for ${url}`);
       if (page instanceof Error) throw page;
+      if (page === "gone") return { url, finalUrl: url, status: 404, body: "", robotsAllowed: true };
       return { url, finalUrl: page.finalUrl ?? url, status: page.status, body: page.body, robotsAllowed: true };
     },
   };

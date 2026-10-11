@@ -105,7 +105,7 @@ describe("registry lane fetching", () => {
     const { ports } = fakePorts(WEEK_1, {
       pages: {
         "https://down.test/": new Error("connect ECONNREFUSED"),
-        "https://gone.test/": { status: 404, body: "not found" },
+        "https://gone.test/": "gone",
         "https://back.test/": { status: 200, body: "<html>calendar</html>" },
       },
       completions: [NO_EVENTS],

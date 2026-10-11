@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createOpenRouterModel } from "../src/adapters/openrouter.js";
 import { ModelReplyUnusable, type CompletionRequest } from "../src/ports.js";
+import { extractionResponseFormat } from "../src/extraction.js";
 
 const REQUEST: CompletionRequest = {
   model: "vendor/model",
@@ -86,6 +87,61 @@ describe("OpenRouter model adapter", () => {
     });
   });
 
+  /** A completion whose one message is this, billed at the default cost. */
+  const replying = (message: object, finishReason = "stop") => ({ ...completion(), choices: [{ index: 0, finish_reason: finishReason, message: { role: "assistant", refusal: null, ...message } }] });
+
+  it.each([
+    ["no choices", { ...completion(), choices: [] }, "OpenRouter response for vendor/model had no choices"],
+    ["a refusal", replying({ content: null, refusal: "I can't help with that" }), "vendor/model refused: I can't help with that"],
+    [
+      "a tool call",
+      replying({ content: null, tool_calls: [{ id: "call_1", type: "function", function: { name: "lookup", arguments: "{}" } }] }, "tool_calls"),
+      "vendor/model replied with a tool call; the model port does not run tool loops yet",
+    ],
+    ["empty content", replying({ content: "  " }, "length"), "vendor/model returned no content (finish reason length)"],
+    ["no content", replying({ content: null }), "vendor/model returned no content (finish reason stop)"],
+    ["content that is not JSON", replying({ content: "Here are the events: none" }), "vendor/model returned content that is not JSON despite the strict response format"],
+  ])("a reply with %s throws, as unusable and billed", async (_, reply, message) => {
+    const { fetch } = cannedFetch(json(reply));
+
+    const error = await createOpenRouterModel({ apiKey: "key", fetch }).complete(REQUEST).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ModelReplyUnusable);
+    expect(error).toMatchObject({ message, costUsd: 0.0042 });
+  });
+
+  it("sends the strict JSON schema the caller gave, with no $schema, and tools as strict functions", async () => {
+    const { fetch, bodies } = cannedFetch(json(completion()));
+    const tool = { name: "lookup", description: "Look a venue up", parameters: { type: "object", properties: {}, additionalProperties: false } };
+
+    await createOpenRouterModel({ apiKey: "key", fetch }).complete({
+      ...REQUEST,
+      messages: [
+        { role: "system", content: "Rules" },
+        { role: "user", content: "Read this page" },
+      ],
+      tools: [tool],
+      responseFormat: extractionResponseFormat,
+    });
+
+    expect(bodies[0]).toMatchObject({
+      messages: [
+        { role: "system", content: "Rules" },
+        { role: "user", content: "Read this page" },
+      ],
+      tools: [{ type: "function", function: { ...tool, strict: true } }],
+      response_format: { type: "json_schema", json_schema: { name: "extracted_events", strict: true, schema: extractionResponseFormat.schema } },
+      provider: { require_parameters: true },
+      usage: { include: true },
+    });
+    expect(JSON.stringify(bodies[0])).not.toContain("$schema");
+  });
+
+  it("sends no tools field when the request has none", async () => {
+    const { fetch, bodies } = cannedFetch(json(completion()));
+    await createOpenRouterModel({ apiKey: "key", fetch }).complete({ ...REQUEST, tools: [] });
+    expect(bodies[0]).not.toHaveProperty("tools");
+  });
+
   it("throws when the reply carries no cost", async () => {
     const { fetch } = cannedFetch(json(completion({ usage: { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 } })));
 
@@ -104,8 +160,10 @@ describe("OpenRouter model adapter", () => {
   });
 
   it("needs the key only when a call is made", async () => {
-    const model = createOpenRouterModel({ apiKey: undefined });
+    const { fetch, bodies } = cannedFetch(json(completion()));
+    const model = createOpenRouterModel({ apiKey: undefined, fetch });
 
     await expect(model.complete(REQUEST)).rejects.toThrow(/OPENROUTER_API_KEY is not set/);
+    expect(bodies).toEqual([]);
   });
 });

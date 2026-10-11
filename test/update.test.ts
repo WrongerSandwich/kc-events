@@ -112,6 +112,31 @@ describe("re-verification and expiry", () => {
     expect(third.report.counts.expired["two-strike"]).toBe(1);
   });
 
+  describe("a registry calendar that now redirects", () => {
+    // The registry still names the old URL; the venue's server sends it on to the new one.
+    const REDIRECTED = "https://knuckleheads.test/events";
+    const pages = { [CALENDAR_URL]: { ...PAGE, finalUrl: REDIRECTED } };
+
+    it("is read where it ends: the event found there moves to the new page, with no second fetch", async () => {
+      const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
+
+      const second = await runAt(WEEK_2, first.dataset, { pages, completions: [reply(candidate())] });
+
+      expect(second.calls).toEqual([`fetch:${CALENDAR_URL}`, "model:test/extraction"]);
+      expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], primaryUrl: REDIRECTED, lastVerified: WEEK_2_ISO }]);
+      expect(second.report.counts).toMatchObject({ found: 1, new: 0, updated: 1 });
+    });
+
+    it("counts as a reading of the old URL: an event no longer on it takes a strike, with no second fetch", async () => {
+      const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
+
+      const second = await runAt(WEEK_2, first.dataset, { pages, completions: [reply()] });
+
+      expect(second.calls).toEqual([`fetch:${CALENDAR_URL}`, "model:test/extraction"]);
+      expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], verificationFailures: 1 }]);
+    });
+  });
+
   describe("an active event the registry lane did not read", () => {
     // The venue moved its calendar between runs; the event's primary page is still the old one.
     const NEW_CALENDAR_URL = "https://knuckleheads.test/shows";
@@ -154,7 +179,7 @@ describe("re-verification and expiry", () => {
 
       const second = await runAt(WEEK_2, first.dataset, {
         sources: [moved],
-        pages: { [NEW_CALENDAR_URL]: PAGE, [CALENDAR_URL]: { status: 404, body: "gone" } },
+        pages: { [NEW_CALENDAR_URL]: PAGE, [CALENDAR_URL]: "gone" },
         completions: [reply()],
       });
 

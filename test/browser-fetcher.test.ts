@@ -192,6 +192,36 @@ describe("browser fetcher", () => {
     }
   });
 
+  it("closes without launching when no page needed the browser", async () => {
+    const fetcher = createBrowserFetcher(plainFetcher());
+
+    await expect(fetcher.close()).resolves.toBeUndefined();
+    expect(launch).not.toHaveBeenCalled();
+  });
+
+  it("closes the browser it launched", async () => {
+    const browser = browserRunning();
+    const fetcher = createBrowserFetcher(plainFetcher());
+
+    await fetcher.fetch(CALENDAR);
+    await fetcher.close();
+
+    expect(browser.closed).toBe(true);
+  });
+
+  it("loads a page once a run for each selector it is waited on by, and once with none", async () => {
+    const browser = browserRunning();
+    const fetcher = createBrowserFetcher(plainFetcher());
+
+    await fetcher.fetch(CALENDAR);
+    await fetcher.fetch(CALENDAR);
+    await fetcher.fetch(CALENDAR, { waitFor: ".event" });
+    await fetcher.fetch(CALENDAR, { waitFor: ".event" });
+    await fetcher.fetch(CALENDAR, { waitFor: ".show" });
+
+    expect(browser.contexts).toHaveLength(3);
+  });
+
   it("closes a popup the page opens and loads nothing for it", async () => {
     let popup: FakePage | undefined;
     const browser = browserRunning(async (page) => {
