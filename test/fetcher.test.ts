@@ -18,7 +18,10 @@ const fetcher = () => createFetcher({ lookup: async () => [{ address: "93.184.21
 /** The venue's calendar behind this robots.txt. */
 const venue = (robotsRoute: Routes[string], page: Routes[string] = html("<p>Shows</p>")): Routes => ({ [VENUE_ROBOTS]: robotsRoute, [CALENDAR]: page });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 describe("plain fetcher: robots.txt", () => {
   it("does not request a page its robots.txt disallows, and says so", async () => {

@@ -16,9 +16,10 @@ function nothingFlagged(request: CompletionRequest): CompletionResult {
 
 /**
  * A canned response: a page with a status (and where its redirects ended, if anywhere else), a page
- * that is gone (a 404, read as the real fetcher reads one: no body), a robots.txt block, a robots.txt that cannot be reached (thrown, as the real fetcher does), a page
- * the fetch policy refuses (a private host, a body over budget, an unreadable content type: a
- * `FetchRefused` thrown), or a network failure.
+ * that is gone (a 404, read as the real fetcher reads one: no body), a robots.txt block, a
+ * robots.txt that cannot be reached (thrown, as the real fetcher does), a page the fetch policy
+ * refuses (a private host, a body over budget, an unreadable content type: a `FetchRefused`
+ * thrown), or a network failure.
  */
 export type CannedPage = { status: number; body: string; finalUrl?: string } | "gone" | "robots-blocked" | "robots-unreachable" | "refused" | Error;
 

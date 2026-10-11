@@ -17,7 +17,7 @@ import { createFetcher } from "../../../src/adapters/fetcher.js";
 import { USER_AGENT } from "../../../src/adapters/identity.js";
 
 const KEPT_ATTRIBUTES = new Set(["href", "datetime", "class"]);
-const TRACKING = /^(utm_\w+|fbclid|gclid|_ga|mc_[ce]id)$/;
+const TRACKING = /^(utm_\w+|fbclid|gclid|_ga|mc_[ce]id|_branch_\w+|g_ep|\$affiliate_json|\$3p)$/;
 
 export function scrub(html: string): string {
   return html
@@ -39,11 +39,20 @@ export function scrub(html: string): string {
     .replace(/\n\s*\n(\s*\n)+/g, "\n\n");
 }
 
+function decoded(name: string): string {
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+}
+
 function untracked(href: string): string {
   const [base, query] = href.split("?", 2);
   if (query === undefined) return href;
-  const kept = query.split("&").filter((pair) => !TRACKING.test(pair.split("=")[0]!));
-  return kept.length > 0 ? `${base}?${kept.join("&")}` : base!;
+  // In markup the separator is usually written as an entity.
+  const kept = query.split(/&(?:amp;|#0*38;)?/).filter((pair) => !TRACKING.test(decoded(pair.split("=")[0]!)));
+  return kept.length > 0 ? `${base}?${kept.join("&amp;")}` : base!;
 }
 
 async function main() {
