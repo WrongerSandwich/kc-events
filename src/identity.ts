@@ -25,12 +25,12 @@ export function normalizeName(title: string): string {
 }
 
 /**
- * Two texts that say the same thing in the same words, in the same case, differing at most in
- * whitespace, punctuation and symbols (#82): a re-reading that writes "Oct 31 · 8 PM" as "Oct 31 - 8 PM"
- * changes nothing worth storing.
+ * Two texts in the same words, in the same case, differing at most in whitespace and punctuation
+ * (#82): a re-reading that writes "A big show, with friends." as "A big show with friends" changes
+ * nothing worth storing.
  */
 export function sameText(a: string, b: string): boolean {
-  const bare = (text: string) => text.replace(/[\s\p{P}\p{S}]+/gu, "");
+  const bare = (text: string) => text.replace(/[\s\p{P}]+/gu, "");
   return bare(a) === bare(b);
 }
 

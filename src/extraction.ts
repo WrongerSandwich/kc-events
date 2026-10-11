@@ -353,6 +353,14 @@ function quoteNotOnPage(quotes: { date: string; venue: string }, quotable: strin
   return missing === undefined ? undefined : `quoted "${quotes[missing]}" for its ${missing}`;
 }
 
+/**
+ * Two quotes the page check cannot tell apart (#82): one is on a page exactly when the other is, so a
+ * re-reading may keep the stored one without it leaving the page it was just verified against.
+ */
+export function sameQuote(a: string, b: string): boolean {
+  return comparable(a) === comparable(b);
+}
+
 function comparable(text: string): string {
   return text
     .replace(/[‘’‚‛′]/g, "'")

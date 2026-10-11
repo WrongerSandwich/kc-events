@@ -10,6 +10,7 @@ import {
   overCap,
   quotableText,
   readPage,
+  sameQuote,
   type ExtractionContext,
   type PageOrigin,
   type Sighting,
@@ -121,7 +122,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
   // A record no reading ever verified goes stale when no lane has sighted it for four runs that could have (#82).
   const sighted = new Set([...touched, ...reverified.sighted]);
-  const aged = reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: e.lead.lane === "registry" || config.discovery.enabled }));
+  const aged = reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: couldHaveSighted(e, laneOutcome.attempts, registry, config) }));
   // A reading places an event from its page; one no page placed this run is placed from what is stored.
   const placed = placeOffList(aged, neighborhoods, config, registry);
   // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
@@ -205,6 +206,19 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     report,
     archived,
   };
+}
+
+/**
+ * Whether this run's lanes could have sighted a record (#82): a discovery-led one only with discovery
+ * on; a registry-led one unless its source is excluded or its page was not read (an outage, the spend
+ * cap, a reply that could not be read), which says nothing about it, as an outage says nothing for a strike.
+ */
+function couldHaveSighted(event: Event, attempts: PageAttempts, registry: Registry, config: RunConfig): boolean {
+  const { lead } = event;
+  if (lead.lane === "discovery") return config.discovery.enabled;
+  const key = pageKey(event.primaryUrl);
+  const excluded = registry.sources.some((s) => s.name === lead.source && s.status === "excluded");
+  return !excluded && !attempts.outages.has(key) && !attempts.unread.has(key);
 }
 
 /** Every event whose title or primary page differs from what the run started with, now and before (#82). */
@@ -840,20 +854,28 @@ function firstMonthPair(events: Event[]): [Event, Event] | undefined {
  * the known one: a listing line that says nothing more does not wipe what a fuller page said. Like
  * every other field, the description is only taken from a verified reading. The stored title is
  * kept when the new one is a form of it, cut short or with a series name in front (#75): the page
- * billed the same event two ways, and the site should not flap between them. So are the stored title,
- * description, own page and evidence when the new one says the same in other whitespace or
- * punctuation (#82): the weekly diff carries what changed, not how a reading happened to spell it.
+ * billed the same event two ways, and the site should not flap between them. So are the stored title
+ * and description when the new one differs only in whitespace or punctuation, the stored own page when
+ * the new one is the same page (samePage), and each stored quote when the quote check cannot tell it
+ * from the new one, so it is on the page just as surely (#82): the weekly diff carries what changed,
+ * not how a reading happened to spell it.
  */
 function refresh(known: Event, sighting: Event): Event {
   const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };
-  const steady = <K extends string>(field: K, was: string | undefined, now: string | undefined) => (was !== undefined && now !== undefined && sameText(was, now) ? { [field]: was } : {});
+  /** The stored value under its field when the new one is the same by the given test, else nothing, so the new one stands. */
+  const keepIfSame = (field: string, was: string | undefined, now: string | undefined, same: (a: string, b: string) => boolean) =>
+    was !== undefined && now !== undefined && same(was, now) ? { [field]: was } : {};
   return {
     ...(known.description !== undefined ? { description: known.description } : {}),
     ...sighting,
-    ...(variantTitles(known.title, sighting.title) ? { title: known.title } : steady("title", known.title, sighting.title)),
-    ...steady("description", known.description, sighting.description),
-    ...steady("eventUrl", known.eventUrl, sighting.eventUrl),
-    evidence: { ...sighting.evidence, ...steady("date", known.evidence.date, sighting.evidence.date), ...steady("venue", known.evidence.venue, sighting.evidence.venue) },
+    ...(variantTitles(known.title, sighting.title) ? { title: known.title } : keepIfSame("title", known.title, sighting.title, sameText)),
+    ...keepIfSame("description", known.description, sighting.description, sameText),
+    ...keepIfSame("eventUrl", known.eventUrl, sighting.eventUrl, samePage),
+    evidence: {
+      ...sighting.evidence,
+      ...keepIfSame("date", known.evidence.date, sighting.evidence.date, sameQuote),
+      ...keepIfSame("venue", known.evidence.venue, sighting.evidence.venue, sameQuote),
+    },
     id: known.id,
     firstSeen: known.firstSeen,
     lead: known.lead,

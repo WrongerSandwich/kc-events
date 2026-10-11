@@ -114,6 +114,20 @@ describe("stale records", () => {
     expect(runs.map((r) => r.dataset.events.find((e) => e.title === "Open Jam")!.runsUnsighted)).toEqual([1, 2, undefined, 1]);
   });
 
+  it("a run in which its page could not be loaded says nothing, so it counts for nothing", async () => {
+    const events = [stored("Big Show"), neverVerified("Something Undated", { runsUnsighted: 3 })];
+
+    // Another source loads, so the run is not a dead network.
+    const other = source("Other Venue");
+    const { dataset } = await runWith(week(2), { ...emptyDataset(), events }, {
+      sources: [knuckleheads, other],
+      pages: { [CALENDAR_URL]: { status: 503, body: "" }, [other.urls[0]!]: PAGE },
+      completions: [reply(candidateAt(other))],
+    });
+
+    expect(dataset.events.find((e) => e.title === "Something Undated")).toMatchObject({ status: "unverified", runsUnsighted: 3 });
+  });
+
   it("a record verified once is re-verified instead, and never goes stale", async () => {
     const hidden = stored("Hidden Show", { status: "unverified", consecutiveOutages: 3 });
     const events = [stored("Big Show"), hidden];
@@ -155,7 +169,7 @@ describe("stable readings", () => {
   const reread = (known: Event, overrides: Record<string, unknown>) =>
     runWith(WEEK_2, { ...emptyDataset(), events: [known] }, { sources: [knuckleheads], pages: { [CALENDAR_URL]: LISTING }, completions: [reply(candidate({ eventLink: 1, ...overrides }))] });
 
-  it("keeps the stored evidence, description, title and eventUrl when the new ones differ only in whitespace and punctuation", async () => {
+  it("keeps the stored title and description that differ only in whitespace and punctuation, the same own page, and quotes the page check cannot tell apart", async () => {
     const known = stored("Big Show!", {
       description: "A big show, with friends.",
       eventUrl: "https://knuckleheads.test/shows/big-show/",
@@ -165,8 +179,8 @@ describe("stable readings", () => {
     const { dataset } = await reread(known, {
       title: "Big  Show",
       description: "A big show with friends",
-      dateEvidence: "Sat, Oct 31  Doors 7:00 PM - Show 8:00 PM",
-      venueEvidence: "Knuckleheads 1 Main St.",
+      dateEvidence: "Sat, Oct 31 ·  Doors 7:00 PM ·\nShow 8:00 PM",
+      venueEvidence: "KNUCKLEHEADS, 1 Main St",
     });
 
     expect(dataset.events[0]).toMatchObject({
@@ -176,6 +190,22 @@ describe("stable readings", () => {
       evidence: { date: "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM", venue: "Knuckleheads, 1 Main St" },
       lastVerified: WEEK_2_ISO,
     });
+  });
+
+  it("takes a quote with other punctuation, which the page check would not take for the stored one", async () => {
+    const known = stored("Big Show");
+
+    const { dataset } = await reread(known, { dateEvidence: "Sat, Oct 31 Doors 7:00 PM Show 8:00 PM" });
+
+    expect(dataset.events[0]!.evidence.date).toBe("Sat, Oct 31 Doors 7:00 PM Show 8:00 PM");
+  });
+
+  it("takes an own page that is another page, however alike its URL reads", async () => {
+    const known = stored("Big Show", { eventUrl: "https://knuckleheads.test/showsbig/show" });
+
+    const { dataset } = await reread(known, {});
+
+    expect(dataset.events[0]!.eventUrl).toBe("https://knuckleheads.test/shows/big-show");
   });
 
   it("takes the new values when the words change, or their case", async () => {
