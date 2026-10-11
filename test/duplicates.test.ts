@@ -361,7 +361,7 @@ describe("venue-less twins (#77)", () => {
 
     expect(dataset.events.map((e) => e.id)).toEqual(bars.map((e) => e.id));
     expect(report.counts).toMatchObject({ new: 0, found: 0, venuelessAmbiguous: 1 });
-    expect(renderReportMarkdown(report)).toContain("| Not created: a venue-less sighting fitting more than one known event | 1 |");
+    expect(renderReportMarkdown(report)).toContain("| Not created: a venue-less sighting fitting more than one known event, none preferred | 1 |");
   });
 });
 
@@ -385,6 +385,27 @@ describe("one title listed twice on one page (#77)", () => {
       ["2026-11-27T17:30:00-06:00", "active"],
     ]);
     expect(report.counts).toMatchObject({ new: 2, found: 2, expired: { duplicate: 0 } });
+  });
+
+  it("makes the far night the second record whichever night the page gives first, keeping the known record on its own night", async () => {
+    const known = nov7();
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([known]), { sources: [wineco], pages: { [WINECO]: PAGE }, completions: [reply(pianos("2026-11-27"), pianos("2026-11-07"))], config });
+
+    expect(dataset.events.map((e) => [e.id === known.id, e.start?.slice(0, 10), e.status])).toEqual([
+      [true, "2026-11-07", "active"],
+      [false, "2026-11-27", "active"],
+    ]);
+    expect(report.counts).toMatchObject({ new: 1, found: 2 });
+  });
+
+  it("does not make a record of a second night already past", async () => {
+    const known = { ...nov7(), start: "2026-10-09T17:30:00-05:00" };
+
+    const { dataset, report } = await runWith(WEEK_2, withEvents([known]), { sources: [wineco], pages: { [WINECO]: PAGE }, completions: [reply(pianos("2026-10-09"), pianos("2026-09-25"))], config });
+
+    expect(dataset.events).toEqual([expect.objectContaining({ id: known.id, status: "active" })]);
+    expect(report.counts).toMatchObject({ new: 0, found: 1 });
   });
 
   it("cancels only the record whose date is inside the window of the cancelled listing", async () => {
@@ -448,6 +469,25 @@ describe("one title listed twice on one page (#77)", () => {
       const { dataset } = await reverifying(withEvents([known]), pianos("2026-11-27", { notice: "cancelled" }));
 
       expect(dataset.events).toEqual([expect.objectContaining({ id: known.id, status: "active", start: "2026-11-07T17:30:00-06:00", verificationFailures: 1 })]);
+    });
+
+    it("strikes a recurring event whose page lists only a cancelled month of it, as the registry lane would", async () => {
+      const museum = source("National WWI Museum and Memorial", { kind: "other", neighborhood: "Crossroads", urls: [WWI] });
+      const { start: _start, ...standing } = event("Main Gallery Tours", "National WWI Museum and Memorial", WWI, "2026-10-05", {
+        recurrence: "recurring",
+        schedule: "Monday, Friday-Saturday, Select times",
+        lead: { lane: "discovery", query: "museum tours" },
+      });
+      const recurring: Event = { ...standing, evidence: { date: "Monday, Friday-Saturday Select times", venue: "National WWI Museum and Memorial" } };
+
+      const { dataset } = await runWith(WEEK_1, withEvents([recurring]), {
+        sources: [knuckleheads],
+        pages: { [knuckleheads.urls[0]!]: PAGE, [WWI]: PAGE },
+        completions: [reply(), reply(candidateAt(museum, { title: "Main Gallery Tours (Oct. 2026)", startDate: "2026-10-09", startTime: null, endDate: "2026-10-10", endTime: null, notice: "cancelled" }))],
+        config,
+      });
+
+      expect(dataset.events).toEqual([expect.objectContaining({ id: recurring.id, status: "active", recurrence: "recurring", verificationFailures: 1 })]);
     });
   });
 });

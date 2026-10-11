@@ -47,6 +47,7 @@ export interface EventIdentity {
   eventUrl?: string;
   /** A recurring event has no date; a dated sighting may be one month of it. */
   recurrence?: RecurrenceClass;
+  /** The record's id, looked at only to follow a duplicate pointer; never compared with a sighting's. */
   id?: string;
   /** The id of the record this one was folded into as a duplicate; a match on this record is a match on that one. */
   duplicateOf?: string;
@@ -55,41 +56,52 @@ export interface EventIdentity {
 /** Which rule matched a sighting to a known event. */
 export type MatchRule = "page-and-title" | "fuzzy" | "venueless" | "month";
 
-export interface Match<T> {
-  /** The known event the sighting is, when one is. */
-  event?: T;
-  rule?: MatchRule;
-  /** A venue-less sighting that fits two or more known events with none preferred: nothing can say which. */
-  ambiguous: boolean;
-}
+/**
+ * What a sighting is to the known events: one of them, by a rule; ambiguous, a venue-less sighting
+ * that fits two or more with none preferred, so nothing can say which; or none of them.
+ */
+export type Match<T> = { kind: "matched"; event: T; rule: MatchRule } | { kind: "ambiguous" } | { kind: "none" };
+
+const NONE = { kind: "none" } as const;
 
 /**
  * The known event a sighting is, if any, and by which rule: the match on primary page and title
  * first (among several such records, the one whose date is nearest), then the fuzzy match on
  * title, venue, and nearby date, then for a sighting with no venue the known event with its title
- * on its date, then a recurring event the sighting is one month of. A match on a record folded as a
- * duplicate is a match on the record it was folded into, as far as that chain goes within `known`.
+ * on its date, then a recurring event the sighting is one month of. A record folded as a duplicate
+ * stands for the record it was folded into, as far as that chain goes within `known`: the match is
+ * that record, and its date is the one compared.
  */
 export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases): Match<T> {
-  const onPage = known.filter((k) => samePageAndTitle(sighting, k));
+  const standsFor = (k: T) => throughDuplicates(k, known);
+  const onPage = known.filter((k) => samePageAndTitle(sighting, k)).flatMap((k) => standsFor(k) ?? []);
   const direct = onPage.reduce<T | undefined>((nearest, k) => (nearest === undefined || daysApart(sighting, k) < daysApart(sighting, nearest) ? k : nearest), undefined);
-  if (direct) return followed(direct, "page-and-title", known);
-  const fuzzy = known.find((k) => sameEventFuzzily(sighting, k, aliases));
-  if (fuzzy) return followed(fuzzy, "fuzzy", known);
+  if (direct) return { kind: "matched", event: direct, rule: "page-and-title" };
+  for (const k of known) {
+    const fuzzy = sameEventFuzzily(sighting, k, aliases) ? standsFor(k) : undefined;
+    if (fuzzy) return { kind: "matched", event: fuzzy, rule: "fuzzy" };
+  }
   const venueless = candidateForVenueless(sighting, known);
-  if (venueless.event) return { event: venueless.event, rule: "venueless", ambiguous: false };
+  if (venueless.kind === "matched") return venueless;
   const month = known.find((k) => k.recurrence === "recurring" && k.status !== "expired" && oneMonthOf(sighting, k));
-  if (month) return { event: month, rule: "month", ambiguous: false };
-  return { ambiguous: venueless.ambiguous };
+  if (month) return { kind: "matched", event: month, rule: "month" };
+  return venueless;
 }
 
 /** The known event a sighting is, if any; see matchSighting. */
 export function findMatch<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases): T | undefined {
-  return matchSighting(sighting, known, aliases).event;
+  return matchedEvent(matchSighting(sighting, known, aliases));
 }
 
-/** The match, taken through any chain of duplicate pointers to the record kept; none when the chain leaves `known`. */
-function followed<T extends EventIdentity>(matched: T, rule: MatchRule, known: readonly T[]): Match<T> {
+function matchedEvent<T>(match: Match<T>): T | undefined {
+  return match.kind === "matched" ? match.event : undefined;
+}
+
+/**
+ * The record a matched record stands for: itself, or through any chain of duplicate pointers the
+ * record kept. None when the chain leaves `known` or loops: it points at no record.
+ */
+function throughDuplicates<T extends EventIdentity>(matched: T, known: readonly T[]): T | undefined {
   const seen = new Set<T>();
   let kept: T | undefined = matched;
   while (kept !== undefined && kept.duplicateOf !== undefined && !seen.has(kept)) {
@@ -97,8 +109,7 @@ function followed<T extends EventIdentity>(matched: T, rule: MatchRule, known: r
     const id: string = kept.duplicateOf;
     kept = known.find((k) => k.id === id);
   }
-  // A chain that leaves the known events, or that loops, points at no record.
-  return kept === undefined || kept.duplicateOf !== undefined ? { ambiguous: false } : { event: kept, rule, ambiguous: false };
+  return kept === undefined || kept.duplicateOf !== undefined ? undefined : kept;
 }
 
 /**
@@ -113,8 +124,8 @@ export function sameEvent(a: EventIdentity, b: EventIdentity, live: readonly Eve
     (samePageAndTitle(a, b) && nearDates(a, b)) ||
     sameEventFuzzily(a, b, aliases) ||
     venuelessTwins(a, b) ||
-    candidateForVenueless(a, live).event === b ||
-    candidateForVenueless(b, live).event === a
+    matchedEvent(candidateForVenueless(a, live)) === b ||
+    matchedEvent(candidateForVenueless(b, live)) === a
   );
 }
 
@@ -242,7 +253,7 @@ function byLength(a: string, b: string): [string, string] {
 }
 
 /** The local calendar date of an ISO date or date-time, as read. */
-function calendarDate(iso: string | undefined): string | undefined {
+export function calendarDate(iso: string | undefined): string | undefined {
   return iso?.slice(0, 10);
 }
 
@@ -278,26 +289,31 @@ function sameEventFuzzily(a: EventIdentity, b: EventIdentity, aliases: VenueAlia
 /**
  * For a sighting that names no venue, the known event with the same or shortened title, with or
  * without a series name in front, on the same calendar date, not expired. With one such event, it is
- * the match. With two or more, the one on the sighting's host is preferred, then the one whose own
- * page is the sighting's (#77): a program's calendar and its venue's list the same concert, and the
- * venue-less twin the program's page made last week is on the program's host. Where neither narrows
- * it to one, nothing can say which: the sighting is ambiguous. A recurring event has no date, so it
- * never qualifies; the sighting itself, when it is a record among the known, is no candidate either.
+ * the match. With two or more, the one on the sighting's page is preferred, then the one on its
+ * host, then the one whose own page is the sighting's (#77): a program's calendar and its venue's
+ * list the same concert, and the venue-less twin the program's page made last week is on the
+ * program's host. Where none of that narrows it to one, nothing can say which: the sighting is
+ * ambiguous. A recurring event has no date, so it never qualifies; the sighting itself, when it is
+ * a record among the known, is no candidate either.
  */
-function candidateForVenueless<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[]): { event?: T; ambiguous: boolean } {
+function candidateForVenueless<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[]): Match<T> {
   const date = calendarDate(sighting.start);
-  if (sighting.venue !== undefined || date === undefined) return { ambiguous: false };
+  if (sighting.venue !== undefined || date === undefined) return NONE;
   const candidates = known.filter(
     (k) => k !== sighting && k.status !== "expired" && calendarDate(k.start) === date && (sameOrShortenedTitle(sighting.title, k.title) || sameTitleWithSeries(sighting.title, k.title)),
   );
   let pool = candidates;
-  for (const prefer of [onSameHost, sameOwnPage]) {
+  for (const prefer of [onSamePage, onSameHost, sameOwnPage]) {
     if (pool.length <= 1) break;
     const narrowed = pool.filter((k) => prefer(sighting, k));
     if (narrowed.length > 0) pool = narrowed;
   }
-  if (pool.length === 1) return { event: pool[0]!, ambiguous: false };
-  return { ambiguous: candidates.length > 1 };
+  if (pool.length === 1) return { kind: "matched", event: pool[0]!, rule: "venueless" };
+  return candidates.length > 1 ? { kind: "ambiguous" } : NONE;
+}
+
+function onSamePage(a: EventIdentity, b: EventIdentity): boolean {
+  return samePage(a.primaryUrl, b.primaryUrl);
 }
 
 function onSameHost(a: EventIdentity, b: EventIdentity): boolean {

@@ -272,9 +272,9 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
       continue;
     }
     const checked = await checkSource(source, ports);
-    for (const url of [...source.urls, ...checked.pages.map((p) => p.finalUrl)]) attempts.tried.add(normalizeUrl(url, url));
-    for (const url of checked.outages) attempts.outages.add(normalizeUrl(url, url));
-    for (const url of checked.gone) attempts.gone.add(normalizeUrl(url, url));
+    for (const url of [...source.urls, ...checked.pages.map((p) => p.finalUrl)]) attempts.tried.add(pageKey(url));
+    for (const url of checked.outages) attempts.outages.add(pageKey(url));
+    for (const url of checked.gone) attempts.gone.add(pageKey(url));
     sourceReports.push(checked.report);
     pages.push(...checked.pages.map((page) => ({ source, page })));
     if (checked.report.result === "fetched") sourceState[source.name] = { consecutiveFailures: 0 };
@@ -341,7 +341,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   const tally = noTally();
   let pagesNotExtracted = 0;
   const markUnread = (page: FetchResult) => {
-    for (const url of [page.url, page.finalUrl]) unreadUrls.add(normalizeUrl(url, url));
+    for (const url of [page.url, page.finalUrl]) unreadUrls.add(pageKey(url));
   };
 
   for (const { source, page } of pages) {
@@ -456,17 +456,19 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
  * its old id rather than starting a duplicate; all but those expired as index-page, which were
  * never read from an event's own page, so a reading of the real page starts a new event. A record
  * expired as duplicate stands for the record it was folded into (#77), which takes its sightings;
- * one folded before that pointer was kept takes none. Within one page's reading, a second verified
- * candidate with a known event's title and a date outside the fuzzy window is a second event: the
- * page lists the show twice, so it starts a record rather than confirming the first. A cancellation
- * applies only to a known event whose date is inside the window: a cancelled later night is not the
- * earlier night's cancellation. A dated sighting that is one month of a recurring event confirms it
- * and no more: a month's dates would make the standing event dated; a cancelled month is no listing
- * of the standing event at all, so a page that lists nothing else of it strikes it. A venue-less sighting that
- * fits two or more known events with none preferred creates nothing (nothing publishable anyway)
- * and is counted. A cancellation from a page that cannot speak for the event is not a sighting of
- * it at all: the event is left as it was, for re-verification to check its own page, and the
- * report says who said what.
+ * one folded before that pointer was kept takes none. Within one page's reading, a verified
+ * candidate with a known event's title on a date outside the fuzzy window, where the page also
+ * lists the event on or near its own date, is a second event: the page lists the show twice, so it
+ * starts a record rather than confirming or moving the first, whichever night the page gives first.
+ * A cancellation applies only to a known event whose date is inside the window: a cancelled later
+ * night is not the earlier night's cancellation. A dated sighting that is one month of a recurring
+ * event confirms it and no more: a month's dates would make the standing event dated; a cancelled
+ * month is no listing of the standing event at all, so a page that lists nothing else of it strikes
+ * it (cancellationReaches and standingUnder, which re-verification applies too). A venue-less
+ * sighting that fits two or more known events with none preferred creates nothing (nothing
+ * publishable anyway) and is counted. A cancellation from a page that cannot speak for the event is
+ * not a sighting of it at all: the event is left as it was, for re-verification to check its own
+ * page, and the report says who said what.
  */
 function mergeSightings(existing: Event[], sightings: Sighting[], today: string, config: RunConfig) {
   const aliases = config.venueAliases;
@@ -474,8 +476,7 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
   const touched = new Set<string>();
   const refreshed = new Set<string>();
   const created = new Set<string>();
-  /** Events read verified this run, to the page whose reading did it. */
-  const readVerified = new Map<string, string>();
+  const readVerified = new Set<string>();
   const uncitable = new Set<string>();
   const cancellationsFromElsewhere: RunReport["cancellationsFromElsewhere"] = [];
   let venuelessAmbiguous = 0;
@@ -484,35 +485,38 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
     events.push(event);
     touched.add(event.id);
     created.add(event.id);
-    if (event.status === "active") readVerified.set(event.id, pageKey(event.primaryUrl));
+    if (event.status === "active") readVerified.add(event.id);
   };
 
-  for (const { event, cancelled } of sightings) {
+  for (const sighting of sightings) {
+    const { event, cancelled } = sighting;
     const match = matchSighting(event, events.filter(matchable), aliases);
-    const known = match.event;
-    if (!known) {
+    if (match.kind !== "matched") {
       if (cancelled || isPast(event, today)) continue;
-      if (match.ambiguous) {
+      if (match.kind === "ambiguous") {
         venuelessAmbiguous++;
         continue;
       }
       create(event);
       continue;
     }
-    if (cancelled && (match.rule === "month" || !nearDates(event, known))) continue;
-    const standing = match.rule === "month" ? "confirms-only" : standingOf(event, known, config.discovery.platformHosts);
+    const { event: known, rule } = match;
+    if (cancelled && !cancellationReaches(event, known, rule)) continue;
+    const standing = standingUnder(rule, standingOf(event, known, config.discovery.platformHosts));
     if (cancelled && standing === "confirms-only") {
       cancellationsFromElsewhere.push({ ...titleAndUrl(known), reportedBy: event.primaryUrl });
       continue;
     }
-    // The first verified reading this run stands; a later page listing the same event, citably or not, only confirms it,
-    // unless the same page lists it verified again on a date too far off to be the same night: that is a second event.
-    if (readVerified.has(known.id) && !cancelled) {
-      if (readVerified.get(known.id) === pageKey(event.primaryUrl) && event.status === "active" && !nearDates(event, known)) create(event);
+    // A verified sighting far from the known event's date, on a page that also lists the event on or near its date
+    // (in this reading, before or after this sighting), is a second event: the page lists the show twice.
+    if (event.status === "active" && !cancelled && !nearDates(event, known) && listsNear(known, sighting, sightings)) {
+      if (!isPast(event, today)) create(event);
       continue;
     }
+    // The first verified reading this run stands; a later page listing the same event, citably or not, only confirms it.
+    if (readVerified.has(known.id) && !cancelled) continue;
     touched.add(known.id);
-    if (event.status === "active" && standing !== "confirms-only") readVerified.set(known.id, pageKey(event.primaryUrl));
+    if (event.status === "active" && standing !== "confirms-only") readVerified.add(known.id);
     const applied = applySighting(known, { event, cancelled }, standing);
     events[events.indexOf(known)] = applied.event;
     if (applied.refreshed && !created.has(known.id)) refreshed.add(known.id);
@@ -545,6 +549,36 @@ function standingOf(sighting: Event, known: Event, platformHosts: readonly strin
   if (samePage(sighting.primaryUrl, known.primaryUrl)) return "own-page";
   const ownSite = sameSite(sighting.primaryUrl, known.primaryUrl) && !onHost(known.primaryUrl, platformHosts);
   return sighting.lead.lane === "registry" || ownSite ? "speaks-for" : "confirms-only";
+}
+
+/**
+ * A page's standing toward a known event under the rule that matched them (#77): a dated sighting
+ * that is one month of a recurring event confirms it and no more, whatever its page, since a month's
+ * dates would make the standing event dated. Any other rule leaves the page's standing as it is.
+ */
+function standingUnder(rule: MatchRule, standing: Standing): Standing {
+  return rule === "month" ? "confirms-only" : standing;
+}
+
+/**
+ * Whether a cancelled sighting says anything about the known event it matched (#77): not when it is
+ * one month of a recurring event (a month off is not the standing event's cancellation), nor when
+ * its date is outside the fuzzy window of the event's (a later night's cancellation is not this
+ * night's). Such a sighting is no listing of the event at all.
+ */
+function cancellationReaches(sighting: Event, known: Event, rule: MatchRule): boolean {
+  return rule !== "month" && nearDates(sighting, known);
+}
+
+/**
+ * Whether the page a sighting was read from also lists the known event's title on or near the
+ * event's date, elsewhere in this run's sightings, cancelled or not, cited or not (#77). When it
+ * does, a sighting of that title far from the date is another night of the show, not a date move.
+ */
+function listsNear(known: Event, sighting: Sighting, sightings: Sighting[]): boolean {
+  return sightings.some(
+    (other) => other !== sighting && samePage(other.event.primaryUrl, sighting.event.primaryUrl) && sameName(other.event.title, sighting.event.title) && nearDates(other.event, known),
+  );
 }
 
 /**
@@ -692,9 +726,9 @@ async function reverify(
   const problems: string[] = [];
   const sighted = (e: Event) => lane.touched.has(e.id);
   const pending = events.filter((e) => {
-    if (lane.attempts.unread.has(e.primaryUrl)) return false;
+    if (lane.attempts.unread.has(pageKey(e.primaryUrl))) return false;
     if (e.status === "active") return !sighted(e);
-    return hiddenSinceVerified(e) && !(sighted(e) && lane.attempts.tried.has(e.primaryUrl));
+    return hiddenSinceVerified(e) && !(sighted(e) && lane.attempts.tried.has(pageKey(e.primaryUrl)));
   });
   const sightingsAt = new Map<string, Sighting[]>();
   const outageAt = new Set<string>();
@@ -707,12 +741,12 @@ async function reverify(
   let notReverified = 0;
 
   for (const url of new Set(pending.map((e) => e.primaryUrl))) {
-    if (lane.attempts.outages.has(url)) {
+    if (lane.attempts.outages.has(pageKey(url))) {
       outageAt.add(url);
       continue;
     }
-    if (lane.attempts.tried.has(url)) {
-      if (lane.attempts.gone.has(url)) goneAt.add(url);
+    if (lane.attempts.tried.has(pageKey(url))) {
+      if (lane.attempts.gone.has(pageKey(url))) goneAt.add(url);
       sightingsAt.set(url, []);
       continue;
     }
@@ -762,15 +796,15 @@ async function reverify(
     }
     const sightings = sightingsAt.get(event.primaryUrl);
     if (!sightings) return event;
-    const listing = listingOf(event, sightings, context.config.venueAliases);
-    if (!listing) {
+    const listed = sightingFor(event, sightings, context.config.venueAliases);
+    if (!listed) {
       if (partlyReadAt.has(event.primaryUrl)) return event;
       if (goneAt.has(event.primaryUrl) || !startsAfterHorizon(event, lastDay)) return strike(event);
       beyondHorizonUnstruck++;
       return event;
     }
-    // The page read here is the event's primary page, whatever page the sighting cites; a month of a recurring event confirms it and no more.
-    const applied = applySighting(event, listing.sighting, listing.rule === "month" ? "confirms-only" : "own-page");
+    // The page read here is the event's primary page, whatever page the sighting cites.
+    const applied = applySighting(event, listed.sighting, standingUnder(listed.rule, "own-page"));
     if (applied.refreshed) refreshed.add(event.id);
     if (applied.uncitable) uncitable.add(event.id);
     return applied.event;
@@ -790,19 +824,18 @@ async function reverify(
 }
 
 /**
- * The sighting on a re-read page that lists a known event, and by which rule it matched: of those
+ * The sighting on a re-read page that is a known event, and by which rule it matched: of those
  * matching, the one on or near the event's date, else the first (#77): a page that lists the show
- * twice names the event's own night among them, and a show on only another night has moved. A
- * cancelled listing far from the event's date is not a listing of it at all: a later night's
- * cancellation says nothing about this one.
+ * twice gives the event's own night among them, and a show given only on another night has moved. A
+ * cancelled sighting that does not reach the event (cancellationReaches) is no sighting of it.
  */
-function listingOf(event: Event, sightings: Sighting[], aliases: VenueAliases): { sighting: Sighting; rule: MatchRule } | undefined {
-  const listings = sightings.flatMap((sighting) => {
-    const { event: matched, rule } = matchSighting(sighting.event, [event], aliases);
-    if (matched === undefined || rule === undefined || (sighting.cancelled && !nearDates(sighting.event, event))) return [];
-    return [{ sighting, rule }];
+function sightingFor(event: Event, sightings: Sighting[], aliases: VenueAliases): { sighting: Sighting; rule: MatchRule } | undefined {
+  const matching = sightings.flatMap((sighting) => {
+    const match = matchSighting(sighting.event, [event], aliases);
+    if (match.kind !== "matched" || (sighting.cancelled && !cancellationReaches(sighting.event, event, match.rule))) return [];
+    return [{ sighting, rule: match.rule }];
   });
-  return listings.find(({ sighting }) => nearDates(sighting.event, event)) ?? listings[0];
+  return matching.find(({ sighting }) => nearDates(sighting.event, event)) ?? matching[0];
 }
 
 /** What the two lanes leave for re-verification: which events they sighted and which pages they tried. */
@@ -811,7 +844,7 @@ interface LaneOutcome {
   attempts: PageAttempts;
 }
 
-/** The pages a lane tried this run and how each attempt ended, all as normalized URLs. */
+/** The pages a lane tried this run and how each attempt ended, all as page keys (pageKey), so two spellings of one URL are one page. */
 interface PageAttempts {
   /** Every URL requested or redirected to that said something about its page; never one the spend cap kept from being requested, nor a lead that led to an index page. */
   tried: Set<string>;
@@ -908,20 +941,21 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     leadsNotFollowed: 0,
   };
   const { report, attempts } = outcome;
+  /** Pages followed this run, as page keys. */
   const followed = new Set<string>();
 
   /** The page behind a lead not yet followed this run, or nothing: already followed, the cap, or a problem fetching it. */
   const follow = async (url: string): Promise<FetchResult | undefined> => {
-    if (followed.has(url) || registryTried.has(url)) return undefined;
-    followed.add(url);
+    if (followed.has(pageKey(url)) || registryTried.has(pageKey(url))) return undefined;
+    followed.add(pageKey(url));
     if (ports.model.exhausted()) {
       outcome.leadsNotFollowed++;
       return undefined;
     }
     const fetched = await fetchReadable(url, ports.fetcher);
     if ("page" in fetched) return fetched.page;
-    if (fetched.failure === "outage") attempts.outages.add(url);
-    else attempts.gone.add(url);
+    if (fetched.failure === "outage") attempts.outages.add(pageKey(url));
+    else attempts.gone.add(pageKey(url));
     report.problems.push(fetched.problem);
     return undefined;
   };
@@ -936,12 +970,12 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
   const readPrimaryPage = async (url: string, query: string) => {
     const page = await follow(url);
     if (!page) {
-      if (attempts.gone.has(url)) attempts.tried.add(url);
+      if (attempts.gone.has(pageKey(url))) attempts.tried.add(pageKey(url));
       return;
     }
-    const pageUrls = [url, normalizeUrl(page.finalUrl, url)];
+    const pageUrls = [url, page.finalUrl].map(pageKey);
     if (isIndexPage(page.finalUrl, config)) {
-      attempts.outages.add(url);
+      attempts.outages.add(pageKey(url));
       report.problems.push(`${url} led to an index page and was not extracted`);
       return;
     }
@@ -962,7 +996,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     if (!read.sightings) return;
     outcome.sightings.push(...read.sightings);
     const host = hostOf(page.finalUrl);
-    if (host && !outcome.hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) outcome.hosts.set(host, pageUrls[1]!);
+    if (host && !outcome.hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) outcome.hosts.set(host, normalizeUrl(page.finalUrl, url));
   };
 
   const readIndex = async (url: string, query: string) => {

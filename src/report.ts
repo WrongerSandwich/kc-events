@@ -137,7 +137,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Not struck: starts after the horizon | ${counts.beyondHorizonUnstruck} |
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
-| Not created: a venue-less sighting fitting more than one known event | ${counts.venuelessAmbiguous} |
+| Not created: a venue-less sighting fitting more than one known event, none preferred | ${counts.venuelessAmbiguous} |
 | Dropped: outside geography | ${counts.outsideGeography} |
 | Dropped: a field past its length cap | ${counts.overCap} |
 | Uncitable: a date or time that does not exist, or an end before the start | ${counts.unusableDates} |

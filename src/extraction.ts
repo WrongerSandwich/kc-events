@@ -8,6 +8,7 @@ import type { RunConfig } from "./config.js";
 import { citedDate, ownPageAllowed, type Event } from "./dataset.js";
 import { linkTarget } from "./discovery.js";
 import { samePage } from "./hosts.js";
+import { calendarDate } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
 import type { Source } from "./registry.js";
@@ -215,7 +216,7 @@ function decodeCharacterReference(reference: string, body: string): string {
  * page, title, calendar date (a page may list one title on two nights, #77), and the run.
  */
 export function newEventId(primaryUrl: string, title: string, nowIso: string, start?: string): string {
-  const digest = createHash("sha256").update(`${primaryUrl}\n${title}\n${start?.slice(0, 10) ?? ""}\n${nowIso}`).digest("hex");
+  const digest = createHash("sha256").update(`${primaryUrl}\n${title}\n${calendarDate(start) ?? ""}\n${nowIso}`).digest("hex");
   return `evt_${digest.slice(0, 12)}`;
 }
 

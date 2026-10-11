@@ -263,14 +263,19 @@ describe("a sighting with no venue and several candidates (#77)", () => {
     expect(findMatch(linked, [kauffman, twin], {})).toBe(kauffman);
   });
 
+  it("prefers the candidate on its own page first: a twin on the sighting's page under a longer title", () => {
+    const onPage = { ...twin, primaryUrl: "https://kcsymphony.org/", title: "Interstellar Live | Film with Orchestra" };
+    expect(findMatch(sighting, [twin, onPage], {})).toBe(onPage);
+  });
+
   it("is ambiguous when neither narrows the candidates to one, and matches none", () => {
     const elsewhere = { ...sighting, primaryUrl: "https://kclivearts.org/" };
     expect(findMatch(elsewhere, [kauffman, twin], {})).toBeUndefined();
-    expect(matchSighting(elsewhere, [kauffman, twin], {})).toEqual({ ambiguous: true });
+    expect(matchSighting(elsewhere, [kauffman, twin], {})).toEqual({ kind: "ambiguous" });
     const twins = [twin, { ...twin, primaryUrl: "https://www.kcsymphony.org/" }];
-    expect(matchSighting({ ...sighting, primaryUrl: "https://kcsymphony.org/concerts" }, [kauffman, ...twins], {})).toEqual({ ambiguous: true });
-    expect(matchSighting(sighting, [kauffman], {})).toEqual({ event: kauffman, rule: "venueless", ambiguous: false });
-    expect(matchSighting({ ...sighting, title: "Other" }, [kauffman, twin], {})).toEqual({ ambiguous: false });
+    expect(matchSighting({ ...sighting, primaryUrl: "https://kcsymphony.org/concerts" }, [kauffman, ...twins], {})).toEqual({ kind: "ambiguous" });
+    expect(matchSighting(sighting, [kauffman], {})).toEqual({ kind: "matched", event: kauffman, rule: "venueless" });
+    expect(matchSighting({ ...sighting, title: "Other" }, [kauffman, twin], {})).toEqual({ kind: "none" });
   });
 
   it("folds the twin into the one candidate left once its own host's other twin is gone", () => {
@@ -288,16 +293,26 @@ describe("a record folded as a duplicate (#77)", () => {
 
   it("stands for the record it was folded into: a match on it is a match on that record", () => {
     expect(findMatch(sighting, [duplicate, kept], {})).toBe(kept);
-    expect(matchSighting(sighting, [kept, duplicate], {}).rule).toBe("page-and-title");
+    expect(matchSighting(sighting, [kept, duplicate], {})).toEqual({ kind: "matched", event: kept, rule: "page-and-title" });
     expect(findMatch(sighting, [kept], {})).toBeUndefined();
   });
 
-  it("follows a chain of folds, and matches nothing when the chain leaves the known events", () => {
+  it("follows a chain of folds, and a chain that leaves the known events or loops points at no record", () => {
     const first = { ...kept, id: "evt_first", primaryUrl: "https://kcballet.org/", venue: "Kansas City Ballet" };
     const chained = { ...kept, status: "expired" as const, duplicateOf: "evt_first" };
     expect(findMatch(sighting, [duplicate, chained, first], {})).toBe(first);
     expect(findMatch(sighting, [duplicate], {})).toBeUndefined();
     expect(findMatch(sighting, [duplicate, { ...chained, duplicateOf: "evt_dup" }], {})).toBeUndefined();
+  });
+
+  it("goes on to the other rules when a pointer leads nowhere, and compares the kept record's date", () => {
+    const { venue: _venue, ...venueless } = sighting;
+    expect(findMatch(venueless, [duplicate, kept], {})).toBe(kept);
+    const elsewhere = { ...kept, id: "evt_elsewhere", primaryUrl: "https://kclivearts.org/" };
+    expect(findMatch(venueless, [duplicate, elsewhere], {})).toBe(elsewhere);
+    const moved = { ...kept, start: "2026-10-30" };
+    const other = { ...kept, id: "evt_other", primaryUrl: duplicate.primaryUrl, venue: "Symphony Hall", start: "2026-10-23" };
+    expect(findMatch(sighting, [duplicate, moved, other], {})).toBe(other);
   });
 });
 
@@ -307,14 +322,14 @@ describe("one month of a recurring event (#77)", () => {
   const month = { primaryUrl: page, title: "Main Gallery Tours (Oct. 2026)", venue: "National WWI Museum and Memorial", start: "2026-10-09", recurrence: "limited-run" as const };
 
   it("matches the recurring event on its page as a confirmation, after every other rule", () => {
-    expect(matchSighting(month, [recurring], {})).toEqual({ event: recurring, rule: "month", ambiguous: false });
+    expect(matchSighting(month, [recurring], {})).toEqual({ kind: "matched", event: recurring, rule: "month" });
     const dated = { ...month, recurrence: "limited-run" as const, status: "active" as const };
-    expect(matchSighting(month, [recurring, dated], {}).rule).toBe("page-and-title");
+    expect(matchSighting(month, [recurring, dated], {})).toMatchObject({ rule: "page-and-title" });
   });
 
   it("matches no recurring event on another page and none expired; the untagged title is the page-and-title match it always was", () => {
     expect(findMatch({ ...month, primaryUrl: "https://unionstation.org/" }, [recurring], {})).toBeUndefined();
     expect(findMatch(month, [{ ...recurring, status: "expired" as const }], {})).toBeUndefined();
-    expect(matchSighting({ ...month, title: "Main Gallery Tours" }, [recurring], {}).rule).toBe("page-and-title");
+    expect(matchSighting({ ...month, title: "Main Gallery Tours" }, [recurring], {})).toMatchObject({ rule: "page-and-title" });
   });
 });
