@@ -181,6 +181,7 @@ describe("outages", () => {
     const second = await runAt(week(2), first.dataset, { [moved.urls[0]!]: PAGE }, [reply(), reply()], moved);
 
     expect(second.calls).not.toContain(`fetch:${CALENDAR_URL}`);
-    expect(second.dataset.events).toEqual(first.dataset.events);
+    // It is left as it was, but for one more run no lane sighted it (#82).
+    expect(second.dataset.events).toEqual(first.dataset.events.map((e) => ({ ...e, runsUnsighted: 1 })));
   });
 });

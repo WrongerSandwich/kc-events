@@ -19,6 +19,9 @@ const MONTHS = ["January", "February", "March", "April", "May", "June", "July", 
 /** Runs a discovery host must have been seen in before it is suggested for promotion. */
 const PROMOTION_THRESHOLD = 2;
 
+/** Consecutive runs with discovery on, without the host, after which its state is forgotten (#82). */
+const RUNS_TO_FORGET_HOST = 8;
+
 /** A URL path ending in one of these is a stylesheet, script, font, image or file, never an event page. */
 const STATIC_ASSET_PATH = /\.(css|m?js|woff2?|ttf|otf|eot|png|jpe?g|gif|svg|webp|ico|avif|pdf|xml|json|zip|mp3|mp4)$/i;
 
@@ -139,9 +142,11 @@ export function excludedSourceOnHost(url: string, registry: Registry): ExcludedS
  * Folds this run's discovery hosts (those whose pages yielded a verified sighting, held or not) into the state
  * carried between runs, and lists as promotion suggestions every host seen this run that has now
  * been seen in at least two runs, each with how many events held for promotion (ADR 0012) promoting
- * it would release. A host the registry already checks, or a ticketing platform that
- * is no one source, is neither counted nor suggested. Suggestions are only ever suggestions:
- * nothing here touches the registry.
+ * it would release. A host the registry already checks, a ticketing platform that is no one source, or
+ * an aggregator, whose pages are never read as primary pages, is neither counted nor suggested, and
+ * what was stored for one before is dropped (#82). A host not seen in eight runs with discovery on is
+ * forgotten; a run with discovery off could not have seen it, so it counts for nothing. Suggestions
+ * are only ever suggestions: nothing here touches the registry.
  */
 export function trackDiscoveryHosts(
   previous: Dataset["discoveryState"],
@@ -150,8 +155,17 @@ export function trackDiscoveryHosts(
   runIso: string,
   events: readonly Event[],
 ): { discoveryState: Dataset["discoveryState"]; promotionSuggestions: RunReport["promotionSuggestions"] } {
-  const neverSuggested = [...hostsOf(registry.sources), ...config.discovery.platformHosts];
-  const discoveryState = { ...previous };
+  const neverSuggested = [...hostsOf(registry.sources), ...config.discovery.platformHosts, ...config.discovery.aggregatorHosts];
+  const discoveryState: Dataset["discoveryState"] = {};
+  for (const [host, was] of Object.entries(previous)) {
+    if (onHost(`https://${host}/`, neverSuggested)) continue;
+    if (!config.discovery.enabled || seenThisRun.has(host)) {
+      discoveryState[host] = was;
+      continue;
+    }
+    const runsUnseen = (was.runsUnseen ?? 0) + 1;
+    if (runsUnseen < RUNS_TO_FORGET_HOST) discoveryState[host] = { ...was, runsUnseen };
+  }
   const promotionSuggestions: RunReport["promotionSuggestions"] = [];
   for (const [host, exampleUrl] of seenThisRun) {
     if (onHost(exampleUrl, neverSuggested)) continue;

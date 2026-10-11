@@ -3,7 +3,8 @@
  * reason: past (its last date is behind us), two-strike (two consecutive strikes), cancelled
  * (its page says so), index-page (its primary page is an index page, which is never read),
  * duplicate (another record is the same event and was seen first; see foldDuplicates in run),
- * or promotion or not-public (what extraction skips now, stored before it did; see skip). A
+ * promotion or not-public (what extraction skips now, stored before it did; see skip), or stale
+ * (no reading ever verified it and no page has listed it for four runs; see ageUnsighted). A
  * postponement is a date change, not this. An outage never expires an event; enough of them in a
  * row make it unverified.
  */
@@ -16,6 +17,9 @@ import { shiftDate } from "./time.js";
 
 /** Consecutive strikes after which an event expires. */
 const STRIKES_TO_EXPIRE = 2;
+
+/** Consecutive runs unsighted after which a record no reading ever verified expires as stale (#82). */
+const RUNS_TO_STALE = 4;
 
 /** Consecutive outages after which an active event becomes unverified (ADR 0008). */
 const OUTAGES_TO_UNVERIFY = 3;
@@ -59,6 +63,24 @@ export function expireIndexCited(event: Event, config: RunConfig): Event {
 export function expireSkipped(event: Event): Event {
   const reason = event.status !== "expired" ? skipReason(event) : undefined;
   return reason !== undefined ? expire(event, reason) : event;
+}
+
+/**
+ * Counts one run that could have sighted a record no reading ever verified, and did not (#82):
+ * re-verification never reads such a record (see hiddenSinceVerified), so only a lane's sighting
+ * says it is still listed, and the fourth run in a row without one expires it as stale. A sighting,
+ * citable or not, starts the count again, and so does a verified reading. A run whose lanes could not
+ * have sighted it, discovery being off for a discovery-led record, counts for nothing. An expired
+ * event stops counting; a held one expired as stale is no longer held, since there is nothing to release.
+ */
+export function ageUnsighted(event: Event, { sighted, laneRan }: { sighted: boolean; laneRan: boolean }): Event {
+  const { runsUnsighted, ...uncounted } = event;
+  if (event.status === "expired" || event.lastVerified !== undefined || sighted) return runsUnsighted === undefined ? event : uncounted;
+  if (!laneRan) return event;
+  const runs = (runsUnsighted ?? 0) + 1;
+  if (runs < RUNS_TO_STALE) return { ...event, runsUnsighted: runs };
+  const { heldForPromotion: _released, ...unheld } = uncounted;
+  return expire(unheld, "stale");
 }
 
 /**

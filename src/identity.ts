@@ -24,6 +24,16 @@ export function normalizeName(title: string): string {
     .replace(/^the /, "");
 }
 
+/**
+ * Two texts that say the same thing in the same words, in the same case, differing at most in
+ * whitespace, punctuation and symbols (#82): a re-reading that writes "Oct 31 · 8 PM" as "Oct 31 - 8 PM"
+ * changes nothing worth storing.
+ */
+export function sameText(a: string, b: string): boolean {
+  const bare = (text: string) => text.replace(/[\s\p{P}\p{S}]+/gu, "");
+  return bare(a) === bare(b);
+}
+
 /** Two names (titles or venues) are the same when they normalize alike; two absent names are the same too. */
 export function sameName(a: string | undefined, b: string | undefined): boolean {
   return a === undefined || b === undefined ? a === b : normalizeName(a) === normalizeName(b);

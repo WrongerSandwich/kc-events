@@ -19,7 +19,7 @@ const httpUrl = z
 
 export const RECURRENCE_CLASSES = ["one-off", "limited-run", "recurring"] as const;
 export const EVENT_STATUSES = ["active", "unverified", "expired"] as const;
-export const EXPIRY_REASONS = ["past", "two-strike", "cancelled", "index-page", "duplicate", "promotion", "not-public"] as const;
+export const EXPIRY_REASONS = ["past", "two-strike", "cancelled", "index-page", "duplicate", "promotion", "not-public", "stale"] as const;
 
 export type RecurrenceClass = (typeof RECURRENCE_CLASSES)[number];
 export type EventStatus = (typeof EVENT_STATUSES)[number];
@@ -69,6 +69,11 @@ const eventFields = z.strictObject({
    */
   heldForPromotion: z.literal(true).optional(),
   verificationFailures: z.number().int().nonnegative(),
+  /**
+   * Consecutive runs that could have sighted a record no reading ever verified and did not (#82); absent
+   * at zero. The fourth expires it as stale (ageUnsighted in expiry).
+   */
+  runsUnsighted: z.number().int().positive().optional(),
   /** Consecutive runs in which the event's primary page could not be loaded; absent in datasets older than the field. */
   consecutiveOutages: z.number().int().nonnegative().default(0),
   lead: leadSchema,
@@ -129,6 +134,9 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     .refine((e) => e.heldForPromotion === undefined || (e.status === "unverified" && e.lead.lane === "discovery"), {
       message: "an event held for promotion is unverified and was found by the discovery lane",
     })
+    .refine((e) => e.runsUnsighted === undefined || (e.status !== "expired" && e.lastVerified === undefined), {
+      message: "only a record never verified and not expired counts runs unsighted",
+    })
     .refine((e) => e.eventUrl === undefined || ownPageAllowed(e.eventUrl, e.primaryUrl, platformHosts), {
       message: "an event's own page is on its primary page's site or a ticketing platform",
     });
@@ -145,7 +153,19 @@ export const discoveryHostStateSchema = z.strictObject({
   runsSeen: z.number().int().positive(),
   /** The start of the last run that did. */
   lastSeen: isoDateTime,
+  /** Consecutive runs with discovery on that have not found one since (#82); absent at zero. The eighth forgets the host. */
+  runsUnseen: z.number().int().positive().optional(),
 });
+
+/** Events with ids unique among them. */
+const uniqueEvents = (platformHosts: readonly string[]) =>
+  z.array(eventSchemaFor(platformHosts)).superRefine((events, ctx) => {
+    const seen = new Set<string>();
+    for (const { id } of events) {
+      if (seen.has(id)) ctx.addIssue({ code: "custom", message: `event ids must be unique; ${id} appears more than once` });
+      seen.add(id);
+    }
+  });
 
 export const datasetSchemaFor = (platformHosts: readonly string[]) =>
   z.strictObject({
@@ -154,13 +174,7 @@ export const datasetSchemaFor = (platformHosts: readonly string[]) =>
     generatedAt: isoDateTime.nullable(),
     /** When the last run completed; null only before the first run. */
     lastSuccessfulRun: isoDateTime.nullable(),
-    events: z.array(eventSchemaFor(platformHosts)).superRefine((events, ctx) => {
-      const seen = new Set<string>();
-      for (const { id } of events) {
-        if (seen.has(id)) ctx.addIssue({ code: "custom", message: `event ids must be unique; ${id} appears more than once` });
-        seen.add(id);
-      }
-    }),
+    events: uniqueEvents(platformHosts),
     /** Keyed by registry source name. */
     sourceState: z.record(z.string(), sourceStateSchema),
     /** Keyed by host, without "www.". */
@@ -179,6 +193,23 @@ export type Dataset = z.infer<typeof datasetSchema>;
  */
 export function parseDataset(raw: unknown, config?: Pick<RunConfig, "discovery">): Dataset {
   return datasetSchemaFor(config?.discovery.platformHosts ?? DEFAULT_PLATFORM_HOSTS).parse(raw);
+}
+
+/**
+ * One year's archive (#82): `data/archive/<year>.json`, the expired records a run moved out of the live
+ * file, as they were when it did. Nothing reads it to run; it is kept so the record is not lost.
+ */
+export const archiveSchemaFor = (platformHosts: readonly string[]) =>
+  z.strictObject({
+    schemaVersion: z.literal(DATASET_SCHEMA_VERSION),
+    events: uniqueEvents(platformHosts),
+  });
+
+export type Archive = z.infer<ReturnType<typeof archiveSchemaFor>>;
+
+/** Parses an archive file under the run config, as parseDataset does the live file. */
+export function parseArchive(raw: unknown, config?: Pick<RunConfig, "discovery">): Archive {
+  return archiveSchemaFor(config?.discovery.platformHosts ?? DEFAULT_PLATFORM_HOSTS).parse(raw);
 }
 
 /** The dataset before any run has happened. */

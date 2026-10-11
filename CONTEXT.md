@@ -14,6 +14,10 @@ _Avoid_: item, listing, entry
 The `/events.json` the site publishes alongside its HTML: the active, not yet past events with the fields the site shows, each with its description, plus `schemaVersion`, `generatedAt` and `lastSuccessfulRun`. It is the interface between the site and any downstream reader. The job's own `data/events.json` (evidence, leads, counters, held-back and expired records) stays in the repository and is not published.
 _Avoid_: database, feed, API
 
+**Archive**:
+`data/archive/<year>.json`: the expired records a run moved out of `data/events.json` once both their last day and their last change were more than eight weeks back (#82), as they were when it did, filed by the later of the two. Nothing reads it to run: folding and matching see the live file alone, so a page that lists an archived event again starts a new record. Kept so the record is not lost, and so the live file each run loads holds only what may still matter.
+_Avoid_: history, backup
+
 **Primary page**:
 The page on the event's own web presence (venue calendar, promoter page, organizer site) from which its date and venue were read. Verification and identity hang on it. It is the same page whichever way its URL is written (with or without `www.`, http or https, a trailing slash or a fragment); a query string makes another page.
 _Avoid_: official page, canonical URL, source page
@@ -68,7 +72,7 @@ The category of an event, from a fixed taxonomy.
 _Avoid_: type, category, genre
 
 **Status**:
-Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, `index-page` (its primary page was an index page), or `duplicate` (another record turned out to be the same event and was seen first, or is the recurring event this one is one month of), `promotion` or `not-public` (stored before the skip in code matched it, #81). A duplicate names the record it was folded into (`duplicateOf`) and stands for it: a sighting that matches the duplicate is a sighting of that record. A postponement with a new date is a date change, not an expiry.
+Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, `index-page` (its primary page was an index page), or `duplicate` (another record turned out to be the same event and was seen first, or is the recurring event this one is one month of), `promotion` or `not-public` (stored before the skip in code matched it, #81), or `stale` (no reading ever verified it, and no lane has sighted it in four runs that could have, #82: re-verification never reads such a record, so nothing else would end it). A duplicate names the record it was folded into (`duplicateOf`) and stands for it: a sighting that matches the duplicate is a sighting of that record. A postponement with a new date is a date change, not an expiry.
 
 **Last-verified**:
 The date of the most recent run that read the event's date and venue from its primary page. Shown on every published event.
@@ -150,7 +154,7 @@ _Avoid_: citation, quote, proof
 The part of a run that uses web search to find events outside the registry. It finds; it does not admit: a new event from a host that is neither a registry source nor a ticketing platform is **held for promotion** until a person promotes the host (ADR 0012), and a host the registry excludes is never followed. A page it finds speaks for a known event only when it is on the event's own site; otherwise it can confirm the event and nothing more.
 
 **Held for promotion**:
-The state of an event the discovery lane found on a host nobody has looked at (no active registry source is on it, and it is no ticketing platform): stored unverified with its reading, marked (`heldForPromotion`), never rendered on the site, and not re-verified (its page is neither fetched for it nor sent to the model while it is held) until the host is promoted into the registry, which releases it to re-verification against its own page. The first run under the rule held every discovery-led event already on such a host, verified or not. Discovery finding the page again keeps the reading current and the hold in place; the event expires `past` like any other. Only a discovery-led event is ever held: a registry-led event whose page has moved to another host, or whose source was since excluded, was admitted by a person. Released by promotion, not by time; the run report counts what it held and released, by host.
+The state of an event the discovery lane found on a host nobody has looked at (no active registry source is on it, and it is no ticketing platform): stored unverified with its reading, marked (`heldForPromotion`), never rendered on the site, and not re-verified (its page is neither fetched for it nor sent to the model while it is held) until the host is promoted into the registry, which releases it to re-verification against its own page. The first run under the rule held every discovery-led event already on such a host, verified or not. Discovery finding the page again keeps the reading current and the hold in place; the event expires `past`, or `stale` if no reading of it was ever verified, like any other. Only a discovery-led event is ever held: a registry-led event whose page has moved to another host, or whose source was since excluded, was admitted by a person. Released by promotion, not by time; the run report counts what it held and released, by host.
 _Avoid_: quarantined, pending, draft
 
 **Aggregator**:
@@ -164,7 +168,7 @@ _Avoid_: listing page, directory page (when meaning this)
 The rule that an event publishes only if its date and venue were read from its fetched primary page. Anything less is held as `unverified` and never rendered. A date or time that does not exist (February 30th, 24:00), or an end before the start, is a misreading, not a read date: the candidate is held uncitable and counted. Both evidence snippets must occur in the page's text as the model was given it, with the job's own link numbers (`[12]`) stripped and runs of whitespace, case, curly quotes, dashes and an ellipsis not counting as differences; a candidate whose quote is not on the page is held `unverified` and counted, and a re-reading like that makes an active event unverified.
 
 **Two-strike expiry**:
-The rule that an active event which takes a strike on two consecutive runs becomes `expired` on the site while staying in the dataset. Outages do not count toward it.
+The rule that an active event which takes a strike on two consecutive runs becomes `expired` on the site while staying in the dataset, until it is archived. Outages do not count toward it.
 
 **Spend cap**:
 The per-run cost ceiling, enforced by the loop from the cost returned on every model call and backstopped by a monthly limit on the API key itself. When hit, the run publishes what it verified and logs the shortfall.

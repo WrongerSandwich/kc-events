@@ -194,6 +194,31 @@ describe("discovery lane", () => {
     expect(report.discovery.pagesExtracted).toBe(1);
   });
 
+  it("forgets a host unseen in eight discovery runs, and never keeps an aggregator, platform or registry host (#82)", async () => {
+    const seen = { runsSeen: 1, lastSeen: WEEK_1_ISO };
+    const dataset = {
+      ...emptyDataset(),
+      discoveryState: {
+        "old.test": { ...seen, runsUnseen: 7 },
+        "fresh.test": { ...seen, runsUnseen: 2 },
+        "lately.test": seen,
+        "listings.test": seen,
+        "eventbrite.com": seen,
+        "knuckleheads.test": seen,
+      },
+    };
+    const knuckleheads = source("Knuckleheads");
+
+    const discovering = await discoverAt(WEEK_2, dataset, { sources: [knuckleheads], pages: { [knuckleheads.urls[0]!]: PAGE }, searches: { [LATER_QUERY]: [] }, completions: [costing(0.01)] });
+
+    expect(discovering.dataset.discoveryState).toEqual({ "fresh.test": { ...seen, runsUnseen: 3 }, "lately.test": { ...seen, runsUnseen: 1 } });
+
+    // A run with discovery off could not have seen any host, so it ages none.
+    const fakes = fakePorts(WEEK_3, { pages: { [knuckleheads.urls[0]!]: PAGE }, completions: [costing(0.01)] });
+    const quiet = await run({ config: testConfig(), prompts: testPrompts(), dataset: discovering.dataset, registry: { sources: [knuckleheads] }, ports: fakes.ports });
+    expect(quiet.dataset.discoveryState).toEqual(discovering.dataset.discoveryState);
+  });
+
   it("a discovery host seen in two runs is a promotion suggestion, never a registry source", async () => {
     const otherShow = "https://promoter.test/shows/other-show";
     const first = await discoverAt(WEEK_1, emptyDataset(), {

@@ -94,6 +94,56 @@ describe("a research run's files", () => {
     expect(closed()).toBe(true);
   });
 
+  /** An event expired long before WEEK_1's run (2026-10-02), on the given date. */
+  const longGone = (id: string, start: string) => ({
+    id,
+    title: `Show ${id}`,
+    start,
+    venue: "Knuckleheads",
+    neighborhood: "East Bottoms",
+    primaryUrl: CALENDAR_URL,
+    kind: "music",
+    recurrence: "one-off",
+    dontMiss: false,
+    firstSeen: `${start}T09:00:00-05:00`,
+    lastChanged: `${start}T09:00:00-05:00`,
+    status: "expired",
+    expiryReason: "past",
+    verificationFailures: 0,
+    consecutiveOutages: 0,
+    lead: { lane: "registry", source: "Knuckleheads" },
+    evidence: {},
+  });
+  const readJson = async (path: string) => JSON.parse(await readFile(join(root, "data", path), "utf8"));
+
+  it("moves long-expired records to the archive file for their year, adding to what is there, and the live file loads alone (#82)", async () => {
+    await writeFile(join(root, "data", "events.json"), JSON.stringify({ ...emptyDataset(), events: [longGone("evt_a", "2026-06-01"), longGone("evt_b", "2025-11-01")] }));
+    await mkdir(join(root, "data", "archive"));
+    await writeFile(join(root, "data", "archive", "2026.json"), JSON.stringify({ schemaVersion: 1, events: [longGone("evt_old", "2026-01-10")] }, null, 2) + "\n");
+    const { done } = researchWith({ pages: { [CALENDAR_URL]: PAGE }, completions: [reply(candidateAt(knuckleheads))] });
+
+    const { written } = await done;
+
+    expect(await dataFiles()).toEqual(["archive/2025.json", "archive/2026.json", "events.json", "registry.yaml", "runs/2026-10-02.json", "runs/2026-10-02.md"]);
+    expect(written).toContain(join(root, "data", "archive", "2026.json"));
+    expect((await readJson("archive/2026.json")).events.map((e: { id: string }) => e.id)).toEqual(["evt_old", "evt_a"]);
+    expect((await readJson("archive/2025.json")).events.map((e: { id: string }) => e.id)).toEqual(["evt_b"]);
+    expect(parseDataset(await readJson("events.json"), testConfig()).events.map((e) => e.title)).toEqual(["Big Show"]);
+  });
+
+  it("writes nothing when an archive file it would add to does not load", async () => {
+    await writeFile(join(root, "data", "events.json"), JSON.stringify({ ...emptyDataset(), events: [longGone("evt_a", "2026-06-01")] }));
+    await mkdir(join(root, "data", "archive"));
+    await writeFile(join(root, "data", "archive", "2026.json"), "{ not json");
+    const before = await readFile(join(root, "data", "events.json"), "utf8");
+    const { done } = researchWith({ pages: { [CALENDAR_URL]: PAGE }, completions: [reply(candidateAt(knuckleheads))] });
+
+    await expect(done).rejects.toThrow("data/archive/2026.json");
+
+    expect(await dataFiles()).toEqual(["archive/2026.json", "events.json", "registry.yaml"]);
+    expect(await readFile(join(root, "data", "events.json"), "utf8")).toBe(before);
+  });
+
   it("writes nothing, and still lets go of the adapters, when the run throws", async () => {
     await writeFile(join(root, "data", "events.json"), JSON.stringify(emptyDataset()));
     const before = await readFile(join(root, "data", "events.json"), "utf8");

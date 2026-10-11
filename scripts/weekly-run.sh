@@ -5,7 +5,8 @@
 #
 # Runs in the clone this script lives in, which should be one dedicated to the job (set up by
 # scripts/home-run-setup.sh): it resets to origin/main, installs, runs `pnpm research`, and commits
-# data/events.json and the run's report as "Weekly research run <run date>", then pushes. A failed
+# data/events.json, the run's report, and any archive file under data/archive as "Weekly research
+# run <run date>", then pushes. A failed
 # run commits nothing, so the last committed dataset stands. It also installs the Chromium that
 # registry sources with `fetch: browser` are loaded in. Each run's output goes to a log under
 # $XDG_STATE_HOME/kc-this-week (default ~/.local/state/kc-this-week), kept for 90 days.
@@ -124,6 +125,8 @@ if ((run_status != 0)); then
 fi
 
 git add data/events.json data/runs
+# Expired records a run moves out of events.json go to data/archive (#82), which exists once one has.
+if [[ -d data/archive ]]; then git add data/archive; fi
 if git diff --cached --quiet; then
   echo "the run finished but changed nothing under data/; every run should at least restamp the dataset" >&2
   false
@@ -137,14 +140,17 @@ fi
 message="Weekly research run $run_date"
 git commit --quiet -m "$message"
 
-# Someone may have pushed while the run was going. The run touches only its three files, so they go
-# on top of whatever main has now; if a rebase cannot do that (a manual run's events.json landed in
-# between), main's data/ is taken and this run's three files are written over it.
+# Someone may have pushed while the run was going. The run touches only its own files (the dataset,
+# its report's two, and any archive file it added to), so they go on top of whatever main has now; if
+# a rebase cannot do that (a manual run's events.json landed in between), main's data/ is taken and
+# this run's files are written over it.
 git fetch --quiet origin main
 if ! git rebase --quiet origin/main; then
   echo "rebase onto origin/main conflicted; re-applying this run's files on top of it"
   git rebase --abort
   run_files=(data/events.json "data/runs/$run_date.json" "data/runs/$run_date.md")
+  mapfile -t archive_files < <(git diff --name-only HEAD~1 HEAD -- data/archive)
+  run_files+=("${archive_files[@]}")
   saved=$(mktemp -d)
   for f in "${run_files[@]}"; do
     mkdir -p "$saved/$(dirname "$f")"

@@ -1,4 +1,5 @@
 import { EXPIRY_REASONS, type ExpiryReason } from "./dataset.js";
+import { ARCHIVE_AFTER_WEEKS } from "./archive.js";
 import { markdownList, plural, tableCell } from "./markdown.js";
 import type { ModelCall } from "./spend.js";
 
@@ -67,6 +68,8 @@ export interface RunReport {
     /** Events released this run because a person promoted their host into the registry; re-verified against their page from here on. */
     releasedForPromotion: number;
     expired: Record<ExpiryReason, number>;
+    /** Expired records moved out of the live dataset into the archive this run: gone more than eight weeks (#82). */
+    archived: number;
   };
   spend: {
     totalUsd: number;
@@ -143,6 +146,8 @@ export interface RunReport {
    * known event is cancelled (ADR 0008, amended #75). The event was left as it was; its own page decides.
    */
   cancellationsFromElsewhere: (EventRef & { reportedBy: string })[];
+  /** Events whose title or primary page changed this run, as they are now and as they were (#82): a flap shows here the week it happens. */
+  identityChurn: (EventRef & { was: EventRef })[];
 }
 
 export function renderReportMarkdown(report: RunReport): string {
@@ -177,6 +182,8 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Unverified: a quote not on its page | ${counts.quoteNotOnPage} |
 | Stored neighborhoods off the list, placed again | ${report.offListNeighborhoods.reduce((n, r) => n + r.events, 0)} |
 ${EXPIRY_REASONS.map((reason) => `| Expired: ${reason} | ${counts.expired[reason]} |`).join("\n")}
+| Archived: expired more than ${ARCHIVE_AFTER_WEEKS} weeks back | ${counts.archived} |
+| Identity churn: title or primary page changed | ${report.identityChurn.length} |
 
 ## Spend
 
@@ -243,6 +250,10 @@ ${eventList(report.uncitableReadings)}
 ## Cancellations from elsewhere
 
 ${markdownList(report.cancellationsFromElsewhere.map((c) => `${c.reportedBy} says ${c.title} (${c.primaryUrl}) is cancelled; the event was left as it was`))}
+
+## Identity churn
+
+${markdownList(report.identityChurn.map((c) => `${c.was.title} (${c.was.primaryUrl}) is now ${c.title} (${c.primaryUrl})`))}
 
 ## Held for promotion
 

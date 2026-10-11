@@ -1,8 +1,9 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { parseConfig } from "../src/config.js";
-import { parseDataset } from "../src/dataset.js";
+import { archiveDate } from "../src/archive.js";
+import { parseArchive, parseDataset } from "../src/dataset.js";
 import { onHost } from "../src/hosts.js";
 import { parseRegistry } from "../src/registry.js";
 import { neighborhoodList, regionOf } from "../src/taxonomy.js";
@@ -17,6 +18,15 @@ describe("committed config and registry", () => {
     const raw = JSON.parse(readFileSync(new URL("../data/events.json", import.meta.url), "utf8"));
     // Loading fills fields newer than the file with their defaults and changes nothing else.
     expect(parseDataset(raw, config)).toEqual({ ...raw, events: raw.events.map((e: object) => ({ consecutiveOutages: 0, ...e })) });
+  });
+
+  it("loads every committed archive file, each record under its archive year (#82)", () => {
+    const dir = new URL("../data/archive/", import.meta.url);
+    const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".json")) : [];
+    for (const file of files) {
+      const archive = parseArchive(JSON.parse(readFileSync(new URL(file, dir), "utf8")), config);
+      expect(archive.events.filter((e) => `${archiveDate(e).slice(0, 4)}.json` !== file).map((e) => e.id)).toEqual([]);
+    }
   });
 
   it("gives every source a kind from the taxonomy", () => {

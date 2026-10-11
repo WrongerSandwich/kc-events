@@ -1,6 +1,7 @@
 import type { RunConfig } from "./config.js";
 import { EXPIRY_REASONS, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
-import { expire, expireIndexCited, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
+import { splitArchived } from "./archive.js";
+import { ageUnsighted, expire, expireIndexCited, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
 import {
   buildExtractionRequest,
   candidateToSighting,
@@ -30,7 +31,7 @@ import {
 } from "./curation.js";
 import { discoveryQueries, excludedSourceOnHost, isIndexPage, isLead, onAdmittedHost, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { hostOf, onHost, pageKey, samePage, sameSite } from "./hosts.js";
-import { calendarDate, daysApart, matchSighting, nearDates, normalizeName, oneMonthOf, sameEvent, sameName, variantTitles, type MatchRule, type VenueAliases } from "./identity.js";
+import { calendarDate, daysApart, matchSighting, nearDates, normalizeName, oneMonthOf, sameEvent, sameName, sameText, variantTitles, type MatchRule, type VenueAliases } from "./identity.js";
 import type { ExcludedSource, Registry, Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
@@ -65,6 +66,8 @@ export interface RunInput {
 export interface RunOutput {
   dataset: Dataset;
   report: RunReport;
+  /** Expired records this run moved out of the dataset (#82), for the caller to add to the archive. */
+  archived: Event[];
 }
 
 /**
@@ -116,8 +119,11 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     attempts: combineAttempts(registryLane.attempts, extraction.attempts, discovery.attempts),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
+  // A record no reading ever verified goes stale when no lane has sighted it for four runs that could have (#82).
+  const sighted = new Set([...touched, ...reverified.sighted]);
+  const aged = reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: e.lead.lane === "registry" || config.discovery.enabled }));
   // A reading places an event from its page; one no page placed this run is placed from what is stored.
-  const placed = placeOffList(reverified.events, neighborhoods, config, registry);
+  const placed = placeOffList(aged, neighborhoods, config, registry);
   // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
   const madeUncitable = new Set([...merged.uncitable, ...reverified.uncitable]);
   const uncitable = placed.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
@@ -127,6 +133,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = curation.events.map(cleanStoredWhyLine);
   const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso, events);
+  // What expired long enough ago that nothing will revive it leaves the live dataset (#82).
+  const { live, archived } = splitArchived(events, today);
   const shortfall = {
     pagesNotExtracted: extraction.pagesNotExtracted + discovery.pagesNotExtracted,
     eventsNotReverified: reverified.notReverified,
@@ -159,6 +167,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       releasedForPromotion: countEvents(held.releasedByHost),
       ...sumTallies(extraction.tally, discovery.tally, reverified.tally),
       expired: countExpired(dataset.events, events),
+      archived: archived.length,
     },
     spend: {
       totalUsd: model.totalUsd(),
@@ -181,19 +190,31 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     outageLimited: reverified.outageLimited.map(titleAndUrl),
     uncitableReadings: uncitable.map(titleAndUrl),
     cancellationsFromElsewhere: merged.cancellationsFromElsewhere,
+    identityChurn: identityChurn(dataset.events, events),
   };
 
   return {
     dataset: {
       ...dataset,
-      events,
+      events: live,
       sourceState: registryLane.sourceState,
       discoveryState: promotion.discoveryState,
       generatedAt: finishedIso,
       lastSuccessfulRun: finishedIso,
     },
     report,
+    archived,
   };
+}
+
+/** Every event whose title or primary page differs from what the run started with, now and before (#82). */
+function identityChurn(previous: Event[], events: Event[]): RunReport["identityChurn"] {
+  const before = new Map(previous.map((e) => [e.id, e]));
+  return events.flatMap((event) => {
+    const was = before.get(event.id);
+    if (!was || (was.title === event.title && was.primaryUrl === event.primaryUrl)) return [];
+    return [{ ...titleAndUrl(event), was: titleAndUrl(was) }];
+  });
 }
 
 function titleAndUrl(event: Event): EventRef {
@@ -327,14 +348,15 @@ interface SourcePage {
 
 /**
  * The registry lane's fetching: checks every active source, skips excluded ones, and carries
- * each source's consecutive failure count forward. A blocked source's count is left alone:
+ * each source's consecutive failure count forward, for the sources the registry still names. A blocked source's count is left alone:
  * it is neither a success nor a transient failure.
  */
 async function checkRegistry(registry: Registry, previous: Record<string, SourceState>, ports: Ports) {
   const sourceReports: SourceReport[] = [];
   const pages: SourcePage[] = [];
   const attempts = noAttempts();
-  const sourceState = { ...previous };
+  // A source taken out of the registry leaves no state behind (#82); an excluded one keeps its count for when it returns.
+  const sourceState = Object.fromEntries(Object.entries(previous).filter(([name]) => registry.sources.some((s) => s.name === name)));
   const failuresOf = (name: string) => sourceState[name]?.consecutiveFailures ?? 0;
 
   for (const source of registry.sources) {
@@ -818,14 +840,20 @@ function firstMonthPair(events: Event[]): [Event, Event] | undefined {
  * the known one: a listing line that says nothing more does not wipe what a fuller page said. Like
  * every other field, the description is only taken from a verified reading. The stored title is
  * kept when the new one is a form of it, cut short or with a series name in front (#75): the page
- * billed the same event two ways, and the site should not flap between them.
+ * billed the same event two ways, and the site should not flap between them. So are the stored title,
+ * description, own page and evidence when the new one says the same in other whitespace or
+ * punctuation (#82): the weekly diff carries what changed, not how a reading happened to spell it.
  */
 function refresh(known: Event, sighting: Event): Event {
   const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };
+  const steady = <K extends string>(field: K, was: string | undefined, now: string | undefined) => (was !== undefined && now !== undefined && sameText(was, now) ? { [field]: was } : {});
   return {
     ...(known.description !== undefined ? { description: known.description } : {}),
     ...sighting,
-    ...(variantTitles(known.title, sighting.title) ? { title: known.title } : {}),
+    ...(variantTitles(known.title, sighting.title) ? { title: known.title } : steady("title", known.title, sighting.title)),
+    ...steady("description", known.description, sighting.description),
+    ...steady("eventUrl", known.eventUrl, sighting.eventUrl),
+    evidence: { ...sighting.evidence, ...steady("date", known.evidence.date, sighting.evidence.date), ...steady("venue", known.evidence.venue, sighting.evidence.venue) },
     id: known.id,
     firstSeen: known.firstSeen,
     lead: known.lead,
@@ -888,6 +916,8 @@ async function reverify(
   const excludedAt = new Map<string, ExcludedSource>();
   const lastDay = horizonEnd(context.today, context.config.horizonWeeks);
   const refreshed = new Set<string>();
+  /** Events a re-read page listed, citably or not. */
+  const listedHere = new Set<string>();
   const tally = noTally();
   let notReverified = 0;
 
@@ -997,6 +1027,7 @@ async function reverify(
     }
     // The page read here is the event's primary page, whatever page the sighting cites.
     const applied = applySighting(event, listed.sighting, "own-page", listed.rule);
+    listedHere.add(event.id);
     if (applied.refreshed) refreshed.add(event.id);
     if (applied.uncitable) uncitable.add(event.id);
     return applied.event;
@@ -1004,6 +1035,7 @@ async function reverify(
   return {
     events: checked,
     reverified: refreshed.size,
+    sighted: listedHere,
     notReverified,
     tally,
     heldThroughOutage,

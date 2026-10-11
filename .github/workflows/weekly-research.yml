@@ -79,6 +79,8 @@ jobs:
           TRIGGER: ${{ github.event_name }}
         run: |
           git add data/events.json data/runs
+          # Expired records a run moves out of events.json go to data/archive (#82), which exists once one has.
+          if [[ -d data/archive ]]; then git add data/archive; fi
           if git diff --cached --quiet; then
             echo "::error::the run finished but changed nothing under data/; every run should at least restamp the dataset"
             exit 1
