@@ -9,12 +9,21 @@
 import type { RunConfig } from "./config.js";
 import type { Event, ExpiryReason } from "./dataset.js";
 import { isIndexPage } from "./discovery.js";
+import { calendarDate } from "./identity.js";
+import { shiftDate } from "./time.js";
 
 /** Consecutive strikes after which an event expires. */
 const STRIKES_TO_EXPIRE = 2;
 
 /** Consecutive outages after which an active event becomes unverified (ADR 0008). */
 const OUTAGES_TO_UNVERIFY = 3;
+
+/**
+ * Days at the end of the horizon in which an omission still says nothing (#78): the model is told the
+ * weeks and the last date, and one that reads "the next N weeks" a day or two short leaves out an
+ * event the job counts as asked for.
+ */
+const HORIZON_SLACK_DAYS = 2;
 
 export function expire(event: Event, reason: ExpiryReason): Event {
   return { ...event, status: "expired", expiryReason: reason };
@@ -52,12 +61,28 @@ export function strike(event: Event): Event {
 
 /**
  * Whether a page that loaded and does not list an event says nothing about it: the event starts
- * after the last day of the horizon, and extraction is asked only for events within it. A recurring
- * event and an undated one are always asked for, and so is a limited run that opens inside the
- * horizon, however long after it closes.
+ * after the last day of the horizon, less two days of slack, and extraction is asked only for events
+ * within it. A recurring event and an undated one are always asked for, and so is a limited run that
+ * opens inside the horizon, however long after it closes.
  */
 export function startsAfterHorizon(event: Event, lastDay: string): boolean {
-  return event.recurrence !== "recurring" && event.start !== undefined && event.start.slice(0, 10) > lastDay;
+  return startsAfter(event, shiftDate(lastDay, -HORIZON_SLACK_DAYS));
+}
+
+/**
+ * Whether a page that loaded and does not list an event says nothing about it because its listing
+ * stops short (#78): the event starts after the latest start the page listed this run, so a window
+ * that moved ("the next 20 shows", a month view) rather than the venue dropped it. A page that listed
+ * nothing dated has no such window. A recurring event and an undated one are listed under no date.
+ */
+export function startsAfterListing(event: Event, latestStart: string | undefined): boolean {
+  return latestStart !== undefined && startsAfter(event, latestStart);
+}
+
+/** Whether a dated, non-recurring event starts on a calendar date after the given one. */
+function startsAfter(event: Event, date: string): boolean {
+  const start = event.recurrence === "recurring" ? undefined : calendarDate(event.start);
+  return start !== undefined && start > date;
 }
 
 /**

@@ -5,6 +5,7 @@
 import type { z } from "zod";
 import type { RunConfig } from "./config.js";
 import type { CompletionRequest } from "./ports.js";
+import { horizonEnd } from "./time.js";
 
 /** A strict JSON-schema response format from a Zod schema. Zod emits a `$schema` declaration that strict mode does not accept. */
 export function strictResponseFormat(name: string, schema: z.ZodType): CompletionRequest["responseFormat"] {
@@ -12,7 +13,11 @@ export function strictResponseFormat(name: string, schema: z.ZodType): Completio
   return { name, schema: rest };
 }
 
-/** The opening of the "This run" section of a system message: the date and horizon every call needs. */
+/**
+ * The opening of the "This run" section of a system message: the date and horizon every call needs.
+ * The horizon names its last date as well as its weeks (#78): told only "the next N weeks", a model
+ * may stop a day or two short of the date the job counts to, and leave out an event it was asked for.
+ */
 export function thisRunLines(config: RunConfig, today: string): string[] {
-  return ["## This run", "", `- Today: ${today} (${config.timezone})`, `- Horizon: the next ${config.horizonWeeks} weeks`];
+  return ["## This run", "", `- Today: ${today} (${config.timezone})`, `- Horizon: the next ${config.horizonWeeks} weeks, through ${horizonEnd(today, config.horizonWeeks)}`];
 }

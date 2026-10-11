@@ -71,5 +71,10 @@ function offsetAt(instant: Date, timeZone: string): number {
  * An event starting after it is beyond the horizon.
  */
 export function horizonEnd(today: string, horizonWeeks: number): string {
-  return new Date(Date.parse(`${today}T00:00:00Z`) + horizonWeeks * 7 * DAY_MS).toISOString().slice(0, 10);
+  return shiftDate(today, horizonWeeks * 7);
+}
+
+/** A calendar date (YYYY-MM-DD) some days after another, or before it when the count is negative. */
+export function shiftDate(date: string, days: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + days * DAY_MS).toISOString().slice(0, 10);
 }

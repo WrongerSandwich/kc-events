@@ -1,6 +1,6 @@
 import type { RunConfig } from "./config.js";
 import { EXPIRY_REASONS, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
-import { expire, expireIndexCited, expirePast, hiddenSinceVerified, isPast, outage, startsAfterHorizon, strike } from "./expiry.js";
+import { expire, expireIndexCited, expirePast, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
 import {
   buildExtractionRequest,
   candidateToSighting,
@@ -27,7 +27,7 @@ import {
 } from "./curation.js";
 import { discoveryQueries, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { hostOf, onHost, pageKey, samePage, sameSite } from "./hosts.js";
-import { matchSighting, nearDates, normalizeName, oneMonthOf, sameEvent, sameName, variantTitles, type MatchRule, type VenueAliases } from "./identity.js";
+import { calendarDate, daysApart, matchSighting, nearDates, normalizeName, oneMonthOf, sameEvent, sameName, variantTitles, type MatchRule, type VenueAliases } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
@@ -101,7 +101,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   for (const [duplicate, kept] of folded.foldedInto) if (touched.has(duplicate)) touched.add(kept);
   const laneOutcome = {
     touched,
-    attempts: combineAttempts({ ...registryLane.attempts, unread: extraction.unreadUrls }, discovery.attempts),
+    attempts: combineAttempts({ ...registryLane.attempts, unread: extraction.unreadUrls, yields: extraction.yields }, discovery.attempts),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
   // A reading places an event from its page; one no page placed this run is placed from what is stored.
@@ -137,7 +137,9 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       reverified: reverified.reverified,
       heldUnverified: merged.counts.heldUnverified,
       heldThroughOutage: reverified.heldThroughOutage,
+      heldSourceExcluded: reverified.heldSourceExcluded,
       beyondHorizonUnstruck: reverified.beyondHorizonUnstruck,
+      beyondListingUnstruck: reverified.beyondListingUnstruck,
       unverifiedByOutageLimit: reverified.outageLimited.length,
       unverifiedByUncitableReading: uncitable.length,
       venuelessAmbiguous: merged.counts.venuelessAmbiguous,
@@ -340,6 +342,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   const sightings: Sighting[] = [];
   const bySource = new Map<string, SourceExtraction>();
   const unreadUrls = new Set<string>();
+  const yields = new Map<string, PageYield>();
   const tally = noTally();
   let pagesNotExtracted = 0;
   const markUnread = (page: FetchResult) => {
@@ -363,13 +366,16 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
       continue;
     }
     addTally(tally, read.tally);
-    if (read.sightings) sightings.push(...read.sightings);
+    if (read.sightings) {
+      sightings.push(...read.sightings);
+      for (const url of [page.url, page.finalUrl]) yields.set(pageKey(url), yieldOf({ ...read, sightings: read.sightings }));
+    }
     if (!readInFull(read)) markUnread(page);
     outcome.extracted += read.extracted;
     outcome.problems.push(...read.problems);
   }
 
-  return { sightings, tally, pagesNotExtracted, bySource, unreadUrls };
+  return { sightings, tally, pagesNotExtracted, bySource, unreadUrls, yields };
 }
 
 const noTally = (): CandidateTally => ({ outsideGeography: 0, overCap: 0, unusableDates: 0 });
@@ -385,6 +391,22 @@ function addTally(into: CandidateTally, from: CandidateTally): void {
  */
 function readInFull(read: { sightings?: Sighting[]; tally: CandidateTally }): boolean {
   return read.sightings !== undefined && read.tally.overCap === 0;
+}
+
+/**
+ * What a page's reading amounted to, for judging an event it leaves out (#78): how many candidates
+ * the model listed, and the latest start among them, cancelled or not, cited or not, which is as far
+ * as the page's listing reaches this run. A recurring candidate is listed under no date.
+ */
+interface PageYield {
+  candidates: number;
+  latestStart?: string;
+}
+
+function yieldOf(read: { sightings: Sighting[]; extracted: number }): PageYield {
+  const starts = read.sightings.flatMap((s) => (s.event.recurrence === "recurring" ? [] : [calendarDate(s.event.start)])).filter((d): d is string => d !== undefined);
+  const latestStart = starts.sort().at(-1);
+  return { candidates: read.extracted, ...(latestStart !== undefined ? { latestStart } : {}) };
 }
 
 function sumTallies(...tallies: CandidateTally[]): CandidateTally {
@@ -468,9 +490,11 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
  * month is no listing of the standing event at all, so a page that lists nothing else of it strikes
  * it (cancellationReaches and standingUnder, which re-verification applies too). A venue-less
  * sighting that fits two or more known events with none preferred creates nothing (nothing
- * publishable anyway) and is counted. A cancellation from a page that cannot speak for the event is
- * not a sighting of it at all: the event is left as it was, for re-verification to check its own
- * page, and the report says who said what.
+ * publishable anyway) and is counted. A sighting from a page with no standing toward the event (see
+ * Standing) is not a sighting of it at all (#78): the event is left as it was, strikes included, for
+ * re-verification to check its own page; when such a page says cancelled, the report says who said
+ * what. When one page lists the show twice within the fuzzy window, the night nearest the stored
+ * start is the event's reading, whichever the page gives first (#78); the other confirms it at most.
  */
 function mergeSightings(existing: Event[], sightings: Sighting[], today: string, config: RunConfig) {
   const aliases = config.venueAliases;
@@ -504,8 +528,8 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
     }
     const { event: known, rule } = match;
     if (cancelled && !cancellationReaches(event, known, rule)) continue;
-    const standing = standingUnder(rule, standingOf(event, known, config.discovery.platformHosts));
-    if (cancelled && standing === "confirms-only") {
+    const standing = standingOf(event, known, config.discovery.platformHosts);
+    if (cancelled && standing === "none") {
       cancellationsFromElsewhere.push({ ...titleAndUrl(known), reportedBy: event.primaryUrl });
       continue;
     }
@@ -517,9 +541,13 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
     }
     // The first verified reading this run stands; a later page listing the same event, citably or not, only confirms it.
     if (readVerified.has(known.id) && !cancelled) continue;
+    // A page with no standing says nothing about the event; its own page decides, in re-verification.
+    if (standing === "none") continue;
+    // Of this run's verified sightings of the event from pages with standing, the one nearest its stored start is its reading.
+    if (event.status === "active" && !cancelled && hasNearerSighting(known, sighting, sightings, config)) continue;
     touched.add(known.id);
-    if (event.status === "active" && standing !== "confirms-only") readVerified.add(known.id);
-    const applied = applySighting(known, { event, cancelled }, standing);
+    if (event.status === "active" && rule !== "month") readVerified.add(known.id);
+    const applied = applySighting(known, { event, cancelled }, standing, rule);
     events[events.indexOf(known)] = applied.event;
     if (applied.refreshed && !created.has(known.id)) refreshed.add(known.id);
     if (applied.uncitable) uncitable.add(known.id);
@@ -542,24 +570,37 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
  * re-reading cites nothing (#16). A page that speaks for the event, the registry lane's (a source a
  * person admitted) or one on the event's own site, its primary page's registrable domain, can
  * cancel and refresh it: a ticket subdomain of the venue can cancel its show. Any other page, one
- * the search ranked, confirms the event at most. A ticketing platform the config lists is no one's
- * site, since any organizer can put a page on it, so two pages there never speak for each other.
+ * the search ranked, has no standing (#78): it says nothing about the event, not even that it is
+ * still listed, so the event goes to re-verification against its own page as if the page had not
+ * been read. A ticketing platform the config lists is no one's site, since any organizer can put a
+ * page on it, so two pages there never speak for each other.
  */
-type Standing = "own-page" | "speaks-for" | "confirms-only";
+type Standing = "own-page" | "speaks-for" | "none";
 
 function standingOf(sighting: Event, known: Event, platformHosts: readonly string[]): Standing {
   if (samePage(sighting.primaryUrl, known.primaryUrl)) return "own-page";
   const ownSite = sameSite(sighting.primaryUrl, known.primaryUrl) && !onHost(known.primaryUrl, platformHosts);
-  return sighting.lead.lane === "registry" || ownSite ? "speaks-for" : "confirms-only";
+  return sighting.lead.lane === "registry" || ownSite ? "speaks-for" : "none";
 }
 
 /**
- * A page's standing toward a known event under the rule that matched them (#77): a dated sighting
- * that is one month of a recurring event confirms it and no more, whatever its page, since a month's
- * dates would make the standing event dated. Any other rule leaves the page's standing as it is.
+ * Whether another of this run's verified, uncancelled sightings of a known event, from a page with
+ * standing, starts nearer the event's stored start than this one (#78). When one does, this sighting
+ * is not the event's reading: a page that lists the show on two nights within the fuzzy window names
+ * the night nearest the one stored, whichever it gives first, so the record does not jump to the
+ * earlier night for being listed first. Two nights the same distance away leave the first to stand.
  */
-function standingUnder(rule: MatchRule, standing: Standing): Standing {
-  return rule === "month" ? "confirms-only" : standing;
+function hasNearerSighting(known: Event, sighting: Sighting, sightings: Sighting[], config: RunConfig): boolean {
+  const distance = (s: Sighting) => daysApart(s.event, known);
+  return sightings.some(
+    (other) =>
+      other !== sighting &&
+      other.event.status === "active" &&
+      !other.cancelled &&
+      distance(other) < distance(sighting) &&
+      matchSighting(other.event, [known], config.venueAliases).kind === "matched" &&
+      standingOf(other.event, known, config.discovery.platformHosts) !== "none",
+  );
 }
 
 /**
@@ -593,29 +634,30 @@ function matchable(event: Event): boolean {
 }
 
 /**
- * What a sighting of a known event does to it, by the standing of its page. One that speaks for the
- * event (see Standing): saying cancelled expires it (an event already expired keeps its reason); a
- * verified reading refreshes it; a reading of the event's own primary page with nothing citable
- * makes an active event unverified, keeping its old reading and curation, since the rules no longer
- * support publishing it, and leaves any other event's status alone. Another page with nothing
+ * What a sighting of a known event does to it, from a page with standing (see Standing) and under
+ * the rule that matched them. Saying cancelled expires it (an event already expired keeps its
+ * reason); a verified reading refreshes it; a reading of the event's own primary page with nothing
+ * citable makes an active event unverified, keeping its old reading and curation, since the rules no
+ * longer support publishing it, and leaves any other event's status alone. Another page with nothing
  * citable, such as one that names no venue, cannot cancel or hide the event: it was matched on
- * title and date alone. A page that does not speak for the event, one found by discovery off the
- * event's site, confirms it at most: a verified reading there moves nothing, not the primary page,
- * the dates, or the title. Short of a cancellation, the page still lists the event, so it is not
- * missing and any strike and any run of outages is cleared.
+ * title and date alone. A dated sighting that is one month of a recurring event confirms it and no
+ * more, whatever its page (#77): a month's dates would make the standing event dated. Short of a
+ * cancellation, the page still lists the event, so it is not missing and any strike and any run of
+ * outages is cleared. A page with no standing never gets here (#78): it clears nothing.
  */
 function applySighting(
   known: Event,
   { event, cancelled }: Sighting,
-  standing: Standing,
+  standing: Exclude<Standing, "none">,
+  rule: MatchRule,
 ): { event: Event; refreshed: boolean; uncitable: boolean } {
   const fromOwnPage = standing === "own-page";
-  const speaksFor = standing !== "confirms-only";
-  const mayCancel = speaksFor && (fromOwnPage || event.status === "active");
+  const confirmsOnly = rule === "month";
+  const mayCancel = !confirmsOnly && (fromOwnPage || event.status === "active");
   if (cancelled && mayCancel) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
-  if (event.status === "active" && speaksFor) return { event: refresh(known, event), refreshed: true, uncitable: false };
+  if (event.status === "active" && !confirmsOnly) return { event: refresh(known, event), refreshed: true, uncitable: false };
   const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
-  if (known.status === "active" && fromOwnPage) return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
+  if (known.status === "active" && fromOwnPage && !confirmsOnly) return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
   const cleared = known.verificationFailures === 0 && known.consecutiveOutages === 0;
   return { event: cleared ? known : listed, refreshed: false, uncitable: false };
 }
@@ -708,10 +750,17 @@ function refresh(known: Event, sighting: Event): Event {
  * keyed to another page that the lane's reading did not match stays as it was. An event citing an index page has already
  * expired, so none is fetched here. A page either lane already tried this run is not fetched
  * again; it counts as that attempt ended. A page that loaded and no longer lists the event is a
- * strike, unless the event starts after the horizon: extraction was not asked for it, so leaving it
- * out says nothing and the event is left as it was. A page that is gone or that robots.txt now
- * disallows is a strike whatever the event's date. A page that could not be loaded (see
- * fetchReadable), or a discovery lead whose redirects ended on an index page, is an outage: it holds an active event as it was, up to the outage limit. A
+ * strike, unless the page said nothing about it (#78): the event starts after the horizon, less two
+ * days of slack, where extraction was not asked for it; or after the latest start the page listed
+ * this run, so the page's window stops short of it. Either way the event is left as it was, and the
+ * report counts it. A page that is gone or that robots.txt now disallows is a strike whatever the
+ * event's date. A page that could not be loaded (see fetchReadable), or a discovery lead whose
+ * redirects ended on an index page, is an outage: it holds an active event as it was, up to the
+ * outage limit. So is a page that loaded and read as listing nothing where three or more active
+ * events would be struck (#78): a page that renders empty, or a model that returns nothing, is not
+ * news about each event; the report names the page. An excluded source's page is not fetched at all
+ * (#78): a person took the source out of the run, so its events are held as through an outage, and
+ * the report names the source; they are checked again when it is active. A
  * page that does list the event applies the sighting as in the registry lane, which revives a
  * hidden event whose reading is verified and hides an active one whose reading is not. When the
  * model's reply about a page could not be read, or the call threw, nothing is known either way and
@@ -732,32 +781,45 @@ async function reverify(
     if (e.status === "active") return !sighted(e);
     return hiddenSinceVerified(e) && !(sighted(e) && lane.attempts.tried.has(pageKey(e.primaryUrl)));
   });
+  const onPage = (url: string) => pending.filter((e) => e.primaryUrl === url);
   const sightingsAt = new Map<string, Sighting[]>();
+  /** What each page read this run, by either lane or here, listed. */
+  const yieldAt = new Map<string, PageYield>();
   const outageAt = new Set<string>();
   const goneAt = new Set<string>();
   /** Pages read with a candidate dropped over its cap: what is missing from the reading may be on the page. */
   const partlyReadAt = new Set<string>();
+  /** Pages not fetched because they are an excluded source's: an outage for their events, by the source. */
+  const excludedAt = new Map<string, Source & { status: "excluded" }>();
   const lastDay = horizonEnd(context.today, context.config.horizonWeeks);
   const refreshed = new Set<string>();
   const tally = noTally();
   let notReverified = 0;
 
   for (const url of new Set(pending.map((e) => e.primaryUrl))) {
-    if (lane.attempts.outages.has(pageKey(url))) {
+    const key = pageKey(url);
+    if (lane.attempts.outages.has(key)) {
       outageAt.add(url);
       continue;
     }
-    if (lane.attempts.tried.has(pageKey(url))) {
-      if (lane.attempts.gone.has(pageKey(url))) goneAt.add(url);
+    if (lane.attempts.tried.has(key)) {
+      if (lane.attempts.gone.has(key)) goneAt.add(url);
       sightingsAt.set(url, []);
+      const yielded = lane.attempts.yields.get(key);
+      if (yielded) yieldAt.set(url, yielded);
+      continue;
+    }
+    const origin = originFor(onPage(url)[0]!, url, registry);
+    const excluded = excludedSourceOf(origin, url, registry);
+    if (excluded) {
+      excludedAt.set(url, excluded);
+      outageAt.add(url);
       continue;
     }
     if (ports.model.exhausted()) {
-      notReverified += pending.filter((e) => e.primaryUrl === url).length;
+      notReverified += onPage(url).length;
       continue;
     }
-    const onPage = pending.filter((e) => e.primaryUrl === url);
-    const origin = originFor(onPage[0]!, url, registry);
     // The page is fetched the way its source's pages are; a discovered page always plainly.
     const fetched = await fetchReadable(url, ...(origin.lane === "registry" ? fetcherFor(origin.source, ports) : plainly(ports)));
     if (!("page" in fetched)) {
@@ -775,38 +837,70 @@ async function reverify(
       read = await extractPage(page, origin, ports.model, context);
     } catch (error) {
       if (error instanceof SpendCapReached) throw error;
-      problems.push(`${url} not re-read: ${modelFailed(error)}; ${plural(onPage.length, "event")} left unchanged`);
+      problems.push(`${url} not re-read: ${modelFailed(error)}; ${plural(onPage(url).length, "event")} left unchanged`);
       continue;
     }
     addTally(tally, read.tally);
     problems.push(...read.problems);
-    if (read.sightings) sightingsAt.set(url, read.sightings);
-    if (read.sightings && !readInFull(read)) partlyReadAt.add(url);
+    if (read.sightings) {
+      sightingsAt.set(url, read.sightings);
+      yieldAt.set(url, yieldOf({ ...read, sightings: read.sightings }));
+      if (!readInFull(read)) partlyReadAt.add(url);
+    }
+  }
+
+  // The empty-reading guard: a page that loaded and read as listing nothing, where it would strike three or more
+  // events, is a wobble (the model's, or a page that rendered empty), not news about each of them.
+  for (const [url, yielded] of yieldAt) {
+    if (yielded.candidates > 0 || !sightingsAt.has(url) || goneAt.has(url) || partlyReadAt.has(url)) continue;
+    const wouldStrike = onPage(url).filter((e) => e.status === "active" && !startsAfterHorizon(e, lastDay)).length;
+    if (wouldStrike < EMPTY_READING_GUARD) continue;
+    sightingsAt.delete(url);
+    outageAt.add(url);
+    problems.push(`${url} loaded but read as listing nothing where ${plural(wouldStrike, "active event")} cite it; counted as an outage for them, not ${plural(wouldStrike, "strike")}`);
+  }
+  for (const source of new Set(excludedAt.values())) {
+    const urls = [...excludedAt].filter(([, s]) => s === source).map(([url]) => url);
+    const held = urls.reduce((n, url) => n + onPage(url).length, 0);
+    problems.push(`${source.name} is excluded (${source.reason}): ${plural(held, "event")} on ${plural(urls.length, "page")} not fetched, held as through an outage`);
   }
 
   let heldThroughOutage = 0;
+  let heldSourceExcluded = 0;
   let beyondHorizonUnstruck = 0;
+  let beyondListingUnstruck = 0;
   const outageLimited: Event[] = [];
   const uncitable = new Set<string>();
   const checked = events.map((event) => {
     if (!pending.includes(event)) return event;
-    if (outageAt.has(event.primaryUrl)) {
+    const url = event.primaryUrl;
+    if (outageAt.has(url)) {
       const held = outage(event);
-      if (event.status === "active" && held.status === "active") heldThroughOutage++;
+      if (event.status === "active" && held.status === "active") {
+        if (excludedAt.has(url)) heldSourceExcluded++;
+        else heldThroughOutage++;
+      }
       if (event.status === "active" && held.status === "unverified") outageLimited.push(held);
       return held;
     }
-    const sightings = sightingsAt.get(event.primaryUrl);
+    const sightings = sightingsAt.get(url);
     if (!sightings) return event;
     const listed = sightingFor(event, sightings, context.config.venueAliases);
     if (!listed) {
-      if (partlyReadAt.has(event.primaryUrl)) return event;
-      if (goneAt.has(event.primaryUrl) || !startsAfterHorizon(event, lastDay)) return strike(event);
-      beyondHorizonUnstruck++;
-      return event;
+      if (partlyReadAt.has(url)) return event;
+      if (goneAt.has(url)) return strike(event);
+      if (startsAfterHorizon(event, lastDay)) {
+        beyondHorizonUnstruck++;
+        return event;
+      }
+      if (startsAfterListing(event, yieldAt.get(url)?.latestStart)) {
+        beyondListingUnstruck++;
+        return event;
+      }
+      return strike(event);
     }
     // The page read here is the event's primary page, whatever page the sighting cites.
-    const applied = applySighting(event, listed.sighting, standingUnder(listed.rule, "own-page"));
+    const applied = applySighting(event, listed.sighting, "own-page", listed.rule);
     if (applied.refreshed) refreshed.add(event.id);
     if (applied.uncitable) uncitable.add(event.id);
     return applied.event;
@@ -817,7 +911,9 @@ async function reverify(
     notReverified,
     tally,
     heldThroughOutage,
+    heldSourceExcluded,
     beyondHorizonUnstruck,
+    beyondListingUnstruck,
     outageLimited,
     uncitable,
     sightings: [...sightingsAt.values()].flat(),
@@ -825,11 +921,25 @@ async function reverify(
   };
 }
 
+/** Active events a page must be about to strike before a reading of nothing on it counts as an outage instead (#78). */
+const EMPTY_READING_GUARD = 3;
+
+/**
+ * The excluded registry source whose page an event's primary page is, if any (#78): the source its
+ * lead names, or one that lists the page among its URLs, for an event found elsewhere. A person took
+ * the source out of the run, so its pages are not fetched for re-verification either.
+ */
+function excludedSourceOf(origin: PageOrigin, url: string, registry: Registry): (Source & { status: "excluded" }) | undefined {
+  if (origin.lane === "registry" && origin.source.status === "excluded") return origin.source;
+  return registry.sources.find((s): s is Source & { status: "excluded" } => s.status === "excluded" && s.urls.some((u) => samePage(u, url)));
+}
+
 /**
  * The sighting on a re-read page that is a known event, and by which rule it matched: of those
- * matching, the one on or near the event's date, else the first (#77): a page that lists the show
- * twice gives the event's own night among them, and a show given only on another night has moved. A
- * cancelled sighting that does not reach the event (cancellationReaches) is no sighting of it.
+ * matching, the one whose start is nearest the event's stored start, the first of them on a tie
+ * (#77, #78): a page that lists the show twice gives the event's own night among them, and a show
+ * given only on another night has moved. A cancelled sighting that does not reach the event
+ * (cancellationReaches) is no sighting of it.
  */
 function sightingFor(event: Event, sightings: Sighting[], aliases: VenueAliases): { sighting: Sighting; rule: MatchRule } | undefined {
   const matching = sightings.flatMap((sighting) => {
@@ -837,7 +947,7 @@ function sightingFor(event: Event, sightings: Sighting[], aliases: VenueAliases)
     if (match.kind !== "matched" || (sighting.cancelled && !cancellationReaches(sighting.event, event, match.rule))) return [];
     return [{ sighting, rule: match.rule }];
   });
-  return matching.find(({ sighting }) => nearDates(sighting.event, event)) ?? matching[0];
+  return matching.sort((a, b) => daysApart(a.sighting.event, event) - daysApart(b.sighting.event, event))[0];
 }
 
 /** What the two lanes leave for re-verification: which events they sighted and which pages they tried. */
@@ -856,10 +966,12 @@ interface PageAttempts {
   gone: Set<string>;
   /** Pages that came back but were not read, or not in full: an unreadable reply, the spend cap, or a candidate dropped over its cap. */
   unread: Set<string>;
+  /** What each page whose reply was read listed: how many candidates, and the latest start among them (#78). */
+  yields: Map<string, PageYield>;
 }
 
 function noAttempts(): PageAttempts {
-  return { tried: new Set(), outages: new Set(), gone: new Set(), unread: new Set() };
+  return { tried: new Set(), outages: new Set(), gone: new Set(), unread: new Set(), yields: new Map() };
 }
 
 function combineAttempts(...all: PageAttempts[]): PageAttempts {
@@ -868,6 +980,7 @@ function combineAttempts(...all: PageAttempts[]): PageAttempts {
     outages: new Set(all.flatMap((a) => [...a.outages])),
     gone: new Set(all.flatMap((a) => [...a.gone])),
     unread: new Set(all.flatMap((a) => [...a.unread])),
+    yields: new Map(all.flatMap((a) => [...a.yields])),
   };
 }
 
@@ -996,6 +1109,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     report.problems.push(...read.problems);
     if (!readInFull(read)) for (const u of pageUrls) attempts.unread.add(u);
     if (!read.sightings) return;
+    for (const u of pageUrls) attempts.yields.set(u, yieldOf({ ...read, sightings: read.sightings }));
     outcome.sightings.push(...read.sightings);
     const host = hostOf(page.finalUrl);
     if (host && !outcome.hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) outcome.hosts.set(host, normalizeUrl(page.finalUrl, url));

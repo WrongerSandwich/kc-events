@@ -258,7 +258,7 @@ export function calendarDate(iso: string | undefined): string | undefined {
 }
 
 /** Whole days between two events' calendar dates; none when either has no date, which is as near as can be. */
-function daysApart(a: EventIdentity, b: EventIdentity): number {
+export function daysApart(a: EventIdentity, b: EventIdentity): number {
   const [x, y] = [calendarDate(a.start), calendarDate(b.start)];
   if (x === undefined || y === undefined) return 0;
   return Math.abs(Date.parse(x) - Date.parse(y)) / DAY_MS;

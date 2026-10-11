@@ -42,10 +42,14 @@ export interface RunReport {
     updated: number;
     reverified: number;
     heldUnverified: number;
-    /** Active events whose primary page could not be loaded this run, held as they were. */
+    /** Active events whose primary page could not be loaded this run, or loaded and read as listing nothing where three or more active events cite it (#78), held as they were. */
     heldThroughOutage: number;
+    /** Active events whose lead source is excluded from the registry, so their primary page was not fetched (#78); held as through an outage. */
+    heldSourceExcluded: number;
     /** Events whose primary page loaded without them, left unstruck because they start after the horizon, which extraction is not asked to read. */
     beyondHorizonUnstruck: number;
+    /** Events whose primary page loaded without them, left unstruck because they start after the latest start it listed this run: its window stops short of them (#78). */
+    beyondListingUnstruck: number;
     /** Active events made unverified this run by their third consecutive outage. */
     unverifiedByOutageLimit: number;
     /** Active events made unverified this run because their page still lists them but a re-reading cited no date or venue. */
@@ -79,7 +83,11 @@ export interface RunReport {
     /** Leads that could not be fetched, searches that failed, and replies that could not be read. */
     problems: string[];
   };
-  /** Re-verification this run: pages re-fetched and not re-read because the model call threw, leaving their events as they were. */
+  /**
+   * Re-verification this run: pages re-fetched and not re-read because the model call threw, leaving
+   * their events as they were; pages read as listing nothing where several active events cite them,
+   * counted as an outage; and excluded sources whose events were not fetched (#78).
+   */
   reverification: { problems: string[] };
   /** Don't-miss curation this run: only events new or changed since last judged are sent, so a quiet run makes no calls. */
   curation: {
@@ -137,7 +145,9 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Re-verified | ${counts.reverified} |
 | Held unverified | ${counts.heldUnverified} |
 | Held through an outage | ${counts.heldThroughOutage} |
+| Held: lead source excluded | ${counts.heldSourceExcluded} |
 | Not struck: starts after the horizon | ${counts.beyondHorizonUnstruck} |
+| Not struck: starts after the page's last listing | ${counts.beyondListingUnstruck} |
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
 | Not created: a venue-less sighting fitting more than one known event, none preferred | ${counts.venuelessAmbiguous} |

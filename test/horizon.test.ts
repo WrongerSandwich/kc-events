@@ -64,8 +64,8 @@ describe("events that start after the horizon", () => {
 
   it("are struck as before once the horizon reaches them", async () => {
     const first = await firstRun();
-    // Week 6 (2026-11-06): the horizon ends 2027-01-01, so the New Year Show is inside it.
-    const later = await runAt(week(6), first.dataset, { [CALENDAR_URL]: PAGE }, [reply(), reply()]);
+    // Week 7 (2026-11-13): the horizon ends 2027-01-08, so the New Year Show is inside it, clear of the two days of slack at its end.
+    const later = await runAt(week(7), first.dataset, { [CALENDAR_URL]: PAGE }, [reply(), reply()]);
 
     expect(strikeState(byTitle(later.dataset, "New Year Show"))).toMatchObject({ status: "active", verificationFailures: 1 });
     expect(later.report.counts.beyondHorizonUnstruck).toBe(0);

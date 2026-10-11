@@ -114,14 +114,14 @@ A candidate after cite-or-drop has made it an active or unverified event, togeth
 _Avoid_: match, hit
 
 **Speaks for**:
-A page speaks for a known event when it is the registry lane's (a source a person admitted) or on the event's own site (ADR 0008, amended #75). Only such a page's sighting can cancel the event or refresh its reading; only the event's own primary page can hide it on an uncitable re-reading. A sighting from any other page **confirms** the event at most: its strikes and outages clear and nothing else changes. A cancellation from any other page is a line in the run report and leaves the event alone.
-_Avoid_: trusted, authoritative
+A page speaks for a known event when it is the registry lane's (a source a person admitted) or on the event's own site (ADR 0008, amended #75). Only such a page's sighting can cancel the event, refresh its reading, or clear its strikes; only the event's own primary page can hide it on an uncitable re-reading. A sighting from any other page says nothing about the event (amended #78): it is left as it was and re-verified against its own page, which decides. A cancellation from any other page is also a line in the run report. When one page lists a show on two nights within the fuzzy window, the night nearest the stored start is the event's reading, whichever the page gives first.
+_Avoid_: trusted, authoritative, confirms (a page with no standing confirms nothing)
 
 **Strike**:
-One run in which an active event's primary page loaded and no longer listed it, or told the job it is gone (not found) or may not be read (its `robots.txt` now disallows it). A page that loaded without an event starting after the weeks the run researches (`horizonWeeks` in the config, not the site's horizon buckets) is not a strike: extraction is asked only for events within those weeks, so leaving it out says nothing. Any run that lists the event clears its strikes; the second consecutive strike is two-strike expiry.
+One run in which an active event's primary page loaded and no longer listed it, or told the job it is gone (not found) or may not be read (its `robots.txt` now disallows it). A reading that says nothing about the event is not a strike (ADR 0008, amended #39 and #78): a page that loaded without an event starting after the weeks the run researches (`horizonWeeks` in the config, not the site's horizon buckets), less two days of slack at the end, since extraction is asked only for events within those weeks; or without an event starting after the latest start the page listed this run, since the page's window stops short of it. A page read as listing nothing where three or more active events would be struck is an outage, not a strike each. Any run in which a page that speaks for the event lists it clears its strikes; the second consecutive strike is two-strike expiry.
 
 **Outage**:
-One run in which an event's primary page could not be loaded: the connection failed, the site refused the job, it errored, or the job's fetch policy refused the page (a host on a private network, a body over budget, a content type it cannot read). An outage says nothing about the event, so it is not a strike. An event is held as it was through a few consecutive outages, then becomes `unverified` until its page loads and lists it again.
+One run in which an event's primary page could not be loaded: the connection failed, the site refused the job, it errored, or the job's fetch policy refused the page (a host on a private network, a body over budget, a content type it cannot read). Two readings count as one too (amended #78): a page that loaded but read as listing nothing where three or more active events cite it, and an excluded source's page, which is not fetched at all. An outage says nothing about the event, so it is not a strike. An event is held as it was through a few consecutive outages, then becomes `unverified` until its page loads and lists it again.
 _Avoid_: failed check, strike (when the page never loaded)
 
 **Extraction rules**:
@@ -164,7 +164,7 @@ The rule that an active event which takes a strike on two consecutive runs becom
 The per-run cost ceiling, enforced by the loop from the cost returned on every model call and backstopped by a monthly limit on the API key itself. When hit, the run publishes what it verified and logs the shortfall.
 
 **Excluded source**:
-A source the job knows about but does not fetch, with the reason recorded: its `robots.txt` disallows it, its pages cannot be read (listings that even a browser fetch does not show, or a site that refuses the job's fetcher), or its information is not worth checking.
+A source the job knows about but does not fetch, with the reason recorded: its `robots.txt` disallows it, its pages cannot be read (listings that even a browser fetch does not show, or a site that refuses the job's fetcher), or its information is not worth checking. Its pages are not fetched for re-verification either (#78): the events it led to, and any event whose primary page is one of its pages, are held as through an outage until it is active again, and the run report names it.
 
 ### Site
 

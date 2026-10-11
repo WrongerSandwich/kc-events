@@ -129,18 +129,32 @@ describe("a verified sighting refreshes a known event only from a page that spea
   /** The dataset with its one event carrying a strike and an outage, to see them cleared. */
   const struck = (dataset: Dataset): Dataset => ({ ...dataset, events: dataset.events.map((e) => ({ ...e, verificationFailures: 1, consecutiveOutages: 1 })) });
 
-  it("a discovered page off the event's site confirms it: strikes and outages cleared, nothing else moved", async () => {
+  it("a discovered page off the event's site says nothing about it (#78): its own page is re-read, and decides its strikes", async () => {
+    const first = await discovered();
+
+    // The other page still lists the show; the event's own page is gone, so its second strike expires it.
+    const second = await runAt(WEEK_2, struck(first.dataset), {
+      leads: [ELSEWHERE_URL],
+      pages: { [ELSEWHERE_URL]: PAGE, [PROMOTER_URL]: { status: 404, body: "Not Found" } },
+      completions: [reply(at(ELSEWHERE_URL, { startDate: "2026-12-13", dateEvidence: "Sun, Dec 13", venue: "Knuckleheads Saloon", description: "A description from elsewhere." }))],
+    });
+
+    expect(second.calls).toContain(`fetch:${PROMOTER_URL}`);
+    expect(only(second.dataset)).toMatchObject({ status: "expired", expiryReason: "two-strike", verificationFailures: 2, start: first.dataset.events[0]!.start });
+    expect(second.report.counts).toMatchObject({ found: 0, new: 0, updated: 0 });
+  });
+
+  it("a discovered page off the event's site clears nothing: its own page, listing it, does", async () => {
     const first = await discovered();
 
     const second = await runAt(WEEK_2, struck(first.dataset), {
       leads: [ELSEWHERE_URL],
-      pages: { [ELSEWHERE_URL]: PAGE },
-      completions: [reply(at(ELSEWHERE_URL, { startDate: "2026-12-13", dateEvidence: "Sun, Dec 13", venue: "Knuckleheads Saloon", description: "A description from elsewhere." }))],
+      pages: { [ELSEWHERE_URL]: PAGE, [PROMOTER_URL]: PAGE },
+      completions: [reply(at(ELSEWHERE_URL)), reply(at(PROMOTER_URL))],
     });
 
-    expect(only(second.dataset)).toEqual({ ...first.dataset.events[0], verificationFailures: 0, consecutiveOutages: 0 });
-    expect(second.report.counts).toMatchObject({ found: 1, new: 0, updated: 0 });
-    expect(second.calls).not.toContain(`fetch:${PROMOTER_URL}`);
+    expect(only(second.dataset)).toEqual({ ...first.dataset.events[0], verificationFailures: 0, consecutiveOutages: 0, lastVerified: WEEK_2_ISO });
+    expect(second.report.counts).toMatchObject({ found: 0, reverified: 1 });
   });
 
   it("a page on the event's own site refreshes it, moving its primary page and reading there", async () => {
