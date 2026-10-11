@@ -9,14 +9,39 @@ import { DATASET_SCHEMA_VERSION, parseDataset, type Event } from "../../../src/d
 import { genericVenueName, venueAndRoom } from "../../../src/identity.ts";
 import { regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
-import { isValidDate } from "../lib/dates";
+import { addDays, isDateOnly, isValidDate, localDate } from "../lib/dates";
 import { isPast } from "../lib/events";
 import type { Published, PublishedDescriptions, PublishedEvent } from "../lib/types";
+import { isProductionBuild, knownOrigin } from "./origin.ts";
 
 /** Bumped by hand when the site is updated for a new dataset shape; a job-side bump fails the build until then. */
 export const SITE_EXPECTS_SCHEMA_VERSION = 1;
 /** Raw bytes of the projected events; past this the explorer's one-page design needs rethinking. */
 export const MAX_PAYLOAD_BYTES = 400_000;
+
+/** How far the build's today may be from the last successful run's day, either way, before it is taken for a wrong clock or SITE_TODAY. */
+export const MAX_DAYS_FROM_RUN = 14;
+
+/** The job's event ids; the sitemap and `view-transition-name` take them as they are. */
+const EVENT_ID = /^evt_[0-9a-f]{12}$/;
+
+/** An end that falls before its start: by instant when both carry a time, else by day (a date end on a timed start's day is not before it). */
+function endsBeforeStart(start: string, end: string): boolean {
+  if (!isDateOnly(start) && !isDateOnly(end)) return Date.parse(end) < Date.parse(start);
+  return localDate(end) < localDate(start);
+}
+
+/**
+ * Throws on an active event the pages cannot render, which the job's schema lets through: a one-off with no start
+ * (the tile and the front page read it), an end before the start (an invalid calendar file, a future event dropped as
+ * past), a kind with no colour, icon or filter, or an id the sitemap and view transitions cannot carry.
+ */
+function assertRenderable(e: Event, config: RunConfig): void {
+  if (!EVENT_ID.test(e.id)) throw new Error(`event id ${JSON.stringify(e.id)} is not evt_ and twelve hex digits`);
+  if (e.recurrence === "one-off" && e.start === undefined) throw new Error(`event ${e.id} is a one-off with no start`);
+  if (e.start !== undefined && e.end !== undefined && endsBeforeStart(e.start, e.end)) throw new Error(`event ${e.id} has its end, ${e.end}, before its start, ${e.start}`);
+  if (!config.kinds.includes(e.kind)) throw new Error(`event ${e.id} has kind "${e.kind}", which research.config.yaml does not list`);
+}
 
 /** Throws when the job's dataset schema version is not the one this site was written against. */
 export function checkSchemaVersion(jobVersion: number, siteVersion: number = SITE_EXPECTS_SCHEMA_VERSION): void {
@@ -92,13 +117,25 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
     throw new Error(`the build's today must be a real YYYY-MM-DD date, got "${today}" (from ${source})`);
   }
 
+  if (isProductionBuild() && knownOrigin() === undefined) {
+    throw new Error("a production build needs its origin for canonical links and the sitemap: set SITE_ORIGIN (or build on Vercel, which sets VERCEL_PROJECT_PRODUCTION_URL)");
+  }
+  const runDay = localDate(dataset.lastSuccessfulRun);
+  if (today > addDays(runDay, MAX_DAYS_FROM_RUN) || today < addDays(runDay, -MAX_DAYS_FROM_RUN)) {
+    throw new Error(`the build's today, ${today}, is more than ${MAX_DAYS_FROM_RUN} days from the last successful run, ${runDay}: check SITE_TODAY or the weekly run`);
+  }
+
   const active = dataset.events.filter((e) => e.status === "active");
   const seen = new Set<string>();
   for (const e of active) {
     if (seen.has(e.id)) throw new Error(`duplicate active event id ${e.id}`);
     seen.add(e.id);
+    assertRenderable(e, config);
   }
   const published = active.map((e) => ({ e, out: project(e, config) })).filter(({ out }) => !isPast(out, today));
+  if (active.length > 0 && published.length === 0) {
+    throw new Error(`the dataset has ${active.length} active events but none from ${today} on: no event to publish; check SITE_TODAY or the weekly run`);
+  }
   const events = published.map(({ out }) => out);
   // Only the event page shows a description, so they stay out of the events every island carries.
   const descriptions: PublishedDescriptions = {};

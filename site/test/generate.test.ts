@@ -2,8 +2,8 @@
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
-import { writeGenerated } from "../src/build/write-generated";
+import { describe, expect, it, vi } from "vitest";
+import { MAX_PICKS, writeGenerated } from "../src/build/write-generated";
 import { activeEvent, configYaml, dataset } from "./fixtures/dataset";
 
 /** The value a generated module exports: the JSON after "export const x: T = ". */
@@ -78,5 +78,26 @@ describe("writeGenerated", () => {
     expect(JSON.parse(published).events.map((e: { id: string }) => e.id)).toEqual(["evt_000000000001"]);
     expect(published).not.toContain("winery.example");
     expect(published).not.toContain("barrel room");
+  });
+
+  it("warns when the front page would carry more picks than its budget was sized for, and not at the ceiling", () => {
+    const picks = (n: number) =>
+      dataset(Array.from({ length: n }, (_, i) => activeEvent({ id: `evt_${String(i + 1).padStart(12, "0")}`, dontMiss: true, whyLine: "A rare occasion." })));
+    const run = (n: number) => {
+      const dir = mkdtempSync(join(tmpdir(), "kc-generate-"));
+      writeFileSync(join(dir, "events.json"), JSON.stringify(picks(n)));
+      writeFileSync(join(dir, "research.config.yaml"), configYaml);
+      writeGenerated({ datasetPath: join(dir, "events.json"), configPath: join(dir, "research.config.yaml"), outDir: join(dir, "generated"), publicDir: join(dir, "public"), today: "2026-10-05" });
+    };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      run(MAX_PICKS);
+      expect(warn).not.toHaveBeenCalled();
+      run(MAX_PICKS + 1);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0]![0])).toContain(`${MAX_PICKS + 1} don't-miss picks, over the ${MAX_PICKS}`);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

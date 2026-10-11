@@ -156,6 +156,32 @@ describe("DontMissList", () => {
       expect(titles(week!)).toEqual(["Closing run", "Tuesday show", "Wednesday show"]);
     });
 
+    it("moves the cards by a view transition where the browser has one, and filters the same where it has none", async () => {
+      // What a card's style was when the browser would capture it, before the update runs.
+      let captured: string | null | undefined;
+      const start = vi.fn((update: () => Promise<void>) => {
+        captured = document.querySelector("section .pick")!.getAttribute("style");
+        const done = update();
+        return { finished: done, updateCallbackDone: done, ready: done, skipTransition() {} };
+      });
+      Object.defineProperty(document, "startViewTransition", { value: start, configurable: true });
+      try {
+        const [week] = await front();
+        within(week!).getByRole("button", { name: "2 music" }).click();
+        await tick();
+        expect(start).toHaveBeenCalledTimes(1);
+        expect(titles(week!)).toEqual(["Tuesday show", "Wednesday show"]);
+        // Each card carries its own name while the filter moves it, so the transition slides the kept ones into place;
+        // afterwards the names are gone, so a navigation to an event page carries only its tile and title.
+        expect(captured).toContain("view-transition-name: pick-b");
+        await tick();
+        await tick();
+        expect(week!.querySelector(".pick")!.getAttribute("style") ?? "").not.toContain("view-transition-name");
+      } finally {
+        delete (document as { startViewTransition?: unknown }).startViewTransition;
+      }
+    });
+
     it("leaves the other sections' filters alone", async () => {
       const [week, next] = await front();
       within(next!).getByRole("button", { name: "1 music" }).click();

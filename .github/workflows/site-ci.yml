@@ -4,8 +4,8 @@
 #
 # Order matters: the real build and its size check run before the tests, because the built-output
 # tests read dist/ and fail in CI when it is missing. The end-to-end build (dist-e2e/) also runs before
-# the size check, which measures the explorer on its fixed fixture data so that budget tracks code, not
-# the week's event count; Playwright rebuilds it for the end-to-end tests.
+# the size check, which measures the explorer and the front page on its fixed fixture data so those
+# budgets track code, not the week's events and picks; Playwright rebuilds it for the end-to-end tests.
 # The size check runs here and not in `pnpm build`, which is Vercel's build command: a page going over
 # budget should fail CI, not stop the weekly data commit from deploying.
 name: Site

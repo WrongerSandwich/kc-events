@@ -4,16 +4,18 @@
  * exceeds its budget (spec section 9). Font files are not counted: they are the same for every page and woff2 is
  * already compressed; the budget is about markup, styles, and script.
  *
- * The explorer carries every published event, in its rows and in its script, so on the real build its size tracks the
- * dataset and not the code. It is measured on the end-to-end build instead, whose fixture dataset and date never
- * change, so its budget is a budget for code; the build's 400 KB raw-payload guard (MAX_PAYLOAD_BYTES in
- * src/build/load-dataset.ts) is what bounds the data. The front page and event pages carry little data each and stay
- * on the real build.
+ * The explorer carries every published event, in its rows and in its script, and the front page every don't-miss
+ * pick, so on the real build their sizes track the week's data and not the code (and the weekly data commit runs no
+ * CI, so a breach would show on the next unrelated pull request). Both are measured on the end-to-end build instead,
+ * whose fixture dataset and date never change, so their budgets are budgets for code. The data is bounded at build:
+ * the explorer's by the 400 KB raw-payload guard (MAX_PAYLOAD_BYTES in src/build/load-dataset.ts), the front page's by
+ * a warning past MAX_PICKS (src/build/write-generated.ts). Event pages carry one event each and stay on the real build.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
+import { FRONT_PAGE_BYTES, MAX_PICKS } from "../src/build/write-generated.ts";
 
 /** Paths relative to dist/ of the CSS and JS a page's HTML references: every /_astro/ URL (scripts, stylesheets, island URLs). */
 function htmlReferences(html: string): string[] {
@@ -48,9 +50,15 @@ export function measure(dist: string, page: string): { bytes: number; assets: st
   return { bytes, assets: [...seen] };
 }
 
+/** About what one more don't-miss pick adds to the front page, gzipped (measured 2026-10-11: 16 real picks against the fixture's 4). */
+export const PICK_BYTES = 375;
+/** The don't-miss picks the fixture build publishes (e2e/fixtures/events.json on its SITE_TODAY; a test holds it). */
+export const FIXTURE_PICKS = 4;
+
 /** Each page's budget in gzipped bytes and the build it is measured on: "real" is dist/, "fixture" is the end-to-end build. */
 export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" }[] = [
-  { page: "index.html", budget: 50_000, build: "real" },
+  // The front page's code budget: what is left of its real-data budget once a week at the pick ceiling is paid for.
+  { page: "index.html", budget: FRONT_PAGE_BYTES - (MAX_PICKS - FIXTURE_PICKS) * PICK_BYTES, build: "fixture" },
   { page: "explore.html", budget: 50_000, build: "fixture" },
 ];
 

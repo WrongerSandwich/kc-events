@@ -10,6 +10,8 @@ import Footer from "../components/Footer.astro";
 import StalenessBanner from "../components/StalenessBanner.svelte";
 import IconSprite from "../components/IconSprite.astro";
 import Analytics from "@vercel/analytics/astro";
+// The one face every page sets its text in, latin subset: preloaded so it is not found only once the CSS is parsed.
+import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 
 /** noindex: a page no search engine should list (the 404), which then names no canonical URL either. */
 interface Props { title: string; description: string; canonical?: string; jsonLd?: object; wide?: boolean; noindex?: boolean }
@@ -25,6 +27,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
+    <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={url} />}
     <!-- Safari draws no SVG icon and takes the ICO; the others take the SVG, listed after it. -->
@@ -47,7 +50,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
   </head>
   <body>
     <IconSprite />
-    <Header wide={wide}><StalenessBanner client:load wide={wide} /></Header>
+    <Header wide={wide}><StalenessBanner client:idle wide={wide} /></Header>
     <main id="main" class={wide ? "wide" : "measure"}>
       <slot />
     </main>
