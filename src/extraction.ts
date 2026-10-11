@@ -232,8 +232,8 @@ export type CandidateOrigin = PageOrigin & {
   pageUrl: string;
   /** What the page's numbered links lead to, as `readPage` gave them. */
   links: string[];
-  /** The page's text as `readPage` gave it to the model, link markers and all. */
-  pageText: string;
+  /** The page's text as quotes are compared with it, from `quotableText`. */
+  quotableText: string;
 };
 
 /**
@@ -263,14 +263,14 @@ export interface Sighting {
  * whatever the status, and so does the description; neither plays any part in verifying. Both
  * quotes must be on the page (#74): the model quotes the page as `readPage` gave it, so the job's
  * own link markers are stripped from every text field first, and a quote then counts only when it
- * occurs in the page's text as `onPage` compares them.
+ * occurs in the page's quotable text.
  */
 export function candidateToSighting(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Sighting {
   const { timezone } = context.config;
   const primaryUrl = origin.pageUrl;
   const eventUrl = linkedPage(candidate.eventLink, origin.links, primaryUrl, context.config.discovery.platformHosts);
-  const clean = (text: string | null) => nonEmpty(text === null ? null : withoutLinkMarkers(text, origin.links.length));
-  const title = clean(candidate.title) ?? candidate.title.trim();
+  const unmarked = (text: string | null) => nonEmpty(text === null ? null : withoutLinkMarkers(text, origin.links.length));
+  const title = unmarked(candidate.title) ?? candidate.title.trim();
   const startAt = localIso(candidate.startDate, candidate.startTime, timezone);
   const endAt = localIso(candidate.endDate, candidate.endTime, timezone);
   const start = startAt.iso;
@@ -280,10 +280,10 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const schedule = nonEmpty(candidate.schedule);
   const recurrence = deriveRecurrence({ start, end, schedule, sportsSeason: candidate.sportsSeason });
   const when = recurrence === "recurring" ? { schedule } : { start, end };
-  const dateEvidence = clean(candidate.dateEvidence);
-  const venueEvidence = clean(candidate.venueEvidence);
-  const venue = clean(candidate.venue);
-  const description = clean(candidate.description);
+  const dateEvidence = unmarked(candidate.dateEvidence);
+  const venueEvidence = unmarked(candidate.venueEvidence);
+  const venue = unmarked(candidate.venue);
+  const description = unmarked(candidate.description);
   const placement = toNeighborhood(candidate.neighborhood, context.neighborhoods);
 
   const cited =
@@ -292,14 +292,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     dateEvidence !== undefined &&
     venue !== undefined &&
     venueEvidence !== undefined;
-  const page = cited ? withoutLinkMarkers(origin.pageText, origin.links.length) : "";
-  const quoteProblem = !cited
-    ? undefined
-    : !onPage(dateEvidence, page)
-      ? `quoted "${dateEvidence}" for its date`
-      : !onPage(venueEvidence, page)
-        ? `quoted "${venueEvidence}" for its venue`
-        : undefined;
+  const quoteProblem = cited ? quoteNotOnPage({ date: dateEvidence, venue: venueEvidence }, origin.quotableText) : undefined;
   const verified = cited && quoteProblem === undefined;
 
   const event: Event = {
@@ -345,12 +338,19 @@ export function withoutLinkMarkers(text: string, linkCount: number): string {
 }
 
 /**
- * Whether the quote occurs in the page's text, read as a person would compare them: runs of
- * whitespace (a line break included) are one space, case does not count, and curly quotes and
- * dashes match their plain forms, which a model writes for them as often as not.
+ * The page's text as a quote from it is compared, worked out once per page: the link markers go, and
+ * the rest is read as a person would compare two texts: runs of whitespace (a line break included)
+ * are one space, case does not count, and curly quotes, dashes and an ellipsis match their plain
+ * forms, which a model writes for them as often as not.
  */
-export function onPage(quote: string, pageText: string): boolean {
-  return comparable(pageText).includes(comparable(quote));
+export function quotableText(reading: PageReading): string {
+  return comparable(withoutLinkMarkers(reading.text, reading.links.length));
+}
+
+/** The first of the quotes, date then venue, that is not in the page's quotable text, as a report phrase. */
+function quoteNotOnPage(quotes: { date: string; venue: string }, quotable: string): string | undefined {
+  const missing = (["date", "venue"] as const).find((field) => !quotable.includes(comparable(quotes[field])));
+  return missing === undefined ? undefined : `quoted "${quotes[missing]}" for its ${missing}`;
 }
 
 function comparable(text: string): string {
@@ -358,6 +358,7 @@ function comparable(text: string): string {
     .replace(/[‘’‚‛′]/g, "'")
     .replace(/[“”„″]/g, '"')
     .replace(/[‐‑‒–—―]/g, "-")
+    .replace(/…/g, "...")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();

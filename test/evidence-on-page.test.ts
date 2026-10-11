@@ -61,10 +61,10 @@ describe("evidence on the page", () => {
     expect(dataset.events[0]).toMatchObject({ status: "active", evidence: { venue: "Knuckleheads, 1 Main St Ages 21+ [3]" } });
   });
 
-  it("whitespace, case, curly quotes, and dashes are not differences", async () => {
-    const page: CannedPage = { status: 200, body: "<html><body><p>Nov 1 –\n  Kelly’s   Westport Inn</p><p>Sun, Nov 1</p></body></html>" };
+  it("whitespace, case, curly quotes, dashes, and an ellipsis are not differences", async () => {
+    const page: CannedPage = { status: 200, body: "<html><body><p>Nov 1 –\n  Kelly’s   Westport Inn</p><p>Sun, Nov 1 … late</p></body></html>" };
 
-    const { dataset } = await runAt([reply(candidate({ startDate: "2026-11-01", dateEvidence: "SUN, NOV 1", venue: "Kelly's Westport Inn", venueEvidence: "Nov 1 - Kelly's Westport Inn" }))], page);
+    const { dataset } = await runAt([reply(candidate({ startDate: "2026-11-01", dateEvidence: "SUN, NOV 1 ... late", venue: "Kelly's Westport Inn", venueEvidence: "Nov 1 - Kelly's Westport Inn" }))], page);
 
     expect(dataset.events[0]).toMatchObject({ status: "active" });
   });

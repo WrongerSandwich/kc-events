@@ -7,6 +7,7 @@ import {
   extractionReplySchema,
   normalizeUrl,
   overCap,
+  quotableText,
   readPage,
   type ExtractionContext,
   type PageOrigin,
@@ -504,7 +505,7 @@ async function extractPage(
       problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`],
     };
   }
-  const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl), links: reading.links, pageText: reading.text };
+  const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl), links: reading.links, quotableText: quotableText(reading) };
   const sightings: Sighting[] = [];
   const problems: string[] = [];
   const tally = noTally();
