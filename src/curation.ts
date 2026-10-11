@@ -6,7 +6,7 @@
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import type { Event } from "./dataset.js";
-import { calendarDate, sameName } from "./identity.js";
+import { sameMoment, sameName } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest } from "./ports.js";
 
@@ -83,16 +83,6 @@ export function markChanged(previous: Event[], events: Event[], nowIso: string):
   });
 }
 
-/** Two stored dates on the same calendar date, and at the same HH:MM when both carry a time; two absent dates are the same too. */
-function sameMoment(a: string | undefined, b: string | undefined): boolean {
-  if (calendarDate(a) !== calendarDate(b)) return false;
-  const [x, y] = [timeOfDay(a), timeOfDay(b)];
-  return x === undefined || y === undefined || x === y;
-}
-
-/** The HH:MM of a date-time as written (local, with its offset); none for a bare date. */
-const timeOfDay = (iso: string | undefined) => (iso !== undefined && iso.length > 10 ? iso.slice(11, 16) : undefined);
-
 /** The line that opens the user message of a curation request; the events follow as a JSON array. */
 export const EVENTS_TO_JUDGE = "Events to judge:";
 
@@ -128,9 +118,24 @@ export function buildCurationRequest(events: Event[], context: CurationContext):
 
 /** The event with a judgment applied and stamped as judged now; the why-line is kept only with the flag. */
 export function applyJudgment(event: Event, judgment: Judgment, nowIso: string): Event {
+  return withJudgment(event, { dontMiss: judgment.dontMiss, whyLine: cleanWhyLine(judgment.why), lastJudged: nowIso });
+}
+
+/**
+ * The record kept by a fold, with the judgment of whichever record of the pair was judged later
+ * (#79): the pair is one event, and its latest verdict is the one to show. A recurring record takes
+ * no judgment, since recurring events are never flagged.
+ */
+export function withLaterJudgment(kept: Event, duplicate: Event): Event {
+  if (kept.recurrence === "recurring" || duplicate.lastJudged === undefined) return kept;
+  if (kept.lastJudged !== undefined && Date.parse(kept.lastJudged) >= Date.parse(duplicate.lastJudged)) return kept;
+  return withJudgment(kept, { dontMiss: duplicate.dontMiss, whyLine: duplicate.whyLine, lastJudged: duplicate.lastJudged });
+}
+
+/** The event carrying this judgment in place of its own; the why-line is kept only with the flag. */
+function withJudgment(event: Event, { dontMiss, whyLine, lastJudged }: { dontMiss: boolean; whyLine: string | undefined; lastJudged: string }): Event {
   const { whyLine: _, ...rest } = event;
-  const why = cleanWhyLine(judgment.why);
-  return { ...rest, dontMiss: judgment.dontMiss, ...(judgment.dontMiss ? { whyLine: why } : {}), lastJudged: nowIso };
+  return { ...rest, dontMiss, ...(dontMiss && whyLine !== undefined ? { whyLine } : {}), lastJudged };
 }
 
 /** Brackets that pair as an opening and a closing character, keyed by the closing one. */

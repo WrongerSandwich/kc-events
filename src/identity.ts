@@ -291,6 +291,16 @@ export function calendarDate(iso: string | undefined): string | undefined {
   return iso?.slice(0, 10);
 }
 
+/** Two stored dates on the same calendar date, and at the same HH:MM when both carry a time; two absent dates are the same too. */
+export function sameMoment(a: string | undefined, b: string | undefined): boolean {
+  if (calendarDate(a) !== calendarDate(b)) return false;
+  const [x, y] = [timeOfDay(a), timeOfDay(b)];
+  return x === undefined || y === undefined || x === y;
+}
+
+/** The HH:MM of a date-time as written (local, with its offset); none for a bare date. */
+const timeOfDay = (iso: string | undefined) => (iso !== undefined && iso.length > 10 ? iso.slice(11, 16) : undefined);
+
 /** Whole days between two events' calendar dates; none when either has no date, which is as near as can be. */
 export function daysApart(a: EventIdentity, b: EventIdentity): number {
   const [x, y] = [calendarDate(a.start), calendarDate(b.start)];

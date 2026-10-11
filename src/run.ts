@@ -19,6 +19,7 @@ import {
   cleanStoredWhyLine,
   cleanWhyLine,
   markChanged,
+  withLaterJudgment,
   unflagged,
   CURATION_BATCH_SIZE,
   curationReplySchema,
@@ -749,8 +750,9 @@ function applySighting(
  * of it goes to the kept record (#77). One fold sets the first-seen rule aside: a dated record
  * that is one month of a recurring event folds into it (firstMonthPair). A kept record that is
  * not active takes an active duplicate's reading under its own id and first-seen. Either way the kept
- * record ends with the judgment of the pair's later-judged record (laterJudgment). Folding repeats until nothing matches, since a fold can leave a venue-less record with one candidate where
- * it had two. The result depends only on the dataset. Returns which record each duplicate was folded into.
+ * record ends with the judgment of the pair's later-judged record (withLaterJudgment). Folding
+ * repeats until nothing matches, since a fold can leave a venue-less record with one candidate
+ * where it had two. The result depends only on the dataset. Returns which record each duplicate was folded into.
  */
 function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event[]; foldedInto: Map<string, string> } {
   const byId = new Map(events.map((e) => [e.id, e]));
@@ -764,23 +766,11 @@ function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event
     // A recurring record keeps its own reading, even when hidden: a month's dates would make it dated.
     // Re-verification checks a hidden one against its page this run.
     const takesReading = kept.status !== "active" && duplicate.status === "active" && kept.recurrence !== "recurring";
-    byId.set(kept.id, laterJudgment(takesReading ? refresh(kept, duplicate) : kept, duplicate));
+    byId.set(kept.id, withLaterJudgment(takesReading ? refresh(kept, duplicate) : kept, duplicate));
     byId.set(duplicate.id, { ...expire(duplicate, "duplicate"), duplicateOf: kept.id });
     foldedInto.set(duplicate.id, kept.id);
   }
   return { events: [...byId.values()], foldedInto };
-}
-
-/**
- * The kept record with the judgment of whichever record of a folded pair was judged later (#79): the
- * pair is one event, and its latest verdict is the one to show. A recurring record takes no judgment,
- * since recurring events are never flagged.
- */
-function laterJudgment(kept: Event, duplicate: Event): Event {
-  if (kept.recurrence === "recurring" || duplicate.lastJudged === undefined) return kept;
-  if (kept.lastJudged !== undefined && Date.parse(kept.lastJudged) >= Date.parse(duplicate.lastJudged)) return kept;
-  const { whyLine: _, ...rest } = kept;
-  return { ...rest, dontMiss: duplicate.dontMiss, ...(duplicate.whyLine !== undefined ? { whyLine: duplicate.whyLine } : {}), lastJudged: duplicate.lastJudged };
 }
 
 /** The first two records, in order seen (ties in dataset order), that are the same event: the one to keep, then its duplicate. */
