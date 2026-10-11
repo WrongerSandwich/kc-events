@@ -147,7 +147,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Held through an outage | ${counts.heldThroughOutage} |
 | Held: lead source excluded | ${counts.heldSourceExcluded} |
 | Not struck: starts after the horizon | ${counts.beyondHorizonUnstruck} |
-| Not struck: starts after the page's last listing | ${counts.beyondListingUnstruck} |
+| Not struck: starts after the last date the page listed | ${counts.beyondListingUnstruck} |
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
 | Not created: a venue-less sighting fitting more than one known event, none preferred | ${counts.venuelessAmbiguous} |

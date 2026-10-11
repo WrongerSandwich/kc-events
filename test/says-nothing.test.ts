@@ -104,6 +104,16 @@ describe("a page read as empty", () => {
     expect(second.report.reverification.problems).toEqual([`${CALENDAR_URL} loaded but read as listing nothing where 3 active events cite it; counted as an outage for them, not 3 strikes`]);
   });
 
+  it("is empty when its reading has only candidates that are no sighting: untitled, or outside the geography", async () => {
+    const first = await listing(bigShow, secondShow, thirdShow);
+
+    const wobble = reply(candidateAt(knuckleheads, { title: "" }), candidateAt(knuckleheads, { title: "Touring Show", outsideGeography: true }));
+    const second = await runAt(week(2), first.dataset, { [CALENDAR_URL]: PAGE }, [wobble, reply()]);
+
+    expect(second.dataset.events.map(strikeState)).toEqual([HELD, HELD, HELD]);
+    expect(second.report.reverification.problems).toHaveLength(1);
+  });
+
   it("where two active events cite it strikes them as before", async () => {
     const first = await listing(bigShow, secondShow);
 
@@ -154,7 +164,7 @@ describe("an event starting after the last date its page listed this run", () =>
 
     expect(strikeState(byTitle(second.dataset, "Later Show"))).toEqual(UNTOUCHED);
     expect(second.report.counts.beyondListingUnstruck).toBe(1);
-    expect(renderReportMarkdown(second.report)).toContain("| Not struck: starts after the page's last listing | 1 |");
+    expect(renderReportMarkdown(second.report)).toContain("| Not struck: starts after the last date the page listed | 1 |");
   });
 
   it("is not struck when re-verification read the page", async () => {

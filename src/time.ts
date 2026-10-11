@@ -68,7 +68,8 @@ function offsetAt(instant: Date, timeZone: string): number {
 
 /**
  * The last day of a run's horizon (YYYY-MM-DD): the run's local date plus the horizon's weeks.
- * An event starting after it is beyond the horizon.
+ * Discovery searches the months up to it; whether an event's omission from a page says nothing is
+ * judged against it less two days of slack (startsAfterHorizon in expiry).
  */
 export function horizonEnd(today: string, horizonWeeks: number): string {
   return shiftDate(today, horizonWeeks * 7);

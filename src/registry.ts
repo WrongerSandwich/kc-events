@@ -29,6 +29,8 @@ export const registrySchema = z
   });
 
 export type Source = z.infer<typeof sourceSchema>;
+/** A source the job knows about and deliberately does not fetch, with the reason. */
+export type ExcludedSource = Extract<Source, { status: "excluded" }>;
 export type Registry = z.infer<typeof registrySchema>;
 
 export function parseRegistry(raw: unknown): Registry {
