@@ -9,4 +9,18 @@ export const siteConfig = {
   repoUrl: "https://github.com/WrongerSandwich/kc-events",
   /** Days after the last successful run before every page shows the staleness banner. */
   staleAfterDays: 9,
+  /**
+   * The postal address the Event JSON-LD gives each region of research.config.yaml (a test holds the two in step).
+   * `kansasCity` is which of the region's neighborhoods are parts of Kansas City: all of them, or only those listed,
+   * every other being a city of its own. The catch-all region has no entry: its events state Kansas City and no state.
+   */
+  regionAddress: {
+    "Central KC": { state: "MO", kansasCity: "all" },
+    "South KC": { state: "MO", kansasCity: "all" },
+    Northland: { state: "MO", kansasCity: ["Northland"] },
+    "Kansas City, Kansas": { state: "KS", kansasCity: ["Kansas City, Kansas"] },
+    "Johnson County": { state: "KS", kansasCity: [] },
+    "Eastern Jackson County": { state: "MO", kansasCity: [] },
+    Lawrence: { state: "KS", kansasCity: [] },
+  } as Record<string, { state: string; kansasCity: "all" | readonly string[] } | undefined>,
 } as const;

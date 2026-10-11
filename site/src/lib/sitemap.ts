@@ -1,0 +1,14 @@
+import type { PublishedEvent } from "./types";
+
+/**
+ * The sitemap: the site's pages, last modified at the run that rebuilt them, and every event page, last modified when
+ * its date and venue were last verified. Both are ISO instants with an offset, which the W3C datetime format accepts.
+ */
+export function sitemapXml(events: PublishedEvent[], opts: { origin: string; lastSuccessfulRun: string }): string {
+  const entries = [
+    ...["/", "/explore", "/about"].map((p) => ({ path: p, lastmod: opts.lastSuccessfulRun })),
+    ...events.map((e) => ({ path: `/e/${e.id}`, lastmod: e.lastVerified })),
+  ];
+  const urls = entries.map((u) => `  <url><loc>${new URL(u.path, opts.origin).href}</loc><lastmod>${u.lastmod}</lastmod></url>`).join("\n");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+}

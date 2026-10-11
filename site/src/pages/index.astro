@@ -3,6 +3,11 @@ import Base from "../layouts/Base.astro";
 import DontMissList from "../components/DontMissList.svelte";
 import KindIcon from "../components/KindIcon.svelte";
 import { events } from "../generated/events";
+import { dontMiss } from "../generated/dont-miss";
+import { meta } from "../generated/meta";
+import { origin } from "../build/origin";
+import { frontPageJsonLd } from "../lib/event-meta";
+import { bucketDontMiss, HORIZONS } from "../lib/horizon";
 import { siteConfig } from "../site.config";
 import { alwaysTherePicks } from "../always-there";
 import { pickAlwaysThere } from "../lib/always-there";
@@ -11,8 +16,11 @@ import { slugify } from "../lib/slugs";
 const alwaysThere = pickAlwaysThere(events, alwaysTherePicks);
 // Everything the explorer holds, recurring included, since the link turns recurring on.
 const count = events.length;
+// The picks as the page renders them at build: each horizon's in turn.
+const buckets = bucketDontMiss(dontMiss, meta.buildToday);
+const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin);
 ---
-<Base title={siteConfig.name} description={siteConfig.tagline}>
+<Base title={siteConfig.name} description={siteConfig.tagline} jsonLd={jsonLd}>
   <h1>What's on in Kansas City</h1>
   <p class="lede">
     The picks worth going out of your way for, each with a line on why. Every date is read from the event's own

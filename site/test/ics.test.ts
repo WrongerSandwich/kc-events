@@ -78,4 +78,9 @@ describe("toIcs", () => {
   it("converts the winter offset too", () => {
     expect(toIcs([event({ start: "2026-11-20T19:00:00-06:00" })], opts)).toContain("DTSTART:20261121T010000Z");
   });
+
+  it("names the calendar only when asked, after METHOD:PUBLISH", () => {
+    expect(toIcs([event()], { ...opts, calendarName: "KC Events, weekly" })).toContain("METHOD:PUBLISH\r\nX-WR-CALNAME:KC Events\\, weekly\r\nBEGIN:VEVENT");
+    expect(toIcs([event()], opts)).not.toContain("X-WR-CALNAME");
+  });
 });

@@ -4,15 +4,16 @@ import "@fontsource/josefin-sans/700.css";
 import "../styles/tokens.css";
 import "../styles/base.css";
 import { siteConfig } from "../site.config";
-import { origin } from "../build/origin";
+import { origin, shareImage } from "../build/origin";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import StalenessBanner from "../components/StalenessBanner.svelte";
 import IconSprite from "../components/IconSprite.astro";
 import Analytics from "@vercel/analytics/astro";
 
-interface Props { title: string; description: string; canonical?: string; jsonLd?: object; wide?: boolean }
-const { title, description, canonical, jsonLd, wide = false } = Astro.props;
+/** noindex: a page no search engine should list (the 404), which then names no canonical URL either. */
+interface Props { title: string; description: string; canonical?: string; jsonLd?: object; wide?: boolean; noindex?: boolean }
+const { title, description, canonical, jsonLd, wide = false, noindex = false } = Astro.props;
 const fullTitle = title === siteConfig.name ? title : `${title} · ${siteConfig.name}`;
 // build.format "file" yields /e/<id>.html and /index.html; the public URLs are extensionless.
 const publicPath = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/") || "/";
@@ -25,7 +26,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={url} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={url} />}
     <!-- Safari draws no SVG icon and takes the ICO; the others take the SVG, listed after it. -->
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -34,9 +35,13 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <meta property="og:site_name" content={siteConfig.name} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:url" content={url} />
-    <meta property="og:image" content={new URL("/og.png", origin).toString()} />
+    {!noindex && <meta property="og:url" content={url} />}
+    <meta property="og:image" content={shareImage.url} />
+    <meta property="og:image:width" content={String(shareImage.width)} />
+    <meta property="og:image:height" content={String(shareImage.height)} />
+    <meta property="og:image:alt" content={shareImage.alt} />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image:alt" content={shareImage.alt} />
     <link rel="sitemap" href="/sitemap.xml" />
     {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, "\\u003c")} />}
   </head>

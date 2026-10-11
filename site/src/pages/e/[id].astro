@@ -6,7 +6,7 @@ import UiIcon from "../../components/UiIcon.svelte";
 import { dateTile } from "../../lib/tile";
 import { slugify } from "../../lib/slugs";
 import EventPageIsland from "../../components/EventPageIsland.svelte";
-import { origin } from "../../build/origin";
+import { origin, shareImage } from "../../build/origin";
 import { events } from "../../generated/events";
 import { descriptions } from "../../generated/descriptions";
 import { meta } from "../../generated/meta";
@@ -33,7 +33,7 @@ const moreLikeThis = events
   .filter((e) => e.id !== event.id && e.kind === event.kind && hasStartDay(e) && firstDay(e)! >= meta.buildToday)
   .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
   .slice(0, 5);
-const jsonLd = eventJsonLd(event);
+const jsonLd = eventJsonLd(event, { description, image: shareImage.url });
 ---
 <Base title={event.title} description={metaDescription} jsonLd={jsonLd}>
   <article class={`event kind-${slugify(event.kind)}`}>
