@@ -3,19 +3,20 @@ import { run } from "../src/run.js";
 import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
 import { EVENTS_TO_JUDGE } from "../src/curation.js";
 import { discoveryQueries } from "../src/discovery.js";
-import { parseRunReport, renderReportMarkdown } from "../src/report.js";
+import { parseRunReport, renderReportMarkdown, type RunReport } from "../src/report.js";
 import { toLocalDate } from "../src/time.js";
-import type { CompletionResult, SearchResult } from "../src/ports.js";
+import type { CompletionResult, ModelPort, SearchResult } from "../src/ports.js";
 import { fakePorts, type CannedPage } from "./fakes/ports.js";
 import { TEST_MODELS, testConfig, testPrompts } from "./fakes/config.js";
 import { candidateAt, PAGE, reply, source, WEEK_1, WEEK_2, WEEK_3 } from "./fakes/fixtures.js";
 
 /**
- * Three weekly runs end to end (#100), each pinned as the dataset and the Markdown report it writes, so any change
- * to what `run` produces shows up as a reviewed snapshot diff. Three sources: Knuckleheads lists a show that drops
- * off its page while a later one stays (struck in week 2, expired two-strike in week 3); Recordbar's calendar redirects to its events page;
- * the Midland's page is down in week 2 and back in week 3. Discovery finds a promoter's page in week 1 (held for
- * promotion), and curation flags one show.
+ * Three weekly runs end to end (#100), each pinned as the dataset and the Markdown report it writes, so any
+ * change to what `run` produces shows up as a reviewed snapshot diff. Three registry sources: Knuckleheads
+ * lists a show that drops off its page while a later one stays (struck in week 2, expired two-strike in
+ * week 3); Recordbar's calendar redirects to its events page; the Midland's page is down in week 2 and back
+ * in week 3. Discovery finds a promoter's page in week 1 (held for promotion; `promoter` is not in the
+ * registry, only what candidateAt cites), and curation flags one show.
  */
 const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms" });
 const recordbar = source("Recordbar", { neighborhood: "Crossroads" });
@@ -45,7 +46,7 @@ const queryAt = (now: Date) => {
 };
 
 /** The model, with curation flagging Big Show by title, since its id is the run's to make. */
-function flaggingBigShow(model: ReturnType<typeof fakePorts>["ports"]["model"]): typeof model {
+function flaggingBigShow(model: ModelPort): ModelPort {
   return {
     async complete(request) {
       if (request.model !== TEST_MODELS.curation) return model.complete(request);
@@ -67,7 +68,7 @@ async function weekly(now: Date, dataset: Dataset, { pages, completions, searche
   return result;
 }
 
-async function pin(week: number, { dataset, report }: { dataset: Dataset; report: Parameters<typeof renderReportMarkdown>[0] }) {
+async function pin(week: number, { dataset, report }: { dataset: Dataset; report: RunReport }) {
   await expect(`${JSON.stringify(dataset, null, 2)}\n`).toMatchFileSnapshot(`__snapshots__/golden/week-${week}.json`);
   await expect(renderReportMarkdown(report)).toMatchFileSnapshot(`__snapshots__/golden/week-${week}.md`);
 }

@@ -61,10 +61,10 @@ describe("committed config and registry", () => {
  * refuses some of these; each has its own test so a regression names the invariant it broke.
  */
 describe("committed dataset invariants", () => {
-  const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
-  const config = parseConfig(parse(read("research.config.yaml")));
-  const registry = parseRegistry(parse(read("data/registry.yaml")));
-  const dataset = parseDataset(JSON.parse(read("data/events.json")), config);
+  const text = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+  const config = parseConfig(parse(text("research.config.yaml")));
+  const registry = parseRegistry(parse(text("data/registry.yaml")));
+  const dataset = parseDataset(JSON.parse(text("data/events.json")), config);
   const runsDir = new URL("../data/runs/", import.meta.url);
   const reportFiles = readdirSync(runsDir).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
   const runDate = dataset.lastSuccessfulRun!.slice(0, 10);

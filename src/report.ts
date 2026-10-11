@@ -151,8 +151,8 @@ export interface RunReport {
   identityChurn: (EventRef & { was: EventRef })[];
 }
 
-/** A count a report written before it existed does not carry: zero. */
 const count = z.number().int().nonnegative();
+/** A count, or a list, that a report written before it existed does not carry: zero, or empty. */
 const countSince = count.default(0);
 const listSince = <T extends z.ZodType>(item: T) => z.array(item).default([]);
 const eventRef = z.strictObject({ title: z.string(), primaryUrl: z.string() });
