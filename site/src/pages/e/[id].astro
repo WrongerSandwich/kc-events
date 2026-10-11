@@ -33,7 +33,7 @@ const moreLikeThis = events
   .filter((e) => e.id !== event.id && e.kind === event.kind && hasStartDay(e) && firstDay(e)! >= meta.buildToday)
   .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
   .slice(0, 5);
-const jsonLd = eventJsonLd(event);
+const jsonLd = eventJsonLd(event, { description, image: new URL("/og.png", origin).toString() });
 ---
 <Base title={event.title} description={metaDescription} jsonLd={jsonLd}>
   <article class={`event kind-${slugify(event.kind)}`}>

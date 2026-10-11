@@ -37,18 +37,30 @@ describe.skipIf(!matchesGenerated)("built output", () => {
     expect(read("robots.txt")).toContain("/sitemap.xml");
     const sitemap = read("sitemap.xml");
     expect(sitemap).toContain("<urlset");
-    expect(sitemap).toContain(`/e/${events[0]!.id}</loc>`);
-    expect(read("404.html")).toContain("Nothing here");
+    expect(sitemap).toContain(`/e/${events[0]!.id}</loc><lastmod>${events[0]!.lastVerified}</lastmod>`);
+    const notFound = read("404.html");
+    expect(notFound).toContain("Nothing here");
+    expect(notFound).toContain('<meta name="robots" content="noindex">');
+    expect(notFound).not.toContain('rel="canonical"');
   });
 
   it("carries Event JSON-LD and the share image on an event page", () => {
     const sample = events.find((e) => e.dontMiss)!;
     const html = read(`e/${sample.id}.html`);
     expect(html).toContain('"@type":"Event"');
-    expect(html).not.toContain("addressRegion");
+    expect(html).toContain('"eventStatus":"https://schema.org/EventScheduled"');
+    expect(html).toContain('"addressCountry":"US"');
     expect(html).toContain("/og.png");
+    expect(html).toContain('<meta property="og:image:width" content="1200">');
     // Verified from the page linked above when the list is the event's own page, else from the list it was read from (#53).
     expect(html).toMatch(/Date and venue verified .* from (the page linked above|<a [^>]*>the list at [^<]+<\/a>)\./);
+  });
+
+  it("declares the site, its search action, and the picks on the front page", () => {
+    const html = read("index.html");
+    expect(html).toContain('"@type":"WebSite"');
+    expect(html).toContain('"@type":"ItemList"');
+    expect(html).toContain("explore?q={search_term_string}");
   });
 
   it("gives a recurring event's page no Add to calendar link, and a dated one's page has it", () => {
