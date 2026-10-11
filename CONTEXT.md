@@ -137,7 +137,7 @@ One value an event carries, its date or its venue, together with the evidence sn
 _Avoid_: extraction, value
 
 **Evidence snippet**:
-The exact text, quoted verbatim from the primary page, that a date or venue was read from. Stored beside the value so it can be audited without re-fetching.
+The exact text, quoted verbatim from the primary page, that a date or venue was read from. Stored beside the value so it can be audited without re-fetching. The run checks that it is there: see cite-or-drop.
 _Avoid_: citation, quote, proof
 
 **Discovery lane**:
@@ -155,7 +155,7 @@ A page read only for its links to events, never as a primary page: every page on
 _Avoid_: listing page, directory page (when meaning this)
 
 **Cite-or-drop**:
-The rule that an event publishes only if its date and venue were read from its fetched primary page. Anything less is held as `unverified` and never rendered. A date or time that does not exist (February 30th, 24:00), or an end before the start, is a misreading, not a read date: the candidate is held uncitable and counted.
+The rule that an event publishes only if its date and venue were read from its fetched primary page. Anything less is held as `unverified` and never rendered. A date or time that does not exist (February 30th, 24:00), or an end before the start, is a misreading, not a read date: the candidate is held uncitable and counted. Both evidence snippets must occur in the page's text as the model was given it, with the job's own link numbers (`[12]`) stripped and runs of whitespace, case, curly quotes and dashes not counting as differences; a candidate whose quote is not on the page is held `unverified` and counted, and a re-reading like that makes an active event unverified.
 
 **Two-strike expiry**:
 The rule that an active event which takes a strike on two consecutive runs becomes `expired` on the site while staying in the dataset. Outages do not count toward it.

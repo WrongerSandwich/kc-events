@@ -34,10 +34,27 @@ export interface FakePortOptions {
   curations?: ScriptedReply[];
   /** Search results by query; a query not listed returns nothing, an Error is thrown. */
   searches?: Record<string, SearchResult[] | Error>;
+  /** Whether each page with a body carries the quotes the scripted extraction replies make (see `carryingQuotes`); on unless false. */
+  pagesCarryQuotes?: boolean;
+}
+
+/**
+ * The canned pages with every date and venue quote in the scripted extraction replies added to each
+ * page that has a body, so a test about another stage need not write each quote into its page (#74).
+ */
+function carryingQuotes(pages: Record<string, CannedPage>, completions: ScriptedReply[]): Record<string, CannedPage> {
+  const quotes = completions.flatMap((reply) => {
+    const events = reply instanceof Error ? undefined : (reply.value as { events?: { dateEvidence?: unknown; venueEvidence?: unknown }[] } | null)?.events;
+    return (events ?? []).flatMap((e) => [e.dateEvidence, e.venueEvidence]).filter((q): q is string => typeof q === "string");
+  });
+  if (quotes.length === 0) return pages;
+  const lines = quotes.map((q) => `\n<p>${q}</p>`).join("");
+  return Object.fromEntries(Object.entries(pages).map(([url, page]) => [url, typeof page === "object" && !(page instanceof Error) && page.body !== "" ? { ...page, body: page.body + lines } : page]));
 }
 
 /** Fake ports that record every call; none of them reach the network. */
-export function fakePorts(now: Date, { pages = {}, completions = [], curations = [], searches = {} }: FakePortOptions = {}) {
+export function fakePorts(now: Date, { pages: canned = {}, completions = [], curations = [], searches = {}, pagesCarryQuotes = true }: FakePortOptions = {}) {
+  const pages = pagesCarryQuotes ? carryingQuotes(canned, completions) : canned;
   const calls: string[] = [];
   const requests: CompletionRequest[] = [];
   const replies = [...completions];

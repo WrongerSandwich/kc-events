@@ -444,7 +444,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   return { sightings, tally, pagesNotExtracted, bySource, attempts };
 }
 
-const noTally = (): CandidateTally => ({ outsideGeography: 0, overCap: 0, unusableDates: 0 });
+const noTally = (): CandidateTally => ({ outsideGeography: 0, overCap: 0, unusableDates: 0, quoteNotOnPage: 0 });
 
 function addTally(into: CandidateTally, from: CandidateTally): void {
   for (const cause of Object.keys(into) as (keyof CandidateTally)[]) into[cause] += from[cause];
@@ -504,7 +504,7 @@ async function extractPage(
       problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`],
     };
   }
-  const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl), links: reading.links };
+  const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl), links: reading.links, pageText: reading.text };
   const sightings: Sighting[] = [];
   const problems: string[] = [];
   const tally = noTally();
@@ -527,6 +527,10 @@ async function extractPage(
     if (sighting.dateProblem !== undefined) {
       tally.unusableDates++;
       problems.push(`"${sighting.event.title}" on ${page.finalUrl} had ${sighting.dateProblem} and was held uncitable`);
+    }
+    if (sighting.quoteProblem !== undefined) {
+      tally.quoteNotOnPage++;
+      problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.quoteProblem}, which is not on the page, and was held unverified`);
     }
     sightings.push(sighting);
   }

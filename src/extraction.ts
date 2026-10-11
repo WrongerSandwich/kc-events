@@ -26,6 +26,8 @@ const MAX_PAGE_CHARS = 70_000;
  */
 const ANCHOR = /<a\b((?:\s+[^\s<>"'=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s<>"']+))?)*)\s*\/?>((?:(?!<a\b)[\s\S])*?)<\/a\s*>/gi;
 const HREF = /\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"']+))/i;
+/** A number in brackets, as `readPage` writes after a link, with any space before it. */
+const BRACKETED_NUMBER = /\s*\[(\d+)\]/g;
 
 const LOCAL_DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** A clock time, 00:00 to 23:59; a one-digit hour is padded before use. */
@@ -230,6 +232,8 @@ export type CandidateOrigin = PageOrigin & {
   pageUrl: string;
   /** What the page's numbered links lead to, as `readPage` gave them. */
   links: string[];
+  /** The page's text as `readPage` gave it to the model, link markers and all. */
+  pageText: string;
 };
 
 /**
@@ -243,6 +247,8 @@ export interface Sighting {
   unmappable?: { proposed?: string };
   /** Why a date or time the model wrote could not be used, which made the candidate uncitable. */
   dateProblem?: string;
+  /** Which quote of an otherwise citable candidate is not on its page, which held it unverified. */
+  quoteProblem?: string;
 }
 
 /**
@@ -254,13 +260,17 @@ export interface Sighting {
  * midnight can be given an end time earlier than its start on the same date. A recurring event's date is its schedule phrase, which it
  * carries instead of a start and end. A venue the page did not name stays absent rather than borrowing the source's.
  * The event's own page, when the model named one of the page's links by number, rides along
- * whatever the status, and so does the description; neither plays any part in verifying.
+ * whatever the status, and so does the description; neither plays any part in verifying. Both
+ * quotes must be on the page (#74): the model quotes the page as `readPage` gave it, so the job's
+ * own link markers are stripped from every text field first, and a quote then counts only when it
+ * occurs in the page's text as `onPage` compares them.
  */
 export function candidateToSighting(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Sighting {
   const { timezone } = context.config;
   const primaryUrl = origin.pageUrl;
   const eventUrl = linkedPage(candidate.eventLink, origin.links, primaryUrl, context.config.discovery.platformHosts);
-  const title = candidate.title.trim();
+  const clean = (text: string | null) => nonEmpty(text === null ? null : withoutLinkMarkers(text, origin.links.length));
+  const title = clean(candidate.title) ?? candidate.title.trim();
   const startAt = localIso(candidate.startDate, candidate.startTime, timezone);
   const endAt = localIso(candidate.endDate, candidate.endTime, timezone);
   const start = startAt.iso;
@@ -270,18 +280,27 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const schedule = nonEmpty(candidate.schedule);
   const recurrence = deriveRecurrence({ start, end, schedule, sportsSeason: candidate.sportsSeason });
   const when = recurrence === "recurring" ? { schedule } : { start, end };
-  const dateEvidence = nonEmpty(candidate.dateEvidence);
-  const venueEvidence = nonEmpty(candidate.venueEvidence);
-  const venue = nonEmpty(candidate.venue);
-  const description = nonEmpty(candidate.description);
+  const dateEvidence = clean(candidate.dateEvidence);
+  const venueEvidence = clean(candidate.venueEvidence);
+  const venue = clean(candidate.venue);
+  const description = clean(candidate.description);
   const placement = toNeighborhood(candidate.neighborhood, context.neighborhoods);
 
-  const verified =
+  const cited =
     dateProblem === undefined &&
     citedDate({ recurrence, ...when }) !== undefined &&
     dateEvidence !== undefined &&
     venue !== undefined &&
     venueEvidence !== undefined;
+  const page = cited ? withoutLinkMarkers(origin.pageText, origin.links.length) : "";
+  const quoteProblem = !cited
+    ? undefined
+    : !onPage(dateEvidence, page)
+      ? `quoted "${dateEvidence}" for its date`
+      : !onPage(venueEvidence, page)
+        ? `quoted "${venueEvidence}" for its venue`
+        : undefined;
+  const verified = cited && quoteProblem === undefined;
 
   const event: Event = {
     id: newEventId(primaryUrl, title, context.nowIso, when.start),
@@ -313,7 +332,35 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     cancelled: candidate.notice === "cancelled",
     ...("unmappable" in placement ? { unmappable: placement.unmappable } : {}),
     ...(dateProblem !== undefined ? { dateProblem } : {}),
+    ...(quoteProblem !== undefined ? { quoteProblem } : {}),
   };
+}
+
+/**
+ * The text without the link markers `readPage` wrote: a bracketed number that is one of the page's
+ * link numbers goes, with the space before it. A higher number (a page's own footnote) is page text.
+ */
+export function withoutLinkMarkers(text: string, linkCount: number): string {
+  return text.replace(BRACKETED_NUMBER, (marker, n: string) => (Number(n) >= 1 && Number(n) <= linkCount ? "" : marker));
+}
+
+/**
+ * Whether the quote occurs in the page's text, read as a person would compare them: runs of
+ * whitespace (a line break included) are one space, case does not count, and curly quotes and
+ * dashes match their plain forms, which a model writes for them as often as not.
+ */
+export function onPage(quote: string, pageText: string): boolean {
+  return comparable(pageText).includes(comparable(quote));
+}
+
+function comparable(text: string): string {
+  return text
+    .replace(/[‘’‚‛′]/g, "'")
+    .replace(/[“”„″]/g, '"')
+    .replace(/[‐‑‒–—―]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 }
 
 /**

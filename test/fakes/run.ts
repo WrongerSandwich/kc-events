@@ -11,7 +11,9 @@ import { testConfig, testPrompts } from "./config.js";
  * One run over these registry sources with canned pages and scripted model replies, under the test
  * config unless another is given, and with these search results by query when the config turns
  * discovery on. The dataset it returns must parse; the fake ports' calls come back
- * and model requests come back with the run's output.
+ * and model requests come back with the run's output. Each canned page carries the quotes the
+ * scripted replies make, as a real page carries what the model quotes from it, unless
+ * `pagesCarryQuotes` is false.
  */
 export async function runWith(
   now: Date,
@@ -22,9 +24,17 @@ export async function runWith(
     completions,
     config = testConfig(),
     searches,
-  }: { sources: Source[]; pages: Record<string, CannedPage>; completions: ScriptedReply[]; config?: RunConfig; searches?: Record<string, SearchResult[] | Error> },
+    pagesCarryQuotes = true,
+  }: {
+    sources: Source[];
+    pages: Record<string, CannedPage>;
+    completions: ScriptedReply[];
+    config?: RunConfig;
+    searches?: Record<string, SearchResult[] | Error>;
+    pagesCarryQuotes?: boolean;
+  },
 ) {
-  const fakes = fakePorts(now, { pages, completions, ...(searches ? { searches } : {}) });
+  const fakes = fakePorts(now, { pages, completions, pagesCarryQuotes, ...(searches ? { searches } : {}) });
   const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports });
   expect(parseDataset(result.dataset, config)).toEqual(result.dataset);
   return { ...result, calls: fakes.calls, requests: fakes.requests };

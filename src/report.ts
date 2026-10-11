@@ -21,6 +21,8 @@ export interface CandidateTally {
   overCap: number;
   /** Held uncitable because a date or time the model wrote does not exist, or the end came before the start. */
   unusableDates: number;
+  /** Held unverified because a quote the model gave for the date or venue is not on the page (#74). */
+  quoteNotOnPage: number;
 }
 
 /** An event as the report names it: by title and primary page. */
@@ -166,6 +168,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Dropped: outside geography | ${counts.outsideGeography} |
 | Dropped: a field past its length cap | ${counts.overCap} |
 | Uncitable: a date or time that does not exist, or an end before the start | ${counts.unusableDates} |
+| Unverified: a quote not on its page | ${counts.quoteNotOnPage} |
 | Stored neighborhoods off the list, placed again | ${report.offListNeighborhoods.reduce((n, r) => n + r.events, 0)} |
 ${EXPIRY_REASONS.map((reason) => `| Expired: ${reason} | ${counts.expired[reason]} |`).join("\n")}
 
