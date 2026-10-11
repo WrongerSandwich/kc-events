@@ -56,7 +56,7 @@ export interface RunReport {
     unverifiedByUncitableReading: number;
     /** Venue-less sightings that fit two or more known events with none preferred, so no record was made: nothing publishable anyway (#77). */
     venuelessAmbiguous: number;
-    /** Discovery-led events held for promotion this run (ADR 0012): found on a host no registry source is on, new this run or read before the rule. */
+    /** Discovery-led events held for promotion this run (ADR 0012): found on a host no active registry source is on and no ticketing platform, new this run or read before the rule. */
     heldForPromotion: number;
     /** Events released this run because a person promoted their host into the registry; re-verified against their page from here on. */
     releasedForPromotion: number;

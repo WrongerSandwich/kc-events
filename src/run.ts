@@ -98,7 +98,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     merged.events.map((e) => expireIndexCited(expirePast(e, today), config)),
     config.venueAliases,
   );
-  // Discovery finds; a person admits (ADR 0012): what discovery found on a host no registry source is on is
+  // Discovery finds; a person admits (ADR 0012): what discovery found on a host no active registry source is on is
   // held, before re-verification so a held event is not read, and what a promotion since released is sent there.
   const held = holdForPromotion(folded.events, dataset.events, registry, config);
   const current = held.events;
@@ -1096,7 +1096,7 @@ interface DiscoveryLaneOutcome {
   sightings: Sighting[];
   /** The primary pages the lane tried; never an index page. */
   attempts: PageAttempts;
-  /** Host to an example page, for every host whose page yielded an active event this run. */
+  /** Host to an example page, for every host whose page yielded a verified sighting this run, held for promotion or not. */
   hosts: Map<string, string>;
   report: RunReport["discovery"];
   tally: CandidateTally;
@@ -1133,17 +1133,21 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
   /** Pages followed this run, as page keys. */
   const followed = new Set<string>();
 
+  /** Whether a lead is on an excluded source's host, before its fetch or where its redirects ended; counted for the report by source. */
+  const onExcludedHost = (url: string): boolean => {
+    const excluded = excludedSourceOnHost(url, registry);
+    if (!excluded) return false;
+    const line = report.leadsOnExcludedSources.find((l) => l.source === excluded.name);
+    if (line) line.leads++;
+    else report.leadsOnExcludedSources.push({ source: excluded.name, reason: excluded.reason, leads: 1 });
+    return true;
+  };
+
   /** The page behind a lead not yet followed this run, or nothing: already followed, an excluded host, the cap, or a problem fetching it. */
   const follow = async (url: string): Promise<FetchResult | undefined> => {
     if (followed.has(pageKey(url)) || registryTried.has(pageKey(url))) return undefined;
     followed.add(pageKey(url));
-    const excluded = excludedSourceOnHost(url, registry);
-    if (excluded) {
-      const line = report.leadsOnExcludedSources.find((l) => l.source === excluded.name);
-      if (line) line.leads++;
-      else report.leadsOnExcludedSources.push({ source: excluded.name, reason: excluded.reason, leads: 1 });
-      return undefined;
-    }
+    if (onExcludedHost(url)) return undefined;
     if (ports.model.exhausted()) {
       outcome.leadsNotFollowed++;
       return undefined;
@@ -1173,6 +1177,11 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     if (isIndexPage(page.finalUrl, config)) {
       attempts.outages.add(pageKey(url));
       report.problems.push(`${url} led to an index page and was not extracted`);
+      return;
+    }
+    // A lead whose redirects end on an excluded host is not read either (ADR 0012); like one that could not be read, it says nothing about its events.
+    if (onExcludedHost(page.finalUrl)) {
+      attempts.outages.add(pageKey(url));
       return;
     }
     for (const u of pageUrls) attempts.tried.add(u);

@@ -20,7 +20,7 @@ async function main() {
   const expired = Object.values(counts.expired).reduce((sum, n) => sum + n, 0);
   console.log(
     `Run ${report.runDate}: ${counts.found} found, ${counts.new} new, ${counts.updated} updated, ${counts.reverified} re-verified, ` +
-      `${counts.heldUnverified} held unverified, ${counts.heldForPromotion} held for promotion, ${counts.releasedForPromotion} released, ${expired} expired; ` +
+      `${counts.heldUnverified} held unverified, ${counts.heldForPromotion} held for promotion, ${counts.releasedForPromotion} released by promotion, ${expired} expired; ` +
       `${spend.totalUsd.toFixed(4)} of ${spend.capUsd} USD` +
       (spend.capHit
         ? `, cap hit (${spend.shortfall.pagesNotExtracted} page(s) not extracted, ${spend.shortfall.eventsNotReverified} event(s) not re-verified, ` +

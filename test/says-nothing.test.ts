@@ -73,7 +73,7 @@ describe("an excluded source's events", () => {
     expect(byTitle(back.dataset, "Big Show")).toMatchObject({ id: first.dataset.events[0]!.id, status: "active", consecutiveOutages: 0, lastVerified: weekIso(5) });
   });
 
-  it("an event found elsewhere whose primary page is one of the excluded source's pages is held for promotion instead (ADR 0012): a person said no to the host", async () => {
+  it("include, held for promotion rather than as through an outage (ADR 0012), an event found elsewhere whose primary page is one of its pages: a person said no to the host", async () => {
     const first = await listing(bigShow);
     const found = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, lead: { lane: "discovery" as const, query: "music events in Kansas City" } })) };
 

@@ -48,7 +48,7 @@ describe("writeGenerated", () => {
     expect(published.events[1]).toEqual({ ...exported(join(outDir, "events.ts"))[1], description: "A three-piece playing their first record." });
   });
 
-  it("leaves an event held for promotion (ADR 0012) out of every generated module, verified reading or not", () => {
+  it("leaves an event held for promotion (ADR 0012) out of every generated module and the published events.json, verified reading or not", () => {
     const dir = mkdtempSync(join(tmpdir(), "kc-generate-"));
     const datasetPath = join(dir, "events.json");
     const configPath = join(dir, "research.config.yaml");
@@ -66,11 +66,17 @@ describe("writeGenerated", () => {
     writeFileSync(configPath, configYaml);
     const outDir = join(dir, "generated");
 
-    const result = writeGenerated({ datasetPath, configPath, outDir, publicDir: join(dir, "public"), today: "2026-10-05" });
+    const publicDir = join(dir, "public");
+
+    const result = writeGenerated({ datasetPath, configPath, outDir, publicDir, today: "2026-10-05" });
 
     expect(result.eventCount).toBe(1);
     expect(exported(join(outDir, "events.ts")).map((e: { id: string }) => e.id)).toEqual(["evt_000000000001"]);
     expect(exported(join(outDir, "dont-miss.ts"))).toEqual([]);
     expect(exported(join(outDir, "descriptions.ts"))).toEqual({});
+    const published = readFileSync(join(publicDir, "events.json"), "utf8");
+    expect(JSON.parse(published).events.map((e: { id: string }) => e.id)).toEqual(["evt_000000000001"]);
+    expect(published).not.toContain("winery.example");
+    expect(published).not.toContain("barrel room");
   });
 });

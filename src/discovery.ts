@@ -8,7 +8,7 @@
  */
 import type { RunConfig } from "./config.js";
 import type { Dataset, Event } from "./dataset.js";
-import type { ExcludedSource, Registry } from "./registry.js";
+import type { ExcludedSource, Registry, Source } from "./registry.js";
 import type { FetchResult } from "./ports.js";
 import type { RunReport } from "./report.js";
 import { hostOf, onHost } from "./hosts.js";
@@ -111,12 +111,9 @@ export function outboundLinks(page: FetchResult, config: RunConfig): string[] {
   return links;
 }
 
-/** The hosts the registry's sources are on, of one status or any; a URL that does not parse is on none. */
-function registryHosts(registry: Registry, status?: Registry["sources"][number]["status"]): string[] {
-  return registry.sources
-    .filter((s) => status === undefined || s.status === status)
-    .flatMap((s) => s.urls.map(hostOf))
-    .filter((h): h is string => h !== undefined);
+/** The hosts these sources are on; a URL that does not parse is on none. */
+function hostsOf(sources: readonly Source[]): string[] {
+  return sources.flatMap((s) => s.urls.map(hostOf)).filter((h): h is string => h !== undefined);
 }
 
 /**
@@ -127,7 +124,7 @@ function registryHosts(registry: Registry, status?: Registry["sources"][number][
  * admission: a person looked and said no.
  */
 export function onAdmittedHost(url: string, registry: Registry, config: RunConfig): boolean {
-  return onHost(url, registryHosts(registry, "active")) || onHost(url, config.discovery.platformHosts);
+  return onHost(url, hostsOf(registry.sources.filter((s) => s.status === "active"))) || onHost(url, config.discovery.platformHosts);
 }
 
 /**
@@ -135,11 +132,11 @@ export function onAdmittedHost(url: string, registry: Registry, config: RunConfi
  * follows such a lead (ADR 0012): the exclusion was a decision about the host, not about one lane.
  */
 export function excludedSourceOnHost(url: string, registry: Registry): ExcludedSource | undefined {
-  return registry.sources.find((s): s is ExcludedSource => s.status === "excluded" && onHost(url, registryHosts({ sources: [s] })));
+  return registry.sources.find((s): s is ExcludedSource => s.status === "excluded" && onHost(url, hostsOf([s])));
 }
 
 /**
- * Folds this run's discovery hosts (those whose pages yielded an active event) into the state
+ * Folds this run's discovery hosts (those whose pages yielded a verified sighting, held or not) into the state
  * carried between runs, and lists as promotion suggestions every host seen this run that has now
  * been seen in at least two runs, each with how many events held for promotion (ADR 0012) promoting
  * it would release. A host the registry already checks, or a ticketing platform that
@@ -153,7 +150,7 @@ export function trackDiscoveryHosts(
   runIso: string,
   events: readonly Event[],
 ): { discoveryState: Dataset["discoveryState"]; promotionSuggestions: RunReport["promotionSuggestions"] } {
-  const neverSuggested = [...registryHosts(registry), ...config.discovery.platformHosts];
+  const neverSuggested = [...hostsOf(registry.sources), ...config.discovery.platformHosts];
   const discoveryState = { ...previous };
   const promotionSuggestions: RunReport["promotionSuggestions"] = [];
   for (const [host, exampleUrl] of seenThisRun) {

@@ -243,4 +243,18 @@ describe("a discovered host's events are held until the host is promoted (ADR 00
     // The cap cut nothing.
     expect(report.spend).toMatchObject({ capHit: false, shortfall: { leadsNotFollowed: 0 } });
   });
+
+  it("a lead whose redirects end on an excluded host is not extracted either, and counts with the leads not followed", async () => {
+    const starlight: Source = { ...source("Starlight", { urls: ["https://starlight.test/calendar"] }), status: "excluded", reason: "robots.txt disallows" };
+    const shortLink = "https://sl.test/big-show";
+    const { dataset, report, calls } = await discoverAt(WEEK_1, emptyDataset(), {
+      sources: [starlight],
+      searches: { [QUERY]: [lead(shortLink)] },
+      pages: { [shortLink]: { ...PAGE, finalUrl: "https://www.starlight.test/shows/big-show" } },
+    });
+
+    expect(calls).toEqual([`search:${QUERY}`, `fetch:${shortLink}`]);
+    expect(dataset.events).toEqual([]);
+    expect(report.discovery).toMatchObject({ pagesExtracted: 0, leadsOnExcludedSources: [{ source: "Starlight", reason: "robots.txt disallows", leads: 1 }] });
+  });
 });
