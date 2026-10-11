@@ -135,6 +135,18 @@ describe("re-verification and expiry", () => {
       expect(second.calls).toEqual([`fetch:${CALENDAR_URL}`, "model:test/extraction"]);
       expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], verificationFailures: 1 }]);
     });
+
+    it("to an index page says nothing about its events: they are held through an outage, with no strike and no second fetch (#111)", async () => {
+      const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
+      const INDEX = "https://www.eventbrite.com/d/mo--kansas-city/events/";
+
+      const second = await runAt(WEEK_2, first.dataset, { pages: { [CALENDAR_URL]: { ...PAGE, finalUrl: INDEX } }, completions: [] });
+
+      expect(second.calls).toEqual([`fetch:${CALENDAR_URL}`]);
+      expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], consecutiveOutages: 1 }]);
+      expect(second.report.counts).toMatchObject({ heldThroughOutage: 1, expired: { "two-strike": 0 } });
+      expect(second.report.sources).toEqual([expect.objectContaining({ name: knuckleheads.name, detail: `${INDEX} is an index page and was not extracted` })]);
+    });
   });
 
   describe("an active event the registry lane did not read", () => {

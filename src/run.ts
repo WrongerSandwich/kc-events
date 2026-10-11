@@ -108,7 +108,11 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const laneOutcome = {
     touched,
     released: held.released,
-    attempts: combineAttempts({ ...registryLane.attempts, unread: extraction.unreadUrls, yields: extraction.yields }, discovery.attempts),
+    attempts: combineAttempts(
+      { ...registryLane.attempts, unread: extraction.unreadUrls, yields: extraction.yields },
+      { ...noAttempts(), outages: extraction.outageUrls },
+      discovery.attempts,
+    ),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
   // A reading places an event from its page; one no page placed this run is placed from what is stored.
@@ -398,12 +402,15 @@ interface SourceExtraction {
  * Hands every fetched page to the extraction model with the rules document and turns the
  * candidates into sightings under cite-or-drop. A reply that fails validation, or a call that
  * throws, yields nothing from that page. Once the spend cap refuses a call, every page left is counted
- * as not extracted; like an unreadable reply, that tells nothing about the events on it.
+ * as not extracted; like an unreadable reply, that tells nothing about the events on it. A page whose
+ * redirects ended on an index page is not extracted at all, and is an outage for its events (#111).
  */
 async function extractFromPages(pages: SourcePage[], model: ModelPort, context: ExtractionContext) {
   const sightings: Sighting[] = [];
   const bySource = new Map<string, SourceExtraction>();
   const unreadUrls = new Set<string>();
+  /** Registry URLs whose redirects ended on an index page: never read, an outage for their events. */
+  const outageUrls = new Set<string>();
   const yields = new Map<string, PageYield>();
   const tally = noTally();
   let pagesNotExtracted = 0;
@@ -415,6 +422,9 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     const outcome = bySource.get(source.name) ?? { extracted: 0, problems: [] };
     bySource.set(source.name, outcome);
     if (isIndexPage(page.finalUrl, context.config)) {
+      // A calendar that now redirects to an index page says nothing about its events; like a lead
+      // that does (see discover), they are held as through an outage, not struck (#111).
+      outageUrls.add(pageKey(page.url));
       outcome.problems.push(`${page.finalUrl} is an index page and was not extracted`);
       continue;
     }
@@ -437,7 +447,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     outcome.problems.push(...read.problems);
   }
 
-  return { sightings, tally, pagesNotExtracted, bySource, unreadUrls, yields };
+  return { sightings, tally, pagesNotExtracted, bySource, unreadUrls, outageUrls, yields };
 }
 
 const noTally = (): CandidateTally => ({ outsideGeography: 0, overCap: 0, unusableDates: 0 });
@@ -823,8 +833,8 @@ function refresh(known: Event, sighting: Event): Event {
  * days of slack, where extraction was not asked for it; or after the latest start the page listed
  * this run, so the page's window stops short of it. Either way the event is left as it was, and the
  * report counts it. A page that is gone or that robots.txt now disallows is a strike whatever the
- * event's date. A page that could not be loaded (see fetchReadable), or a discovery lead whose
- * redirects ended on an index page, is an outage: it holds an active event as it was, up to the
+ * event's date. A page that could not be loaded (see fetchReadable), or a registry calendar or
+ * discovery lead whose redirects ended on an index page (#111), is an outage: it holds an active event as it was, up to the
  * outage limit. So is a page that loaded and read as listing nothing where three or more active
  * events would be struck (#78): a page that renders empty, or a model that returns nothing, is not
  * news about each event; the report names the page. An excluded source's page is not fetched at all
