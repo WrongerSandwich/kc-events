@@ -5,9 +5,9 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { BUDGETS, FIXTURE_PICKS, FRONT_PAGE_BYTES, measure, PICK_BYTES } from "../scripts/size-check";
+import { BUDGETS, FIXTURE_PICKS, measure, PICK_BYTES } from "../scripts/size-check";
 import { loadPublished } from "../src/build/load-dataset";
-import { MAX_PICKS } from "../src/build/write-generated";
+import { FRONT_PAGE_BYTES, MAX_PICKS } from "../src/build/write-generated";
 
 describe("measure", () => {
   it("counts the page and every script and stylesheet it loads, following static chunk imports but not dynamic ones", () => {

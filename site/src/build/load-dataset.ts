@@ -25,7 +25,7 @@ export const MAX_DAYS_FROM_RUN = 14;
 /** The job's event ids; the sitemap and `view-transition-name` take them as they are. */
 const EVENT_ID = /^evt_[0-9a-f]{12}$/;
 
-/** An end the calendar can place after its start: by instant when both carry a time, else by day. */
+/** An end that falls before its start: by instant when both carry a time, else by day (a date end on a timed start's day is not before it). */
 function endsBeforeStart(start: string, end: string): boolean {
   if (!isDateOnly(start) && !isDateOnly(end)) return Date.parse(end) < Date.parse(start);
   return localDate(end) < localDate(start);

@@ -157,7 +157,10 @@ describe("DontMissList", () => {
     });
 
     it("moves the cards by a view transition where the browser has one, and filters the same where it has none", async () => {
+      // What a card's style was when the browser would capture it, before the update runs.
+      let captured: string | null | undefined;
       const start = vi.fn((update: () => Promise<void>) => {
+        captured = document.querySelector("section .pick")!.getAttribute("style");
         const done = update();
         return { finished: done, updateCallbackDone: done, ready: done, skipTransition() {} };
       });
@@ -168,8 +171,12 @@ describe("DontMissList", () => {
         await tick();
         expect(start).toHaveBeenCalledTimes(1);
         expect(titles(week!)).toEqual(["Tuesday show", "Wednesday show"]);
-        // Each card carries its own name, so the transition slides the kept ones into place.
-        expect(week!.querySelector(".pick")!.getAttribute("style")).toContain("view-transition-name: pick-a");
+        // Each card carries its own name while the filter moves it, so the transition slides the kept ones into place;
+        // afterwards the names are gone, so a navigation to an event page carries only its tile and title.
+        expect(captured).toContain("view-transition-name: pick-b");
+        await tick();
+        await tick();
+        expect(week!.querySelector(".pick")!.getAttribute("style") ?? "").not.toContain("view-transition-name");
       } finally {
         delete (document as { startViewTransition?: unknown }).startViewTransition;
       }

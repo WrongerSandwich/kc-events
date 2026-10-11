@@ -15,9 +15,11 @@ import { loadPublished } from "./load-dataset.ts";
  */
 export const PUBLISHED_SCHEMA_VERSION = 2;
 
+/** What the front page may weigh on real data: HTML, CSS, and JS, gzipped. */
+export const FRONT_PAGE_BYTES = 50_000;
 /**
  * The most don't-miss picks the front page was sized for: its code budget, measured on the fixture build, leaves room
- * for this many (scripts/size-check.ts). A week over it is a warning, not a failed deploy.
+ * in FRONT_PAGE_BYTES for this many (scripts/size-check.ts). A week over it is a warning, not a failed deploy.
  */
 export const MAX_PICKS = 20;
 
@@ -32,7 +34,7 @@ export function writeGenerated(opts: { datasetPath: string; configPath: string; 
   const dontMiss = events.filter((e) => e.dontMiss);
   writeFileSync(join(opts.outDir, "dont-miss.ts"), `${header}import type { PublishedEvent } from "../lib/types";\nexport const dontMiss: PublishedEvent[] = ${JSON.stringify(dontMiss)};\n`);
   if (dontMiss.length > MAX_PICKS) {
-    console.warn(`site: ${dontMiss.length} don't-miss picks, over the ${MAX_PICKS} the front page's 50 KB budget was sized for; curation is flagging more than it should`);
+    console.warn(`site: ${dontMiss.length} don't-miss picks, over the ${MAX_PICKS} the front page's ${FRONT_PAGE_BYTES / 1000} KB budget was sized for; curation is flagging more than it should`);
   }
 
   mkdirSync(opts.publicDir, { recursive: true });

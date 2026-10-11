@@ -15,7 +15,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
 import { pathToFileURL } from "node:url";
 import { gzipSync } from "node:zlib";
-import { MAX_PICKS } from "../src/build/write-generated.ts";
+import { FRONT_PAGE_BYTES, MAX_PICKS } from "../src/build/write-generated.ts";
 
 /** Paths relative to dist/ of the CSS and JS a page's HTML references: every /_astro/ URL (scripts, stylesheets, island URLs). */
 function htmlReferences(html: string): string[] {
@@ -50,8 +50,6 @@ export function measure(dist: string, page: string): { bytes: number; assets: st
   return { bytes, assets: [...seen] };
 }
 
-/** What the front page may weigh on real data, gzipped. */
-export const FRONT_PAGE_BYTES = 50_000;
 /** About what one more don't-miss pick adds to the front page, gzipped (measured 2026-10-11: 16 real picks against the fixture's 4). */
 export const PICK_BYTES = 375;
 /** The don't-miss picks the fixture build publishes (e2e/fixtures/events.json on its SITE_TODAY; a test holds it). */

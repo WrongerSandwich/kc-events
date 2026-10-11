@@ -108,11 +108,14 @@ test.describe("a section's kind filter", () => {
       const section = music.closest("section")!;
       const before = section.querySelectorAll("article").length;
       (music as HTMLButtonElement).click();
+      // Half a second at most; and a few frames past the change, since the transition's animations start after it.
+      const maxFrames = 30;
+      const settleFrames = 3;
       let animations = 0;
-      for (let frame = 0; frame < 30; frame++) {
+      for (let frame = 0; frame < maxFrames; frame++) {
         await new Promise(requestAnimationFrame);
         animations = Math.max(animations, document.getAnimations().length);
-        if (section.querySelectorAll("article").length !== before && frame > 2) break;
+        if (section.querySelectorAll("article").length !== before && frame >= settleFrames) break;
       }
       return { animations, cards: section.querySelectorAll("article").length };
     });

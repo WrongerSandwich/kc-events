@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { onMount, tick } from "svelte";
-  // dont-miss, not events: the front page ships only the flagged events (its budget is 50 KB; the full list is about 26).
+  import { flushSync, onMount, tick } from "svelte";
+  // dont-miss, not events: the front page ships only the flagged events (the full list would be about 26 KB more).
   import { dontMiss } from "../generated/dont-miss";
   import { meta } from "../generated/meta";
   import { addDays, formatDay, formatShort, formatTime, localDate, nowIn } from "../lib/dates";
@@ -86,6 +86,9 @@
       .map(([kind, n]) => ({ kind, n, href: explorerHref(h, kind) }));
   }
 
+  /** A kind filter's view transition is running: the cards carry their names. */
+  let moving = $state(false);
+
   function toggle(h: Horizon, kind: string) {
     const next = chosen[h] === kind ? undefined : kind;
     const update = () => {
@@ -96,9 +99,15 @@
       return tick();
     };
     // The kept cards slide into place and the others fade: the browser's view transition, by each card's name (its
-    // timing and the reduced-motion rule are in base.css). Where there is none, the list just changes.
-    if (typeof document.startViewTransition === "function") document.startViewTransition(update);
-    else update();
+    // timing and the reduced-motion rule are in base.css). The cards are named only for it, so opening an event page
+    // still carries just the tile and title across. Where there is none, the list just changes.
+    if (typeof document.startViewTransition !== "function") {
+      update();
+      return;
+    }
+    moving = true;
+    flushSync(); // the names are on the cards before the browser captures them
+    document.startViewTransition(update).finished.finally(() => { moving = false; });
   }
 
   /**
@@ -158,9 +167,9 @@
                and lists started picks last, so a day jumps to one that can still be gone to. -->
           <WeekStrip picks={[...upcoming, ...started]} {today} sunday={horizonBounds(today).sunday} />
         {/if}
-        <!-- Named, so a filter's view transition (toggle) slides the kept cards into place. -->
+        <!-- Named while a filter moves them (toggle), so its view transition slides the kept cards into place. -->
         {#each upcoming as event (event.id)}
-          <div class="pick" style={`view-transition-name: pick-${event.id}`}>
+          <div class="pick" style={moving ? `view-transition-name: pick-${event.id}` : undefined}>
             <DontMissCard {event} {today} {now} />
           </div>
         {/each}

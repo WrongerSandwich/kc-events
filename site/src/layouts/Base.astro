@@ -28,7 +28,6 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
-
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={url} />}
     <!-- Safari draws no SVG icon and takes the ICO; the others take the SVG, listed after it. -->
