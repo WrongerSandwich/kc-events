@@ -77,7 +77,7 @@ The run that last judged an event for the don't-miss flag. Absent until curation
 How an event was first found: which registry source or which discovery search.
 
 **Venue**:
-The place an event happens. A venue is not the same as a source, even when the venue's website is a source. One venue can go by several names: the building, a room inside it ("Helzberg Hall" at the Kauffman Center), or a program that runs there ("Tivoli Cinema" at the Nelson-Atkins). These are its **venue aliases**, kept by hand; event identity treats them as one venue.
+The place an event happens. A venue is not the same as a source, even when the venue's website is a source. One venue can go by several names: the building, a room inside it ("Helzberg Hall" at the Kauffman Center), or a program that runs there ("Tivoli Cinema" at the Nelson-Atkins). These are its **venue aliases**, kept by hand; event identity treats them as one venue, and the site shows the event at the venue's display name with the page's room after it ("Kauffman Center for the Performing Arts · Helzberg Hall"). An alias made only of generic words ("Pavilion", "Main Auditorium") names that room alone, never a longer name that contains it.
 _Avoid_: location, room (when meaning the venue as a whole)
 
 **Neighborhood**:

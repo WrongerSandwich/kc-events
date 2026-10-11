@@ -60,6 +60,12 @@ describe("eventJsonLd's fields for Google's Event result", () => {
       location: { "@type": "Place", name: "recordBar, Crossroads", address: { "@type": "PostalAddress", addressLocality: "Kansas City", addressRegion: "MO", addressCountry: "US" } },
     });
   });
+
+  it("names the venue, not the room the page named (#91)", () => {
+    const e = event({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall", neighborhood: "Downtown" });
+    expect(eventJsonLd(e, opts)).toMatchObject({ location: { name: "Kauffman Center for the Performing Arts, Downtown" } });
+    expect(eventDescription(e, today)).toBe("Friday, October 9, 7:00 pm at Kauffman Center for the Performing Arts · Helzberg Hall, Downtown.");
+  });
 });
 
 describe("postalAddress", () => {

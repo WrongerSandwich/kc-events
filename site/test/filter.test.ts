@@ -83,6 +83,12 @@ describe("matches", () => {
     expect(matches(show, f({ q: "" }), today, none)).toBe(true);
   });
 
+  it("searches the room too (#91)", () => {
+    const hall = event({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall" });
+    expect(matches(hall, f({ q: "helzberg" }), today, none)).toBe(true);
+    expect(matches(hall, f({ q: "kauffman" }), today, none)).toBe(true);
+  });
+
   it("never matches a past event", () => {
     expect(matches(show, f(), "2026-10-10", none)).toBe(false);
   });

@@ -12,6 +12,7 @@ import { siteConfig } from "../site.config";
 import { alwaysTherePicks } from "../always-there";
 import { pickAlwaysThere } from "../lib/always-there";
 import { slugify } from "../lib/slugs";
+import { venueLine } from "../lib/events";
 
 const alwaysThere = pickAlwaysThere(events, alwaysTherePicks);
 // Everything the explorer holds, recurring included, since the link turns recurring on.
@@ -36,7 +37,7 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin);
       {alwaysThere.map((e) => (
         <li class={`kind-${slugify(e.kind)}`}>
           <a href={`/e/${e.id}`}><span class="icon"><KindIcon kind={e.kind} /></span>{e.title}<span class="visually-hidden">, {e.kind}</span></a>
-          <span class="detail">{e.schedule} · {e.venue}</span>
+          <span class="detail">{e.schedule} · {venueLine(e)}</span>
         </li>
       ))}
     </ul>

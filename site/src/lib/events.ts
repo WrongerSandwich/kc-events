@@ -55,3 +55,8 @@ export function hostOf(url: string): string {
 export function detailsUrl(e: PublishedEvent): string {
   return e.eventUrl ?? e.primaryUrl;
 }
+
+/** Where an event is, as cards and lists say it: the venue, then the room when the page named one. */
+export function venueLine(e: PublishedEvent): string {
+  return e.room === undefined ? e.venue : `${e.venue} · ${e.room}`;
+}

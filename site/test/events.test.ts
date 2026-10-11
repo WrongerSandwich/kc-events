@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl } from "../src/lib/events";
+import { firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, venueLine } from "../src/lib/events";
 import { event } from "./fixtures/event";
+
+describe("venueLine", () => {
+  it("is the venue, then the room when the page named one", () => {
+    expect(venueLine(event())).toBe("recordBar");
+    expect(venueLine(event({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall" }))).toBe("Kauffman Center for the Performing Arts · Helzberg Hall");
+  });
+});
 
 const oneDay = event();
 const multiDay = event({ start: "2026-10-09", end: "2026-10-11" });

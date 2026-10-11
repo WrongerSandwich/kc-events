@@ -504,7 +504,7 @@ test("the venue sort puts each venue's rows under its own heading", async ({ pag
   const seen: string[] = [];
   for (const [isHeading, venue] of items) {
     if (isHeading) { heading = venue; seen.push(venue); }
-    else expect(venue, "a row sits under its venue's heading").toBe(heading);
+    else expect(venue === heading || venue.startsWith(`${heading} · `), `a row (${venue}) sits under its venue's heading (${heading}), its room after it`).toBe(true);
   }
   expect(new Set(seen).size, "one heading per venue").toBe(seen.length);
   expect(seen.length).toBeGreaterThan(5);

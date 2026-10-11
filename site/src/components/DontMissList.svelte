@@ -7,7 +7,7 @@
   import { dontMiss } from "../generated/dont-miss";
   import { meta } from "../generated/meta";
   import { addDays, formatDay, formatShort, formatTime, localDate, nowIn } from "../lib/dates";
-  import { firstDay, isMultiDay, lastDay } from "../lib/events";
+  import { firstDay, isMultiDay, lastDay, venueLine } from "../lib/events";
   import { bucketDontMiss, horizonBounds, horizonHeading, HORIZONS, type Horizon } from "../lib/horizon";
   import { slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
@@ -130,7 +130,7 @@
             <li class={`kind-${slugify(event.kind)}`}>
               <span class="when">{shortWhen(event)}</span>
               <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {event.kind}</span></a>
-              <span class="where">{event.venue}</span>
+              <span class="where">{venueLine(event)}</span>
             </li>
           {/each}
         </ul>
@@ -171,7 +171,7 @@
                 <li class={`kind-${slugify(event.kind)}`} id={`pick-${event.id}`}>
                   <span class="when">{formatTime(event.start!)}</span>
                   <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {event.kind}</span></a>
-                  <span class="where">{event.venue}</span>
+                  <span class="where">{venueLine(event)}</span>
                 </li>
               {/each}
             </ul>
