@@ -12,7 +12,7 @@ import { parse as parseYaml } from "yaml";
 import { parseConfig } from "./config.js";
 import { parseDataset } from "./dataset.js";
 import { renderGrading } from "./grading.js";
-import type { RunReport } from "./report.js";
+import { parseRunReport } from "./report.js";
 
 const ROOT = process.cwd();
 const RUNS_DIR = join(ROOT, "data", "runs");
@@ -36,7 +36,7 @@ async function main() {
   const reportPath = join(RUNS_DIR, `${runDate}.json`);
   if (!existsSync(reportPath)) throw new Error(`no run report at ${reportPath}`);
 
-  const report = JSON.parse(await readFile(reportPath, "utf8")) as RunReport;
+  const report = parseRunReport(JSON.parse(await readFile(reportPath, "utf8")));
   const config = parseConfig(parseYaml(await readFile(CONFIG_PATH, "utf8")) ?? {});
   const dataset = parseDataset(JSON.parse(await readFile(DATASET_PATH, "utf8")), config);
   const existing = existsSync(GRADING_PATH) ? await readFile(GRADING_PATH, "utf8") : undefined;

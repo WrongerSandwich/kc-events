@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { parseConfig } from "../src/config.js";
 import { archiveDate } from "../src/archive.js";
-import { parseArchive, parseDataset } from "../src/dataset.js";
+import { parseArchive, parseDataset, type Event } from "../src/dataset.js";
+import { isIndexPage } from "../src/discovery.js";
+import { isPast } from "../src/expiry.js";
 import { onHost } from "../src/hosts.js";
+import { parseRunReport } from "../src/report.js";
 import { parseRegistry } from "../src/registry.js";
 import { neighborhoodList, regionOf } from "../src/taxonomy.js";
 
@@ -50,5 +53,65 @@ describe("committed config and registry", () => {
     const listed = [...config.discovery.aggregatorHosts, ...config.discovery.ignoredHosts];
     const onList = registry.sources.flatMap((s) => s.urls).filter((url) => onHost(url, listed));
     expect(onList).toEqual([]);
+  });
+});
+
+/**
+ * What every run leaves true of the committed dataset and its reports (#100). The schema already
+ * refuses some of these; each has its own test so a regression names the invariant it broke.
+ */
+describe("committed dataset invariants", () => {
+  const read = (path: string) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
+  const config = parseConfig(parse(read("research.config.yaml")));
+  const registry = parseRegistry(parse(read("data/registry.yaml")));
+  const dataset = parseDataset(JSON.parse(read("data/events.json")), config);
+  const runsDir = new URL("../data/runs/", import.meta.url);
+  const reportFiles = readdirSync(runsDir).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort();
+  const runDate = dataset.lastSuccessfulRun!.slice(0, 10);
+  const ids = (events: Event[]) => events.map((e) => e.id);
+  const active = dataset.events.filter((e) => e.status === "active");
+
+  it("has no active event whose last day is before the run date", () => {
+    expect(ids(active.filter((e) => isPast(e, runDate)))).toEqual([]);
+  });
+
+  it("has every id once across the dataset", () => {
+    expect(ids(dataset.events).filter((id, i, all) => all.indexOf(id) !== i)).toEqual([]);
+  });
+
+  it("puts every event not expired in a neighborhood on the config's list", () => {
+    const list = neighborhoodList(config, registry);
+    expect(dataset.events.filter((e) => e.status !== "expired" && !list.includes(e.neighborhood)).map((e) => `${e.id}: ${e.neighborhood}`)).toEqual([]);
+  });
+
+  it("gives an expiry reason to exactly the expired events", () => {
+    expect(ids(dataset.events.filter((e) => (e.status === "expired") !== (e.expiryReason !== undefined)))).toEqual([]);
+  });
+
+  it("has no active event citing an index page", () => {
+    expect(ids(active.filter((e) => isIndexPage(e.primaryUrl, config)))).toEqual([]);
+  });
+
+  it("has no own page on an aggregator or ignored host, but on an expired record kept as it was", () => {
+    const listed = [...config.discovery.aggregatorHosts, ...config.discovery.ignoredHosts];
+    expect(ids(dataset.events.filter((e) => e.status !== "expired" && e.eventUrl !== undefined && onHost(e.eventUrl, listed)))).toEqual([]);
+  });
+
+  it("keeps source state only for registry sources", () => {
+    const names = new Set(registry.sources.map((s) => s.name));
+    expect(Object.keys(dataset.sourceState).filter((name) => !names.has(name))).toEqual([]);
+  });
+
+  it("was written by the newest run report's run", () => {
+    const newest = parseRunReport(JSON.parse(readFileSync(new URL(reportFiles.at(-1)!, runsDir), "utf8")));
+    expect(dataset.generatedAt).toBe(newest.finishedAt);
+  });
+
+  it("parses every run report, each named by its run date", () => {
+    expect(reportFiles.length).toBeGreaterThan(0);
+    for (const file of reportFiles) {
+      const report = parseRunReport(JSON.parse(readFileSync(new URL(file, runsDir), "utf8")));
+      expect(`${report.runDate}.json`).toBe(file);
+    }
   });
 });
