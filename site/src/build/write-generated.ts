@@ -1,14 +1,18 @@
 /**
  * Writes meta.ts, events.ts, dont-miss.ts, and descriptions.ts for the pages and islands to import (four modules so
- * each island ships only what it renders; descriptions go to the event page alone), and copies the dataset byte for
- * byte to events.json in the public directory (the published contract, never re-serialized). Paths are parameters so
- * a test can write somewhere else.
+ * each island ships only what it renders; descriptions go to the event page alone), and events.json in the public
+ * directory: the published events with their descriptions, never the job's raw file, whose evidence, leads, counters,
+ * and held-back records stay in git. Paths and the clock are parameters so a test can write somewhere else.
  */
-import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { PublishedDataset } from "../lib/types";
 import { loadPublished } from "./load-dataset.ts";
 
-export function writeGenerated(opts: { datasetPath: string; configPath: string; outDir: string; publicDir: string; today?: string }): { eventCount: number; buildToday: string } {
+/** The shape of the public events.json; bumped by hand when a field is removed or changes meaning. */
+export const PUBLISHED_SCHEMA_VERSION = 1;
+
+export function writeGenerated(opts: { datasetPath: string; configPath: string; outDir: string; publicDir: string; today?: string; now?: Date }): { eventCount: number; buildToday: string } {
   const { events, descriptions, ...meta } = loadPublished({ datasetPath: opts.datasetPath, configPath: opts.configPath, ...(opts.today === undefined ? {} : { today: opts.today }) });
 
   mkdirSync(opts.outDir, { recursive: true });
@@ -19,6 +23,12 @@ export function writeGenerated(opts: { datasetPath: string; configPath: string; 
   writeFileSync(join(opts.outDir, "dont-miss.ts"), `${header}import type { PublishedEvent } from "../lib/types";\nexport const dontMiss: PublishedEvent[] = ${JSON.stringify(events.filter((e) => e.dontMiss))};\n`);
 
   mkdirSync(opts.publicDir, { recursive: true });
-  copyFileSync(opts.datasetPath, join(opts.publicDir, "events.json"));
+  const published: PublishedDataset = {
+    schemaVersion: PUBLISHED_SCHEMA_VERSION,
+    generatedAt: (opts.now ?? new Date()).toISOString(),
+    lastSuccessfulRun: meta.lastSuccessfulRun,
+    events: events.map((e) => (descriptions[e.id] === undefined ? e : { ...e, description: descriptions[e.id]! })),
+  };
+  writeFileSync(join(opts.publicDir, "events.json"), JSON.stringify(published));
   return { eventCount: events.length, buildToday: meta.buildToday };
 }

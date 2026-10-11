@@ -241,12 +241,16 @@ test("returns to the first result when a filter changes deep in the list", async
 test("without JavaScript, a filtered link says the filters need it", async ({ browser }) => {
   const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
+  const violations: string[] = [];
+  page.on("console", (m) => { if (/Content Security Policy/i.test(m.text())) violations.push(m.text()); });
   await on(page, BUILD_DAY, "/explore?kind=music");
   // Playwright's text and role queries skip <noscript>, so find the notice by its class.
   const notice = page.locator(".no-js");
   await expect(notice).toBeVisible();
   await expect(notice).toContainText("Filters need JavaScript.");
+  // Hidden by the <noscript> style, which the CSP lets through by its hash.
   await expect(page.getByRole("button", { name: /^Filters/ })).toBeHidden();
+  expect(violations).toEqual([]);
   await context.close();
 });
 
@@ -639,12 +643,33 @@ test("the staleness banner appears after nine days", async ({ page }) => {
   await expect(page.getByRole("status").filter({ hasText: "last researched" })).toContainText("This list was last researched on Oct 5 and may have missed changes since.");
 });
 
-test("the dataset is published verbatim, and llms.txt and the sitemap point at the pages", async ({ request }) => {
+test("the dataset is published as the projection, and llms.txt and the sitemap point at the pages", async ({ request }) => {
   const json = await (await request.get("/events.json")).text();
-  expect(JSON.parse(json).events).toHaveLength(11);
+  // Eleven in the fixture; the past one is not published, and no job internals are.
+  const ids = JSON.parse(json).events.map((e: { id: string }) => e.id);
+  expect(ids).toHaveLength(10);
+  expect(ids).not.toContain("evt_e2e000000010");
+  expect(json).not.toContain('"evidence"');
   expect(await (await request.get("/llms.txt")).text()).toContain("/events.json");
   expect(await (await request.get("/sitemap.xml")).text()).toContain("/e/evt_e2e000000001</loc>");
 });
+
+// The explorer link carries a query so its inline script takes the slice-pending branch.
+for (const path of ["/", "/explore?kind=music", "/e/evt_e2e000000001"]) {
+  test(`${path} hydrates under its content security policy without a violation`, async ({ page }) => {
+    const violations: string[] = [];
+    page.on("console", (m) => { if (/Content Security Policy/i.test(m.text())) violations.push(m.text()); });
+    await page.addInitScript(() => {
+      document.addEventListener("securitypolicyviolation", (e) => console.error(`Content Security Policy: ${e.violatedDirective} ${e.blockedURI}`));
+    });
+    await on(page, BUILD_DAY, path);
+    await page.waitForLoadState("networkidle");
+    expect(await page.locator('meta[http-equiv="content-security-policy"]').getAttribute("content")).toContain("script-src 'self' 'sha256-");
+    // An island that hydrated proves its bootstrap ran.
+    await expect(page.locator("astro-island:not([ssr])").first()).toBeAttached();
+    expect(violations).toEqual([]);
+  });
+}
 
 for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/about", "/404"]) {
   test(`${path} makes no third-party requests and does not scroll sideways at 320px`, async ({ page }) => {

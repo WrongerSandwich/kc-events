@@ -37,5 +37,14 @@ export type PublishedMeta = {
 /** What the page says each event is, by event id, for the events that have one; only the event page reads it. */
 export type PublishedDescriptions = Record<string, string>;
 
+/** The public /events.json: the published events, each with its description when it has one. */
+export type PublishedDataset = {
+  schemaVersion: number;
+  /** When the build wrote the file, as an ISO instant. */
+  generatedAt: string;
+  lastSuccessfulRun: string;
+  events: (PublishedEvent & { description?: string })[];
+};
+
 /** What loadPublished returns; the generator writes `events` to src/generated/events.ts, `descriptions` to descriptions.ts, and the rest to meta.ts. */
 export type Published = PublishedMeta & { events: PublishedEvent[]; descriptions: PublishedDescriptions };
