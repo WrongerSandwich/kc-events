@@ -25,8 +25,11 @@ describe.skipIf(!matchesGenerated)("built output", () => {
     if (recurring) expect(has(`e/${recurring.id}.ics`)).toBe(false);
   });
 
-  it("publishes the dataset verbatim", () => {
-    expect(read("events.json")).toBe(readFileSync(new URL("../../data/events.json", import.meta.url), "utf8"));
+  it("publishes the projection, not the job's file", () => {
+    const published = JSON.parse(read("events.json"));
+    expect(published.lastSuccessfulRun).toBe(meta.lastSuccessfulRun);
+    expect(published.events.map((e: { id: string }) => e.id)).toEqual(events.map((e) => e.id));
+    expect(read("events.json")).not.toContain('"evidence"');
   });
 
   it("writes llms.txt, robots.txt, the sitemap, and the 404", () => {

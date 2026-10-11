@@ -11,7 +11,7 @@ A single public, in-person thing happening at a venue over a date range, recorde
 _Avoid_: item, listing, entry
 
 **Published dataset**:
-The `events.json` the site publishes alongside its HTML. It is the interface between the research job, the site, and any downstream reader.
+The `/events.json` the site publishes alongside its HTML: the active, not yet past events with the fields the site shows, each with its description, plus `schemaVersion`, `generatedAt` and `lastSuccessfulRun`. It is the interface between the site and any downstream reader. The job's own `data/events.json` (evidence, leads, counters, held-back and expired records) stays in the repository and is not published.
 _Avoid_: database, feed, API
 
 **Primary page**:
