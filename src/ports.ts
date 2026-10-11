@@ -22,6 +22,8 @@ export interface CompletionRequest {
   tools?: ToolDefinition[];
   /** Strict JSON-schema response format; the reply is parsed against it. */
   responseFormat: { name: string; schema: Record<string, unknown> };
+  /** How long the call may take before it is abandoned and thrown; a page or batch is lost, not the run's time budget. */
+  timeoutMs: number;
 }
 
 export interface CompletionResult {
@@ -29,6 +31,8 @@ export interface CompletionResult {
   value: unknown;
   /** Cost in USD as reported by the provider for this call. */
   costUsd: number;
+  /** Who served the call, as the provider names it, so spend can be reconciled against its own records. */
+  servedBy?: { model?: string; provider?: string; generationId?: string };
 }
 
 export interface ModelPort {
@@ -43,7 +47,13 @@ export interface SearchResult {
 }
 
 export interface SearchPort {
+  /** Throws `SearchQuotaExhausted` when the search service will take no more queries from this key. */
   search(query: string): Promise<SearchResult[]>;
+}
+
+/** The search key's quota is spent: every further query would fail the same way, so none should be made. */
+export class SearchQuotaExhausted extends Error {
+  override name = "SearchQuotaExhausted";
 }
 
 export interface FetchResult {

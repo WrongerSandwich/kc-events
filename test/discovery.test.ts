@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { run } from "../src/run.js";
 import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
-import type { CompletionResult, SearchResult } from "../src/ports.js";
+import { SearchQuotaExhausted, type CompletionResult, type SearchResult } from "../src/ports.js";
 import type { Source } from "../src/registry.js";
 import type { RunConfig } from "../src/config.js";
 import { fakePorts, type CannedPage } from "./fakes/ports.js";
@@ -30,15 +30,16 @@ interface DiscoverOptions {
   searches?: Record<string, SearchResult[] | Error>;
   discovery?: Partial<RunConfig["discovery"]>;
   spendCapUsd?: number;
+  kinds?: string[];
 }
 
 async function discoverAt(
   now: Date,
   dataset: Dataset,
-  { sources = [], pages = {}, completions = [], searches = {}, discovery = {}, spendCapUsd = 5 }: DiscoverOptions,
+  { sources = [], pages = {}, completions = [], searches = {}, discovery = {}, spendCapUsd = 5, kinds }: DiscoverOptions,
 ) {
   const fakes = fakePorts(now, { pages, completions, searches });
-  const config = testConfig({ spendCapUsd });
+  const config = testConfig({ spendCapUsd, ...(kinds ? { kinds } : {}) });
   const discovering = { ...config, discovery: { ...config.discovery, enabled: true, aggregatorHosts: ["listings.test"], ...discovery } };
   const result = await run({ config: discovering, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports });
   expect(parseDataset(result.dataset, discovering)).toEqual(result.dataset);
@@ -430,6 +431,22 @@ describe("discovery lane", () => {
     const { report } = await discoverAt(WEEK_1, emptyDataset(), { searches: { [QUERY]: new Error("Tavily HTTP 432") } });
 
     expect(report.discovery).toMatchObject({ queries: 0, problems: [`search "${QUERY}" failed: Tavily HTTP 432`] });
+  });
+
+  it("a spent search quota is reported once and no further search is made", async () => {
+    const kinds = ["music", "comedy", "film", "other"];
+    const [first, ...rest] = discoveryQueries(testConfig({ kinds }), WEEK_1_ISO.slice(0, 10));
+    const { calls, report } = await discoverAt(WEEK_1, emptyDataset(), {
+      kinds,
+      searches: { [first!]: new SearchQuotaExhausted("Tavily HTTP 432: plan limit exceeded") },
+    });
+
+    expect(rest).toHaveLength(2);
+    expect(calls.filter((c) => c.startsWith("search:"))).toEqual([`search:${first}`]);
+    expect(report.discovery).toMatchObject({
+      queries: 0,
+      problems: ["search quota exhausted (Tavily HTTP 432: plan limit exceeded); 2 searches not made"],
+    });
   });
 
   it("once the spend cap is reached, no lead is fetched and no search is made, and the shortfall says so", async () => {

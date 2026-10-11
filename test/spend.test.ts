@@ -4,7 +4,7 @@ import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
 import { renderReportMarkdown } from "../src/report.js";
 import type { CompletionResult } from "../src/ports.js";
 import type { Source } from "../src/registry.js";
-import { fakePorts, type CannedPage } from "./fakes/ports.js";
+import { fakePorts, type CannedPage, type ScriptedReply } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
 import { candidateAt, costing, PAGE, source, WEEK_1, WEEK_1_ISO, WEEK_2 } from "./fakes/fixtures.js";
 
@@ -17,7 +17,7 @@ const show = (at: Source) => candidateAt(at, { title: `${at.name} Show` });
 async function runAt(
   now: Date,
   dataset: Dataset,
-  { sources, pages, completions, spendCapUsd }: { sources: Source[]; pages: Record<string, CannedPage>; completions: CompletionResult[]; spendCapUsd: number },
+  { sources, pages, completions, spendCapUsd }: { sources: Source[]; pages: Record<string, CannedPage>; completions: ScriptedReply[]; spendCapUsd: number },
 ) {
   const fakes = fakePorts(now, { pages, completions });
   const result = await run({
@@ -32,6 +32,22 @@ async function runAt(
 }
 
 describe("spend cap", () => {
+  it("records every call that went out: who served it and its cost, or the error it threw", async () => {
+    const served = { ...costing(0.02, show(ALPHA)), servedBy: { model: "vendor/model-v2", provider: "Vendor", generationId: "gen-1" } };
+    const { report } = await runAt(WEEK_1, emptyDataset(), {
+      sources: [ALPHA, BRAVO],
+      pages: pagesOf(ALPHA, BRAVO),
+      completions: [served, new Error("Request timed out.")],
+      spendCapUsd: 5,
+    });
+
+    expect(report.spend.calls.slice(0, 2)).toEqual([
+      { model: "test/extraction", servedModel: "vendor/model-v2", provider: "Vendor", generationId: "gen-1", costUsd: 0.02 },
+      { model: "test/extraction", error: "Request timed out." },
+    ]);
+    expect(renderReportMarkdown(report)).not.toContain("gen-1");
+  });
+
   it("stops model calls once the cap is reached and reports the spend, the cap, and the shortfall", async () => {
     const { calls, report, dataset } = await runAt(WEEK_1, emptyDataset(), {
       sources: [ALPHA, BRAVO, CHARLIE],
@@ -47,6 +63,10 @@ describe("spend cap", () => {
       capUsd: 0.05,
       capHit: true,
       shortfall: { pagesNotExtracted: 1, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 2 },
+      calls: [
+        { model: "test/extraction", costUsd: 0.03 },
+        { model: "test/extraction", costUsd: 0.03 },
+      ],
     });
     expect(report.sources.find((s) => s.name === "Charlie")).toMatchObject({
       result: "fetched",
@@ -107,7 +127,7 @@ describe("spend cap", () => {
       spendCapUsd: 5,
     });
 
-    expect(report.spend).toEqual({
+    expect(report.spend).toMatchObject({
       totalUsd: 0.035,
       capUsd: 5,
       capHit: false,
@@ -125,7 +145,7 @@ describe("spend cap", () => {
       spendCapUsd: 0.05,
     });
 
-    expect(report.spend).toEqual({
+    expect(report.spend).toMatchObject({
       totalUsd: 0.06,
       capUsd: 0.05,
       capHit: false,

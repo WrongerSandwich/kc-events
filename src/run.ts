@@ -29,7 +29,7 @@ import { discoveryQueries, isIndexPage, isLead, outboundLinks, trackDiscoveryHos
 import { hostOf, onHost, pageKey, samePage, sameSite } from "./hosts.js";
 import { matchSighting, nearDates, normalizeName, oneMonthOf, sameEvent, sameName, variantTitles, type MatchRule, type VenueAliases } from "./identity.js";
 import type { Registry, Source } from "./registry.js";
-import type { FetchOptions, FetchPort, FetchResult, ModelPort, Ports } from "./ports.js";
+import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
 import type { CandidateTally, EventRef, RunReport, SourceReport } from "./report.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
@@ -150,6 +150,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       // Hit means the cap cut something; a last call that merely crossed it cut nothing.
       capHit: Object.values(shortfall).some((n) => n > 0),
       shortfall,
+      calls: model.calls(),
     },
     discovery: discovery.report,
     reverification: { problems: reverified.problems },
@@ -223,6 +224,7 @@ function countOutcomes(model: CappedModel): CountedModel {
     },
     exhausted: model.exhausted,
     totalUsd: model.totalUsd,
+    calls: model.calls,
     outcomes: () => ({ succeeded, failed, ...(lastError !== undefined ? { lastError } : {}) }),
   };
 }
@@ -1006,7 +1008,8 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     for (const link of outboundLinks(page, config)) await readPrimaryPage(link, query);
   };
 
-  for (const query of config.discovery.enabled ? discoveryQueries(config, context.today) : []) {
+  const queries = config.discovery.enabled ? discoveryQueries(config, context.today) : [];
+  for (const [i, query] of queries.entries()) {
     if (ports.model.exhausted()) {
       outcome.queriesNotSearched++;
       continue;
@@ -1015,6 +1018,11 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     try {
       results = await ports.search.search(query);
     } catch (error) {
+      // A spent quota fails every query the same way: say so once and make no more.
+      if (error instanceof SearchQuotaExhausted) {
+        report.problems.push(`search quota exhausted (${errorMessage(error)}); ${plural(queries.length - i - 1, "search", "searches")} not made`);
+        break;
+      }
       report.problems.push(`search "${query}" failed: ${errorMessage(error)}`);
       continue;
     }
