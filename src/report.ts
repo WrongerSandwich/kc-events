@@ -1,5 +1,6 @@
 import { EXPIRY_REASONS, type ExpiryReason } from "./dataset.js";
 import { markdownList, plural, tableCell } from "./markdown.js";
+import type { ModelCall } from "./spend.js";
 
 export type SourceResult = "fetched" | "failed" | "blocked" | "excluded";
 
@@ -63,6 +64,8 @@ export interface RunReport {
      * discovery searches never made and leads never followed, and events due for curation never judged.
      */
     shortfall: { pagesNotExtracted: number; eventsNotReverified: number; queriesNotSearched: number; leadsNotFollowed: number; eventsNotCurated: number };
+    /** Every model call that went out, with what OpenRouter's activity page lists it by; the JSON twin only. */
+    modelCalls: ModelCall[];
   };
   /** The discovery lane this run; all zero when it is disabled. */
   discovery: {

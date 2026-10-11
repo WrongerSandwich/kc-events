@@ -34,6 +34,9 @@ export function whyLineOverCap(judgment: Judgment): boolean {
 
 export type Judgment = z.infer<typeof judgmentSchema>;
 
+/** A batch of events is a longer reply than a page's; three minutes, and a call past it costs only its batch. */
+const CURATION_TIMEOUT_MS = 180_000;
+
 /** The strict JSON schema sent as the response format on every curation call. */
 export const curationResponseFormat = strictResponseFormat("curation_judgments", curationReplySchema);
 
@@ -84,6 +87,7 @@ export function buildCurationRequest(events: Event[], context: CurationContext):
       { role: "user", content: `${EVENTS_TO_JUDGE}\n\n${JSON.stringify(listed, null, 2)}` },
     ],
     responseFormat: curationResponseFormat,
+    timeoutMs: CURATION_TIMEOUT_MS,
   };
 }
 

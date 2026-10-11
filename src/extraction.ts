@@ -96,6 +96,9 @@ export function overCap(candidate: Candidate): { field: string; cap: number } | 
 
 export type Candidate = z.infer<typeof candidateSchema>;
 
+/** Two minutes for one page; a call past it costs only its page, not the weekly run's time budget. */
+const EXTRACTION_TIMEOUT_MS = 120_000;
+
 /** The strict JSON schema sent as the response format on every extraction call. */
 export const extractionResponseFormat = strictResponseFormat("extracted_events", extractionReplySchema);
 
@@ -141,6 +144,7 @@ export function buildExtractionRequest(page: FetchResult, reading: PageReading, 
       { role: "user", content: user },
     ],
     responseFormat: extractionResponseFormat,
+    timeoutMs: EXTRACTION_TIMEOUT_MS,
   };
 }
 

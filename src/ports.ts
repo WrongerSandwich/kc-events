@@ -22,6 +22,8 @@ export interface CompletionRequest {
   tools?: ToolDefinition[];
   /** Strict JSON-schema response format; the reply is parsed against it. */
   responseFormat: { name: string; schema: Record<string, unknown> };
+  /** How long the call may take before it is abandoned and thrown; a page or batch is lost, not the run's time budget. */
+  timeoutMs: number;
 }
 
 export interface CompletionResult {
@@ -29,6 +31,31 @@ export interface CompletionResult {
   value: unknown;
   /** Cost in USD as reported by the provider for this call. */
   costUsd: number;
+  /** Who served the call, so spend can be reconciled against the provider's own records. */
+  servedBy?: ServedBy;
+}
+
+/** A model call as the provider records it: the model that answered, the upstream provider, and the id its activity page lists. */
+export interface ServedBy {
+  model: string;
+  provider?: string;
+  generationId: string;
+}
+
+/**
+ * A call whose reply came back but could not be used. It was still billed, so it carries who
+ * served it and, when the reply said, the cost, for the spend cap and the run's record of calls.
+ */
+export class ModelReplyUnusable extends Error {
+  override name = "ModelReplyUnusable";
+  constructor(
+    message: string,
+    readonly servedBy: ServedBy,
+    readonly costUsd?: number,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+  }
 }
 
 export interface ModelPort {
@@ -43,7 +70,13 @@ export interface SearchResult {
 }
 
 export interface SearchPort {
+  /** Throws `SearchQuotaExhausted` when the search service will take no more queries from this key. */
   search(query: string): Promise<SearchResult[]>;
+}
+
+/** The search key's quota is spent: every further query would fail the same way, so none should be made. */
+export class SearchQuotaExhausted extends Error {
+  override name = "SearchQuotaExhausted";
 }
 
 export interface FetchResult {
