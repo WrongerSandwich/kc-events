@@ -64,10 +64,12 @@ function vevent(e: PublishedEvent, siteName: string, stamp: string): string[] {
 
 /**
  * An RFC 5545 calendar of the dated events; recurring events are skipped (a schedule phrase is not an RRULE).
- * Published and named for the site, so Outlook and Google import it as a calendar of that name, not an unnamed one.
+ * Published; `calendarName` names it, so Outlook and Google import an export as a calendar of that name, not an
+ * unnamed one. A single event's file goes without, so adding it does not offer to make a calendar for one event.
  */
-export function toIcs(events: PublishedEvent[], opts: { siteName: string; stamp: string }): string {
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", `PRODID:-//${opts.siteName}//EN`, "CALSCALE:GREGORIAN", "METHOD:PUBLISH", `X-WR-CALNAME:${escapeText(opts.siteName)}`];
+export function toIcs(events: PublishedEvent[], opts: { siteName: string; stamp: string; calendarName?: string }): string {
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", `PRODID:-//${opts.siteName}//EN`, "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+  if (opts.calendarName !== undefined) lines.push(`X-WR-CALNAME:${escapeText(opts.calendarName)}`);
   for (const e of events) if (isDated(e)) lines.push(...vevent(e, opts.siteName, opts.stamp));
   lines.push("END:VCALENDAR");
   return lines.map(fold).join("\r\n") + "\r\n";

@@ -79,7 +79,7 @@ describe("postalAddress", () => {
   });
 
   it("has an address for every region the config names but the catch-all", () => {
-    const named = meta.regions.slice(0, -1);
+    const named = meta.regions.slice(0, -1); // the config's regions, then the catch-all (PublishedMeta.regions)
     expect(Object.keys(siteConfig.regionAddress).sort()).toEqual([...named].sort());
   });
 });
@@ -100,8 +100,9 @@ describe("frontPageJsonLd", () => {
     });
   });
 
-  it("lists the picks' pages in order", () => {
-    const ld = frontPageJsonLd([event({ id: "evt_a" }), event({ id: "evt_b" })], origin) as { "@graph": object[] };
+  it("lists the picks' pages in order, leaving out a pick whose page has no Event JSON-LD", () => {
+    const startless = event({ id: "evt_run", recurrence: "limited-run", start: undefined, end: "2026-10-31" });
+    const ld = frontPageJsonLd([event({ id: "evt_a" }), startless, event({ id: "evt_b" })], origin) as { "@graph": object[] };
     expect(ld["@graph"][1]).toMatchObject({
       "@type": "ItemList",
       itemListElement: [

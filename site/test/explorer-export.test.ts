@@ -38,6 +38,7 @@ describe("export this view", () => {
     expect(mime).toBe("text/calendar");
     expect(text).toContain("SUMMARY:Friday jazz");
     expect(text).not.toContain("Trivia");
+    expect(text).toContain("X-WR-CALNAME:KC This Week\r\n");
   });
 
   it("is disabled when the view holds only recurring events, though the count shows events", async () => {

@@ -11,18 +11,16 @@ export const siteConfig = {
   staleAfterDays: 9,
   /**
    * The postal address the Event JSON-LD gives each region of research.config.yaml (a test holds the two in step).
-   * In a region of `cities` a neighborhood is its own city, unless `kansasCity` names it. The catch-all region has no
-   * entry: its events state Kansas City and no state.
+   * `kansasCity` is which of the region's neighborhoods are parts of Kansas City: all of them, or only those listed,
+   * every other being a city of its own. The catch-all region has no entry: its events state Kansas City and no state.
    */
   regionAddress: {
-    "Central KC": { state: "MO", cities: false },
-    "South KC": { state: "MO", cities: false },
-    Northland: { state: "MO", cities: true },
-    "Kansas City, Kansas": { state: "KS", cities: true },
-    "Johnson County": { state: "KS", cities: true },
-    "Eastern Jackson County": { state: "MO", cities: true },
-    Lawrence: { state: "KS", cities: true },
-  } as Record<string, { state: string; cities: boolean } | undefined>,
-  /** Neighborhoods in a region of cities that are parts of Kansas City, not cities of their own. */
-  kansasCity: ["Northland", "Kansas City, Kansas"] as readonly string[],
+    "Central KC": { state: "MO", kansasCity: "all" },
+    "South KC": { state: "MO", kansasCity: "all" },
+    Northland: { state: "MO", kansasCity: ["Northland"] },
+    "Kansas City, Kansas": { state: "KS", kansasCity: ["Kansas City, Kansas"] },
+    "Johnson County": { state: "KS", kansasCity: [] },
+    "Eastern Jackson County": { state: "MO", kansasCity: [] },
+    Lawrence: { state: "KS", kansasCity: [] },
+  } as Record<string, { state: string; kansasCity: "all" | readonly string[] } | undefined>,
 } as const;

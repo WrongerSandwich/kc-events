@@ -11,14 +11,14 @@ export function eventDescription(e: PublishedEvent, today: string): string {
 }
 
 /**
- * The city and state an event is in. A neighborhood is a part of Kansas City unless its region is one of cities
- * (Overland Park, Liberty); the state comes from the region, and the catch-all region, which spans both, states none.
+ * The city and state an event is in: Kansas City, or a city of its own (Overland Park, Liberty), as `regionAddress`
+ * in site.config.ts says of its neighborhood. The catch-all region, which spans both states, states none.
  */
 export function postalAddress(e: PublishedEvent): { addressLocality: string; addressRegion?: string } {
   const region = siteConfig.regionAddress[e.region];
   if (region === undefined) return { addressLocality: "Kansas City" };
-  const ownCity = region.cities && !siteConfig.kansasCity.includes(e.neighborhood);
-  return { addressLocality: ownCity ? e.neighborhood : "Kansas City", addressRegion: region.state };
+  const inKansasCity = region.kansasCity === "all" || region.kansasCity.includes(e.neighborhood);
+  return { addressLocality: inKansasCity ? "Kansas City" : e.neighborhood, addressRegion: region.state };
 }
 
 /**
@@ -51,7 +51,8 @@ export function eventJsonLd(e: PublishedEvent, opts: { description?: string; ima
 
 /**
  * The front page's JSON-LD: the site, with a search action into the explorer's text filter, and the picks as an
- * ItemList of their event pages, in the order the page shows them.
+ * ItemList of their event pages, in the order the page shows them. Only picks whose page carries Event JSON-LD are
+ * listed: Google reads such a list as a summary of event pages, and a run with no start has none.
  */
 export function frontPageJsonLd(picks: PublishedEvent[], origin: string): object {
   const at = (path: string) => new URL(path, origin).toString();
@@ -71,7 +72,7 @@ export function frontPageJsonLd(picks: PublishedEvent[], origin: string): object
       {
         "@type": "ItemList",
         name: "Don't miss",
-        itemListElement: picks.map((e, i) => ({ "@type": "ListItem", position: i + 1, url: at(`/e/${e.id}`) })),
+        itemListElement: picks.filter(hasStartDay).map((e, i) => ({ "@type": "ListItem", position: i + 1, url: at(`/e/${e.id}`) })),
       },
     ],
   };
