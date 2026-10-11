@@ -13,8 +13,8 @@ describe("dateRange", () => {
     expect(dateRange({ preset: "today" }, today)).toEqual({ from: today, to: today });
     expect(dateRange({ preset: "weekend" }, today)).toEqual({ from: today, to: "2026-10-11" });
     expect(dateRange({ preset: "weekend" }, "2026-10-11")).toEqual({ from: "2026-10-11", to: "2026-10-11" });
-    expect(dateRange({ preset: "7d" }, today)).toEqual({ from: today, to: "2026-10-12" });
-    expect(dateRange({ preset: "30d" }, today)).toEqual({ from: today, to: "2026-11-04" });
+    expect(dateRange({ preset: "7d" }, today)).toEqual({ from: today, to: "2026-10-11" }); // seven days, today among them
+    expect(dateRange({ preset: "30d" }, today)).toEqual({ from: today, to: "2026-11-03" });
     expect(dateRange({ from: "2026-10-09", to: "2026-10-11" }, today)).toEqual({ from: "2026-10-09", to: "2026-10-11" });
   });
 
@@ -89,7 +89,20 @@ describe("matches", () => {
     expect(matches(hall, f({ q: "kauffman" }), today, none)).toBe(true);
   });
 
-  it("never matches a past event", () => {
+  it("searches kind and region too, and folds accents and case on both sides (#93)", () => {
+    const cafe = event({ title: "Jazz at the Café", kind: "comedy", region: "Johnson County", neighborhood: "Overland Park" });
+    expect(matches(cafe, f({ q: "comedy" }), today, none)).toBe(true);
+    expect(matches(cafe, f({ q: "johnson county" }), today, none)).toBe(true);
+    expect(matches(cafe, f({ q: "cafe" }), today, none)).toBe(true);
+    expect(matches(cafe, f({ q: "CAFÉ" }), today, none)).toBe(true);
+    expect(matches(run, f({ q: "art/exhibitions" }), today, none)).toBe(true);
+    expect(matches(cafe, f({ q: "café opera" }), today, none)).toBe(false);
+  });
+
+  it("never matches a past event, except a save in the saved view", () => {
     expect(matches(show, f(), "2026-10-10", none)).toBe(false);
+    expect(matches(show, f(), "2026-10-10", new Set([show.id]))).toBe(false);
+    expect(matches(show, f({ saved: true }), "2026-10-10", new Set([show.id]))).toBe(true);
+    expect(matches(show, f({ saved: true }), "2026-10-10", none)).toBe(false);
   });
 });

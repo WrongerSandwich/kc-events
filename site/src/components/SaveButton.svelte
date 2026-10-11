@@ -3,20 +3,23 @@
   import { saves } from "../lib/saves";
 
   // `large` gives the button a 44 px touch target, for cards and phone rows; a desktop row slims it back down.
-  let { id, title, large = false }: { id: string; title: string; large?: boolean } = $props();
+  // `last` is the event's last day, stored with the save so the header's count can leave it out once it has passed.
+  let { id, title, last, large = false }: { id: string; title: string; last?: string; large?: boolean } = $props();
   // Saving needs the browser's storage, so the button renders only once mounted: without JavaScript there is no
   // button that does nothing. The store is read on mount so the server never touches storage.
   let mounted = $state(false);
   let saved = $state(false);
   onMount(() => {
     mounted = true;
+    // A save made before last days were stored (v1), or one whose date has moved, takes this page's last day.
+    saves().refresh(new Map([[id, last]]));
     return saves().subscribe((ids) => { saved = ids.has(id); });
   });
 </script>
 
 {#if mounted}
   <!-- The name stays "Save <title>"; aria-pressed alone says whether it is saved, so it is announced once. -->
-  <button type="button" class="save" class:large aria-pressed={saved} aria-label={`Save ${title}`} onclick={() => saves().toggle(id)}>
+  <button type="button" class="save" class:large aria-pressed={saved} aria-label={`Save ${title}`} onclick={() => saves().toggle(id, last)}>
     {#if saved}<span class="tick" aria-hidden="true">✓</span>Saved{:else}Save{/if}
   </button>
 {/if}

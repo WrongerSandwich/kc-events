@@ -118,6 +118,23 @@ describe("groupResults", () => {
   });
 });
 
+describe("passed saves (#93)", () => {
+  it("lists a save that has passed last in the saved view, under Already happened, the latest first", () => {
+    const later = "2026-10-10"; // Friday's shows, Tuesday's talk and the fair are over
+    const saved = new Set([fri7.id, tue.id, festNow.id, onNow.id]);
+    const groups = groupResults([fri7, tue, festNow, onNow, fri5], f({ saved: true }), later, saved);
+    expect(groups.map((g) => [g.heading, g.events.map((e) => e.id)])).toEqual([
+      ["On now", ["onNow"]],
+      ["Already happened", ["fri7", "festNow", "tue"]], // by last day: the fair closed Wednesday, after the talk
+    ]);
+  });
+
+  it("leaves passed events out everywhere else", () => {
+    const groups = groupResults([fri7, onNow], f(), "2026-10-10", new Set([fri7.id]));
+    expect(resultEvents(groups).map((e) => e.id)).toEqual(["onNow"]);
+  });
+});
+
 describe("venue sort", () => {
   it("orders two shows at one venue on one day by start time, then title", () => {
     const late = event({ id: "late", title: "A late show", start: "2026-10-09T21:00:00-05:00", venue: "recordBar" });

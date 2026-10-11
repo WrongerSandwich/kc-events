@@ -7,3 +7,13 @@ export function slugTable(names: readonly string[]): { toSlug(name: string): str
   const back = new Map(names.map((n) => [slugify(n), n]));
   return { toSlug: slugify, fromSlug: (slug) => back.get(slug) };
 }
+
+/** The element id a location hash names, "#pick-a" → "pick-a"; a malformed escape ("#%E0") is taken as written. */
+export function hashId(hash: string): string {
+  const raw = hash.startsWith("#") ? hash.slice(1) : hash;
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}

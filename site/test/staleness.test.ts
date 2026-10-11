@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/svelte";
-import { mount, tick, unmount } from "svelte";
+import { flushSync, mount, tick, unmount } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Literals only inside a vi.mock factory: vitest hoists the call above every import and declaration.
@@ -35,6 +35,31 @@ describe("StalenessBanner", () => {
     render(StalenessBanner);
     await tick();
     expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  it("appears when a tab left open comes back on the day the list goes stale (#93)", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-14T12:00:00Z") }); // 9 days
+    render(StalenessBanner);
+    await tick();
+    expect(screen.queryByRole("status")).toBeNull();
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z")); // 10 days
+    document.dispatchEvent(new Event("visibilitychange"));
+    await tick();
+    expect(screen.getByRole("status")).toBeInTheDocument();
+  });
+
+  it("first renders with the build's date even after another island has read the visitor's clock (client:idle)", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") }); // the visitor's clock says stale; the build's does not
+    render(StalenessBanner); // an island that has already hydrated, so the shared clock is read
+    await tick();
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    const target = document.body.appendChild(document.createElement("div"));
+    const component = mount(StalenessBanner, { target }); // the later island's first render, before its own mount
+    expect(target.querySelector('[role="status"]')).toBeNull();
+    flushSync();
+    expect(target.querySelector('[role="status"]')).not.toBeNull();
+    unmount(component);
+    target.remove();
   });
 
   it("is already there in the first render when the build itself is stale", () => {

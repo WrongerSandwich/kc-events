@@ -4,6 +4,7 @@
  */
 import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
+import { PRODUCT, USER_AGENT } from "../../../src/adapters/identity.ts";
 import { ELSEWHERE_IN_THE_METRO, parseConfig, type RunConfig } from "../../../src/config.ts";
 import { DATASET_SCHEMA_VERSION, parseDataset, type Event } from "../../../src/dataset.ts";
 import { genericVenueName, venueAndRoom } from "../../../src/identity.ts";
@@ -162,5 +163,6 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
     lastSuccessfulRun: dataset.lastSuccessfulRun,
     buildToday: today,
     timeZone: config.timezone,
+    about: { crawler: PRODUCT, userAgent: USER_AGENT, geography: config.geography },
   };
 }

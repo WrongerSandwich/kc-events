@@ -1,7 +1,7 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { hostOf, detailsUrl, venueLine } from "../lib/events";
+  import { hostOf, detailsUrl, lastDay, venueLine } from "../lib/events";
   import { slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
@@ -37,7 +37,7 @@
     </p>
   </div>
   <div class="actions">
-    <SaveButton id={event.id} title={event.title} large />
+    <SaveButton id={event.id} title={event.title} last={lastDay(event)} large />
     <!-- A plain link to the event's .ics file: it works with or without JavaScript. -->
     <a class="ics" href={`/e/${event.id}.ics`} download aria-label={`Add ${event.title} to your calendar`} title="Add to calendar"><UiIcon name="calendar-plus" /><span class="ics-label" aria-hidden="true">Calendar</span></a>
   </div>

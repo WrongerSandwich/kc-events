@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
   import { events } from "../generated/events";
   import { meta } from "../generated/meta";
-  import { todayIn } from "../lib/dates";
   import { downloadText } from "../lib/download";
-  import { isDated } from "../lib/events";
-  import { groupResults, resultEvents } from "../lib/group";
+  import { isDated, isPast, lastDay } from "../lib/events";
+  import { groupResults, PASSED_GROUP, resultEvents } from "../lib/group";
   import { toIcs } from "../lib/ics";
   import { DEFAULT_FILTERS, filterPills, isDefault, parseQuery, toQuery, type Filters } from "../lib/query";
   import { saves } from "../lib/saves";
@@ -15,10 +14,13 @@
   import KindIcon from "./KindIcon.svelte";
   import ResultRow from "./ResultRow.svelte";
   import UiIcon from "./UiIcon.svelte";
+  import { islandClock } from "./clock.svelte";
 
   const known = { kinds: meta.kinds, regions: meta.regions };
-  // Server-rendered with the build's date and default filters; the visitor's take over on mount (the hydration rule).
-  let today = $state(meta.buildToday);
+  // Server-rendered with the build's date and default filters; the visitor's take over on mount (the hydration rule),
+  // and the date stays current through the shared clock (clock.svelte.ts).
+  const clock = islandClock();
+  let today = $derived(clock.today);
   let filters = $state<Filters>(DEFAULT_FILTERS);
   let saved = $state<ReadonlySet<string>>(new Set());
   // The phone layout's filter sheet. Closed in the server HTML too, so the results are on screen from first paint; wide
@@ -34,9 +36,10 @@
   let results: HTMLElement;
 
   onMount(() => {
-    today = todayIn(meta.timeZone, new Date());
     filters = parseQuery(new URLSearchParams(location.search), known);
-    const unsubscribe = saves().subscribe((ids) => { saved = ids; });
+    // The explorer has every event, so it brings each save's last day up to this build's (a migrated save has none).
+    saves().refresh(new Map(events.map((e) => [e.id, lastDay(e)])));
+    const unsubscribe = saves().subscribe((s) => { saved = new Set(s.keys()); });
     mounted = true;
     // The explore page hides a filtered link's explorer until its own slice is on screen; show it once this render lands.
     void tick().then(() => { delete document.documentElement.dataset.slice; });
@@ -89,7 +92,9 @@
   // The count on screen follows every keystroke; the live region waits until input settles, so a screen reader hears
   // one count per search, not one per letter. Every change restarts the wait, even one that leaves the count alone.
   const SETTLE_MS = 500;
-  let announced = $state(countText);
+  // Seeded with the first count on purpose (untracked): the region starts out saying what is on screen, and the effect
+  // below, not this seed, follows every later change.
+  let announced = $state(untrack(() => countText));
   $effect(() => {
     void filters;
     const text = countText;
@@ -97,7 +102,8 @@
     return () => clearTimeout(settle);
   });
   let pills = $derived(filterPills(filters));
-  let exportable = $derived(listed.filter(isDated));
+  // A passed save (the saved view lists them) has nothing left to put in a calendar.
+  let exportable = $derived(listed.filter((e) => isDated(e) && !isPast(e, today)));
 
   function exportView() {
     // new Date() is fine here: this is a component, not lib/ (the no-clock grep covers lib only).
@@ -145,9 +151,10 @@
         <p class="empty">No events to show right now.</p>
       {/if}
     {/if}
-    {#snippet rows(events: typeof groups[number]["events"])}
-      {#each events as event (event.id)}
-        <ResultRow {event} {today} withDay={filters.sort === "venue"} />
+    <!-- A row carries its day where no day heading does: the venue sort, and the saved view's passed saves. -->
+    {#snippet rows(g: typeof groups[number])}
+      {#each g.events as event (event.id)}
+        <ResultRow {event} {today} withDay={filters.sort === "venue" || g.key === PASSED_GROUP} />
       {/each}
     {/snippet}
     {#each groups as g (g.key)}
@@ -155,11 +162,11 @@
         <!-- A native disclosure, so it opens without JS and announces its state; closed, it is one line. -->
         <details class="collapsed">
           <summary><h2 class="heading">{g.heading}</h2> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
-          {@render rows(g.events)}
+          {@render rows(g)}
         </details>
       {:else}
         <h2 class={`section-heading group${filters.sort === "venue" ? " venue" : ""}`}>{g.heading}</h2>
-        {@render rows(g.events)}
+        {@render rows(g)}
       {/if}
     {/each}
   </section>
