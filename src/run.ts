@@ -108,11 +108,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const laneOutcome = {
     touched,
     released: held.released,
-    attempts: combineAttempts(
-      { ...registryLane.attempts, unread: extraction.unreadUrls, yields: extraction.yields },
-      { ...noAttempts(), outages: extraction.outageUrls },
-      discovery.attempts,
-    ),
+    attempts: combineAttempts(registryLane.attempts, extraction.attempts, discovery.attempts),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
   // A reading places an event from its page; one no page placed this run is placed from what is stored.
@@ -354,7 +350,7 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
   const failingSources = registry.sources
     .filter((s) => s.status === "active" && failuresOf(s.name) >= FAILING_SOURCE_THRESHOLD)
     .map((s) => s.name);
-  // Extraction, not fetching, finds the unread pages; the run fills them in.
+  // Extraction, not fetching, finds the pages not read and the calendars that now redirect to an index page.
   return { sourceReports, sourceState, failingSources, pages, attempts };
 }
 
@@ -403,19 +399,17 @@ interface SourceExtraction {
  * candidates into sightings under cite-or-drop. A reply that fails validation, or a call that
  * throws, yields nothing from that page. Once the spend cap refuses a call, every page left is counted
  * as not extracted; like an unreadable reply, that tells nothing about the events on it. A page whose
- * redirects ended on an index page is not extracted at all, and is an outage for its events (#111).
+ * redirects ended on an index page is not extracted at all. The attempts returned add to the
+ * registry lane's: the pages not read (in full), each page's yield, and the outages.
  */
 async function extractFromPages(pages: SourcePage[], model: ModelPort, context: ExtractionContext) {
   const sightings: Sighting[] = [];
   const bySource = new Map<string, SourceExtraction>();
-  const unreadUrls = new Set<string>();
-  /** Registry URLs whose redirects ended on an index page: never read, an outage for their events. */
-  const outageUrls = new Set<string>();
-  const yields = new Map<string, PageYield>();
+  const attempts = noAttempts();
   const tally = noTally();
   let pagesNotExtracted = 0;
   const markUnread = (page: FetchResult) => {
-    for (const url of [page.url, page.finalUrl]) unreadUrls.add(pageKey(url));
+    for (const url of [page.url, page.finalUrl]) attempts.unread.add(pageKey(url));
   };
 
   for (const { source, page } of pages) {
@@ -424,7 +418,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     if (isIndexPage(page.finalUrl, context.config)) {
       // A calendar that now redirects to an index page says nothing about its events; like a lead
       // that does (see discover), they are held as through an outage, not struck (#111).
-      outageUrls.add(pageKey(page.url));
+      attempts.outages.add(pageKey(page.url));
       outcome.problems.push(`${page.finalUrl} is an index page and was not extracted`);
       continue;
     }
@@ -440,14 +434,14 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     addTally(tally, read.tally);
     if (read.sightings) {
       sightings.push(...read.sightings);
-      for (const url of [page.url, page.finalUrl]) yields.set(pageKey(url), yieldOf(read.sightings));
+      for (const url of [page.url, page.finalUrl]) attempts.yields.set(pageKey(url), yieldOf(read.sightings));
     }
     if (!readInFull(read)) markUnread(page);
     outcome.extracted += read.extracted;
     outcome.problems.push(...read.problems);
   }
 
-  return { sightings, tally, pagesNotExtracted, bySource, unreadUrls, outageUrls, yields };
+  return { sightings, tally, pagesNotExtracted, bySource, attempts };
 }
 
 const noTally = (): CandidateTally => ({ outsideGeography: 0, overCap: 0, unusableDates: 0 });
@@ -834,8 +828,8 @@ function refresh(known: Event, sighting: Event): Event {
  * this run, so the page's window stops short of it. Either way the event is left as it was, and the
  * report counts it. A page that is gone or that robots.txt now disallows is a strike whatever the
  * event's date. A page that could not be loaded (see fetchReadable), or a registry calendar or
- * discovery lead whose redirects ended on an index page (#111), is an outage: it holds an active event as it was, up to the
- * outage limit. So is a page that loaded and read as listing nothing where three or more active
+ * discovery lead whose redirects ended on an index page (#111), is an outage: it holds an active
+ * event as it was, up to the outage limit. So is a page that loaded and read as listing nothing where three or more active
  * events would be struck (#78): a page that renders empty, or a model that returns nothing, is not
  * news about each event; the report names the page. An excluded source's page is not fetched at all
  * (#78): a person took the source out of the run, so its events are held as through an outage, and
@@ -1039,9 +1033,13 @@ interface LaneOutcome {
 
 /** The pages a lane tried this run and how each attempt ended, all as page keys (pageKey), so two spellings of one URL are one page. */
 interface PageAttempts {
-  /** Every URL requested or redirected to that said something about its page; never one the spend cap kept from being requested, nor a lead that led to an index page. */
+  /**
+   * Every URL requested or redirected to that said something about its page; never one the spend cap kept
+   * from being requested, nor a lead that led to an index page. A registry calendar that redirected to an
+   * index page is here and in outages too: re-verification checks outages first (#111).
+   */
   tried: Set<string>;
-  /** URLs that could not be loaded, or that led discovery to an index page: an outage, not a reading. */
+  /** URLs that could not be loaded, or whose redirects ended on an index page (a discovery lead, or a registry calendar, #111): an outage, not a reading. */
   outages: Set<string>;
   /** URLs that are gone (404, 410) or that robots.txt disallows: a strike for every event citing them. */
   gone: Set<string>;
