@@ -1,8 +1,9 @@
 /**
  * Expiry: how an event stops being publishable. It stays in the dataset as expired, with the
  * reason: past (its last date is behind us), two-strike (two consecutive strikes), cancelled
- * (its page says so), index-page (its primary page is an index page, which is never read), or
- * duplicate (another record is the same event and was seen first; see foldDuplicates in run). A
+ * (its page says so), index-page (its primary page is an index page, which is never read),
+ * duplicate (another record is the same event and was seen first; see foldDuplicates in run),
+ * or promotion or not-public (what extraction skips now, stored before it did; see skip). A
  * postponement is a date change, not this. An outage never expires an event; enough of them in a
  * row make it unverified.
  */
@@ -10,6 +11,7 @@ import type { RunConfig } from "./config.js";
 import type { Event, ExpiryReason } from "./dataset.js";
 import { isIndexPage } from "./discovery.js";
 import { calendarDate } from "./identity.js";
+import { skipReason } from "./skip.js";
 import { shiftDate } from "./time.js";
 
 /** Consecutive strikes after which an event expires. */
@@ -47,6 +49,16 @@ export function expirePast(event: Event, today: string): Event {
  */
 export function expireIndexCited(event: Event, config: RunConfig): Event {
   return event.status !== "expired" && isIndexPage(event.primaryUrl, config) ? expire(event, "index-page") : event;
+}
+
+/**
+ * Expires a promotion or a non-public event (#81): extraction skips them now, but earlier runs stored
+ * some, and no page will strike what the skip keeps it from listing. An event already expired keeps
+ * its reason.
+ */
+export function expireSkipped(event: Event): Event {
+  const reason = event.status !== "expired" ? skipReason(event) : undefined;
+  return reason !== undefined ? expire(event, reason) : event;
 }
 
 /**

@@ -13,7 +13,7 @@ const CALENDAR_URL = recordbar.urls[0]!;
 const candidate = (overrides: Record<string, unknown> = {}) => candidateAt(recordbar, overrides);
 const extracted = (...candidates: unknown[]) => costing(0.01, ...candidates);
 const SHOW_ID = newEventId(CALENDAR_URL, "Big Show", WEEK_1_ISO, "2026-10-31");
-const trivia = candidate({ title: "Trivia", startDate: null, startTime: null, schedule: "every Tuesday", dateEvidence: "Trivia every Tuesday" });
+const tour = candidate({ title: "Gallery Tour", startDate: null, startTime: null, schedule: "every Tuesday", dateEvidence: "Gallery Tour every Tuesday" });
 
 /** One run over the recordBar calendar with one scripted extraction reply and, when given, one scripted curation reply. */
 async function runAt(now: Date, dataset: Dataset, [extraction, curation]: [CompletionResult, CompletionResult?], spendCapUsd = 5) {
@@ -49,26 +49,26 @@ describe("what is sent for curation", () => {
   it("a recurring event and an unverified event are never sent; only the active one-off is judged", async () => {
     const unverified = candidate({ title: "Mystery Show", venue: null, venueEvidence: null });
     const { dataset, curationRequests } = await runAt(WEEK_1, emptyDataset(), [
-      extracted(candidate(), trivia, unverified),
+      extracted(candidate(), tour, unverified),
       judging(0.02, { id: SHOW_ID, dontMiss: false, why: "" }),
     ]);
 
     expect(curationRequests).toHaveLength(1);
     const sent = curationRequests[0]!.messages[1]!.content;
     expect(sent).toContain(SHOW_ID);
-    expect(sent).not.toContain("Trivia");
+    expect(sent).not.toContain("Gallery Tour");
     expect(sent).not.toContain("Mystery Show");
     expect(dataset.events.map((e) => [e.title, e.dontMiss, e.lastJudged])).toEqual([
       ["Big Show", false, WEEK_1_ISO],
-      ["Trivia", false, undefined],
+      ["Gallery Tour", false, undefined],
       ["Mystery Show", false, undefined],
     ]);
   });
 
   it("an unchanged event is not re-judged: a second run over the same page makes zero curation calls", async () => {
-    const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate(), trivia), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+    const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate(), tour), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
 
-    const second = await runAt(WEEK_2, first.dataset, [extracted(candidate(), trivia)]);
+    const second = await runAt(WEEK_2, first.dataset, [extracted(candidate(), tour)]);
 
     expect(second.curationCalls).toEqual([]);
     expect(second.report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, problems: [] });

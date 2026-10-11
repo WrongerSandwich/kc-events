@@ -1,6 +1,6 @@
 import type { RunConfig } from "./config.js";
 import { EXPIRY_REASONS, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
-import { expire, expireIndexCited, expirePast, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
+import { expire, expireIndexCited, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
 import {
   buildExtractionRequest,
   candidateToSighting,
@@ -35,6 +35,7 @@ import type { ExcludedSource, Registry, Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
 import type { CandidateTally, EventRef, RunReport, SourceReport } from "./report.js";
+import { awayGame, skipReason } from "./skip.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList, placeStored } from "./taxonomy.js";
 import { horizonEnd, toLocalDate, toLocalIso } from "./time.js";
@@ -94,11 +95,12 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const discovery = await discover({ ...ports, model }, extractionContext, registry, registryLane.attempts.tried);
   // Registry sightings merge first: an event both lanes found keeps its registry lead.
   const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], today, config);
-  // Past events, and events citing an index page as their primary page, expire before re-verification,
-  // so nothing is fetched to check a date already gone or a page that is never read. Duplicates fold
-  // after that, among what is left, and before re-verification, so a duplicate is not checked either.
+  // Past events, events citing an index page as their primary page, and promotions or non-public events
+  // stored before the skip (#81) expire before re-verification, so nothing is fetched to check a date
+  // already gone, a page that is never read, or an event no reading may keep. Duplicates fold after
+  // that, among what is left, and before re-verification, so a duplicate is not checked either.
   const folded = foldDuplicates(
-    merged.events.map((e) => expireIndexCited(expirePast(e, today), config)),
+    merged.events.map((e) => expireSkipped(expireIndexCited(expirePast(e, today), config))),
     config.venueAliases,
   );
   // Discovery finds; a person admits (ADR 0012): what discovery found on a host no active registry source is on is
@@ -437,7 +439,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     addTally(tally, read.tally);
     if (read.sightings) {
       sightings.push(...read.sightings);
-      for (const url of [page.url, page.finalUrl]) attempts.yields.set(pageKey(url), yieldOf(read.sightings));
+      for (const url of [page.url, page.finalUrl]) attempts.yields.set(pageKey(url), yieldOf({ sightings: read.sightings, tally: read.tally }));
     }
     if (!readInFull(read)) markUnread(page);
     outcome.extracted += read.extracted;
@@ -447,7 +449,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   return { sightings, tally, pagesNotExtracted, bySource, attempts };
 }
 
-const noTally = (): CandidateTally => ({ outsideGeography: 0, overCap: 0, unusableDates: 0, quoteNotOnPage: 0 });
+const noTally = (): CandidateTally => ({ outsideGeography: 0, skippedPromotion: 0, skippedNotPublic: 0, overCap: 0, unusableDates: 0, quoteNotOnPage: 0 });
 
 function addTally(into: CandidateTally, from: CandidateTally): void {
   for (const cause of Object.keys(into) as (keyof CandidateTally)[]) into[cause] += from[cause];
@@ -463,20 +465,22 @@ function readInFull(read: { sightings?: Sighting[]; tally: CandidateTally }): bo
 }
 
 /**
- * What a page's reading amounted to, for judging an event it leaves out (#78): how many sightings it
- * yielded (a candidate with no title, or outside the geography, is no sighting, so a reply of only
- * those yields nothing), and the latest start among them, cancelled or not, cited or not, which is
+ * What a page's reading amounted to, for judging an event it leaves out (#78): how many things it
+ * listed, its sightings and the candidates skipped as promotions or not public (#81), which the page
+ * did list (a candidate with no title, or outside the geography, is neither, so a reply of only those
+ * lists nothing), and the latest start among the sightings, cancelled or not, cited or not, which is
  * as far as the page listed this run. A recurring sighting is listed under no date.
  */
 interface PageYield {
-  sightings: number;
+  listed: number;
   latestStart?: string;
 }
 
-function yieldOf(sightings: Sighting[]): PageYield {
-  const starts = sightings.flatMap((s) => (s.event.recurrence === "recurring" ? [] : [calendarDate(s.event.start)])).filter((d): d is string => d !== undefined);
+function yieldOf(read: { sightings: Sighting[]; tally: CandidateTally }): PageYield {
+  const starts = read.sightings.flatMap((s) => (s.event.recurrence === "recurring" ? [] : [calendarDate(s.event.start)])).filter((d): d is string => d !== undefined);
   const latestStart = starts.sort().at(-1);
-  return { sightings: sightings.length, ...(latestStart !== undefined ? { latestStart } : {}) };
+  const listed = read.sightings.length + read.tally.skippedPromotion + read.tally.skippedNotPublic;
+  return { listed, ...(latestStart !== undefined ? { latestStart } : {}) };
 }
 
 function sumTallies(...tallies: CandidateTally[]): CandidateTally {
@@ -516,7 +520,13 @@ async function extractPage(
       problems.push(`a candidate on ${page.finalUrl} had no title and was skipped`);
       continue;
     }
-    if (candidate.outsideGeography) {
+    const skipped = skipReason(candidate);
+    if (skipped !== undefined) {
+      if (skipped === "promotion") tally.skippedPromotion++;
+      else tally.skippedNotPublic++;
+      continue;
+    }
+    if (candidate.outsideGeography || awayGame(candidate)) {
       tally.outsideGeography++;
       continue;
     }
@@ -928,7 +938,7 @@ async function reverify(
     problems.push(...read.problems);
     if (read.sightings) {
       sightingsAt.set(url, read.sightings);
-      yieldAt.set(url, yieldOf(read.sightings));
+      yieldAt.set(url, yieldOf({ sightings: read.sightings, tally: read.tally }));
       if (!readInFull(read)) partlyReadAt.add(url);
     }
   }
@@ -936,7 +946,7 @@ async function reverify(
   // The empty-reading guard: a page that loaded and read as listing nothing, where it would strike three or more
   // events, is a wobble (the model's, or a page that rendered empty), not news about each of them.
   for (const [url, yielded] of yieldAt) {
-    if (yielded.sightings > 0 || !sightingsAt.has(url) || goneAt.has(url) || partlyReadAt.has(url)) continue;
+    if (yielded.listed > 0 || !sightingsAt.has(url) || goneAt.has(url) || partlyReadAt.has(url)) continue;
     const wouldStrike = onPage(url).filter((e) => e.status === "active" && !startsAfterHorizon(e, lastDay)).length;
     if (wouldStrike < EMPTY_READING_GUARD) continue;
     sightingsAt.delete(url);
@@ -1215,7 +1225,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     report.problems.push(...read.problems);
     if (!readInFull(read)) for (const u of pageUrls) attempts.unread.add(u);
     if (!read.sightings) return;
-    for (const u of pageUrls) attempts.yields.set(u, yieldOf(read.sightings));
+    for (const u of pageUrls) attempts.yields.set(u, yieldOf({ sightings: read.sightings, tally: read.tally }));
     outcome.sightings.push(...read.sightings);
     const host = hostOf(page.finalUrl);
     if (host && !outcome.hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) outcome.hosts.set(host, normalizeUrl(page.finalUrl, url));

@@ -21,25 +21,25 @@ async function runOver(candidates: unknown[], config: RunConfig = testConfig()) 
 }
 
 describe("recurrence, kind, geography, and neighborhood", () => {
-  it("weekly trivia is an active recurring event with a schedule phrase and no start date", async () => {
+  it("a weekly market is an active recurring event with a schedule phrase and no start date", async () => {
     const { dataset } = await runOver([
       candidate({
-        title: "Tuesday Trivia",
+        title: "Tuesday Farmers Market",
         startDate: null,
         startTime: null,
         schedule: "Every Tuesday, 7pm",
         kind: "other",
-        dateEvidence: "Trivia every Tuesday at 7pm",
+        dateEvidence: "Market every Tuesday at 7pm",
       }),
     ]);
 
     expect(dataset.events).toHaveLength(1);
     expect(dataset.events[0]).toMatchObject({
-      title: "Tuesday Trivia",
+      title: "Tuesday Farmers Market",
       schedule: "Every Tuesday, 7pm",
       recurrence: "recurring",
       status: "active",
-      evidence: { date: "Trivia every Tuesday at 7pm" },
+      evidence: { date: "Market every Tuesday at 7pm" },
     });
     expect(dataset.events[0]).not.toHaveProperty("start");
     expect(dataset.events[0]).not.toHaveProperty("end");

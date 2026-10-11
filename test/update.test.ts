@@ -61,11 +61,11 @@ describe("incremental update", () => {
   });
 
   it("a recurring event's schedule is its date: a new schedule marks it changed, the same schedule does not", async () => {
-    const trivia = (schedule: string) =>
-      candidate({ title: "Trivia", startDate: null, startTime: null, schedule, dateEvidence: `Trivia ${schedule}` });
-    const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(trivia("every Tuesday"))] });
-    const same = await runAt(WEEK_2, first.dataset, { completions: [reply(trivia("every Tuesday"))] });
-    const moved = await runAt(WEEK_3, same.dataset, { completions: [reply(trivia("every Wednesday"))] });
+    const tour = (schedule: string) =>
+      candidate({ title: "Gallery Tour", startDate: null, startTime: null, schedule, dateEvidence: `Gallery Tour ${schedule}` });
+    const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(tour("every Tuesday"))] });
+    const same = await runAt(WEEK_2, first.dataset, { completions: [reply(tour("every Tuesday"))] });
+    const moved = await runAt(WEEK_3, same.dataset, { completions: [reply(tour("every Wednesday"))] });
 
     expect(same.dataset.events[0]).toMatchObject({ recurrence: "recurring", lastChanged: WEEK_1_ISO });
     expect(moved.dataset.events[0]).toMatchObject({ id: first.dataset.events[0]!.id, schedule: "every Wednesday", lastChanged: WEEK_3_ISO });
@@ -219,7 +219,7 @@ describe("re-verification and expiry", () => {
     const second = await runAt(WEEK_2, first.dataset, { completions: [reply()] });
 
     expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], status: "expired", expiryReason: "past", lastChanged: WEEK_2_ISO }]);
-    expect(second.report.counts.expired).toEqual({ past: 1, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0 });
+    expect(second.report.counts.expired).toEqual({ past: 1, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0, promotion: 0, "not-public": 0 });
   });
 
   it("a past-dated candidate the page still shows is not recorded as a new event", async () => {

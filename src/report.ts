@@ -17,6 +17,10 @@ export interface SourceReport {
 export interface CandidateTally {
   /** Dropped because their page placed them outside the geography. */
   outsideGeography: number;
+  /** Skipped because their title is a promotion's: a business's standing night, a watch party (#81). */
+  skippedPromotion: number;
+  /** Skipped because they are not open to the public: a graduation, a board meeting, an online session (#81). */
+  skippedNotPublic: number;
   /** Dropped because a field the model wrote ran past its length cap. */
   overCap: number;
   /** Held uncitable because a date or time the model wrote does not exist, or the end came before the start. */
@@ -166,6 +170,8 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Held for promotion | ${counts.heldForPromotion} |
 | Released for promotion | ${counts.releasedForPromotion} |
 | Dropped: outside geography | ${counts.outsideGeography} |
+| Skipped as promotion | ${counts.skippedPromotion} |
+| Skipped as not public | ${counts.skippedNotPublic} |
 | Dropped: a field past its length cap | ${counts.overCap} |
 | Uncitable: a date or time that does not exist, or an end before the start | ${counts.unusableDates} |
 | Unverified: a quote not on its page | ${counts.quoteNotOnPage} |

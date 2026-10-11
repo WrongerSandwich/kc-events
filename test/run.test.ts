@@ -52,10 +52,12 @@ describe("run", () => {
       heldForPromotion: 0,
       releasedForPromotion: 0,
       outsideGeography: 0,
+      skippedPromotion: 0,
+      skippedNotPublic: 0,
       overCap: 0,
       unusableDates: 0,
       quoteNotOnPage: 0,
-      expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0 },
+      expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0, promotion: 0, "not-public": 0 },
     });
     expect(report.spend).toEqual({ totalUsd: 0, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 }, modelCalls: [] });
     expect(report.sources).toEqual([]);

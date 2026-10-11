@@ -172,8 +172,8 @@ describe("folding duplicates", () => {
 
   it("folds nothing that does not match: two venues, a venue-less record with two candidates on other hosts, or two events in one series", async () => {
     const separate = [
-      event("Open Mic", "Bar A", "https://bara.test/", "2026-10-14"),
-      event("Open Mic", "Bar B", "https://barb.test/", "2026-10-14"),
+      event("Poetry Reading", "Bar A", "https://bara.test/", "2026-10-14"),
+      event("Poetry Reading", "Bar B", "https://barb.test/", "2026-10-14"),
       event("Nutcracker", "Muriel Kauffman Theatre", KAUFFMAN, "2026-11-28", { recurrence: "limited-run" }),
       event("Nutcracker", undefined, "https://kccrossroads.org/", "2026-11-28", { recurrence: "limited-run" }),
       event("Nutcracker", undefined, "https://www.inkansascity.com/arts/", "2026-11-28", { recurrence: "limited-run" }),
@@ -189,11 +189,11 @@ describe("folding duplicates", () => {
 
   it("never folds a recurring event", async () => {
     const recurring = (primaryUrl: string): Event => {
-      const { start: _start, ...e } = event("Trivia Night", "Bar A", primaryUrl, "2026-10-14", { recurrence: "recurring", schedule: "every Tuesday at 7pm" });
+      const { start: _start, ...e } = event("Gallery Tour", "Bar A", primaryUrl, "2026-10-14", { recurrence: "recurring", schedule: "every Tuesday at 7pm" });
       return { ...e, evidence: { date: "Tuesdays, 7pm", venue: "Bar A" } };
     };
 
-    const { dataset } = await quietRun(withEvents([recurring("https://bara.test/"), recurring("https://bara.test/trivia")]));
+    const { dataset } = await quietRun(withEvents([recurring("https://bara.test/"), recurring("https://bara.test/tour")]));
 
     expect(dataset.events.map((e) => e.status)).toEqual(["active", "active"]);
   });
@@ -376,13 +376,13 @@ describe("venue-less twins (#77)", () => {
   });
 
   it("a venue-less sighting fitting two events on other hosts creates nothing, and the report counts it", async () => {
-    const bars = [event("Open Mic", "Bar A", "https://bara.test/", "2026-10-14"), event("Open Mic", "Bar B", "https://barb.test/", "2026-10-14")];
+    const bars = [event("Poetry Reading", "Bar A", "https://bara.test/", "2026-10-14"), event("Poetry Reading", "Bar B", "https://barb.test/", "2026-10-14")];
     const listings = source("Listings", { urls: ["https://listings.test/calendar"] });
 
     const { dataset, report } = await runWith(WEEK_1, withEvents(bars), {
       sources: [listings],
       pages: { [listings.urls[0]!]: PAGE },
-      completions: [reply(candidateAt(listings, { title: "Open Mic", startDate: "2026-10-14", startTime: null, venue: null, venueEvidence: null }))],
+      completions: [reply(candidateAt(listings, { title: "Poetry Reading", startDate: "2026-10-14", startTime: null, venue: null, venueEvidence: null }))],
       config,
     });
 
@@ -396,8 +396,8 @@ describe("one title listed twice on one page (#77)", () => {
   const WINECO = "https://www.kcwineco.com/events/upcoming-events";
   const wineco = source("KC Wine Co", { urls: [WINECO] });
   const pianos = (startDate: string, overrides: Record<string, unknown> = {}) =>
-    candidateAt(wineco, { title: "Dueling Pianos (FREE Show)", startDate, startTime: "17:30", dateEvidence: `${startDate} 5:30 PM`, ...overrides });
-  const nov7 = () => event("Dueling Pianos (FREE Show)", "KC Wine Co", WINECO, "2026-11-07T17:30:00-06:00");
+    candidateAt(wineco, { title: "Jazz Trio (FREE Show)", startDate, startTime: "17:30", dateEvidence: `${startDate} 5:30 PM`, ...overrides });
+  const nov7 = () => event("Jazz Trio (FREE Show)", "KC Wine Co", WINECO, "2026-11-07T17:30:00-06:00");
 
   it("makes two records when the page lists a title on two dates outside the fuzzy window", async () => {
     const { dataset, report } = await runWith(WEEK_1, emptyDataset(), {

@@ -39,7 +39,7 @@ An event that happens over a bounded span with a known end date, such as an exhi
 An event that repeats indefinitely on a schedule, such as a monthly market, First Fridays, or a museum's weekly tour.
 
 **Promotion**:
-A business's own standing night, or a bar's watch party, listed as if it were an event: a happy hour, a food or drink special, a themed or DJ night, trivia, karaoke, a game-day party. Never an event, whatever it offers; extraction skips it. A recurring event is bigger than one business's night. A DJ date with a named headliner, ticketed on its own, is a show, not the venue's standing night. A class or workshop is never a promotion, wherever it is held.
+A business's own standing night, or a bar's watch party, listed as if it were an event: a happy hour, a food or drink special, a themed or DJ night, trivia, karaoke, a game-day party. Never an event, whatever it offers; extraction skips it. A recurring event is bigger than one business's night. A DJ date with a named headliner, ticketed on its own, is a show, not the venue's standing night. A class or workshop is never a promotion, wherever it is held. The extraction rules tell the model to skip promotions and what the public cannot simply attend (a graduation, a gala, a board meeting, anything online only); a list of title patterns in code (`src/skip.ts`, #81) is the backstop after extraction, counted in the run report as skipped as promotion or as not public, and it expires a stored event it matches as `promotion` or `not-public`. The patterns are narrow so that a ticketed show with a named act never matches.
 _Avoid_: special, deal
 
 **Schedule phrase**:
@@ -62,7 +62,7 @@ The category of an event, from a fixed taxonomy.
 _Avoid_: type, category, genre
 
 **Status**:
-Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, `index-page` (its primary page was an index page), or `duplicate` (another record turned out to be the same event and was seen first, or is the recurring event this one is one month of). A duplicate names the record it was folded into (`duplicateOf`) and stands for it: a sighting that matches the duplicate is a sighting of that record. A postponement with a new date is a date change, not an expiry.
+Whether an event is publishable: `active` (verified and current), `unverified` (not yet, or no longer, meeting cite-or-drop), or `expired`. An expired event carries a reason: `past`, `two-strike`, `cancelled`, `index-page` (its primary page was an index page), or `duplicate` (another record turned out to be the same event and was seen first, or is the recurring event this one is one month of), `promotion` or `not-public` (stored before the skip in code matched it, #81). A duplicate names the record it was folded into (`duplicateOf`) and stands for it: a sighting that matches the duplicate is a sighting of that record. A postponement with a new date is a date change, not an expiry.
 
 **Last-verified**:
 The date of the most recent run that read the event's date and venue from its primary page. Shown on every published event.

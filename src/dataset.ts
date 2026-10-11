@@ -19,7 +19,7 @@ const httpUrl = z
 
 export const RECURRENCE_CLASSES = ["one-off", "limited-run", "recurring"] as const;
 export const EVENT_STATUSES = ["active", "unverified", "expired"] as const;
-export const EXPIRY_REASONS = ["past", "two-strike", "cancelled", "index-page", "duplicate"] as const;
+export const EXPIRY_REASONS = ["past", "two-strike", "cancelled", "index-page", "duplicate", "promotion", "not-public"] as const;
 
 export type RecurrenceClass = (typeof RECURRENCE_CLASSES)[number];
 export type EventStatus = (typeof EVENT_STATUSES)[number];
