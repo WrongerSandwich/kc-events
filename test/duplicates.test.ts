@@ -449,8 +449,8 @@ describe("one title listed twice on one page (#77)", () => {
   });
 
   describe("on re-verification", () => {
-    /** The known night, found by discovery, so no registry source lists its page: re-verification reads it. */
-    const found = () => ({ ...nov7(), lead: { lane: "discovery" as const, query: "food and drink" } });
+    /** The known night, from a source no longer in the registry, so no registry page lists it: re-verification reads it. */
+    const found = () => nov7();
     const reverifying = (dataset: Dataset, ...listed: unknown[]) =>
       runWith(WEEK_1, dataset, { sources: [knuckleheads], pages: { [knuckleheads.urls[0]!]: PAGE, [WINECO]: PAGE }, completions: [reply(), reply(...listed)], config });
 
@@ -476,7 +476,6 @@ describe("one title listed twice on one page (#77)", () => {
       const { start: _start, ...standing } = event("Main Gallery Tours", "National WWI Museum and Memorial", WWI, "2026-10-05", {
         recurrence: "recurring",
         schedule: "Monday, Friday-Saturday, Select times",
-        lead: { lane: "discovery", query: "museum tours" },
       });
       const recurring: Event = { ...standing, evidence: { date: "Monday, Friday-Saturday Select times", venue: "National WWI Museum and Memorial" } };
 
@@ -562,7 +561,7 @@ describe("a dated sighting that is one month of a recurring event (#77)", () => 
   });
 
   it("confirms the recurring event on re-verification too, keeping it recurring", async () => {
-    const recurring = standing({ lead: { lane: "discovery", query: "museum tours" } });
+    const recurring = standing();
 
     const { dataset, report } = await runWith(WEEK_1, withEvents([recurring]), {
       sources: [knuckleheads],

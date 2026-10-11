@@ -62,6 +62,12 @@ const eventFields = z.strictObject({
   expiryReason: z.enum(EXPIRY_REASONS).optional(),
   /** For an event expired as duplicate: the id of the record it was folded into, which its sightings count for (#77). Absent on a duplicate folded before the pointer was kept. */
   duplicateOf: z.string().min(1).optional(),
+  /**
+   * Present exactly while the event is held for promotion (ADR 0012): the discovery lane found it on a host
+   * no active registry source is on and no ticketing platform, so it is stored unverified, never rendered,
+   * and not re-read, until a person promotes the host into the registry.
+   */
+  heldForPromotion: z.literal(true).optional(),
   verificationFailures: z.number().int().nonnegative(),
   /** Consecutive runs in which the event's primary page could not be loaded; absent in datasets older than the field. */
   consecutiveOutages: z.number().int().nonnegative().default(0),
@@ -119,6 +125,9 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     })
     .refine((e) => e.duplicateOf === undefined || e.expiryReason === "duplicate", {
       message: "only an event expired as duplicate names the record it was folded into",
+    })
+    .refine((e) => e.heldForPromotion === undefined || (e.status === "unverified" && e.lead.lane === "discovery"), {
+      message: "an event held for promotion is unverified and was found by the discovery lane",
     })
     .refine((e) => e.eventUrl === undefined || ownPageAllowed(e.eventUrl, e.primaryUrl, platformHosts), {
       message: "an event's own page is on its primary page's site or a ticketing platform",

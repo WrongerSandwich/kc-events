@@ -166,4 +166,12 @@ describe("dataset", () => {
     const twin = { ...event, title: "Other Show", status: "expired", expiryReason: "duplicate" };
     expect(() => parseDataset({ ...emptyDataset(), events: [event, twin] })).toThrow(/unique.*evt_1/);
   });
+
+  it("an event held for promotion is unverified and discovery-led; the marker is only ever true", () => {
+    const held = { ...event, status: "unverified", heldForPromotion: true, lead: { lane: "discovery", query: "music events in Kansas City" } };
+    expect(parseDataset({ ...emptyDataset(), events: [held] }).events[0]).toEqual(held);
+    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...held, status: "active" }] })).toThrow(/held for promotion/);
+    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...held, lead: event.lead }] })).toThrow(/held for promotion/);
+    expect(() => parseDataset({ ...emptyDataset(), events: [{ ...held, heldForPromotion: false }] })).toThrow();
+  });
 });

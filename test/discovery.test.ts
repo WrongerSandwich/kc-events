@@ -20,6 +20,12 @@ const PROMOTER_PAGE = "https://promoter.test/shows/big-show";
 const LISTING = "https://www.listings.test/kc/this-week";
 /** A source standing in for the promoter's page, so candidateAt cites it. */
 const PROMOTER = source("Promoter", { urls: [PROMOTER_PAGE], neighborhood: "Westport" });
+/**
+ * promoter.test as a ticketing platform the config lists: a host a person admitted, so what the lane finds there
+ * is published rather than held for promotion (ADR 0012). For the lane's mechanics around a known event; the hold
+ * itself is held-for-promotion.test.ts's.
+ */
+const ADMITTED = { platformHosts: ["promoter.test"] };
 
 const lead = (url: string, title = "A lead"): SearchResult => ({ url, title, snippet: "Something on in Kansas City" });
 
@@ -47,7 +53,7 @@ async function discoverAt(
 }
 
 describe("discovery lane", () => {
-  it("a lead to a primary page yields an active event whose lead is the discovery query", async () => {
+  it("a lead to a primary page yields an event held for promotion (ADR 0012) whose lead is the discovery query", async () => {
     const { dataset, report, requests } = await discoverAt(WEEK_1, emptyDataset(), {
       searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
       pages: { [PROMOTER_PAGE]: PAGE },
@@ -59,7 +65,8 @@ describe("discovery lane", () => {
       title: "Big Show",
       venue: "The Truman",
       primaryUrl: PROMOTER_PAGE,
-      status: "active",
+      status: "unverified",
+      heldForPromotion: true,
       lastVerified: WEEK_1_ISO,
       lead: { lane: "discovery", query: QUERY },
     });
@@ -87,7 +94,7 @@ describe("discovery lane", () => {
       completions: [costing(0.01, candidateAt(PROMOTER, { title: "Big Show", venue: "The Truman" }))],
     });
 
-    expect(calls).toEqual([`search:${QUERY}`, `fetch:${listing}`, `fetch:${PROMOTER_PAGE}`, "model:test/extraction", "model:test/curation"]);
+    expect(calls).toEqual([`search:${QUERY}`, `fetch:${listing}`, `fetch:${PROMOTER_PAGE}`, "model:test/extraction"]);
     const extractions = requests.filter((r) => r.model === "test/extraction");
     expect(extractions).toHaveLength(1);
     expect(extractions[0]!.messages[1]!.content).toContain(`Page URL: ${PROMOTER_PAGE}`);
@@ -199,15 +206,12 @@ describe("discovery lane", () => {
     const second = await discoverAt(WEEK_2, first.dataset, {
       searches: { [LATER_QUERY]: [lead(otherShow)] },
       pages: { [otherShow]: PAGE, [PROMOTER_PAGE]: PAGE },
-      completions: [
-        costing(0.01, candidateAt(PROMOTER, { title: "Other Show" })),
-        // Re-verification of the first run's event against its own page.
-        costing(0.01, candidateAt(PROMOTER, { title: "Big Show" })),
-      ],
+      // The first run's event is held, so it is not re-verified against its own page.
+      completions: [costing(0.01, candidateAt(PROMOTER, { title: "Other Show" }))],
     });
 
-    expect(second.report.promotionSuggestions).toEqual([{ host: "promoter.test", runsSeen: 2, exampleUrl: otherShow }]);
-    expect(renderReportMarkdown(second.report)).toContain(`promoter.test: events found in 2 runs, e.g. ${otherShow}`);
+    expect(second.report.promotionSuggestions).toEqual([{ host: "promoter.test", runsSeen: 2, exampleUrl: otherShow, heldEvents: 2 }]);
+    expect(renderReportMarkdown(second.report)).toContain(`promoter.test: events found in 2 runs, 2 held events promotion would release, e.g. ${otherShow}`);
   });
 
   it.each<[string, CannedPage, number]>([
@@ -220,6 +224,7 @@ describe("discovery lane", () => {
       searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
       pages: { [PROMOTER_PAGE]: PAGE },
       completions: [costing(0.01, candidateAt(PROMOTER, newYear))],
+      discovery: ADMITTED,
     });
 
     // The lane tried the page this run, so re-verification does not fetch it again.
@@ -227,6 +232,7 @@ describe("discovery lane", () => {
       searches: { [LATER_QUERY]: [lead(PROMOTER_PAGE)] },
       pages: { [PROMOTER_PAGE]: page },
       completions: [costing(0.01)],
+      discovery: ADMITTED,
     });
 
     expect(second.dataset.events[0]).toMatchObject({ status: "active", verificationFailures: strikes });
@@ -394,11 +400,13 @@ describe("discovery lane", () => {
       searches: { [QUERY]: [lead(PROMOTER_PAGE)] },
       pages: { [PROMOTER_PAGE]: PAGE },
       completions: [costing(0.01, candidateAt(PROMOTER))],
+      discovery: ADMITTED,
     })).dataset;
 
     const { calls, dataset: after } = await discoverAt(WEEK_2, known, {
       searches: { [QUERY]: [lead(PROMOTER_PAGE)], [LATER_QUERY]: [lead(PROMOTER_PAGE)] },
       pages: { [PROMOTER_PAGE]: page },
+      discovery: ADMITTED,
     });
 
     expect(calls.filter((c) => c === `fetch:${PROMOTER_PAGE}`)).toHaveLength(1);
@@ -489,6 +497,7 @@ describe("discovery lane", () => {
           searches: { [QUERY]: [lead(OTHER_SHOW)] },
           pages: { [OTHER_SHOW]: PAGE },
           completions: [costing(0.01, candidateAt(OTHER, { title: "Other Show" }))],
+          discovery: ADMITTED,
         })
       ).dataset;
 
@@ -498,6 +507,7 @@ describe("discovery lane", () => {
         pages: { [PROMOTER_PAGE]: PAGE, [OTHER_SHOW]: PAGE },
         completions: [costing(0.06, candidateAt(PROMOTER))],
         spendCapUsd: 0.05,
+        discovery: ADMITTED,
       });
 
       expect(calls).not.toContain(`fetch:${OTHER_SHOW}`);
@@ -509,6 +519,7 @@ describe("discovery lane", () => {
       const { dataset, report } = await discoverAt(WEEK_2, await foundLastWeek(), {
         searches: { [LATER_QUERY]: [lead(OTHER_SHOW)] },
         pages: { [OTHER_SHOW]: { ...PAGE, finalUrl: LISTING } },
+        discovery: ADMITTED,
       });
 
       expect(dataset.events.find((e) => e.title === "Other Show")).toMatchObject({

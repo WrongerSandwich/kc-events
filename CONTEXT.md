@@ -92,7 +92,7 @@ One execution of the research job: check sources, discover, extract, verify, cur
 The committed record of one run: counts, spend against the cap, per-source results, sources failing repeatedly, unmappable neighborhoods, and promotion suggestions.
 
 **Promotion**:
-Moving a source that the discovery lane has found events on in two runs into the registry. The run tracks discovery sources by host (a ticketing platform is no one source and is never suggested). Always a suggestion in the run report, acted on by hand; never automatic. Promoting a host releases the events held for promotion from it on the next run (ADR 0012).
+Moving a source that the discovery lane has found events on in two runs into the registry. The run tracks discovery sources by host (a ticketing platform is no one source and is never suggested). Always a suggestion in the run report, acted on by hand; never automatic. Promoting a host releases the events held for promotion from it on the next run (ADR 0012); each suggestion says how many it would release.
 
 **Source**:
 A venue, institution, or organizer whose page or feed the research job checks. A source produces leads; it is not an event.
@@ -144,7 +144,7 @@ _Avoid_: citation, quote, proof
 The part of a run that uses web search to find events outside the registry. It finds; it does not admit: a new event from a host that is neither a registry source nor a ticketing platform is **held for promotion** until a person promotes the host (ADR 0012), and a host the registry excludes is never followed. A page it finds speaks for a known event only when it is on the event's own site; otherwise it can confirm the event and nothing more.
 
 **Held for promotion**:
-The state of an event the discovery lane found on a host nobody has looked at: stored unverified, marked, never rendered on the site, until the host is promoted into the registry. Released by promotion, not by time.
+The state of an event the discovery lane found on a host nobody has looked at (no active registry source is on it, and it is no ticketing platform): stored unverified with its reading, marked (`heldForPromotion`), never rendered on the site, and not re-read (no fetch, no model call) until the host is promoted into the registry, which releases it to re-verification against its own page. The first run under the rule held every discovery-led event already on such a host, verified or not. Discovery finding the page again keeps the reading current and the hold in place; the event expires `past` like any other. Only a discovery-led event is ever held: a registry-led event whose page has moved to another host, or whose source was since excluded, was admitted by a person. Released by promotion, not by time; the run report counts what it held and released, by host.
 _Avoid_: quarantined, pending, draft
 
 **Aggregator**:
@@ -164,7 +164,7 @@ The rule that an active event which takes a strike on two consecutive runs becom
 The per-run cost ceiling, enforced by the loop from the cost returned on every model call and backstopped by a monthly limit on the API key itself. When hit, the run publishes what it verified and logs the shortfall.
 
 **Excluded source**:
-A source the job knows about but does not fetch, with the reason recorded: its `robots.txt` disallows it, its pages cannot be read (listings that even a browser fetch does not show, or a site that refuses the job's fetcher), or its information is not worth checking. Its pages are not fetched for re-verification either (#78): the events it led to, and any event whose primary page is one of its pages, are held as through an outage until it is active again, and the run report names it.
+A source the job knows about but does not fetch, with the reason recorded: its `robots.txt` disallows it, its pages cannot be read (listings that even a browser fetch does not show, or a site that refuses the job's fetcher), or its information is not worth checking. Its pages are not fetched for re-verification either (#78): the events it led to, and any event whose primary page is one of its pages, are held as through an outage until it is active again, and the run report names it. Discovery never follows a lead on its host, whether a search result or a link off an index page (ADR 0012); the run report counts those leads by source. A discovery-led event on its host is held for promotion, not as through an outage: a person said no to the host.
 
 ### Site
 

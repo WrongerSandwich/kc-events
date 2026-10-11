@@ -7,8 +7,8 @@
  * primary page.
  */
 import type { RunConfig } from "./config.js";
-import type { Dataset } from "./dataset.js";
-import type { Registry } from "./registry.js";
+import type { Dataset, Event } from "./dataset.js";
+import type { ExcludedSource, Registry } from "./registry.js";
 import type { FetchResult } from "./ports.js";
 import type { RunReport } from "./report.js";
 import { hostOf, onHost } from "./hosts.js";
@@ -111,10 +111,38 @@ export function outboundLinks(page: FetchResult, config: RunConfig): string[] {
   return links;
 }
 
+/** The hosts the registry's sources are on, of one status or any; a URL that does not parse is on none. */
+function registryHosts(registry: Registry, status?: Registry["sources"][number]["status"]): string[] {
+  return registry.sources
+    .filter((s) => status === undefined || s.status === status)
+    .flatMap((s) => s.urls.map(hostOf))
+    .filter((h): h is string => h !== undefined);
+}
+
+/**
+ * Whether a page is on a host a person has admitted (ADR 0012): an active registry source's host, a
+ * subdomain of one, or a ticketing platform the config lists, whose event pages are primary pages
+ * though the host is no one source. Promoting a host is adding a registry source whose URL is on it,
+ * so this is also what releases the events held from it. An excluded source's host is no one's
+ * admission: a person looked and said no.
+ */
+export function onAdmittedHost(url: string, registry: Registry, config: RunConfig): boolean {
+  return onHost(url, registryHosts(registry, "active")) || onHost(url, config.discovery.platformHosts);
+}
+
+/**
+ * The excluded registry source whose host a URL is on, or on a subdomain of, if any. Discovery never
+ * follows such a lead (ADR 0012): the exclusion was a decision about the host, not about one lane.
+ */
+export function excludedSourceOnHost(url: string, registry: Registry): ExcludedSource | undefined {
+  return registry.sources.find((s): s is ExcludedSource => s.status === "excluded" && onHost(url, registryHosts({ sources: [s] })));
+}
+
 /**
  * Folds this run's discovery hosts (those whose pages yielded an active event) into the state
  * carried between runs, and lists as promotion suggestions every host seen this run that has now
- * been seen in at least two runs. A host the registry already checks, or a ticketing platform that
+ * been seen in at least two runs, each with how many events held for promotion (ADR 0012) promoting
+ * it would release. A host the registry already checks, or a ticketing platform that
  * is no one source, is neither counted nor suggested. Suggestions are only ever suggestions:
  * nothing here touches the registry.
  */
@@ -123,9 +151,9 @@ export function trackDiscoveryHosts(
   seenThisRun: Map<string, string>,
   { registry, config }: { registry: Registry; config: RunConfig },
   runIso: string,
+  events: readonly Event[],
 ): { discoveryState: Dataset["discoveryState"]; promotionSuggestions: RunReport["promotionSuggestions"] } {
-  const registryHosts = registry.sources.flatMap((s) => s.urls.map(hostOf)).filter((h): h is string => h !== undefined);
-  const neverSuggested = [...registryHosts, ...config.discovery.platformHosts];
+  const neverSuggested = [...registryHosts(registry), ...config.discovery.platformHosts];
   const discoveryState = { ...previous };
   const promotionSuggestions: RunReport["promotionSuggestions"] = [];
   for (const [host, exampleUrl] of seenThisRun) {
@@ -133,7 +161,9 @@ export function trackDiscoveryHosts(
     const was = discoveryState[host];
     const runsSeen = was?.lastSeen === runIso ? was.runsSeen : (was?.runsSeen ?? 0) + 1;
     discoveryState[host] = { runsSeen, lastSeen: runIso };
-    if (runsSeen >= PROMOTION_THRESHOLD) promotionSuggestions.push({ host, runsSeen, exampleUrl });
+    if (runsSeen < PROMOTION_THRESHOLD) continue;
+    const heldEvents = events.filter((e) => e.heldForPromotion && onHost(e.primaryUrl, [host])).length;
+    promotionSuggestions.push({ host, runsSeen, exampleUrl, heldEvents });
   }
   return { discoveryState, promotionSuggestions };
 }

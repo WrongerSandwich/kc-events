@@ -56,6 +56,10 @@ export interface RunReport {
     unverifiedByUncitableReading: number;
     /** Venue-less sightings that fit two or more known events with none preferred, so no record was made: nothing publishable anyway (#77). */
     venuelessAmbiguous: number;
+    /** Discovery-led events held for promotion this run (ADR 0012): found on a host no registry source is on, new this run or read before the rule. */
+    heldForPromotion: number;
+    /** Events released this run because a person promoted their host into the registry; re-verified against their page from here on. */
+    releasedForPromotion: number;
     expired: Record<ExpiryReason, number>;
   };
   spend: {
@@ -82,6 +86,8 @@ export interface RunReport {
     pagesExtracted: number;
     /** Leads that could not be fetched, searches that failed, and replies that could not be read. */
     problems: string[];
+    /** Leads not followed because their host is an excluded registry source's (ADR 0012): the source, its reason, and how many. */
+    leadsOnExcludedSources: { source: string; reason: string; leads: number }[];
   };
   /**
    * Re-verification this run: pages re-fetched and not re-read because the model call threw, leaving
@@ -117,7 +123,11 @@ export interface RunReport {
    * Hosts the discovery lane has found events on in two or more runs, including this one, suggested
    * for promotion into the registry; never added to it automatically.
    */
-  promotionSuggestions: { host: string; runsSeen: number; exampleUrl: string }[];
+  promotionSuggestions: { host: string; runsSeen: number; exampleUrl: string; heldEvents: number }[];
+  /** Events held for promotion this run, by host (ADR 0012). */
+  heldForPromotion: { host: string; events: number }[];
+  /** Events released this run by a host's promotion, by host. */
+  releasedForPromotion: { host: string; events: number }[];
   /** The events unverified by the outage limit this run; re-checked each run until their page lists them again. */
   outageLimited: EventRef[];
   /** The events unverified by an uncitable re-reading this run; a model wobble shows up here. Re-checked each run until a reading is verified again. */
@@ -151,6 +161,8 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
 | Not created: a venue-less sighting fitting more than one known event, none preferred | ${counts.venuelessAmbiguous} |
+| Held for promotion | ${counts.heldForPromotion} |
+| Released for promotion | ${counts.releasedForPromotion} |
 | Dropped: outside geography | ${counts.outsideGeography} |
 | Dropped: a field past its length cap | ${counts.overCap} |
 | Uncitable: a date or time that does not exist, or an end before the start | ${counts.unusableDates} |
@@ -178,8 +190,10 @@ ${
 ${
   report.discovery.enabled
     ? `${plural(report.discovery.queries, "search", "searches")}, ${plural(report.discovery.aggregatorPages, "index page")} read for links, ${plural(report.discovery.pagesExtracted, "primary page")} extracted.${
-        report.discovery.problems.length > 0 ? `\n\n${markdownList(report.discovery.problems)}` : ""
-      }`
+        report.discovery.leadsOnExcludedSources.length > 0
+          ? `\n\n${markdownList(report.discovery.leadsOnExcludedSources.map((l) => `${plural(l.leads, "lead")} not followed: ${l.source} is excluded (${l.reason})`))}`
+          : ""
+      }${report.discovery.problems.length > 0 ? `\n\n${markdownList(report.discovery.problems)}` : ""}`
     : "_Disabled._"
 }
 
@@ -221,9 +235,16 @@ ${eventList(report.uncitableReadings)}
 
 ${markdownList(report.cancellationsFromElsewhere.map((c) => `${c.reportedBy} says ${c.title} (${c.primaryUrl}) is cancelled; the event was left as it was`))}
 
+## Held for promotion
+
+${markdownList([
+  ...report.heldForPromotion.map((h) => `${h.host}: ${plural(h.events, "event")} held`),
+  ...report.releasedForPromotion.map((h) => `${h.host}: ${plural(h.events, "event")} released`),
+])}
+
 ## Promotion suggestions
 
-${markdownList(report.promotionSuggestions.map((p) => `${p.host}: events found in ${p.runsSeen} runs, e.g. ${p.exampleUrl}`))}
+${markdownList(report.promotionSuggestions.map((p) => `${p.host}: events found in ${p.runsSeen} runs, ${plural(p.heldEvents, "held event")} promotion would release, e.g. ${p.exampleUrl}`))}
 `;
 }
 

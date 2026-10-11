@@ -21,6 +21,9 @@ const ELSEWHERE_URL = "https://kc-shows.test/this-week";
 /** A promoter's page found by discovery, which an event cites as its primary page, and another page on that site. */
 const PROMOTER_URL = "https://promoter.test/shows/big-show";
 const PROMOTER_OTHER_URL = "https://promoter.test/shows/big-show-moved";
+/** The promoter's calendar, in the registry: its host is promoted, so what discovery finds there is published rather than held (ADR 0012). */
+const promoter = source("Promoter", { urls: ["https://promoter.test/calendar"], neighborhood: "Westport" });
+const PROMOTER_CALENDAR = promoter.urls[0]!;
 /** An organizer's page on a ticketing platform the config lists, and another organizer's page there. */
 const PLATFORM_URL = "https://www.tickets.test/e/big-show";
 const PLATFORM_OTHER_URL = "https://www.tickets.test/e/big-show-by-someone-else";
@@ -48,8 +51,9 @@ const only = (dataset: Dataset): Event => {
 
 /** The first run: Knuckleheads' calendar lists the Big Show, verified. */
 const seen = () => runWith(WEEK_1, emptyDataset(), { sources: [knuckleheads], pages: { [CALENDAR_URL]: PAGE }, completions: [reply(at(CALENDAR_URL))] });
-/** The first run for a discovery-sourced event: the promoter's page, found by search, lists the Big Show. */
-const discovered = () => runAt(WEEK_1, emptyDataset(), { leads: [PROMOTER_URL], pages: { [PROMOTER_URL]: PAGE }, completions: [reply(at(PROMOTER_URL))] });
+/** The first run for a discovery-sourced event: the promoter's page, found by search, lists the Big Show; its calendar in the registry lists nothing. */
+const discovered = () =>
+  runAt(WEEK_1, emptyDataset(), { sources: [promoter], leads: [PROMOTER_URL], pages: { [PROMOTER_CALENDAR]: PAGE, [PROMOTER_URL]: PAGE }, completions: [reply(), reply(at(PROMOTER_URL))] });
 
 describe("a cancellation counts only from a page that speaks for the event", () => {
   it("a discovered page off the event's site saying cancelled leaves the event as it was, after the registry lane verified it, and the report says who said so", async () => {
@@ -116,9 +120,9 @@ describe("a cancellation counts only from a page that speaks for the event", () 
     const presenter = source("Presenter", { urls: ["https://presenter.test/season"], neighborhood: "Westport" });
 
     const second = await runAt(WEEK_2, first.dataset, {
-      sources: [presenter],
-      pages: { [presenter.urls[0]!]: PAGE },
-      completions: [reply(at(presenter.urls[0]!, { notice: "cancelled" }))],
+      sources: [promoter, presenter],
+      pages: { [PROMOTER_CALENDAR]: PAGE, [presenter.urls[0]!]: PAGE },
+      completions: [reply(), reply(at(presenter.urls[0]!, { notice: "cancelled" }))],
     });
 
     expect(only(second.dataset)).toMatchObject({ status: "expired", expiryReason: "cancelled" });
@@ -134,9 +138,10 @@ describe("a verified sighting refreshes a known event only from a page that spea
 
     // The other page still lists the show; the event's own page is gone, so its second strike expires it.
     const second = await runAt(WEEK_2, struck(first.dataset), {
+      sources: [promoter],
       leads: [ELSEWHERE_URL],
-      pages: { [ELSEWHERE_URL]: PAGE, [PROMOTER_URL]: { status: 404, body: "Not Found" } },
-      completions: [reply(at(ELSEWHERE_URL, { startDate: "2026-12-13", dateEvidence: "Sun, Dec 13", venue: "Knuckleheads Saloon", description: "A description from elsewhere." }))],
+      pages: { [PROMOTER_CALENDAR]: PAGE, [ELSEWHERE_URL]: PAGE, [PROMOTER_URL]: { status: 404, body: "Not Found" } },
+      completions: [reply(), reply(at(ELSEWHERE_URL, { startDate: "2026-12-13", dateEvidence: "Sun, Dec 13", venue: "Knuckleheads Saloon", description: "A description from elsewhere." }))],
     });
 
     expect(second.calls).toContain(`fetch:${PROMOTER_URL}`);
@@ -148,9 +153,10 @@ describe("a verified sighting refreshes a known event only from a page that spea
     const first = await discovered();
 
     const second = await runAt(WEEK_2, struck(first.dataset), {
+      sources: [promoter],
       leads: [ELSEWHERE_URL],
-      pages: { [ELSEWHERE_URL]: PAGE, [PROMOTER_URL]: PAGE },
-      completions: [reply(at(ELSEWHERE_URL)), reply(at(PROMOTER_URL))],
+      pages: { [PROMOTER_CALENDAR]: PAGE, [ELSEWHERE_URL]: PAGE, [PROMOTER_URL]: PAGE },
+      completions: [reply(), reply(at(ELSEWHERE_URL)), reply(at(PROMOTER_URL))],
     });
 
     expect(only(second.dataset)).toEqual({ ...first.dataset.events[0], verificationFailures: 0, consecutiveOutages: 0, lastVerified: WEEK_2_ISO });
@@ -161,9 +167,10 @@ describe("a verified sighting refreshes a known event only from a page that spea
     const first = await discovered();
 
     const second = await runAt(WEEK_2, first.dataset, {
+      sources: [promoter],
       leads: [PROMOTER_OTHER_URL],
-      pages: { [PROMOTER_OTHER_URL]: PAGE },
-      completions: [reply(at(PROMOTER_OTHER_URL, { startDate: "2026-12-13", dateEvidence: "Sun, Dec 13" }))],
+      pages: { [PROMOTER_CALENDAR]: PAGE, [PROMOTER_OTHER_URL]: PAGE },
+      completions: [reply(), reply(at(PROMOTER_OTHER_URL, { startDate: "2026-12-13", dateEvidence: "Sun, Dec 13" }))],
     });
 
     expect(only(second.dataset)).toMatchObject({
@@ -180,9 +187,9 @@ describe("a verified sighting refreshes a known event only from a page that spea
     const first = await discovered();
 
     const second = await runAt(WEEK_2, first.dataset, {
-      sources: [knuckleheads],
-      pages: { [CALENDAR_URL]: PAGE },
-      completions: [reply(at(CALENDAR_URL, { startDate: "2026-12-13", dateEvidence: "Sun, Dec 13" }))],
+      sources: [promoter, knuckleheads],
+      pages: { [PROMOTER_CALENDAR]: PAGE, [CALENDAR_URL]: PAGE },
+      completions: [reply(), reply(at(CALENDAR_URL, { startDate: "2026-12-13", dateEvidence: "Sun, Dec 13" }))],
     });
 
     expect(only(second.dataset)).toMatchObject({ id: first.dataset.events[0]!.id, primaryUrl: CALENDAR_URL, start: "2026-12-13T20:00:00-06:00", lead: { lane: "discovery" } });
@@ -192,9 +199,10 @@ describe("a verified sighting refreshes a known event only from a page that spea
     const first = await discovered();
 
     const second = await runAt(WEEK_2, first.dataset, {
+      sources: [promoter],
       leads: [ELSEWHERE_URL, PROMOTER_OTHER_URL],
-      pages: { [ELSEWHERE_URL]: PAGE, [PROMOTER_OTHER_URL]: PAGE },
-      completions: [reply(at(ELSEWHERE_URL)), reply(at(PROMOTER_OTHER_URL, { startDate: "2026-12-13", dateEvidence: "Sun, Dec 13" }))],
+      pages: { [PROMOTER_CALENDAR]: PAGE, [ELSEWHERE_URL]: PAGE, [PROMOTER_OTHER_URL]: PAGE },
+      completions: [reply(), reply(at(ELSEWHERE_URL)), reply(at(PROMOTER_OTHER_URL, { startDate: "2026-12-13", dateEvidence: "Sun, Dec 13" }))],
     });
 
     expect(only(second.dataset)).toMatchObject({ primaryUrl: PROMOTER_OTHER_URL, start: "2026-12-13T20:00:00-06:00" });

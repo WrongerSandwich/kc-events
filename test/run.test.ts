@@ -49,6 +49,8 @@ describe("run", () => {
       unverifiedByOutageLimit: 0,
       unverifiedByUncitableReading: 0,
       venuelessAmbiguous: 0,
+      heldForPromotion: 0,
+      releasedForPromotion: 0,
       outsideGeography: 0,
       overCap: 0,
       unusableDates: 0,
@@ -59,9 +61,11 @@ describe("run", () => {
     expect(report.failingSources).toEqual([]);
     expect(report.unmappableNeighborhoods).toEqual([]);
     expect(report.offListNeighborhoods).toEqual([]);
-    expect(report.discovery).toEqual({ enabled: false, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [] });
+    expect(report.discovery).toEqual({ enabled: false, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [], leadsOnExcludedSources: [] });
     expect(report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, problems: [] });
     expect(report.promotionSuggestions).toEqual([]);
+    expect(report.heldForPromotion).toEqual([]);
+    expect(report.releasedForPromotion).toEqual([]);
     expect(report.outageLimited).toEqual([]);
     expect(report.uncitableReadings).toEqual([]);
     expect(report.cancellationsFromElsewhere).toEqual([]);

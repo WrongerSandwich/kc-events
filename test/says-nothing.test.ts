@@ -73,14 +73,16 @@ describe("an excluded source's events", () => {
     expect(byTitle(back.dataset, "Big Show")).toMatchObject({ id: first.dataset.events[0]!.id, status: "active", consecutiveOutages: 0, lastVerified: weekIso(5) });
   });
 
-  it("include an event found elsewhere whose primary page is one of the excluded source's pages", async () => {
+  it("an event found elsewhere whose primary page is one of the excluded source's pages is held for promotion instead (ADR 0012): a person said no to the host", async () => {
     const first = await listing(bigShow);
     const found = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, lead: { lane: "discovery" as const, query: "music events in Kansas City" } })) };
 
     const second = await whileExcluded(week(2), found);
 
     expect(second.calls.filter((c) => c.includes("knuckleheads"))).toEqual([]);
-    expect(strikeState(byTitle(second.dataset, "Big Show"))).toEqual(HELD);
+    expect(byTitle(second.dataset, "Big Show")).toMatchObject({ ...UNTOUCHED, status: "unverified", heldForPromotion: true });
+    expect(second.report.counts).toMatchObject({ heldSourceExcluded: 0, heldForPromotion: 1 });
+    expect(second.report.heldForPromotion).toEqual([{ host: "knuckleheads.test", events: 1 }]);
   });
 
   it("are struck as before once the source is active again and its page no longer lists them", async () => {

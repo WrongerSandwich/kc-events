@@ -25,7 +25,7 @@ import {
   WHY_LINE_CAP,
   type CurationContext,
 } from "./curation.js";
-import { discoveryQueries, isIndexPage, isLead, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
+import { discoveryQueries, excludedSourceOnHost, isIndexPage, isLead, onAdmittedHost, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { hostOf, onHost, pageKey, samePage, sameSite } from "./hosts.js";
 import { calendarDate, daysApart, matchSighting, nearDates, normalizeName, oneMonthOf, sameEvent, sameName, variantTitles, type MatchRule, type VenueAliases } from "./identity.js";
 import type { ExcludedSource, Registry, Source } from "./registry.js";
@@ -88,7 +88,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const extraction = await extractFromPages(registryLane.pages, model, extractionContext);
   const sourceReports = registryLane.sourceReports.map((report) => withExtraction(report, extraction.bySource.get(report.name)));
   // Discovery runs after the registry lane, so a page the registry already read is not read again.
-  const discovery = await discover({ ...ports, model }, extractionContext, registryLane.attempts.tried);
+  const discovery = await discover({ ...ports, model }, extractionContext, registry, registryLane.attempts.tried);
   // Registry sightings merge first: an event both lanes found keeps its registry lead.
   const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], today, config);
   // Past events, and events citing an index page as their primary page, expire before re-verification,
@@ -98,12 +98,16 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     merged.events.map((e) => expireIndexCited(expirePast(e, today), config)),
     config.venueAliases,
   );
-  const current = folded.events;
+  // Discovery finds; a person admits (ADR 0012): what discovery found on a host no registry source is on is
+  // held, before re-verification so a held event is not read, and what a promotion since released is sent there.
+  const held = holdForPromotion(folded.events, dataset.events, registry, config);
+  const current = held.events;
   // A lane that sighted a duplicate sighted the record it was folded into.
   const touched = new Set(merged.touched);
   for (const [duplicate, kept] of folded.foldedInto) if (touched.has(duplicate)) touched.add(kept);
   const laneOutcome = {
     touched,
+    released: held.released,
     attempts: combineAttempts({ ...registryLane.attempts, unread: extraction.unreadUrls, yields: extraction.yields }, discovery.attempts),
   };
   const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
@@ -117,7 +121,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   assertModelReached(model);
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = curation.events.map(cleanStoredWhyLine);
-  const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso);
+  const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso, events);
   const shortfall = {
     pagesNotExtracted: extraction.pagesNotExtracted + discovery.pagesNotExtracted,
     eventsNotReverified: reverified.notReverified,
@@ -146,6 +150,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       unverifiedByOutageLimit: reverified.outageLimited.length,
       unverifiedByUncitableReading: uncitable.length,
       venuelessAmbiguous: merged.counts.venuelessAmbiguous,
+      heldForPromotion: countEvents(held.heldByHost),
+      releasedForPromotion: countEvents(held.releasedByHost),
       ...sumTallies(extraction.tally, discovery.tally, reverified.tally),
       expired: countExpired(dataset.events, events),
     },
@@ -165,6 +171,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     offListNeighborhoods: placed.report,
     unmappableNeighborhoods: unmappableNeighborhoods([...extraction.sightings, ...discovery.sightings, ...reverified.sightings]),
     promotionSuggestions: promotion.promotionSuggestions,
+    heldForPromotion: held.heldByHost,
+    releasedForPromotion: held.releasedByHost,
     outageLimited: reverified.outageLimited.map(titleAndUrl),
     uncitableReadings: uncitable.map(titleAndUrl),
     cancellationsFromElsewhere: merged.cancellationsFromElsewhere,
@@ -185,6 +193,57 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
 
 function titleAndUrl(event: Event): EventRef {
   return { title: event.title, primaryUrl: event.primaryUrl };
+}
+
+/** Events by host, as the report lists them. */
+type HostCounts = RunReport["heldForPromotion"];
+
+const countEvents = (hosts: HostCounts): number => hosts.reduce((n, h) => n + h.events, 0);
+
+/**
+ * The hold on what discovery finds (ADR 0012). A discovery-led event not expired whose primary page is on
+ * a host no active registry source is on and no ticketing platform is held for promotion: stored
+ * unverified and marked, whether it is new this run or was read in a run before the rule, and whether
+ * its reading is verified or not; the reading is kept, so promotion releases it as it was read. A held
+ * event whose host a person has since promoted, a registry source now being on it, is released: the
+ * marker goes, it stays unverified, and re-verification reads it from its page this run, which is what
+ * brings it back. An expired event carries no marker: there is nothing to release. A registry-led
+ * event is never held, whatever host its page has moved to, since a person admitted its source; an
+ * excluded source's events are held as through an outage instead (#78). Held and released are judged
+ * against the dataset the run started from: a held event discovery found again this run was refreshed
+ * from its page (refresh), which rebuilt the record without the marker, and is held still, not anew;
+ * one the promoted source's own page refreshed to active this run was released by that promotion.
+ * Returns the events held and released this run, by host, for the report.
+ */
+function holdForPromotion(
+  events: Event[],
+  previous: Event[],
+  registry: Registry,
+  config: RunConfig,
+): { events: Event[]; released: Set<string>; heldByHost: HostCounts; releasedByHost: HostCounts } {
+  const heldBefore = new Set(previous.filter((e) => e.heldForPromotion).map((e) => e.id));
+  const heldByHost = new Map<string, number>();
+  const releasedByHost = new Map<string, number>();
+  const released = new Set<string>();
+  const count = (into: Map<string, number>, event: Event) => {
+    const host = hostOf(event.primaryUrl) ?? event.primaryUrl;
+    into.set(host, (into.get(host) ?? 0) + 1);
+  };
+  const checked = events.map((event) => {
+    const { heldForPromotion: marked, ...unmarked } = event;
+    if (event.status === "expired") return marked ? unmarked : event;
+    if (event.lead.lane === "discovery" && !onAdmittedHost(event.primaryUrl, registry, config)) {
+      if (!heldBefore.has(event.id)) count(heldByHost, event);
+      return marked && event.status === "unverified" ? event : { ...event, status: "unverified" as const, heldForPromotion: true as const };
+    }
+    if (heldBefore.has(event.id)) {
+      count(releasedByHost, event);
+      released.add(event.id);
+    }
+    return marked ? unmarked : event;
+  });
+  const listed = (counts: Map<string, number>): HostCounts => [...counts].map(([host, events]) => ({ host, events })).sort((a, b) => b.events - a.events || a.host.localeCompare(b.host));
+  return { events: checked, released, heldByHost: listed(heldByHost), releasedByHost: listed(releasedByHost) };
 }
 
 /**
@@ -770,7 +829,9 @@ function refresh(known: Event, sighting: Event): Event {
  * events would be struck (#78): a page that renders empty, or a model that returns nothing, is not
  * news about each event; the report names the page. An excluded source's page is not fetched at all
  * (#78): a person took the source out of the run, so its events are held as through an outage, and
- * the report names the source; they are checked again when it is active. A
+ * the report names the source; they are checked again when it is active. An event held for promotion
+ * is not read at all while it is held (ADR 0012): no fetch, no model call; one released this run is
+ * read whether or not it was ever verified, since its page is what brings it back. A
  * page that does list the event applies the sighting as in the registry lane, which revives a
  * hidden event whose reading is verified and hides an active one whose reading is not. When the
  * model's reply about a page could not be read, or the call threw, nothing is known either way and
@@ -787,9 +848,9 @@ async function reverify(
   const problems: string[] = [];
   const sighted = (e: Event) => lane.touched.has(e.id);
   const pending = events.filter((e) => {
-    if (lane.attempts.unread.has(pageKey(e.primaryUrl))) return false;
+    if (e.heldForPromotion || lane.attempts.unread.has(pageKey(e.primaryUrl))) return false;
     if (e.status === "active") return !sighted(e);
-    return hiddenSinceVerified(e) && !(sighted(e) && lane.attempts.tried.has(pageKey(e.primaryUrl)));
+    return (hiddenSinceVerified(e) || lane.released.has(e.id)) && !(sighted(e) && lane.attempts.tried.has(pageKey(e.primaryUrl)));
   });
   const onPage = (url: string) => pending.filter((e) => e.primaryUrl === url);
   const sightingsAt = new Map<string, Sighting[]>();
@@ -958,9 +1019,11 @@ function sightingFor(event: Event, sightings: Sighting[], aliases: VenueAliases)
   return matching.sort((a, b) => daysApart(a.sighting.event, event) - daysApart(b.sighting.event, event))[0];
 }
 
-/** What the two lanes leave for re-verification: which events they sighted and which pages they tried. */
+/** What the two lanes leave for re-verification: which events they sighted, which the hold released this run, and which pages they tried. */
 interface LaneOutcome {
   touched: Set<string>;
+  /** Events released from the hold for promotion this run (ADR 0012): read from their page whether or not they were ever verified. */
+  released: Set<string>;
   attempts: PageAttempts;
 }
 
@@ -1048,16 +1111,19 @@ interface DiscoveryLaneOutcome {
  * in turn; its text never reaches extraction. Any other lead is a primary page, fetched (robots.txt
  * and all, as the fetcher always does) and extracted under the same cite-or-drop rules as the
  * registry lane, with the query as the lead of what it finds. A URL is followed once a run, and
- * not at all when the registry lane already tried it. Once the spend cap is reached, searches and
- * leads still to go are skipped and counted, so nothing is fetched that could not be read.
+ * not at all when the registry lane already tried it, nor when its host is an excluded registry
+ * source's (ADR 0012): a person took that host out of the run, whichever lane reaches it, and the
+ * report counts the leads by source. Once the spend cap is reached, searches and leads still to go
+ * are skipped and counted, so nothing is fetched that could not be read. What the lane finds on a host
+ * no one admitted is held for promotion after merging (holdForPromotion), not here.
  */
-async function discover(ports: Ports & { model: CappedModel }, context: ExtractionContext, registryTried: Set<string>): Promise<DiscoveryLaneOutcome> {
+async function discover(ports: Ports & { model: CappedModel }, context: ExtractionContext, registry: Registry, registryTried: Set<string>): Promise<DiscoveryLaneOutcome> {
   const { config } = context;
   const outcome: DiscoveryLaneOutcome = {
     sightings: [],
     attempts: noAttempts(),
     hosts: new Map(),
-    report: { enabled: config.discovery.enabled, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [] },
+    report: { enabled: config.discovery.enabled, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [], leadsOnExcludedSources: [] },
     tally: noTally(),
     pagesNotExtracted: 0,
     queriesNotSearched: 0,
@@ -1067,10 +1133,17 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
   /** Pages followed this run, as page keys. */
   const followed = new Set<string>();
 
-  /** The page behind a lead not yet followed this run, or nothing: already followed, the cap, or a problem fetching it. */
+  /** The page behind a lead not yet followed this run, or nothing: already followed, an excluded host, the cap, or a problem fetching it. */
   const follow = async (url: string): Promise<FetchResult | undefined> => {
     if (followed.has(pageKey(url)) || registryTried.has(pageKey(url))) return undefined;
     followed.add(pageKey(url));
+    const excluded = excludedSourceOnHost(url, registry);
+    if (excluded) {
+      const line = report.leadsOnExcludedSources.find((l) => l.source === excluded.name);
+      if (line) line.leads++;
+      else report.leadsOnExcludedSources.push({ source: excluded.name, reason: excluded.reason, leads: 1 });
+      return undefined;
+    }
     if (ports.model.exhausted()) {
       outcome.leadsNotFollowed++;
       return undefined;
