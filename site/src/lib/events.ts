@@ -1,4 +1,4 @@
-import { localDate } from "./dates";
+import { isDateOnly, localDate } from "./dates";
 import type { PublishedEvent } from "./types";
 
 export function isDated(e: PublishedEvent): boolean {
@@ -15,10 +15,21 @@ export function firstDay(e: PublishedEvent): string | undefined {
   return e.start === undefined ? undefined : localDate(e.start);
 }
 
-/** The last local day: the end, else the start; undefined for a recurring event. */
+/**
+ * The last local day: the end, else the start; undefined for a recurring event. A night that runs past midnight (a
+ * timed end less than a day after a timed start) is one evening, so its last day is its first (#90).
+ */
 export function lastDay(e: PublishedEvent): string | undefined {
+  if (isOvernight(e)) return firstDay(e);
   const last = e.end ?? e.start;
   return last === undefined ? undefined : localDate(last);
+}
+
+const DAY_MS = 24 * 3_600_000;
+
+function isOvernight(e: PublishedEvent): boolean {
+  if (e.start === undefined || e.end === undefined || isDateOnly(e.start) || isDateOnly(e.end)) return false;
+  return Date.parse(e.end) - Date.parse(e.start) < DAY_MS;
 }
 
 /** The job's rule: past when the last day is before today. An undated event cannot be past. */
@@ -27,7 +38,7 @@ export function isPast(e: PublishedEvent, today: string): boolean {
   return last !== undefined && last < today;
 }
 
-/** Ends on a later day than it starts; a start-less run counts. */
+/** Ends on a later day than it starts (lastDay, so a night past midnight does not); a start-less run counts. */
 export function isMultiDay(e: PublishedEvent): boolean {
   const first = firstDay(e);
   const last = lastDay(e);

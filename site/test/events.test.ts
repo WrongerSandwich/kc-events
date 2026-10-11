@@ -20,6 +20,9 @@ describe("event predicates", () => {
     expect(firstDay(oneDay)).toBe("2026-10-09");
     expect(lastDay(oneDay)).toBe("2026-10-09");
     expect(lastDay(multiDay)).toBe("2026-10-11");
+    const lateSet = event({ start: "2026-10-09T21:00:00-05:00", end: "2026-10-10T01:00:00-05:00" });
+    expect(lastDay(lateSet)).toBe("2026-10-09"); // a night past midnight ends on its evening
+    expect(isPast(lateSet, "2026-10-10")).toBe(true);
     expect(firstDay(runNoStart)).toBeUndefined();
     expect(lastDay(runNoStart)).toBe("2026-10-31");
     expect(isDated(recurring)).toBe(false);
@@ -38,6 +41,9 @@ describe("event predicates", () => {
     expect(isMultiDay(oneDay)).toBe(false);
     expect(isMultiDay(event({ start: "2026-10-09T19:00:00-05:00", end: "2026-10-09T23:00:00-05:00" }))).toBe(false);
     expect(isMultiDay(multiDay)).toBe(true);
+    // A night out that ends after midnight is one evening, not two days; two nights with a timed end are two days.
+    expect(isMultiDay(event({ start: "2026-10-09T21:00:00-05:00", end: "2026-10-10T01:00:00-05:00" }))).toBe(false);
+    expect(isMultiDay(event({ start: "2026-10-09T20:00:00-05:00", end: "2026-10-10T23:00:00-05:00" }))).toBe(true);
     expect(isMultiDay(runNoStart)).toBe(true);
   });
 

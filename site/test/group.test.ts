@@ -74,6 +74,14 @@ describe("groupResults", () => {
     expect(groups.find((g) => g.key === "2026-10-10")!.events.map((e) => e.id)).toEqual(["satAll", "sat", "comedy"]);
   });
 
+  it("lists a show that runs past midnight under its night only", () => {
+    const late = event({ id: "late", title: "Late set", start: "2026-10-09T21:00:00-05:00", end: "2026-10-10T01:00:00-05:00" });
+    const groups = groupResults([late], f(), today, none);
+    expect(groups.map((g) => g.key)).toEqual(["2026-10-09"]);
+    expect(rowDateLine(late, today)).toBe("9:00 pm");
+    expect(groupResults([late], f(), "2026-10-10", none)).toEqual([]); // the next morning it is past, not under yesterday
+  });
+
   it("counts and exports an event listed under several days once", () => {
     const comedy = event({ id: "comedy", title: "Stand-up", start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" });
     expect(resultEvents(groupResults([comedy, fri7], f(), today, none)).map((e) => e.id)).toEqual(["fri7", "comedy"]);

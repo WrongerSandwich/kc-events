@@ -128,7 +128,7 @@ All derivation is in `site/src/lib/`, pure functions over `PublishedEvent` and a
 
 - `localDate(iso)`: the `YYYY-MM-DD` of a dataset date. The job writes local wall time with its offset (`src/time.ts`, `fromLocal`), so this is `iso.slice(0, 10)` for both forms; the function exists so the rule lives in one place.
 - `isPast(event, today)`, as above.
-- `isMultiDay(event)`: `localDate(end) > localDate(start)` (52 one-offs today; none has a same-day end).
+- `isMultiDay(event)`: `localDate(end) > localDate(start)` (52 one-offs today; none has a same-day end). A timed end less than a day after a timed start is a night past midnight: its last day is its first, so it is neither multi-day nor past until that evening's day is (#90).
 - `isUnderway(event, today)`: a limited run or multi-day one-off whose span includes today; a limited run with no `start` is underway by definition (the job's `citedDate` rule). `isOnNow` narrows it to limited runs: only a run is ever shown as "On now" (#90).
 - `horizon(event, today)`: section 5; total over every non-past dated event.
 - `matches(event, filters, today)`, `groupResults(events, filters, today)`: section 6.
@@ -164,7 +164,7 @@ An empty bucket is shown with its heading and one line ("Nothing flagged yet for
 
 **Explore link.** A prominent link to `/explore` with the count: "Browse all 560 events." The front page does not host filters; the explorer does.
 
-`DontMissList` is a Svelte component server-rendered at build with the build date and hydrated with the visitor's date under the hydration rule, so headings and buckets are correct on the day viewed and events that passed since the build drop out. It reads the visitor's clock (in the site's zone) on mount and again whenever the tab becomes visible, never on a timer. With the clock, a card whose pick starts today reads "Today" on a tile ringed in its kind's colour, and a timed one-off whose start has passed reads "Started 7:00 pm" and dims (muted title, the grey "other" kind's shades on its tile and chip, still AA), staying on the page since the site knows no end times. Built HTML has no clock, so it shows neither state. Its JavaScript is small; the page is fully readable without it.
+`DontMissList` is a Svelte component server-rendered at build with the build date and hydrated with the visitor's date under the hydration rule, so headings and buckets are correct on the day viewed and events that passed since the build drop out. It reads the visitor's clock (in the site's zone) on mount and again whenever the tab becomes visible, never on a timer. With the clock, a card whose pick starts today, or is a multi-day one-off on its second or third day, reads "Today" on a tile ringed in its kind's colour, and a timed one-off whose start has passed reads "Started 7:00 pm" and dims (muted title, the grey "other" kind's shades on its tile and chip, still AA), staying on the page since the site knows no end times. Built HTML has no clock, so it shows neither state. Its JavaScript is small; the page is fully readable without it.
 
 ## 6. The explorer
 
