@@ -7,5 +7,7 @@ export default getViteConfig({
     environment: "jsdom",
     include: ["test/**/*.test.ts"],
     setupFiles: ["test/setup.ts"],
+    // `pnpm test:coverage` only; no threshold.
+    coverage: { provider: "v8", include: ["src/**"], exclude: ["src/generated/**"], reporter: ["text-summary", "html", "json-summary"] },
   },
 });

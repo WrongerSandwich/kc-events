@@ -4,3 +4,5 @@ node_modules/
 .claude/worktrees/
 # A run killed between writing and renaming leaves these beside data files (src/write-files.ts).
 *.tmp
+# `pnpm test:coverage` writes its report here.
+coverage/

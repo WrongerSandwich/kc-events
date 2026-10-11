@@ -9,6 +9,7 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "research": "tsx src/cli.ts",
     "grade": "tsx src/grade-cli.ts",
@@ -24,6 +25,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.19.1",
+    "@vitest/coverage-v8": "^5.0.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.3"

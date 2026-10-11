@@ -40,7 +40,16 @@ jobs:
       - run: pnpm --filter kc-events-site build
       - run: pnpm --filter kc-events-site build:e2e
       - run: pnpm --filter kc-events-site size
-      - run: pnpm -r test
+      # The tests, with coverage: reported for reading, with no threshold to fail on.
+      - run: pnpm -r test:coverage
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage
+          path: |
+            coverage
+            site/coverage
+          if-no-files-found: ignore
       - run: pnpm --filter kc-events-site exec playwright install --with-deps chromium
       - run: pnpm --filter kc-events-site test:e2e
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
