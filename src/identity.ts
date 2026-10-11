@@ -182,6 +182,16 @@ export function aliasedVenue(name: string, aliases: VenueAliases): string | unde
   return Object.entries(aliases).find(([venue, names]) => [venue, ...names].some((n) => aliasName(x, normalizeName(n))))?.[0];
 }
 
+/**
+ * A page's venue name as the site shows it: the venue the alias list files it under, else the name; and the name as
+ * the room when it was neither the venue's name nor a form of it ("Helzberg Hall", not "Kauffman Center").
+ */
+export function venueAndRoom(name: string, aliases: VenueAliases): { venue: string; room?: string } {
+  const venue = aliasedVenue(name, aliases);
+  if (venue === undefined) return { venue: name };
+  return oneVenueName(normalizeName(name), normalizeName(venue)) ? { venue } : { venue, room: name };
+}
+
 /** Words that name a room or a kind of place, not any one venue. */
 const GENERIC_VENUE_WORDS = new Set(
   "main grand great upper lower east west north south central auditorium auditoriums hall halls gallery galleries pavilion lobby stage theater theatre ballroom studio room atrium courtyard lawn garden gardens plaza patio rooftop terrace chapel annex library branch park center centre amphitheater amphitheatre arena online virtual".split(" "),

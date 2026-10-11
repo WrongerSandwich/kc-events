@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { ELSEWHERE_IN_THE_METRO, parseConfig, type RunConfig } from "../../../src/config.ts";
 import { DATASET_SCHEMA_VERSION, parseDataset, type Event } from "../../../src/dataset.ts";
-import { aliasedVenue, genericVenueName, normalizeName } from "../../../src/identity.ts";
+import { genericVenueName, venueAndRoom } from "../../../src/identity.ts";
 import { regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
 import { isValidDate } from "../lib/dates";
@@ -42,27 +42,24 @@ function href(url: string, e: Event): string {
   return url;
 }
 
-/**
- * The venue an event is shown at: the one venueAliases files the page's name under, else the page's name; and the
- * page's name as the room when it was neither the venue's name nor a form of it ("Helzberg Hall", not "Kauffman Center").
- */
-export function displayVenue(name: string, config: RunConfig): { venue: string; room?: string } {
-  const venue = aliasedVenue(name, config.venueAliases);
-  if (venue === undefined) return { venue: name };
-  const [page, display] = [normalizeName(name), normalizeName(venue)];
-  const formOfVenue = ` ${page} `.includes(` ${display} `) || ` ${display} `.includes(` ${page} `);
-  return formOfVenue ? { venue } : { venue, room: name };
-}
+/** A house number, then a street-type word: a heuristic for a warning, which a "1600 Genessee" slips past. */
+const STREET_ADDRESS = /^\d+\s+(?:\S+\s+)*?(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|ct|court|ln|lane|pkwy|parkway|pl|place|ter|terrace|hwy|highway|cir|circle|way|trail)\b/i;
 
 /** A published venue that names no one place: generic words only ("Galleries") or a street address. */
 function vagueVenue(venue: string): boolean {
   return genericVenueName(venue) || STREET_ADDRESS.test(venue);
 }
-const STREET_ADDRESS = /^\d+\s+(?:\S+\s+)*?(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|ct|court|ln|lane|pkwy|parkway|pl|place|ter|terrace|hwy|highway|cir|circle|way|trail)\b/i;
+
+/** "A (2), B (1)": each value with how many times it occurs, in first-seen order. */
+function tally(values: string[]): string {
+  const counts = new Map<string, number>();
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
+  return [...counts].map(([v, c]) => `${v} (${c})`).join(", ");
+}
 
 /** The non-null assertions on venue and lastVerified hold because the job schema's refine (src/dataset.ts) requires both on every active event. */
 export function project(e: Event, config: RunConfig): PublishedEvent {
-  const { venue, room } = displayVenue(e.venue!, config);
+  const { venue, room } = venueAndRoom(e.venue!, config.venueAliases);
   const out: PublishedEvent = {
     id: e.id,
     title: e.title,
@@ -112,16 +109,12 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
 
   const unlisted = events.filter((e) => e.region === ELSEWHERE_IN_THE_METRO && e.neighborhood !== ELSEWHERE_IN_THE_METRO);
   if (unlisted.length > 0) {
-    const counts = new Map<string, number>();
-    for (const e of unlisted) counts.set(e.neighborhood, (counts.get(e.neighborhood) ?? 0) + 1);
-    console.warn(`site: ${unlisted.length} published events were mapped to the catch-all because no region lists their neighborhood: ${[...counts].map(([n, c]) => `${n} (${c})`).join(", ")}`);
+    console.warn(`site: ${unlisted.length} published events were mapped to the catch-all because no region lists their neighborhood: ${tally(unlisted.map((e) => e.neighborhood))}`);
   }
 
   const vague = events.filter((e) => vagueVenue(e.venue));
   if (vague.length > 0) {
-    const counts = new Map<string, number>();
-    for (const e of vague) counts.set(e.venue, (counts.get(e.venue) ?? 0) + 1);
-    console.warn(`site: ${vague.length} published events name a room or a street address for their venue; add it to venueAliases in research.config.yaml if it is inside a known venue: ${[...counts].map(([v, c]) => `${v} (${c})`).join(", ")}`);
+    console.warn(`site: ${vague.length} published events name a room or a street address for their venue; add it to venueAliases in research.config.yaml if it is inside a known venue: ${tally(vague.map((e) => e.venue))}`);
   }
 
   return {
