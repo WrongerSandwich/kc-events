@@ -13,7 +13,7 @@
   import KindIcon from "./KindIcon.svelte";
   import UiIcon from "./UiIcon.svelte";
   import WeekStrip from "./WeekStrip.svelte";
-  import { clock, watchClock } from "./clock.svelte";
+  import { islandClock } from "./clock.svelte";
 
   const emptyLines = {
     "through-sunday": "Nothing picked between now and Sunday.",
@@ -21,6 +21,7 @@
     "further-out": "Nothing picked further out yet.",
   } as const;
   // The visitor's clock, shared with every island (clock.svelte.ts): the build's date and no clock as rendered.
+  const clock = islandClock();
   let now = $derived(clock.now);
   let today = $derived(clock.today);
   // The kind counts are links to the explorer as rendered (and without JavaScript); hydrated, they filter in place.
@@ -35,14 +36,10 @@
         target!.scrollIntoView();
       }
     };
-    const unwatch = watchClock();
     hydrated = true;
     window.addEventListener("hashchange", unfold);
     tick().then(unfold); // arriving with the hash: the fold exists once the visitor's clock has rendered
-    return () => {
-      unwatch();
-      window.removeEventListener("hashchange", unfold);
-    };
+    return () => window.removeEventListener("hashchange", unfold);
   });
   // A new day can take every pick of a section's chosen kind away. The filter goes with them, so it cannot come back on
   // unpressed when a later pick of that kind moves into the section.

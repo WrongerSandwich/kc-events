@@ -14,11 +14,12 @@
   import KindIcon from "./KindIcon.svelte";
   import ResultRow from "./ResultRow.svelte";
   import UiIcon from "./UiIcon.svelte";
-  import { clock, watchClock } from "./clock.svelte";
+  import { islandClock } from "./clock.svelte";
 
   const known = { kinds: meta.kinds, regions: meta.regions };
   // Server-rendered with the build's date and default filters; the visitor's take over on mount (the hydration rule),
   // and the date stays current through the shared clock (clock.svelte.ts).
+  const clock = islandClock();
   let today = $derived(clock.today);
   let filters = $state<Filters>(DEFAULT_FILTERS);
   let saved = $state<ReadonlySet<string>>(new Set());
@@ -35,7 +36,6 @@
   let results: HTMLElement;
 
   onMount(() => {
-    const unwatch = watchClock();
     filters = parseQuery(new URLSearchParams(location.search), known);
     // The explorer has every event, so it brings each save's last day up to this build's (a migrated save has none).
     saves().refresh(new Map(events.map((e) => [e.id, lastDay(e)])));
@@ -43,7 +43,7 @@
     mounted = true;
     // The explore page hides a filtered link's explorer until its own slice is on screen; show it once this render lands.
     void tick().then(() => { delete document.documentElement.dataset.slice; });
-    return () => { unwatch(); unsubscribe(); };
+    return unsubscribe;
   });
 
   async function change(next: Filters) {

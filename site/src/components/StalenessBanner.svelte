@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import { meta } from "../generated/meta";
   import { addDays, formatShort, localDate } from "../lib/dates";
   import { siteConfig } from "../site.config";
-  import { clock, watchClock } from "./clock.svelte";
+  import { islandClock } from "./clock.svelte";
 
   // `wide` matches the banner to the header and page below it (the explorer is wide; everything else is the measure).
   let { wide = false }: { wide?: boolean } = $props();
@@ -11,7 +10,7 @@
   const runDay = localDate(meta.lastSuccessfulRun);
   const staleFrom = addDays(runDay, siteConfig.staleAfterDays + 1);
   // The build's date as rendered; the visitor's, kept current, once mounted.
-  onMount(watchClock);
+  const clock = islandClock();
   let stale = $derived(clock.today >= staleFrom);
 </script>
 

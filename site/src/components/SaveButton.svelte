@@ -11,6 +11,8 @@
   let saved = $state(false);
   onMount(() => {
     mounted = true;
+    // A save made before last days were stored (v1), or one whose date has moved, takes this page's last day.
+    saves().refresh(new Map([[id, last]]));
     return saves().subscribe((ids) => { saved = ids.has(id); });
   });
 </script>

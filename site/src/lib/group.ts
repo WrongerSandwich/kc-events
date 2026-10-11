@@ -100,7 +100,7 @@ export function groupResults(events: PublishedEvent[], f: Filters, today: string
   }
   const always = hits.filter((e) => !isDated(e)).sort((a, b) => a.kind.localeCompare(b.kind) || a.title.localeCompare(b.title));
   // Only the saved view lets a passed event through (matches); the latest to have passed first.
-  const passed = hits.filter((e) => isPast(e, today)).sort((a, b) => sortStart(b).localeCompare(sortStart(a)) || a.title.localeCompare(b.title));
+  const passed = hits.filter((e) => isPast(e, today)).sort((a, b) => lastDay(b)!.localeCompare(lastDay(a)!) || sortStart(b).localeCompare(sortStart(a)) || a.title.localeCompare(b.title));
 
   const groups: ResultGroup[] = [];
   const noWhenFilter = "preset" in f.when && f.when.preset === "all";

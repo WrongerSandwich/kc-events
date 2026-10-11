@@ -1,15 +1,12 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { saves, upcomingCount, type SavedMap } from "../lib/saves";
-  import { clock, watchClock } from "./clock.svelte";
+  import { islandClock } from "./clock.svelte";
 
   // The count appears once mounted; the server renders the plain link. Saves that have passed are not counted.
   let saved = $state<SavedMap | undefined>(undefined);
-  onMount(() => {
-    const unwatch = watchClock();
-    const unsubscribe = saves().subscribe((s) => { saved = s; });
-    return () => { unwatch(); unsubscribe(); };
-  });
+  const clock = islandClock();
+  onMount(() => saves().subscribe((s) => { saved = s; }));
   let count = $derived(saved === undefined ? undefined : upcomingCount(saved, clock.today));
 </script>
 

@@ -1,23 +1,12 @@
+import { onMount } from "svelte";
 import { meta } from "../generated/meta";
 import { localDate, nowIn } from "../lib/dates";
 
 /**
- * The visitor's clock, one for every island on the page. Server-rendered with the build's date and no clock; it is read
- * when the first island mounts (the hydration rule) and again whenever the tab comes back into view, so a page left
- * open overnight catches up. No timer.
+ * The visitor's clock, one for every island on the page: read when the first island mounts and again whenever the tab
+ * comes back into view, so a page left open overnight catches up. No timer.
  */
 let now = $state<string | undefined>(undefined);
-
-export const clock = {
-  /** The wall clock in the site's zone, "2026-10-09T19:30"; undefined until an island has mounted. */
-  get now(): string | undefined {
-    return now;
-  },
-  /** The visitor's date once mounted, the build's before. */
-  get today(): string {
-    return now === undefined ? meta.buildToday : localDate(now);
-  },
-};
 
 function read(): void {
   now = nowIn(meta.timeZone, new Date());
@@ -25,16 +14,31 @@ function read(): void {
 
 let watchers = 0;
 
-/**
- * For an island's onMount: reads the clock and keeps it current until the returned function is called. The last
- * island to let go puts the build's date back (islands never unmount on a real page; a test mounts one after another).
- */
-export function watchClock(): () => void {
+function watch(): () => void {
   read();
   if (watchers++ === 0) document.addEventListener("visibilitychange", read);
   return () => {
-    if (--watchers > 0) return;
-    document.removeEventListener("visibilitychange", read);
-    now = undefined;
+    if (--watchers === 0) document.removeEventListener("visibilitychange", read);
+  };
+}
+
+/**
+ * The clock as one island sees it; call during the island's setup. Until that island has mounted it is the build's
+ * date and no clock, whatever an island hydrated earlier has read: its first render must equal the server's (the
+ * hydration rule), and a `client:idle` island hydrates after the `client:load` ones have read the clock.
+ */
+export function islandClock(): { readonly now: string | undefined; readonly today: string } {
+  let mounted = $state(false);
+  onMount(() => {
+    mounted = true;
+    return watch();
+  });
+  return {
+    get now() {
+      return mounted ? now : undefined;
+    },
+    get today() {
+      return mounted && now !== undefined ? localDate(now) : meta.buildToday;
+    },
   };
 }

@@ -125,7 +125,7 @@ describe("passed saves (#93)", () => {
     const groups = groupResults([fri7, tue, festNow, onNow, fri5], f({ saved: true }), later, saved);
     expect(groups.map((g) => [g.heading, g.events.map((e) => e.id)])).toEqual([
       ["On now", ["onNow"]],
-      ["Already happened", ["fri7", "tue", "festNow"]],
+      ["Already happened", ["fri7", "festNow", "tue"]], // by last day: the fair closed Wednesday, after the talk
     ]);
   });
 

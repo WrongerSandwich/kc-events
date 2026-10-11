@@ -128,6 +128,7 @@ export function createSaves(storage: StorageLike | undefined): Saves {
       write();
     },
     refresh(lastDays) {
+      reload(); // from what storage holds now, so a write here cannot undo another tab's
       const next = new Map(saved);
       for (const id of next.keys()) if (lastDays.has(id)) next.set(id, lastDays.get(id));
       if (same(next, saved)) return;

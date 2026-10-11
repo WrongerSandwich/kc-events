@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import SaveButton from "./SaveButton.svelte";
-  import { clock, watchClock } from "./clock.svelte";
+  import { islandClock } from "./clock.svelte";
 
   let { id, title, lastDay }: { id: string; title: string; lastDay?: string } = $props();
   // The build's date as rendered; the visitor's, kept current, once mounted.
-  onMount(watchClock);
+  const clock = islandClock();
   let passed = $derived(lastDay !== undefined && lastDay < clock.today);
 </script>
 
