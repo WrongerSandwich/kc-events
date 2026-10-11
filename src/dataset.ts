@@ -53,7 +53,7 @@ const eventFields = z.strictObject({
   whyLine: z.string().min(1).optional(),
   firstSeen: isoDateTime,
   lastVerified: isoDateTime.optional(),
-  /** The run that first saw the event or last changed its date, venue, or status; curation re-judges on it. */
+  /** The run that first saw the event or last changed its title, date, venue, or status (markChanged in curation); curation re-judges on it. */
   lastChanged: isoDateTime.optional(),
   /** The run that last judged the event for don't-miss; absent until curation has seen it. */
   lastJudged: isoDateTime.optional(),

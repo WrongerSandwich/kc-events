@@ -18,6 +18,7 @@ import {
   buildCurationRequest,
   cleanStoredWhyLine,
   cleanWhyLine,
+  markChanged,
   unflagged,
   CURATION_BATCH_SIZE,
   curationReplySchema,
@@ -747,8 +748,8 @@ function applySighting(
  * first; the other expires as duplicate, naming the kept record (duplicateOf), so a later sighting
  * of it goes to the kept record (#77). One fold sets the first-seen rule aside: a dated record
  * that is one month of a recurring event folds into it (firstMonthPair). A kept record that is
- * not active takes an active duplicate's reading under its own id, first-seen, and curation. Folding
- * repeats until nothing matches, since a fold can leave a venue-less record with one candidate where
+ * not active takes an active duplicate's reading under its own id and first-seen. Either way the kept
+ * record ends with the judgment of the pair's later-judged record (laterJudgment). Folding repeats until nothing matches, since a fold can leave a venue-less record with one candidate where
  * it had two. The result depends only on the dataset. Returns which record each duplicate was folded into.
  */
 function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event[]; foldedInto: Map<string, string> } {
@@ -763,11 +764,23 @@ function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event
     // A recurring record keeps its own reading, even when hidden: a month's dates would make it dated.
     // Re-verification checks a hidden one against its page this run.
     const takesReading = kept.status !== "active" && duplicate.status === "active" && kept.recurrence !== "recurring";
-    byId.set(kept.id, takesReading ? refresh(kept, duplicate) : kept);
+    byId.set(kept.id, laterJudgment(takesReading ? refresh(kept, duplicate) : kept, duplicate));
     byId.set(duplicate.id, { ...expire(duplicate, "duplicate"), duplicateOf: kept.id });
     foldedInto.set(duplicate.id, kept.id);
   }
   return { events: [...byId.values()], foldedInto };
+}
+
+/**
+ * The kept record with the judgment of whichever record of a folded pair was judged later (#79): the
+ * pair is one event, and its latest verdict is the one to show. A recurring record takes no judgment,
+ * since recurring events are never flagged.
+ */
+function laterJudgment(kept: Event, duplicate: Event): Event {
+  if (kept.recurrence === "recurring" || duplicate.lastJudged === undefined) return kept;
+  if (kept.lastJudged !== undefined && Date.parse(kept.lastJudged) >= Date.parse(duplicate.lastJudged)) return kept;
+  const { whyLine: _, ...rest } = kept;
+  return { ...rest, dontMiss: duplicate.dontMiss, ...(duplicate.whyLine !== undefined ? { whyLine: duplicate.whyLine } : {}), lastJudged: duplicate.lastJudged };
 }
 
 /** The first two records, in order seen (ties in dataset order), that are the same event: the one to keep, then its duplicate. */
@@ -1288,26 +1301,6 @@ function placeOffList(events: Event[], list: string[], config: RunConfig, regist
     return { ...event, neighborhood };
   });
   return { events: placed, report };
-}
-
-/**
- * Stamps last-changed on every event that is new this run or whose date (a recurring event's
- * schedule), venue, or status differs from the dataset it started from, so curation knows what
- * to re-judge. A venue spelled with different case or punctuation is the same venue.
- */
-function markChanged(previous: Event[], events: Event[], nowIso: string): Event[] {
-  const before = new Map(previous.map((e) => [e.id, e]));
-  return events.map((event) => {
-    const was = before.get(event.id);
-    const changed =
-      !was ||
-      was.start !== event.start ||
-      was.end !== event.end ||
-      was.schedule !== event.schedule ||
-      !sameName(was.venue, event.venue) ||
-      was.status !== event.status;
-    return changed ? { ...event, lastChanged: nowIso } : event;
-  });
 }
 
 /**

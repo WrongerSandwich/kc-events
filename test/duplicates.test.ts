@@ -153,6 +153,23 @@ describe("folding duplicates", () => {
     expect(byId(dataset).get(verified.id)).toMatchObject({ status: "expired", expiryReason: "duplicate" });
   });
 
+  it("keeps the judgment of whichever record of the pair was judged later (#79)", async () => {
+    const flag = { dontMiss: true, whyLine: "The festival's only Kansas City stop this year." };
+    const [keptOld, flaggedLater] = hand().college;
+    const [keptLater, flaggedOld] = hand().college;
+    const [neverJudged] = hand().room;
+
+    const takes = await quietRun(withEvents([keptOld, { ...flaggedLater, ...flag, lastJudged: RUN_TWO }]));
+    const keeps = await quietRun(withEvents([{ ...keptLater, lastJudged: RUN_TWO }, { ...flaggedOld, ...flag }]));
+    const unjudged = (({ lastJudged: _, ...e }) => e)(neverJudged);
+    const fromUnjudged = await quietRun(withEvents([unjudged, { ...hand().room[1], ...flag }]));
+
+    expect(byId(takes.dataset).get(keptOld.id)).toMatchObject({ status: "active", ...flag, lastJudged: RUN_TWO });
+    expect(byId(keeps.dataset).get(keptLater.id)).toMatchObject({ status: "active", dontMiss: false, lastJudged: RUN_TWO });
+    expect(byId(keeps.dataset).get(keptLater.id)).not.toHaveProperty("whyLine");
+    expect(byId(fromUnjudged.dataset).get(neverJudged.id)).toMatchObject({ status: "active", ...flag, lastJudged: RUN_ONE });
+  });
+
   it("folds nothing that does not match: two venues, a venue-less record with two candidates on other hosts, or two events in one series", async () => {
     const separate = [
       event("Open Mic", "Bar A", "https://bara.test/", "2026-10-14"),
@@ -274,6 +291,16 @@ describe("folding a month-titled dated event into its recurring event (#63)", ()
     expect(byId(dataset).get(dated.id)).toMatchObject({ status: "expired", expiryReason: "duplicate" });
     expect(dataset.events).toHaveLength(2);
     expect(report.counts.expired.duplicate).toBe(1);
+  });
+
+  it("never gives the recurring record a dated month's flag, however recently it was judged (#79)", async () => {
+    const dated = monthly("Hands-on History (Oct. 2026)", WWI, { dontMiss: true, whyLine: "Why.", lastJudged: RUN_TWO });
+    const standing = recurring("Hands-on History");
+
+    const { dataset } = await quietRun(withEvents([dated, standing]));
+
+    expect(byId(dataset).get(standing.id)).toMatchObject({ status: "active", dontMiss: false });
+    expect(byId(dataset).get(standing.id)).not.toHaveProperty("whyLine");
   });
 
   it("folds a month tag of any spelling the tag allows: abbreviated or full, with or without a period or a year", async () => {

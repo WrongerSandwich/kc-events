@@ -68,7 +68,7 @@ Whether an event is publishable: `active` (verified and current), `unverified` (
 The date of the most recent run that read the event's date and venue from its primary page. Shown on every published event.
 
 **Last-changed**:
-The run that first saw an event or last changed its date, venue, or status. Curation re-judges an event only when it has changed since it was last judged.
+The run that first saw an event or last changed its title, date, venue, or status. A name that changes only in case or punctuation, or a date read with a time where it had none (or none where it had one), is no change. Curation re-judges an event only when it has changed since it was last judged.
 
 **Last-judged**:
 The run that last judged an event for the don't-miss flag. Absent until curation has seen the event; a run the spend cap cuts short leaves it absent, so the event comes up again.

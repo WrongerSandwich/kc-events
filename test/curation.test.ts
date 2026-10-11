@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { run } from "../src/run.js";
-import { cleanWhyLine } from "../src/curation.js";
+import { cleanWhyLine, EVENTS_TO_JUDGE, markChanged } from "../src/curation.js";
 import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
 import type { CompletionResult } from "../src/ports.js";
 import { newEventId } from "../src/extraction.js";
@@ -224,5 +224,47 @@ describe("a judgment's why-line", () => {
     expect(second.curationCalls).toHaveLength(1);
     expect(second.dataset.events[0]).toMatchObject({ dontMiss: false, lastChanged: WEEK_2_ISO, lastJudged: WEEK_1_ISO });
     expect(second.dataset.events[0]).not.toHaveProperty("whyLine");
+  });
+});
+
+describe("what counts as a change for curation (#79)", () => {
+  it("a start read with a time where it had none, or without one where it had one, is the same date: no re-judge", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate({ startTime: null })), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+    expect(first.dataset.events[0]!.start).toBe("2026-10-31");
+
+    const timed = await runAt(WEEK_2, first.dataset, [extracted(candidate())]);
+    expect(timed.dataset.events[0]!.start).toMatch(/^2026-10-31T20:00/);
+    const untimed = await runAt(WEEK_2, timed.dataset, [extracted(candidate({ startTime: null }))]);
+
+    expect([timed.curationCalls, untimed.curationCalls]).toEqual([[], []]);
+    expect(untimed.dataset.events[0]).toMatchObject({ dontMiss: true, whyLine: "Why.", lastChanged: WEEK_1_ISO, lastJudged: WEEK_1_ISO });
+  });
+
+  it("a start whose time moves, both readings carrying one, is a change and is re-judged", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+
+    const second = await runAt(WEEK_2, first.dataset, [extracted(candidate({ startTime: "19:00" })), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+
+    expect(second.curationCalls).toHaveLength(1);
+    expect(second.dataset.events[0]).toMatchObject({ lastChanged: WEEK_2_ISO, lastJudged: WEEK_2_ISO });
+  });
+
+  // No reading changes a known event's title past case and punctuation today (identity keeps the stored
+  // form of a variant title), so this is held at markChanged itself; #66 would make a retitle reachable.
+  it("marks a retitled event changed, and not one whose title only changed case or punctuation", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+    const event = first.dataset.events[0]!;
+    const marked = (title: string) => markChanged([event], [{ ...event, title }], WEEK_2_ISO)[0]!.lastChanged;
+
+    expect(marked("Legacy Tour 2026")).toBe(WEEK_2_ISO);
+    expect(marked("BIG SHOW!")).toBe(WEEK_1_ISO);
+  });
+
+  it("sends the event's description, so the model knows what an unfamiliar title is", async () => {
+    const description = "The trio's only Midwest date, playing the 1972 album in full.";
+    const { curationRequests } = await runAt(WEEK_1, emptyDataset(), [extracted(candidate({ description })), judging(0.02, { id: SHOW_ID, dontMiss: false, why: "" })]);
+
+    const sent = JSON.parse(curationRequests[0]!.messages[1]!.content.slice(EVENTS_TO_JUDGE.length));
+    expect(sent).toEqual([expect.objectContaining({ id: SHOW_ID, description })]);
   });
 });

@@ -6,6 +6,7 @@
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import type { Event } from "./dataset.js";
+import { calendarDate, sameName } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest } from "./ports.js";
 
@@ -59,6 +60,39 @@ export function needsCuration(event: Event): boolean {
   return event.lastJudged === undefined || Date.parse(event.lastChanged) > Date.parse(event.lastJudged);
 }
 
+/**
+ * Stamps last-changed on every event that is new this run or whose title, date (a recurring event's
+ * schedule), venue, or status differs from the dataset it started from, so curation knows what to
+ * re-judge. A title or venue spelled with different case or punctuation is the same name. A date is
+ * compared as a calendar date, and by its time of day only when both readings carry one: one page
+ * giving a time and another none, or a reading that drops it, is no change (#79).
+ */
+export function markChanged(previous: Event[], events: Event[], nowIso: string): Event[] {
+  const before = new Map(previous.map((e) => [e.id, e]));
+  return events.map((event) => {
+    const was = before.get(event.id);
+    const changed =
+      !was ||
+      !sameName(was.title, event.title) ||
+      !sameMoment(was.start, event.start) ||
+      !sameMoment(was.end, event.end) ||
+      was.schedule !== event.schedule ||
+      !sameName(was.venue, event.venue) ||
+      was.status !== event.status;
+    return changed ? { ...event, lastChanged: nowIso } : event;
+  });
+}
+
+/** Two stored dates on the same calendar date, and at the same HH:MM when both carry a time; two absent dates are the same too. */
+function sameMoment(a: string | undefined, b: string | undefined): boolean {
+  if (calendarDate(a) !== calendarDate(b)) return false;
+  const [x, y] = [timeOfDay(a), timeOfDay(b)];
+  return x === undefined || y === undefined || x === y;
+}
+
+/** The HH:MM of a date-time as written (local, with its offset); none for a bare date. */
+const timeOfDay = (iso: string | undefined) => (iso !== undefined && iso.length > 10 ? iso.slice(11, 16) : undefined);
+
 /** The line that opens the user message of a curation request; the events follow as a JSON array. */
 export const EVENTS_TO_JUDGE = "Events to judge:";
 
@@ -78,6 +112,7 @@ export function buildCurationRequest(events: Event[], context: CurationContext):
     ...(e.end !== undefined ? { end: e.end } : {}),
     venue: e.venue,
     neighborhood: e.neighborhood,
+    ...(e.description !== undefined ? { description: e.description } : {}),
     primaryUrl: e.primaryUrl,
   }));
   return {
