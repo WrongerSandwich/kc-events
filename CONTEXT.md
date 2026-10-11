@@ -39,7 +39,13 @@ An event that happens over a bounded span with a known end date, such as an exhi
 An event that repeats indefinitely on a schedule, such as a monthly market, First Fridays, or a museum's weekly tour.
 
 **Promotion**:
-A business's own standing night, or a bar's watch party, listed as if it were an event: a happy hour, a food or drink special, a themed or DJ night, trivia, karaoke, a game-day party. Never an event, whatever it offers; extraction skips it. A recurring event is bigger than one business's night. A DJ date with a named headliner, ticketed on its own, is a show, not the venue's standing night. A class or workshop is never a promotion, wherever it is held. The extraction rules tell the model to skip promotions and what the public cannot simply attend (a graduation, a gala, a board meeting, anything online only); a list of title patterns in code (`src/skip.ts`, #81) is the backstop after extraction, counted in the run report as skipped as promotion or as not public, and it expires a stored event it matches as `promotion` or `not-public`. The patterns are narrow so that a ticketed show with a named act never matches.
+A business's own standing night, or a bar's watch party, listed as if it were an event: a happy hour, a food or drink special, a themed or DJ night, trivia, karaoke, a game-day party. Never an event, whatever it offers; extraction skips it. A recurring event is bigger than one business's night. A DJ date with a named headliner, ticketed on its own, is a show, not the venue's standing night. A class or workshop is never a promotion, wherever it is held. Extraction skips it, and the job skips by title what extraction lets through (#81).
+
+**Not public**:
+What the public cannot simply attend, though a calendar lists it: a graduation, a benefit gala, an annual meeting or dinner, a class reunion, a memorial, a board meeting, professional development, anything held only online. Never an event; extraction skips it, and the job skips by title or venue what extraction lets through (#81). A record stored before that is expired `not-public`, as a stored promotion is expired `promotion`.
+
+**Away game**:
+A team's game in another city, which its own schedule lists as "<Team> at <place>", often with no venue. Outside the geography, so dropped and counted, never held unverified (#81).
 _Avoid_: special, deal
 
 **Schedule phrase**:

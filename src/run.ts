@@ -35,7 +35,7 @@ import type { ExcludedSource, Registry, Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
 import type { CandidateTally, EventRef, RunReport, SourceReport } from "./report.js";
-import { awayGame, skipReason } from "./skip.js";
+import { awayGame, skipReason, type SkipReason } from "./skip.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList, placeStored } from "./taxonomy.js";
 import { horizonEnd, toLocalDate, toLocalIso } from "./time.js";
@@ -439,7 +439,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     addTally(tally, read.tally);
     if (read.sightings) {
       sightings.push(...read.sightings);
-      for (const url of [page.url, page.finalUrl]) attempts.yields.set(pageKey(url), yieldOf({ sightings: read.sightings, tally: read.tally }));
+      for (const url of [page.url, page.finalUrl]) attempts.yields.set(pageKey(url), yieldOf(read.sightings, read.tally));
     }
     if (!readInFull(read)) markUnread(page);
     outcome.extracted += read.extracted;
@@ -450,6 +450,9 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
 }
 
 const noTally = (): CandidateTally => ({ outsideGeography: 0, skippedPromotion: 0, skippedNotPublic: 0, overCap: 0, unusableDates: 0, quoteNotOnPage: 0 });
+
+/** The tally each reason to skip a candidate counts under (#81). */
+const SKIPPED_AS: Record<SkipReason, keyof CandidateTally> = { promotion: "skippedPromotion", "not-public": "skippedNotPublic" };
 
 function addTally(into: CandidateTally, from: CandidateTally): void {
   for (const cause of Object.keys(into) as (keyof CandidateTally)[]) into[cause] += from[cause];
@@ -476,10 +479,10 @@ interface PageYield {
   latestStart?: string;
 }
 
-function yieldOf(read: { sightings: Sighting[]; tally: CandidateTally }): PageYield {
-  const starts = read.sightings.flatMap((s) => (s.event.recurrence === "recurring" ? [] : [calendarDate(s.event.start)])).filter((d): d is string => d !== undefined);
+function yieldOf(sightings: Sighting[], tally: CandidateTally): PageYield {
+  const starts = sightings.flatMap((s) => (s.event.recurrence === "recurring" ? [] : [calendarDate(s.event.start)])).filter((d): d is string => d !== undefined);
   const latestStart = starts.sort().at(-1);
-  const listed = read.sightings.length + read.tally.skippedPromotion + read.tally.skippedNotPublic;
+  const listed = Object.values(SKIPPED_AS).reduce((n, cause) => n + tally[cause], sightings.length);
   return { listed, ...(latestStart !== undefined ? { latestStart } : {}) };
 }
 
@@ -522,8 +525,7 @@ async function extractPage(
     }
     const skipped = skipReason(candidate);
     if (skipped !== undefined) {
-      if (skipped === "promotion") tally.skippedPromotion++;
-      else tally.skippedNotPublic++;
+      tally[SKIPPED_AS[skipped]]++;
       continue;
     }
     if (candidate.outsideGeography || awayGame(candidate)) {
@@ -938,7 +940,7 @@ async function reverify(
     problems.push(...read.problems);
     if (read.sightings) {
       sightingsAt.set(url, read.sightings);
-      yieldAt.set(url, yieldOf({ sightings: read.sightings, tally: read.tally }));
+      yieldAt.set(url, yieldOf(read.sightings, read.tally));
       if (!readInFull(read)) partlyReadAt.add(url);
     }
   }
@@ -1225,7 +1227,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     report.problems.push(...read.problems);
     if (!readInFull(read)) for (const u of pageUrls) attempts.unread.add(u);
     if (!read.sightings) return;
-    for (const u of pageUrls) attempts.yields.set(u, yieldOf({ sightings: read.sightings, tally: read.tally }));
+    for (const u of pageUrls) attempts.yields.set(u, yieldOf(read.sightings, read.tally));
     outcome.sightings.push(...read.sightings);
     const host = hostOf(page.finalUrl);
     if (host && !outcome.hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) outcome.hosts.set(host, normalizeUrl(page.finalUrl, url));

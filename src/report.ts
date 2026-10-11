@@ -15,7 +15,7 @@ export interface SourceReport {
 
 /** Candidates the run's page readings dropped or could not cite, by cause. */
 export interface CandidateTally {
-  /** Dropped because their page placed them outside the geography. */
+  /** Dropped because their page placed them outside the geography, or as an away game a team's schedule names no venue for (#81). */
   outsideGeography: number;
   /** Skipped because their title is a promotion's: a business's standing night, a watch party (#81). */
   skippedPromotion: number;

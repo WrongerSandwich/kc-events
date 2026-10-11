@@ -11,7 +11,7 @@ const runAt = (...candidates: unknown[]) =>
 
 /** Promotions and non-public events are skipped in code after extraction, before storage (#81). */
 describe("skipped candidates", () => {
-  it.each(["Trivia Night: Tolkien Edition", "Country Music Bingo (Free to Play)", "Speed dating {30-45}", "Ghouls Pop-Up Bar", "Cafecítón: A Latin Brunch Club"])(
+  it.each(["Happy Hour at Pizza Bar", "Happy Hour Specials", "Trivia Night: Tolkien Edition", "Country Music Bingo (Free to Play)", "Speed dating {30-45}", "Ghouls Pop-Up Bar", "Cafecítón: A Latin Brunch Club"])(
     "%s is skipped as a promotion, counted and reported",
     async (title) => {
       const { dataset, report } = await runAt(candidate({ title }), candidate());
@@ -33,6 +33,8 @@ describe("skipped candidates", () => {
     ["Educator Professional Development: Equality and WWI", "National WWI Museum and Memorial"],
     ["Add More Arts to Your Classroom", "Online"],
     ["Author Talk", "Virtual"],
+    ["Book Club", "Online via Zoom"],
+    ["Panel Discussion", "Livestream"],
   ])("%s at %s is skipped as not public, counted and reported", async (title, venue) => {
     const { dataset, report } = await runAt(candidate({ title, venue }), candidate());
 
@@ -46,6 +48,9 @@ describe("skipped candidates", () => {
     "DAMP - One Night Reunion",
     "Boyz II Men: The Reunion Tour",
     "Trivium",
+    "Opening Night Gala with Joshua Bell",
+    "Board Game Day",
+    "Drag Bingo with Bianca Del Rio",
     "Galactic",
     "Memorial Day Parade",
     "Lecture at the National WWI Museum and Memorial",
@@ -61,9 +66,10 @@ describe("skipped candidates", () => {
       candidate({ title: "Volleyball at South Dakota", kind: "sports", venue: null, venueEvidence: null }),
       candidate({ title: "Men's Soccer vs Tulsa", kind: "sports" }),
       candidate({ title: "Comedy at the Ship", kind: "comedy" }),
+      candidate({ title: "Monster Jam at T-Mobile Center", kind: "sports", venue: "T-Mobile Center" }),
     );
 
-    expect(dataset.events.map((e) => e.title)).toEqual(["Men's Soccer vs Tulsa", "Comedy at the Ship"]);
+    expect(dataset.events.map((e) => e.title)).toEqual(["Men's Soccer vs Tulsa", "Comedy at the Ship", "Monster Jam at T-Mobile Center"]);
     expect(report.counts.outsideGeography).toBe(1);
   });
 });
