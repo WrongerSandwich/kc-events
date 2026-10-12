@@ -34,6 +34,7 @@ cd "$ROOT"
 HEALTH_LABEL=weekly-run-health
 # The fine-grained token the push uses too (through scripts/git-credential-env.sh), read once here.
 GH_TOKEN_FROM_ENV=$(sed -n 's/^GH_TOKEN=//p' .env 2>/dev/null | tail -n1 | tr -d '\r' || true)
+if [[ "$GH_TOKEN_FROM_ENV" =~ ^\"(.*)\"$ || "$GH_TOKEN_FROM_ENV" =~ ^\'(.*)\'$ ]]; then GH_TOKEN_FROM_ENV="${BASH_REMATCH[1]}"; fi
 # The CLI dates a run in the config's timezone; the check for an earlier run today uses the same day.
 TODAY=$(TZ=America/Chicago date +%F)
 
@@ -43,7 +44,12 @@ report() {
   command -v gh >/dev/null 2>&1 || { echo "gh is not installed; not reporting"; return 0; }
   # gh gets the clone's token for this repository alone (#105), not the user's own sign-in; it is
   # exported for this function's gh calls only.
-  if [[ -n "$GH_TOKEN_FROM_ENV" ]]; then local -x GH_TOKEN="$GH_TOKEN_FROM_ENV"; fi
+  # Without one, the report still goes out on the user's sign-in, so a run that cannot push is heard.
+  if [[ -n "$GH_TOKEN_FROM_ENV" ]]; then
+    local -x GH_TOKEN="$GH_TOKEN_FROM_ENV"
+  else
+    echo "WARNING: no GH_TOKEN in .env; reporting with gh's own sign-in (re-run scripts/home-run-setup.sh)"
+  fi
   local issue
   issue=$(gh issue list --label "$HEALTH_LABEL" --state open --limit 1 --json number --jq '.[0].number // empty') || {
     echo "could not reach GitHub to report; see the log"

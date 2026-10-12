@@ -14,5 +14,7 @@ request=$(cat)
 grep -qx 'host=github.com' <<<"$request" || exit 0
 env_file="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/.env"
 token=$(sed -n 's/^GH_TOKEN=//p' "$env_file" 2>/dev/null | tail -n1 | tr -d '\r')
+# Node's .env loader, which the run uses, drops one pair of surrounding quotes; so does this.
+if [[ "$token" =~ ^\"(.*)\"$ || "$token" =~ ^\'(.*)\'$ ]]; then token="${BASH_REMATCH[1]}"; fi
 [[ -n "$token" ]] || exit 0
 printf 'username=x-access-token\npassword=%s\n' "$token"

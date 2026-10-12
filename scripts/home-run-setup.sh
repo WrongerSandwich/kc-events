@@ -313,8 +313,9 @@ else
   write_env GH_TOKEN "$GH_TOKEN"
 fi
 # An empty helper drops every helper configured before it (the user's gh, say), so git in the clone
-# asks this one alone.
-(cd "$RUN_DIR" && git config --local --replace-all credential.helper '' &&
+# asks this one alone. An ssh remote would skip helpers and push with the user's key: https it is.
+(cd "$RUN_DIR" && git remote set-url origin "https://github.com/$REPO.git" &&
+  git config --local --replace-all credential.helper '' &&
   git config --local --add credential.helper "!$(printf '%q' "$RUN_DIR/scripts/git-credential-env.sh")")
 say "The clone's git now asks only scripts/git-credential-env.sh for a credential."
 if (cd "$RUN_DIR" && GIT_TERMINAL_PROMPT=0 git push --quiet --dry-run origin main 2>/dev/null); then
@@ -322,6 +323,14 @@ if (cd "$RUN_DIR" && GIT_TERMINAL_PROMPT=0 git push --quiet --dry-run origin mai
 else
   warn "a dry-run push from the clone failed; the weekly run cannot commit until this works"
   SKIPPED+=("fix the push credential: cd $RUN_DIR && git push --dry-run origin main")
+fi
+# Reading the issues is the most a check can do without writing one; it catches a token made for
+# the wrong repository or without the Issues permission.
+if [[ -n "$GH_TOKEN" ]] && GH_TOKEN="$GH_TOKEN" gh issue list --repo "$REPO" --limit 1 >/dev/null 2>&1; then
+  say "The token can read $REPO's issues, where the run reports its health."
+elif [[ -n "$GH_TOKEN" ]]; then
+  warn "the token cannot read $REPO's issues; the run's health reports will fall back to gh's sign-in"
+  SKIPPED+=("give the token Issues: Read and write on $REPO, then re-run this wizard")
 fi
 
 # ── Stage 6: the cron line ─────────────────────────────────────────────────
