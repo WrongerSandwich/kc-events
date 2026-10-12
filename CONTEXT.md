@@ -147,7 +147,7 @@ One value an event carries, its date or its venue, together with the evidence sn
 _Avoid_: extraction, value
 
 **Evidence snippet**:
-The exact text, quoted verbatim from the primary page, that a date or venue was read from. Stored beside the value so it can be audited without re-fetching. The run checks that it is there: see cite-or-drop.
+The exact text, quoted verbatim from the primary page, that a date or venue was read from. The page is quoted as the job reads it: its visible text, then the schema.org event data in its code, one line per event with times in local time (#98). Stored beside the value so it can be audited without re-fetching. The run checks that it is there: see cite-or-drop.
 _Avoid_: citation, quote, proof
 
 **Discovery lane**:
