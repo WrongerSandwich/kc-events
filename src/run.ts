@@ -937,11 +937,13 @@ function refresh(known: Event, sighting: Event, rule?: MatchRule): Event {
  * gives is its opening or the day the page listed it, so a later reading does not replace an earlier
  * one, and the order pages are read in cannot flap it. The stored start stays with the page and
  * quotes that cite it, since the sighting's page need not carry them (ADR 0002). A stored run with
- * no start takes the sighting's. A date move goes through on the other rules, as on the record's
- * own page under its title.
+ * no start takes the sighting's. A date move goes through on the other rules, and from the record's
+ * own page under any title: that page is the one the start was read from. A fold passes no rule,
+ * so it takes a reading as before (ADR 0007: the fold keeps the record seen first).
  */
 function keepsStart(known: Event, sighting: Event, rule: MatchRule | undefined): boolean {
-  return rule === "same-end" && known.start !== undefined && calendarDate(sighting.start) !== calendarDate(known.start);
+  if (rule !== "same-end" || samePage(sighting.primaryUrl, known.primaryUrl)) return false;
+  return known.start !== undefined && calendarDate(sighting.start) !== calendarDate(known.start);
 }
 
 /** The new reading under the known event's identity and curation, by the field rules refresh gives. */

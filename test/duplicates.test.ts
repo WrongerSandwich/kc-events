@@ -682,15 +682,17 @@ describe("the same own page on one date (#66)", () => {
   });
 });
 
+const NERMAN = "Nerman Museum of Contemporary Art";
+/** A Nerman exhibition read from this page, a limited run closing 2026-12-06; one with no start quotes only its close. */
+const exhibition = (primaryUrl: string, start: string | undefined, overrides: Partial<Event> = {}): Event => {
+  const record = event("Sport and Spectator", NERMAN, primaryUrl, start ?? "", { recurrence: "limited-run", end: "2026-12-06", kind: "arts", ...overrides });
+  if (start !== undefined) return record;
+  const { start: _start, ...noStart } = record;
+  return { ...noStart, evidence: { date: "Through December 6", venue: NERMAN } };
+};
+
 describe("the same end date of a limited run (#68)", () => {
   // The 2026-10-12 dataset's "Sport and Spectator" cluster: evt_e135e4bd220b, evt_1fc163367760, evt_2695c2b8d33a.
-  const NERMAN = "Nerman Museum of Contemporary Art";
-  const exhibition = (primaryUrl: string, start: string | undefined, overrides: Partial<Event> = {}): Event => {
-    const record = event("Sport and Spectator", NERMAN, primaryUrl, start ?? "", { recurrence: "limited-run", end: "2026-12-06", kind: "arts", ...overrides });
-    if (start !== undefined) return record;
-    const { start: _start, ...noStart } = record;
-    return { ...noStart, evidence: { venue: NERMAN } };
-  };
 
   it("folds the three records of one exhibition, whatever their starts, into the one seen first", async () => {
     const opening = exhibition("https://www.nermanmuseum.org/exhibitions/", "2026-06-12");
@@ -745,18 +747,11 @@ describe("the same end date of a limited run (#68)", () => {
 });
 
 describe("a same-end sighting keeps the stored start (#120)", () => {
-  const NERMAN = "Nerman Museum of Contemporary Art";
   const MUSEUM = "https://www.nermanmuseum.org/exhibitions/";
   const ARTSJOCO = "https://artsjoco.org/acjc/calendar-of-events/";
   const museum = source("Nerman Museum", { urls: [MUSEUM], kind: "arts" });
   const artsjoco = source("Arts JoCo", { urls: [ARTSJOCO], kind: "arts" });
   const OPENING_QUOTE = "June 12 – December 6, 2026";
-  const exhibition = (primaryUrl: string, start: string | undefined, overrides: Partial<Event> = {}): Event => {
-    const record = event("Sport and Spectator", NERMAN, primaryUrl, start ?? "", { recurrence: "limited-run", end: "2026-12-06", kind: "arts", ...overrides });
-    if (start !== undefined) return record;
-    const { start: _start, ...noStart } = record;
-    return { ...noStart, evidence: { date: "Through December 6", venue: NERMAN } };
-  };
   const listing = (at: typeof museum, startDate: string, dateEvidence: string, overrides: Record<string, unknown> = {}) =>
     candidateAt(at, { title: "Sport and Spectator", startDate, startTime: null, endDate: "2026-12-06", venue: NERMAN, venueEvidence: NERMAN, dateEvidence, ...overrides });
   const opening = () => exhibition(MUSEUM, "2026-06-12", { evidence: { date: OPENING_QUOTE, venue: NERMAN } });
@@ -811,6 +806,32 @@ describe("a same-end sighting keeps the stored start (#120)", () => {
     });
 
     expect(byId(dataset).get(stored.id)).toMatchObject({ start: "2026-07-10", evidence: { date: "July 10 – December 6, 2026" } });
+  });
+
+  it("keeps the opening when a calendar lists the exhibition with no start", async () => {
+    const stored = opening();
+
+    const { dataset } = await runWith(WEEK_1, withEvents([stored]), {
+      sources: [artsjoco],
+      pages: { [ARTSJOCO]: PAGE },
+      completions: [reply(listing(artsjoco, "", "Through Dec 6", { startDate: null }))],
+      config,
+    });
+
+    expect(byId(dataset).get(stored.id)).toMatchObject({ start: "2026-06-12", primaryUrl: MUSEUM, evidence: { date: OPENING_QUOTE } });
+  });
+
+  it("still moves the start on a re-reading of the record's own page under a longer title", async () => {
+    const stored = opening();
+
+    const { dataset } = await runWith(WEEK_1, withEvents([stored]), {
+      sources: [museum],
+      pages: { [MUSEUM]: PAGE },
+      completions: [reply(listing(museum, "2026-08-14", "August 14 – December 6, 2026", { title: "Sport and Spectator: Art and the Athlete" }))],
+      config,
+    });
+
+    expect(byId(dataset).get(stored.id)).toMatchObject({ start: "2026-08-14", evidence: { date: "August 14 – December 6, 2026" } });
   });
 
   it("fills a stored run's missing start from a same-end sighting", async () => {
