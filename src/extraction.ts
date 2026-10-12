@@ -162,21 +162,26 @@ export interface PageReading {
  * linked text ("Cheekface [12]"), the same URL getting the same number wherever it is linked. The
  * model names an event's own page by number, so it never writes a URL. Not numbered: the page
  * itself (as fetched or as it redirected), and anything `linkTarget` rules out (assets, ignored
- * and aggregator hosts). A feed has no anchors and is passed through.
+ * and aggregator hosts). The page's schema.org events follow the text, numbered the same way (see
+ * `eventDataSection`). A feed has no anchors and is passed through.
  */
 export function readPage(page: FetchResult, config: RunConfig): PageReading {
   if (!isHtml(page.body)) return { text: pageText(page.body), links: [] };
   const links: string[] = [];
+  const number = (href: string): number | undefined => {
+    const link = linkTarget(href, page, config);
+    if (link === undefined || samePage(link, page.url) || samePage(link, page.finalUrl)) return undefined;
+    const n = links.indexOf(link) + 1;
+    return n === 0 ? links.push(link) : n;
+  };
   const marked = withoutScripts(page.body).replace(ANCHOR, (_, attributes: string, content: string) => {
     const href = attributes.match(HREF);
-    const link = href ? linkTarget(href[1] ?? href[2] ?? href[3] ?? "", page, config) : undefined;
+    const n = href ? number(href[1] ?? href[2] ?? href[3] ?? "") : undefined;
     // Spaced as the tags were, so adjacent anchors do not run together once the tags are gone.
-    if (link === undefined || samePage(link, page.url) || samePage(link, page.finalUrl)) return ` ${content} `;
-    let n = links.indexOf(link) + 1;
-    if (n === 0) n = links.push(link);
-    return ` ${content} [${n}] `;
+    return n === undefined ? ` ${content} ` : ` ${content} [${n}] `;
   });
-  return { text: pageText(marked), links };
+  const section = eventDataSection(page.body, number);
+  return { text: capped(section ? `${htmlText(marked)}\n\n${section}` : htmlText(marked)), links };
 }
 
 function isHtml(body: string): boolean {
@@ -187,18 +192,113 @@ function withoutScripts(body: string): string {
   return body.replace(/<(script|style|noscript|svg)\b[\s\S]*?<\/\1>/gi, " ").replace(/<!--[\s\S]*?-->/g, " ");
 }
 
+/**
+ * A whole tag: its name, then its attributes read one at a time, so a quoted value holding ">" (a
+ * utility class such as `[&>span]:underline`) cannot end it early and spill the rest into the text.
+ */
+const TAG = /<\/?[a-z][^\s<>/]*(?:\s+[^\s<>"'=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s<>"']+))?)*\s*\/?>/gi;
+
 /** HTML becomes readable text; anything else (an ICS or RSS feed) is passed through. Both are capped. */
 export function pageText(body: string): string {
-  const text = isHtml(body)
-    ? withoutScripts(body)
-        .replace(/<br\s*\/?>|<\/(p|div|li|h[1-6]|tr|section|article|header|footer)>/gi, "\n")
-        .replace(/<[^>]+>/g, " ")
-        .replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, decodeCharacterReference)
-        .replace(/[ \t\u00a0]+/g, " ")
-        .replace(/\s*\n\s*/g, "\n")
-        .trim()
-    : body;
-  return text.length > MAX_PAGE_CHARS ? `${text.slice(0, MAX_PAGE_CHARS)}\n[page truncated]` : text;
+  return capped(isHtml(body) ? htmlText(body) : body);
+}
+
+function htmlText(body: string): string {
+  return decoded(
+    withoutScripts(body)
+      .replace(/<br\s*\/?>|<\/(p|div|li|h[1-6]|tr|section|article|header|footer)>/gi, "\n")
+      .replace(TAG, " ")
+      .replace(/<[^>]+>/g, " "),
+  )
+    .replace(/[ \t\u00a0]+/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
+    .trim();
+}
+
+function decoded(text: string): string {
+  return text.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, decodeCharacterReference);
+}
+
+/** A reading longer than the cap is cut at the end of the last line that fits, so no listing is left half a line. */
+function capped(text: string): string {
+  if (text.length <= MAX_PAGE_CHARS) return text;
+  const lineEnd = text.lastIndexOf("\n", MAX_PAGE_CHARS);
+  return `${text.slice(0, lineEnd > 0 ? lineEnd : MAX_PAGE_CHARS)}\n[page truncated]`;
+}
+
+const LD_JSON = /<script\b[^>]*\btype\s*=\s*["']?application\/ld\+json\b[^>]*>([\s\S]*?)<\/script\s*>/gi;
+/** The most of an event's own description the section carries; the model writes two sentences from it. */
+const MAX_EVENT_DATA_DESCRIPTION = 400;
+
+/**
+ * The page's schema.org events (its `application/ld+json` scripts), one line each: name and its link's
+ * number, start, end, place, and description, as the page's code gives them. Calendars often give the
+ * time or the blurb only there (#98), and the text drops scripts. Undefined when the page has none.
+ */
+function eventDataSection(body: string, number: (href: string) => number | undefined): string | undefined {
+  const events: Record<string, unknown>[] = [];
+  for (const [, json] of body.matchAll(LD_JSON)) {
+    try {
+      collectEvents(JSON.parse(json ?? ""), events);
+    } catch {
+      // A script that is not JSON says nothing the model could use.
+    }
+  }
+  const lines = new Set(events.map((event) => eventDataLine(event, number)).filter((line) => line !== undefined));
+  return lines.size === 0 ? undefined : ["Event data in the page's code (schema.org):", ...lines].join("\n");
+}
+
+/** Every object typed as an event (Event, MusicEvent, TheaterEvent\u2026), wherever it sits; an event's own parts are not walked. */
+function collectEvents(value: unknown, into: Record<string, unknown>[]): void {
+  if (Array.isArray(value)) {
+    for (const item of value) collectEvents(item, into);
+    return;
+  }
+  if (value === null || typeof value !== "object") return;
+  const types: unknown[] = ([] as unknown[]).concat((value as Record<string, unknown>)["@type"]);
+  if (types.some((type) => typeof type === "string" && /Event$/.test(type))) into.push(value as Record<string, unknown>);
+  else for (const child of Object.values(value)) collectEvents(child, into);
+}
+
+function eventDataLine(event: Record<string, unknown>, number: (href: string) => number | undefined): string | undefined {
+  const name = plainText(event.name);
+  const start = plainText(event.startDate);
+  if (!name || !start) return undefined;
+  const n = typeof event.url === "string" ? number(event.url) : undefined;
+  const end = plainText(event.endDate);
+  const place = placeText(event.location);
+  const description = plainText(event.description);
+  return [
+    n === undefined ? name : `${name} [${n}]`,
+    `starts ${start}`,
+    ...(end ? [`ends ${end}`] : []),
+    ...(place ? [`at ${place}`] : []),
+    ...(description ? [description.length > MAX_EVENT_DATA_DESCRIPTION ? `${description.slice(0, MAX_EVENT_DATA_DESCRIPTION).trimEnd()}\u2026` : description] : []),
+  ].join(" | ");
+}
+
+/** A place's name, street, and town, whichever it gives; the first, when there are several. */
+function placeText(location: unknown): string {
+  const place = Array.isArray(location) ? location[0] : location;
+  if (typeof place === "string") return plainText(place);
+  if (place === null || typeof place !== "object") return "";
+  const { name, address } = place as Record<string, unknown>;
+  const parts =
+    address !== null && typeof address === "object"
+      ? [name, (address as Record<string, unknown>).streetAddress, (address as Record<string, unknown>).addressLocality]
+      : [name, address];
+  return [...new Set(parts.map(plainText).filter(Boolean))].join(", ");
+}
+
+/**
+ * A value from the event data as one line of plain text. Sites escape the HTML in it and then escape
+ * that again ("&lt;p&gt;", "&amp;amp;"), so references are decoded around the tags' removal.
+ */
+function plainText(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return decoded(decoded(value).replace(TAG, " ").replace(/<[^>]+>/g, " "))
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** The named references that show up in event listings; a name not listed here is left as it was. */

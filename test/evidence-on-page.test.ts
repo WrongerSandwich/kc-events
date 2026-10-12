@@ -55,6 +55,29 @@ describe("evidence on the page", () => {
     });
   });
 
+  it("a time and description read from the page's schema.org event data are quoted from it and verified (#98)", async () => {
+    const data = { "@type": "Event", name: "Big Show", startDate: "2026-10-31T20:00:00-05:00", url: "https://knuckleheads.test/shows/big-show", description: "A rockabilly revue." };
+    const page: CannedPage = {
+      status: 200,
+      body: `<html><head><script type="application/ld+json">${JSON.stringify(data)}</script></head><body>
+<div><a href="/shows/big-show">Big Show</a> Sat, Oct 31</div><div>Knuckleheads, 1 Main St</div></body></html>`,
+    };
+
+    const { dataset, requests } = await runAt(
+      [reply(candidate({ dateEvidence: "Big Show [1] | starts 2026-10-31T20:00:00-05:00", description: "A rockabilly revue.", eventLink: 1 }))],
+      page,
+    );
+
+    expect(requests[0]!.messages[1]!.content).toContain("Big Show [1] | starts 2026-10-31T20:00:00-05:00 | A rockabilly revue.");
+    expect(dataset.events[0]).toMatchObject({
+      status: "active",
+      start: "2026-10-31T20:00:00-05:00",
+      description: "A rockabilly revue.",
+      evidence: { date: "Big Show | starts 2026-10-31T20:00:00-05:00" },
+      eventUrl: "https://knuckleheads.test/shows/big-show",
+    });
+  });
+
   it("a bracketed number that is no link marker is page text, and survives", async () => {
     const { dataset } = await runAt([reply(candidate({ venueEvidence: "Knuckleheads, 1 Main St Ages 21+ [3]" }))]);
 
