@@ -801,7 +801,7 @@ function applySighting(
   const confirmsOnly = rule === "month";
   const mayCancel = !confirmsOnly && (fromOwnPage || event.status === "active");
   if (cancelled && mayCancel) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
-  if (event.status === "active" && !confirmsOnly) return { event: refresh(known, event), refreshed: true, uncitable: false };
+  if (event.status === "active" && !confirmsOnly) return { event: refresh(known, event, rule), refreshed: true, uncitable: false };
   const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
   if (known.status === "active" && fromOwnPage && !confirmsOnly) return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
   const cleared = known.verificationFailures === 0 && known.consecutiveOutages === 0;
@@ -914,9 +914,38 @@ function firstMonthPair(events: Event[]): [Event, Event] | undefined {
  * the new one is the same page (samePage), and each stored quote when the quote check cannot tell it
  * from the new one, so it is on the page just as surely (#82): the weekly diff carries what changed,
  * not how a reading happened to spell it. A recurring event's stored schedule, with its quote, stands
- * over a new one from the same page that only repeats a title (#119, holdsSchedule).
+ * over a new one from the same page that only repeats a title (#119, holdsSchedule). A limited run
+ * matched by its end date alone keeps its stored start, with the page and quotes that cite it, over a
+ * sighting giving another (#120, keepsStart).
  */
-function refresh(known: Event, sighting: Event): Event {
+function refresh(known: Event, sighting: Event, rule?: MatchRule): Event {
+  const refreshed = refreshReading(known, sighting);
+  if (!keepsStart(known, sighting, rule)) return refreshed;
+  const { eventUrl: _eventUrl, ...rest } = refreshed;
+  return {
+    ...rest,
+    start: known.start,
+    primaryUrl: known.primaryUrl,
+    ...(known.eventUrl !== undefined ? { eventUrl: known.eventUrl } : {}),
+    evidence: known.evidence,
+  };
+}
+
+/**
+ * Whether a sighting matched to a limited run only by their shared end date (#68) gives a start
+ * other than the stored one, or none (#120). A run is named by when it closes; the start a page
+ * gives is its opening or the day the page listed it, so a later reading does not replace an earlier
+ * one, and the order pages are read in cannot flap it. The stored start stays with the page and
+ * quotes that cite it, since the sighting's page need not carry them (ADR 0002). A stored run with
+ * no start takes the sighting's. A date move goes through on the other rules, as on the record's
+ * own page under its title.
+ */
+function keepsStart(known: Event, sighting: Event, rule: MatchRule | undefined): boolean {
+  return rule === "same-end" && known.start !== undefined && calendarDate(sighting.start) !== calendarDate(known.start);
+}
+
+/** The new reading under the known event's identity and curation, by the field rules refresh gives. */
+function refreshReading(known: Event, sighting: Event): Event {
   const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };
   /** The stored value under its field when the new one is the same by the given test, else nothing, so the new one stands. */
   const keepIfSame = (field: string, was: string | undefined, now: string | undefined, same: (a: string, b: string) => boolean) =>

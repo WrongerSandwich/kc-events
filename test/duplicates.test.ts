@@ -743,3 +743,86 @@ describe("the same end date of a limited run (#68)", () => {
     expect(byId(dataset).get(opening.id)).toMatchObject({ status: "expired", expiryReason: "cancelled" });
   });
 });
+
+describe("a same-end sighting keeps the stored start (#120)", () => {
+  const NERMAN = "Nerman Museum of Contemporary Art";
+  const MUSEUM = "https://www.nermanmuseum.org/exhibitions/";
+  const ARTSJOCO = "https://artsjoco.org/acjc/calendar-of-events/";
+  const museum = source("Nerman Museum", { urls: [MUSEUM], kind: "arts" });
+  const artsjoco = source("Arts JoCo", { urls: [ARTSJOCO], kind: "arts" });
+  const OPENING_QUOTE = "June 12 – December 6, 2026";
+  const exhibition = (primaryUrl: string, start: string | undefined, overrides: Partial<Event> = {}): Event => {
+    const record = event("Sport and Spectator", NERMAN, primaryUrl, start ?? "", { recurrence: "limited-run", end: "2026-12-06", kind: "arts", ...overrides });
+    if (start !== undefined) return record;
+    const { start: _start, ...noStart } = record;
+    return { ...noStart, evidence: { date: "Through December 6", venue: NERMAN } };
+  };
+  const listing = (at: typeof museum, startDate: string, dateEvidence: string, overrides: Record<string, unknown> = {}) =>
+    candidateAt(at, { title: "Sport and Spectator", startDate, startTime: null, endDate: "2026-12-06", venue: NERMAN, venueEvidence: NERMAN, dateEvidence, ...overrides });
+  const opening = () => exhibition(MUSEUM, "2026-06-12", { evidence: { date: OPENING_QUOTE, venue: NERMAN } });
+
+  it.each([
+    ["the museum's page first", [museum, artsjoco]],
+    ["the calendar first", [artsjoco, museum]],
+  ] as const)("keeps the opening and the museum's quote when a calendar lists the exhibition from the day it listed it, %s", async (_order, sources) => {
+    const stored = opening();
+    const readings: Record<string, unknown> = { [MUSEUM]: listing(museum, "2026-06-12", OPENING_QUOTE), [ARTSJOCO]: listing(artsjoco, "2026-09-25", "Sep 25 – Dec 6") };
+    const { dataset } = await runWith(WEEK_1, withEvents([stored]), {
+      sources: [...sources],
+      pages: { [MUSEUM]: PAGE, [ARTSJOCO]: PAGE },
+      completions: sources.map((s) => reply(readings[s.urls[0]!])),
+      config,
+    });
+
+    expect(dataset.events).toHaveLength(1);
+    expect(byId(dataset).get(stored.id)).toMatchObject({ status: "active", start: "2026-06-12", primaryUrl: MUSEUM, evidence: { date: OPENING_QUOTE } });
+  });
+
+  it("keeps the opening, and the page that cites it, when only the calendar lists the exhibition this run", async () => {
+    const stored = opening();
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([stored]), {
+      sources: [artsjoco],
+      pages: { [ARTSJOCO]: PAGE },
+      completions: [reply(listing(artsjoco, "2026-09-25", "Sep 25 – Dec 6", { description: "Athletes on canvas." }))],
+      config,
+    });
+
+    expect(byId(dataset).get(stored.id)).toMatchObject({
+      status: "active",
+      start: "2026-06-12",
+      end: "2026-12-06",
+      primaryUrl: MUSEUM,
+      evidence: { date: OPENING_QUOTE, venue: NERMAN },
+      description: "Athletes on canvas.",
+      lastVerified: WEEK_1_ISO,
+    });
+    expect(report.counts).toMatchObject({ new: 0, found: 1, updated: 1 });
+  });
+
+  it("still moves the start on a sighting from the record's own page under the same title", async () => {
+    const stored = opening();
+
+    const { dataset } = await runWith(WEEK_1, withEvents([stored]), {
+      sources: [museum],
+      pages: { [MUSEUM]: PAGE },
+      completions: [reply(listing(museum, "2026-07-10", "July 10 – December 6, 2026"))],
+      config,
+    });
+
+    expect(byId(dataset).get(stored.id)).toMatchObject({ start: "2026-07-10", evidence: { date: "July 10 – December 6, 2026" } });
+  });
+
+  it("fills a stored run's missing start from a same-end sighting", async () => {
+    const stored = exhibition("https://www.nermanmuseum.org/", undefined);
+
+    const { dataset } = await runWith(WEEK_1, withEvents([stored]), {
+      sources: [artsjoco],
+      pages: { [ARTSJOCO]: PAGE },
+      completions: [reply(listing(artsjoco, "2026-09-25", "Sep 25 – Dec 6"))],
+      config,
+    });
+
+    expect(byId(dataset).get(stored.id)).toMatchObject({ start: "2026-09-25", primaryUrl: ARTSJOCO, evidence: { date: "Sep 25 – Dec 6" } });
+  });
+});
