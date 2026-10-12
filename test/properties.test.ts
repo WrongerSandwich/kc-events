@@ -24,6 +24,7 @@ const identity: fc.Arbitrary<EventIdentity> = fc.record(
     title: name,
     venue: fc.option(name, { nil: undefined }),
     start: fc.option(day, { nil: undefined }),
+    eventUrl: fc.constantFrom("https://a.test/e/1", "https://a.test/e/1/", "https://a.test/e/2", "https://b.test/e/1"),
   },
   { requiredKeys: ["primaryUrl", "title"] },
 );
@@ -39,6 +40,17 @@ describe("identity", () => {
 
   it("sameVenue is symmetric", () => {
     fc.assert(fc.property(name, name, (a, b) => sameVenue(a, b, ALIASES) === sameVenue(b, a, ALIASES)));
+  });
+
+  it("two records with one own page on one date are one event, whatever their titles and venues (#66)", () => {
+    const dated = identity.filter((i) => i.start !== undefined && i.eventUrl !== undefined);
+    fc.assert(
+      fc.property(dated, identity, (a, b) => {
+        const other = { ...b, eventUrl: a.eventUrl, start: a.start };
+        expect(sameEvent(a, other, [a, other], ALIASES)).toBe(true);
+        expect(findMatch(other, [a], ALIASES)).toBe(a);
+      }),
+    );
   });
 
   it("findMatch does not depend on the order of the known events, among records no two of which are one event", () => {

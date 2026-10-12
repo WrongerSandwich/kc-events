@@ -372,3 +372,52 @@ describe("the venue an alias names (#91)", () => {
     expect(["Helzberg Hall", "Bloch Lobby", "recordBar", "Copaken Stage", ""].filter((n) => genericVenueName(n))).toEqual([]);
   });
 });
+
+describe("the same own page on one date (#66)", () => {
+  const page = "https://www.midlandkc.com/events";
+  const detail = "https://www.midlandkc.com/events/detail/1525431";
+  const stored = { primaryUrl: page, title: "An Evening With Kenny G", venue: "The Midland Theatre", start: "2026-11-19T20:00:00-06:00", eventUrl: detail };
+  const retitled = { ...stored, title: "Kenny G" };
+
+  it("matches a sighting titled otherwise, by the own-page rule, whatever its venue", () => {
+    expect(matchSighting(retitled, [stored], {})).toEqual({ kind: "matched", event: stored, rule: "own-page" });
+    expect(findMatch({ ...retitled, venue: "Marble & Canvas" }, [stored], {})).toBe(stored);
+    expect(findMatch({ ...retitled, venue: undefined }, [stored], {})).toBe(stored);
+    expect(sameEvent(stored, retitled, [stored, retitled], {})).toBe(true);
+  });
+
+  it("takes the own page as a page is: without www., over http, with a trailing slash or a fragment", () => {
+    for (const eventUrl of ["https://midlandkc.com/events/detail/1525431", "http://www.midlandkc.com/events/detail/1525431/", `${detail}#tickets`]) {
+      expect(findMatch({ ...retitled, eventUrl }, [stored], {})).toBe(stored);
+    }
+    expect(findMatch({ ...retitled, eventUrl: `${detail}?night=2` }, [stored], {})).toBeUndefined();
+  });
+
+  it("matches when only one gives a time, and not when the times differ: a matinee and an evening show", () => {
+    const bareDate = { ...stored, start: "2026-11-19" };
+    expect(findMatch({ ...retitled, start: "2026-11-19" }, [stored], {})).toBe(stored);
+    expect(findMatch(retitled, [bareDate], {})).toBe(bareDate);
+    expect(findMatch({ ...retitled, start: "2026-11-19T14:00:00-06:00" }, [stored], {})).toBeUndefined();
+    expect(sameEvent(stored, { ...retitled, start: "2026-11-19T14:00:00-06:00" }, [stored], {})).toBe(false);
+  });
+
+  it("is two records on two dates: an exhibition's page or a series page serves several", () => {
+    expect(findMatch({ ...retitled, start: "2026-11-20T20:00:00-06:00" }, [stored], {})).toBeUndefined();
+    expect(sameEvent(stored, { ...retitled, start: "2026-11-20" }, [stored], {})).toBe(false);
+  });
+
+  it("needs an own page and a date on both, and never a recurring record", () => {
+    expect(findMatch({ ...retitled, eventUrl: undefined }, [stored], {})).toBeUndefined();
+    expect(findMatch(retitled, [{ ...stored, eventUrl: undefined }], {})).toBeUndefined();
+    expect(findMatch({ ...retitled, start: undefined }, [stored], {})).toBeUndefined();
+    expect(findMatch(retitled, [{ ...stored, start: undefined }], {})).toBeUndefined();
+    const recurring = { ...stored, recurrence: "recurring" as const };
+    expect(findMatch(retitled, [recurring], {})).toBeUndefined();
+    expect(sameEvent(recurring, retitled, [recurring, retitled], {})).toBe(false);
+  });
+
+  it("comes after the match on page and title: that record wins even when another shares the own page", () => {
+    const other = { ...stored, title: "Kenny G" };
+    expect(matchSighting({ ...stored, start: "2026-11-19" }, [other, stored], {})).toEqual({ kind: "matched", event: stored, rule: "page-and-title" });
+  });
+});

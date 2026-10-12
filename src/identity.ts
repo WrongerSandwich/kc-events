@@ -1,6 +1,7 @@
 /**
  * Event identity (ADR 0007): an event is its primary page plus its normalized title; failing
- * that, the same normalized title (or one cut short, or on the same date one with a series name in
+ * that, its own page (eventUrl) on one calendar date, whatever its title or venue, when the times
+ * agree; failing that, the same normalized title (or one cut short, or on the same date one with a series name in
  * front) at the same venue on a date within a few days, or, for a sighting that names no venue, on
  * the same date the one known event that qualifies, or the one preferred among several; failing all
  * of that, a dated sighting may be one month of a recurring event on the same page. Ids are opaque
@@ -67,7 +68,7 @@ export interface EventIdentity {
 }
 
 /** Which rule matched a sighting to a known event. */
-export type MatchRule = "page-and-title" | "fuzzy" | "venueless" | "month";
+export type MatchRule = "page-and-title" | "own-page" | "fuzzy" | "venueless" | "month";
 
 /**
  * What a sighting is to the known events: one of them, by a rule; ambiguous, a venue-less sighting
@@ -79,8 +80,9 @@ const NONE = { kind: "none" } as const;
 
 /**
  * The known event a sighting is, if any, and by which rule: the match on primary page and title
- * first (among several such records, the one whose date is nearest), then the fuzzy match on
- * title, venue, and nearby date, then for a sighting with no venue the known event with its title
+ * first (among several such records, the one whose date is nearest), then the match on own page
+ * and calendar date (#66), then the fuzzy match on title, venue, and nearby date, then for a
+ * sighting with no venue the known event with its title
  * on its date, then a recurring event the sighting is one month of. A record folded as a duplicate
  * stands for the record it was folded into, as far as that chain goes within `known`: the match is
  * that record, and its date is the one compared.
@@ -90,6 +92,10 @@ export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, 
   const onPage = known.filter((k) => samePageAndTitle(sighting, k)).flatMap((k) => standsFor(k) ?? []);
   const direct = onPage.reduce<T | undefined>((nearest, k) => (nearest === undefined || daysApart(sighting, k) < daysApart(sighting, nearest) ? k : nearest), undefined);
   if (direct) return { kind: "matched", event: direct, rule: "page-and-title" };
+  for (const k of known) {
+    const ownPage = sameOwnPageOnDate(sighting, k) ? standsFor(k) : undefined;
+    if (ownPage) return { kind: "matched", event: ownPage, rule: "own-page" };
+  }
   for (const k of known) {
     const fuzzy = sameEventFuzzily(sighting, k, aliases) ? standsFor(k) : undefined;
     if (fuzzy) return { kind: "matched", event: fuzzy, rule: "fuzzy" };
@@ -135,6 +141,7 @@ function throughDuplicates<T extends EventIdentity>(matched: T, known: readonly 
 export function sameEvent(a: EventIdentity, b: EventIdentity, live: readonly EventIdentity[], aliases: VenueAliases): boolean {
   return (
     (samePageAndTitle(a, b) && nearDates(a, b)) ||
+    sameOwnPageOnDate(a, b) ||
     sameEventFuzzily(a, b, aliases) ||
     venuelessTwins(a, b) ||
     matchedEvent(candidateForVenueless(a, live)) === b ||
@@ -380,4 +387,17 @@ function onSameHost(a: EventIdentity, b: EventIdentity): boolean {
 
 function sameOwnPage(a: EventIdentity, b: EventIdentity): boolean {
   return a.eventUrl !== undefined && b.eventUrl !== undefined && samePage(a.eventUrl, b.eventUrl);
+}
+
+/**
+ * Two dated records with one own page on one calendar date, whose times agree when both give one
+ * (#66): a detail or ticket page names one show, so a page that bills it under the act one week and
+ * under its tour or "An Evening with" the next is read as the one event, whatever either reading
+ * names as the venue. Same date only: an exhibition's page and a series page serve several, and a
+ * matinee and an evening show share a page and a date but not a time. A recurring record has no
+ * date and never qualifies.
+ */
+function sameOwnPageOnDate(a: EventIdentity, b: EventIdentity): boolean {
+  if (a.start === undefined || b.start === undefined || a.recurrence === "recurring" || b.recurrence === "recurring") return false;
+  return sameOwnPage(a, b) && sameMoment(a.start, b.start);
 }

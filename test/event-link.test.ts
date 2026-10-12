@@ -118,3 +118,24 @@ describe("the event's own page", () => {
     expect(dataset.events[0]).toMatchObject({ status: "unverified", eventUrl: "https://knuckleheads.test/shows/big-show" });
   });
 });
+
+describe("the same own page on one date (#66)", () => {
+  it("a re-reading that titles the show otherwise refreshes the record, and the title change is identity churn", async () => {
+    const first = await runAt(WEEK_1);
+    const second = await runAt(WEEK_2, first.dataset, [reply(candidate({ title: "An Evening with Big Show", eventLink: 1 }))]);
+
+    // The new title changes the record for curation, so it is judged again.
+    expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], title: "An Evening with Big Show", lastVerified: WEEK_2_ISO, lastChanged: WEEK_2_ISO, lastJudged: WEEK_2_ISO }]);
+    expect(second.report.counts).toMatchObject({ new: 0, updated: 1 });
+    expect(second.report.identityChurn).toEqual([expect.objectContaining({ title: "An Evening with Big Show", was: expect.objectContaining({ title: "Big Show" }) })]);
+  });
+
+  it("a re-reading that titles the show otherwise on another date, or at another time, is a second record", async () => {
+    const first = await runAt(WEEK_1);
+    const otherNight = await runAt(WEEK_2, first.dataset, [reply(candidate({ title: "An Evening with Big Show", startDate: "2026-11-01", dateEvidence: "Sun, Nov 1", eventLink: 1 }))]);
+    expect(otherNight.dataset.events.map((e) => e.title)).toEqual(["Big Show", "An Evening with Big Show"]);
+
+    const matinee = await runAt(WEEK_2, first.dataset, [reply(candidate({ title: "An Evening with Big Show", startTime: "14:00", eventLink: 1 }))]);
+    expect(matinee.dataset.events.map((e) => e.title)).toEqual(["Big Show", "An Evening with Big Show"]);
+  });
+});

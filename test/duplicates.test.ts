@@ -601,3 +601,39 @@ describe("a dated sighting that is one month of a recurring event (#77)", () => 
     expect(report.counts).toMatchObject({ new: 0, reverified: 0, expired: { "two-strike": 0 } });
   });
 });
+
+describe("the same own page on one date (#66)", () => {
+  const MIDLAND = "https://www.midlandkc.com/events";
+  const detail = (n: number) => `https://www.midlandkc.com/events/detail/${n}`;
+  const show = (title: string, start: string, eventUrl: string, overrides: Partial<Event> = {}) => event(title, "The Midland Theatre", MIDLAND, start, { eventUrl, ...overrides });
+
+  it("folds two records titled otherwise, keeping the one seen first, whatever their venues", async () => {
+    const act = show("Kenny G", "2026-11-19T20:00:00-06:00", detail(1525431), { firstSeen: RUN_TWO });
+    const evening = show("An Evening With Kenny G", "2026-11-19T20:00:00-06:00", detail(1525431));
+    const presenter = event("Mystic Nature", "Marble & Canvas", "https://kcai.edu/calendar/", "2026-10-29", { eventUrl: "https://kcai.edu/calendar/mystic-nature" });
+    const institute = event("Marble & Canvas presents Mystic Nature", "Kansas City Art Institute", "https://kcai.edu/calendar/", "2026-10-29", { eventUrl: "https://kcai.edu/calendar/mystic-nature/", firstSeen: RUN_TWO });
+
+    const { dataset, report } = await quietRun(withEvents([act, evening, institute, presenter]));
+
+    const after = byId(dataset);
+    expect(after.get(evening.id)).toMatchObject({ status: "active", title: "An Evening With Kenny G" });
+    expect(after.get(act.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: evening.id });
+    expect(after.get(presenter.id)).toMatchObject({ status: "active" });
+    expect(after.get(institute.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: presenter.id });
+    expect(report.counts.expired.duplicate).toBe(2);
+  });
+
+  it("folds nothing on another date or at another time: a series page's two nights, a matinee and an evening show", async () => {
+    const separate = [
+      show("Goose", "2026-11-03T20:00:00-06:00", detail(1465853)),
+      show("An Evening with Goose", "2026-11-04T20:00:00-06:00", detail(1465853)),
+      show("The Devils", "2026-10-16T14:00:00-05:00", detail(7)),
+      show("Ken Russell's The Devils", "2026-10-16T19:00:00-05:00", detail(7)),
+    ];
+
+    const { dataset, report } = await quietRun(withEvents(separate));
+
+    expect(dataset.events.map((e) => e.status)).toEqual(["active", "active", "active", "active"]);
+    expect(report.counts.expired.duplicate).toBe(0);
+  });
+});
