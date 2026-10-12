@@ -11,8 +11,9 @@
  * as a pointer from a record folded as a duplicate to the record it was folded into.
  */
 
-import { hasTime, type EventStatus, type RecurrenceClass } from "./dataset.js";
+import type { EventStatus, RecurrenceClass } from "./dataset.js";
 import { hostOf, samePage } from "./hosts.js";
+import { hasTime } from "./time.js";
 
 /** How far apart two dates can be and still be the same event under the fuzzy match. */
 const FUZZY_DATE_WINDOW_DAYS = 3;

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DEFAULT_PLATFORM_HOSTS, ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
 import { onHost, samePage, sameSite } from "./hosts.js";
+import { hasTime } from "./time.js";
 
 /** Bump when the published dataset's shape changes; downstream readers key on it. */
 export const DATASET_SCHEMA_VERSION = 1;
@@ -101,11 +102,6 @@ const eventFields = z.strictObject({
  */
 export function citedDate(e: { recurrence: RecurrenceClass; start?: string; end?: string; schedule?: string }): string | undefined {
   return e.recurrence === "recurring" ? e.schedule : (e.start ?? e.end);
-}
-
-/** Whether a stored date carries a time of day, rather than being a bare date. */
-export function hasTime(iso: string | undefined): boolean {
-  return iso !== undefined && iso.length > 10;
 }
 
 /**

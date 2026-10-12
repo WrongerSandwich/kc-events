@@ -1,5 +1,5 @@
 import { ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
-import { EXPIRY_REASONS, hasTime, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
+import { EXPIRY_REASONS, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
 import { buildOwnPageRequest, ownPageTime } from "./own-page.js";
 import { splitArchived } from "./archive.js";
 import { ageUnsighted, expire, expireIndexCited, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
@@ -57,7 +57,7 @@ import type { CandidateTally, EventRef, OwnPagesReport, RunReport, SourceReport 
 import { awayGame, skipReason, type SkipReason } from "./skip.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList, placeStored } from "./taxonomy.js";
-import { horizonEnd, toLocalDate, toLocalIso } from "./time.js";
+import { hasTime, horizonEnd, toLocalDate, toLocalIso } from "./time.js";
 
 /** Consecutive failed runs after which a source is flagged in the report. */
 const FAILING_SOURCE_THRESHOLD = 3;

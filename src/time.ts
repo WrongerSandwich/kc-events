@@ -1,5 +1,10 @@
 const DAY_MS = 86_400_000;
 
+/** Whether a stored date carries a time of day, rather than being a bare date. */
+export function hasTime(iso: string | undefined): boolean {
+  return iso !== undefined && iso.length > 10;
+}
+
 /** Formats an instant as ISO 8601 with the given IANA timezone's offset, e.g. 2026-10-02T22:15:00-05:00. */
 export function toLocalIso(instant: Date, timeZone: string): string {
   const parts = Object.fromEntries(
