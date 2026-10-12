@@ -134,6 +134,7 @@ write_env() {
   grep -vE "^${key}=" "$ENV_FILE" > "$tmp" || true
   printf '%s=%s\n' "$key" "$value" >> "$tmp"
   mv "$tmp" "$ENV_FILE"
+  chmod 600 "$ENV_FILE" # it holds keys: readable by this user alone
   WRITTEN_ENV+=("$key")
   printf '  %s✓ wrote%s %s → %s\n' "$GREEN" "$RESET" "$key" "$ENV_FILE"
 }
@@ -182,10 +183,10 @@ finish() {
 # ──────────────────────────────────────────────────────────────────────────
 # STAGES: the human steps that move the weekly run to this machine (#22, ADR 0010).
 #
-# The weekly run (scripts/weekly-run.sh) needs a clone of its own, the two keys in that clone's
-# gitignored .env, a git credential that can push to main, and a cron line that can find pnpm. This
-# wizard sets up each from the checkout it is run in. Re-running is safe: the clone is reused, keys
-# are offered back, and the cron line is replaced.
+# The weekly run (scripts/weekly-run.sh) needs a clone of its own, the two keys and a token for this
+# repository alone in that clone's gitignored .env, and a cron line that can find pnpm and the Node
+# .nvmrc names. This wizard sets up each from the checkout it is run in. Re-running is safe: the
+# clone is reused, keys and token are offered back, and the cron line is replaced.
 #
 #   bash scripts/home-run-setup.sh
 #
@@ -225,7 +226,7 @@ done
 REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
 # cron's PATH is nearly empty, so the cron line names where pnpm and node live on this machine.
 CRON_PATH="$(dirname "$(command -v pnpm)"):$(dirname "$(command -v node)"):/usr/local/bin:/usr/bin:/bin"
-say "The run will push to ${BOLD}${REPO}${RESET} as $(gh api user --jq .login)."
+say "The run will push to ${BOLD}${REPO}${RESET}; gh is signed in here as $(gh api user --jq .login), for the setup alone."
 say "pnpm is $(command -v pnpm) and node is $(command -v node); the cron line will carry both."
 confirm "Is that the right repo and account?" || { warn "run this from a clone of the right repo, signed in as the right account"; exit 1; }
 
@@ -293,13 +294,29 @@ for key in OPENROUTER_API_KEY TAVILY_API_KEY; do
 done
 
 # ── Stage 5: push credential ───────────────────────────────────────────────
-stage "Push credential: git uses gh's token"
-say "gh auth setup-git makes git use the token gh holds, for every github.com clone of this user."
-if confirm "Run gh auth setup-git?"; then
-  gh auth setup-git
+# The run's code comes from main's dependencies, so its token reaches this one repository and nothing
+# else (#87): the clone's git asks only scripts/git-credential-env.sh, which answers with GH_TOKEN
+# from the clone's .env, and weekly-run.sh hands the same token to gh for the health issue.
+stage "Push credential: a token for $REPO alone"
+say "The run pushes to main and comments on its health issue with a fine-grained token that reaches"
+say "$REPO and nothing else, kept in the clone's .env. Make one (or press Enter to keep the one there):"
+step "Token name: kc-this-week weekly run; Expiration: your choice (re-run this wizard when it expires)"
+step "Repository access: Only select repositories → $REPO"
+step "Permissions → Repository: Contents: Read and write; Issues: Read and write (Metadata comes with them)"
+if [[ -z "$(_existing GH_TOKEN || true)" ]]; then open_url "https://github.com/settings/personal-access-tokens/new"; fi
+ask_secret GH_TOKEN "Fine-grained token:"
+GH_TOKEN=$(bare "${GH_TOKEN:-}")
+if [[ -z "$GH_TOKEN" ]]; then
+  warn "no token given; the run cannot push until GH_TOKEN is in $ENV_FILE"
+  SKIPPED+=("put a fine-grained token for $REPO in $ENV_FILE as GH_TOKEN")
 else
-  SKIPPED+=("give git a credential that can push to $REPO (gh auth setup-git, or a deploy key)")
+  write_env GH_TOKEN "$GH_TOKEN"
 fi
+# An empty helper drops every helper configured before it (the user's gh, say), so git in the clone
+# asks this one alone.
+(cd "$RUN_DIR" && git config --local --replace-all credential.helper '' &&
+  git config --local --add credential.helper "!$(printf '%q' "$RUN_DIR/scripts/git-credential-env.sh")")
+say "The clone's git now asks only scripts/git-credential-env.sh for a credential."
 if (cd "$RUN_DIR" && GIT_TERMINAL_PROMPT=0 git push --quiet --dry-run origin main 2>/dev/null); then
   say "A dry-run push from the clone succeeded."
 else
@@ -310,14 +327,27 @@ fi
 # ── Stage 6: the cron line ─────────────────────────────────────────────────
 stage "Cron: Mondays at 6:17 a.m. local"
 CRON_LINE="$CRON_SCHEDULE PATH=$CRON_PATH $RUN_DIR/scripts/weekly-run.sh"
-say "This line goes in your crontab (PATH is set for this job alone; other lines are untouched):"
-note "$CRON_LINE"
-if confirm "Install it?"; then
-  { crontab -l 2>/dev/null | grep -v 'scripts/weekly-run.sh' || true; echo "$CRON_LINE"; } | crontab -
-  say "Installed. crontab -l now has:"
-  crontab -l | sed 's/^/    /'
+# Every test and CI job runs the Node major in .nvmrc; a run on another would use an untested fetch.
+NODE_WANTED=$(tr -d '[:space:]' <"$RUN_DIR/.nvmrc")
+NODE_WANTED=${NODE_WANTED#v}
+NODE_HAVE=$(node --version)
+NODE_HAVE_MAJOR=${NODE_HAVE#v}
+NODE_HAVE_MAJOR=${NODE_HAVE_MAJOR%%.*}
+if [[ "$NODE_HAVE_MAJOR" != "${NODE_WANTED%%.*}" ]]; then
+  warn "node here is $NODE_HAVE, but the repository's .nvmrc says $NODE_WANTED: not installing the cron line"
+  step "Install Node $NODE_WANTED (or put it first on PATH), then re-run this wizard."
+  SKIPPED+=("install Node $NODE_WANTED (this machine has $NODE_HAVE), then re-run this wizard for the cron line")
 else
-  SKIPPED+=("add to crontab: $CRON_LINE")
+  say "Node $NODE_HAVE matches the repository's .nvmrc ($NODE_WANTED)."
+  say "This line goes in your crontab (PATH is set for this job alone; other lines are untouched):"
+  note "$CRON_LINE"
+  if confirm "Install it?"; then
+    { crontab -l 2>/dev/null | grep -v 'scripts/weekly-run.sh' || true; echo "$CRON_LINE"; } | crontab -
+    say "Installed. crontab -l now has:"
+    crontab -l | sed 's/^/    /'
+  else
+    SKIPPED+=("add to crontab: $CRON_LINE")
+  fi
 fi
 
 # ── Stage 7: a first run ───────────────────────────────────────────────────

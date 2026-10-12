@@ -17,7 +17,8 @@
 #
 #   scripts/weekly-run.sh [--no-discovery]
 #
-# Secrets come from the clone's gitignored .env (OPENROUTER_API_KEY, TAVILY_API_KEY).
+# Secrets come from the clone's gitignored .env (OPENROUTER_API_KEY, TAVILY_API_KEY, and GH_TOKEN, a
+# fine-grained token for this repository alone that the push and the health issue use: #105).
 
 # No errtrace (-E): the ERR trap would run inside every $(...) as well, and report one failure twice.
 set -euo pipefail
@@ -31,6 +32,8 @@ exec > >(tee -a "$LOG") 2>&1
 cd "$ROOT"
 
 HEALTH_LABEL=weekly-run-health
+# The fine-grained token the push uses too (through scripts/git-credential-env.sh), read once here.
+GH_TOKEN_FROM_ENV=$(sed -n 's/^GH_TOKEN=//p' .env 2>/dev/null | tail -n1 | tr -d '\r' || true)
 # The CLI dates a run in the config's timezone; the check for an earlier run today uses the same day.
 TODAY=$(TZ=America/Chicago date +%F)
 
@@ -38,6 +41,9 @@ TODAY=$(TZ=America/Chicago date +%F)
 # with it, so a report that cannot be posted is logged and otherwise ignored.
 report() {
   command -v gh >/dev/null 2>&1 || { echo "gh is not installed; not reporting"; return 0; }
+  # gh gets the clone's token for this repository alone (#105), not the user's own sign-in; it is
+  # exported for this function's gh calls only.
+  if [[ -n "$GH_TOKEN_FROM_ENV" ]]; then local -x GH_TOKEN="$GH_TOKEN_FROM_ENV"; fi
   local issue
   issue=$(gh issue list --label "$HEALTH_LABEL" --state open --limit 1 --json number --jq '.[0].number // empty') || {
     echo "could not reach GitHub to report; see the log"
@@ -55,11 +61,12 @@ report() {
   gh issue comment "$issue" --body "$1" >/dev/null || echo "could not comment on the health issue; see the log"
 }
 
-# The issue is public: the home directory and anything shaped like an OpenRouter or Tavily key are
-# taken out of what goes there.
+# The issue is public: the home directory and anything shaped like an OpenRouter, Tavily, or GitHub
+# key are taken out of what goes there.
 redact() {
   local text=${1//"$HOME"/\~}
-  sed -E 's/sk-or-[A-Za-z0-9_-]*/sk-or-[redacted]/g; s/tvly-[A-Za-z0-9_-]*/tvly-[redacted]/g' <<<"$text"
+  sed -E 's/sk-or-[A-Za-z0-9_-]*/sk-or-[redacted]/g; s/tvly-[A-Za-z0-9_-]*/tvly-[redacted]/g;
+    s/github_pat_[A-Za-z0-9_]*/github_pat_[redacted]/g; s/gh[pousr]_[A-Za-z0-9]*/gh_[redacted]/g' <<<"$text"
 }
 
 fail() {
