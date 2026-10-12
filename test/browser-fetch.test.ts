@@ -40,7 +40,7 @@ describe("browser fetch", () => {
 
     const second = await runWith(week(2), first.dataset, {
       sources: [rendered, plain],
-      pages: { [CALENDAR_URL]: new Error("Timeout 15000ms exceeded"), [plain.urls[0]!]: PAGE },
+      pages: { [CALENDAR_URL]: new Error("Timeout 30000ms exceeded"), [plain.urls[0]!]: PAGE },
       completions: [reply()],
     });
 

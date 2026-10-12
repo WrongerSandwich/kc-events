@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createBrowserFetcher, LAUNCH_ARGS } from "../src/adapters/browser-fetcher.js";
 import { createFetchPolicy } from "../src/adapters/fetch-policy.js";
 import type { PlainFetcher } from "../src/adapters/fetcher.js";
@@ -28,6 +28,8 @@ type Script = (page: FakePage) => Promise<void>;
 class FakePage {
   closed = false;
   current = "about:blank";
+  /** How long after its document loads the page's script renders what a selector waits for; never, by default. */
+  renderedAfterMs = Infinity;
   private readonly main = { page: () => this };
   constructor(
     readonly context: FakeContext,
@@ -77,7 +79,13 @@ class FakePage {
     return { status: () => 200 };
   }
   async waitForLoadState() {}
-  async waitForSelector() {}
+  /** As Playwright does: the selector within the timeout, or a timeout error once it has passed, on the faked clock. */
+  async waitForSelector(_selector: string, { timeout }: { timeout: number }) {
+    if (!vi.isFakeTimers()) return;
+    if (this.renderedAfterMs <= timeout) return void vi.setSystemTime(Date.now() + this.renderedAfterMs);
+    vi.setSystemTime(Date.now() + timeout);
+    throw new Error(`page.waitForSelector: Timeout ${timeout}ms exceeded.`);
+  }
   async content() {
     return "<html><body>Big Show</body></html>";
   }
@@ -144,11 +152,11 @@ class FakeBrowser {
   }
 }
 
-/** A plain fetcher whose walk ends where it starts, with the real policy over a fake DNS. */
+/** A plain fetcher whose walk ends where it starts, with the real policy over a fake DNS; its pauses move the faked clock, when one is on. */
 function plainFetcher({ disallowed = [] as string[] } = {}): PlainFetcher {
   const policy = createFetchPolicy({
     lookup: async (hostname) => [{ address: hostname === LAN_HOST ? "192.168.1.20" : "93.184.216.34", family: 4 }],
-    sleep: async () => undefined,
+    sleep: async (ms) => void (vi.isFakeTimers() && vi.setSystemTime(Date.now() + ms)),
   });
   const robotsAllows = async (url: string) => !disallowed.includes(url);
   return {
@@ -166,6 +174,10 @@ function browserRunning(script?: Script, answer?: (outcome: Outcome) => Promise<
 
 beforeEach(() => {
   launch.mockReset();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("browser fetcher", () => {
@@ -220,6 +232,38 @@ describe("browser fetcher", () => {
     await fetcher.fetch(CALENDAR, { waitFor: ".show" });
 
     expect(browser.contexts).toHaveLength(3);
+  });
+
+  it("reads a page whose listings render more than 15 s after it loads, within its own 30 s deadline", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    browserRunning(async (page) => void (page.renderedAfterMs = 25_000));
+    const fetcher = createBrowserFetcher(plainFetcher());
+
+    expect(await fetcher.fetch(CALENDAR, { waitFor: ".event" })).toMatchObject({ status: 200, body: expect.stringContaining("Big Show") });
+  });
+
+  it("fails a page whose listings never render, after 30 s, naming the timeout", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    browserRunning();
+    const fetcher = createBrowserFetcher(plainFetcher());
+    const started = Date.now();
+
+    await expect(fetcher.fetch(CALENDAR, { waitFor: ".event" })).rejects.toThrow("Timeout 30000ms exceeded");
+    expect(Date.now() - started).toBe(30_000);
+  });
+
+  it("starts the page's deadline once its origin's crawl delay has passed, not before", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    browserRunning(async (page) => void (page.renderedAfterMs = 25_000));
+    const plain = plainFetcher();
+    // The plain walk of the same URL has just booked the origin, which asks for 10 s between requests.
+    plain.policy.setCrawlDelay(new URL(CALENDAR).origin, 10);
+    await plain.policy.pace(new URL(CALENDAR));
+    const fetcher = createBrowserFetcher(plain);
+    const started = Date.now();
+
+    expect(await fetcher.fetch(CALENDAR, { waitFor: ".event" })).toMatchObject({ status: 200 });
+    expect(Date.now() - started).toBe(35_000);
   });
 
   it("closes a popup the page opens and loads nothing for it", async () => {
