@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pageText, readPage } from "../src/extraction.js";
+import { MAX_EVENT_DATA_CHARS, MAX_PAGE_CHARS, pageText, readPage } from "../src/extraction.js";
 import type { FetchResult } from "../src/ports.js";
 import { testConfig } from "./fakes/config.js";
 
@@ -13,6 +13,10 @@ describe("page text", () => {
   it("drops a whole tag whose quoted attribute holds a '>', so none of it reaches the text", () => {
     const body = `<html><body><div class="group-hover/item:[&>span]:underline [&>em:first-child]:italic" data-x='a > b'><span>Interstellar Live</span></div></body></html>`;
     expect(pageText(body)).toBe("Interstellar Live");
+  });
+
+  it("loses no text to a quote left open in a tag", () => {
+    expect(pageText('<html><body><p title="a>Big Show</p><p data-x="b" >after</p></body></html>')).toBe("Big Show\nafter");
   });
 });
 
@@ -99,8 +103,8 @@ describe("page reading with structured event data", () => {
       [
         "Dolly Parton Tribute [1] Oct 16",
         "",
-        "Event data in the page's code (schema.org):",
-        "Dolly Parton Tribute & More [1] | starts 2026-10-16T19:00:00-05:00 | ends 2026-10-16T21:00:00-05:00 | at Big Theatre, 644 Massachusetts St, Lawrence | Local musicians cover Dolly Parton's songs.",
+        "Event data in the page's code (schema.org)",
+        "Dolly Parton Tribute & More [1] | starts 2026-10-16 19:00 | ends 2026-10-16 21:00 | at Big Theatre, 644 Massachusetts St, Lawrence | Local musicians cover Dolly Parton's songs.",
       ].join("\n"),
     );
     expect(reading.links).toEqual(["https://venue.test/events/dolly"]);
@@ -111,7 +115,7 @@ describe("page reading with structured event data", () => {
     const theater = { "@type": ["TheaterEvent"], name: "Macabaret", startDate: "2026-10-24" };
     const body = `<html><head>${ldJson([music, { "@type": "Organization", name: "Liberty Hall" }])}${ldJson({ "@graph": [theater, { "@type": "Event", name: "No date" }, { "@type": "Event", startDate: "2026-10-25" }] })}<script type="application/ld+json">{not json</script></head><body><p>Shows</p></body></html>`;
     expect(readPage(page(body), config).text).toBe(
-      ["Shows", "", "Event data in the page's code (schema.org):", "Fruit Bats | starts 2026-10-20T20:00:00-05:00", "Macabaret | starts 2026-10-24"].join("\n"),
+      ["Shows", "", "Event data in the page's code (schema.org)", "Fruit Bats | starts 2026-10-20 20:00", "Macabaret | starts 2026-10-24"].join("\n"),
     );
   });
 
@@ -124,8 +128,30 @@ describe("page reading with structured event data", () => {
   it("cuts a long description, so one event cannot crowd out the rest", () => {
     const long = { "@type": "Event", name: "Long", startDate: "2026-10-16", description: "word ".repeat(400) };
     const line = readPage(page(`<html><head>${ldJson(long)}</head><body><p>Shows</p></body></html>`), config).text.split("\n").at(-1)!;
-    expect(line.length).toBeLessThan(600);
+    expect(line.length).toBeLessThan(400);
     expect(line).toMatch(/…$/);
+  });
+
+  it("gives every time as the run's local wall clock, whatever offset the page wrote it in, and a time with no offset as written", () => {
+    const events = [
+      { "@type": "Event", name: "UTC", startDate: "2026-10-17T00:30:00Z" },
+      { "@type": "Event", name: "After the clocks change", startDate: "2026-11-07T02:00:00+00:00", endDate: "2026-11-07T04:00:00.000Z" },
+      { "@type": "Event", name: "Wall clock", startDate: "2026-10-18T19:30" },
+      { "@type": "Event", name: "Placeholder", startDate: "2026-10-19T00:00:00-05:00" },
+      { "@type": "Event", name: "Odd", startDate: "Saturday" },
+    ];
+    expect(readPage(page(`<html><head>${ldJson(events)}</head><body><p>Shows</p></body></html>`), config).text.split("\n").slice(3)).toEqual([
+      "UTC | starts 2026-10-16 19:30",
+      "After the clocks change | starts 2026-11-06 20:00 | ends 2026-11-06 22:00",
+      "Wall clock | starts 2026-10-18 19:30",
+      "Placeholder | starts 2026-10-19 00:00",
+      "Odd | starts Saturday",
+    ]);
+  });
+
+  it("takes no event data from a script that never closes", () => {
+    const body = `<html><body><p>Shows</p><script type="application/ld+json">{"@type":"Event","name":"A","startDate":"2026-10-16"}</body></html>`;
+    expect(readPage(page(body), config).text).not.toContain("Event data");
   });
 });
 
@@ -140,20 +166,28 @@ describe("a heavy page's last listing", () => {
   const data = ldJson({ "@type": "Event", name: "Interstellar Live", startDate: "2026-10-23T19:30:00-05:00", description: "The film's score played live under the screen." });
   const body = `<html><head>${data}</head><body>${Array.from({ length: 100 }, (_, i) => card(i)).join("")}${last}</body></html>`;
 
-  it("keeps the time and blurb that sat past the old 70,000-character cut-off", () => {
-    expect(body.length).toBeGreaterThan(100_000);
+  it("keeps the time and blurb that sat past the old cut-off", () => {
+    expect(body.length).toBeGreaterThan(MAX_PAGE_CHARS + 30_000);
     const { text } = readPage(page(body), config);
     expect(text).not.toContain("[page truncated]");
     expect(text).toContain("Interstellar Live\nOctober 23, 7:30 p.m.\nThe film's score played live under the screen.");
-    expect(text).toContain("Interstellar Live | starts 2026-10-23T19:30:00-05:00 | The film's score played live under the screen.");
+    expect(text).toContain("Interstellar Live | starts 2026-10-23 19:30 | The film's score played live under the screen.");
   });
 });
 
 describe("the reading's length", () => {
-  it("is capped with the event data counted in, and cut at a line's end", () => {
+  it("is capped at a line's end", () => {
+    const body = `<html><body>${Array.from({ length: 5000 }, (_, i) => `<p>Show number ${i}, October 16</p>`).join("")}</body></html>`;
+    const { text } = readPage(page(body), config);
+    expect(text.length).toBeLessThanOrEqual(MAX_PAGE_CHARS + "\n[page truncated]".length);
+    expect(text).toMatch(/\nShow number \d+, October 16\n\[page truncated\]$/);
+  });
+
+  it("holds the event data to its own share, cut at a line's end, so the page's text keeps its room", () => {
     const events = Array.from({ length: 2000 }, (_, i) => ({ "@type": "Event", name: `Show number ${i}`, startDate: "2026-10-16T19:00:00-05:00" }));
     const { text } = readPage(page(`<html><head>${ldJson(events)}</head><body><p>Shows</p></body></html>`), config);
-    expect(text.length).toBeLessThanOrEqual(70_000 + "\n[page truncated]".length);
-    expect(text).toMatch(/\| starts 2026-10-16T19:00:00-05:00\n\[page truncated\]$/);
+    const section = text.slice(text.indexOf("Event data"));
+    expect(section.length).toBeLessThanOrEqual(MAX_EVENT_DATA_CHARS + "\n[event data truncated]".length);
+    expect(section).toMatch(/\| starts 2026-10-16 19:00\n\[event data truncated\]$/);
   });
 });

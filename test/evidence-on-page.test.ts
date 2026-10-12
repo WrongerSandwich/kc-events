@@ -64,16 +64,16 @@ describe("evidence on the page", () => {
     };
 
     const { dataset, requests } = await runAt(
-      [reply(candidate({ dateEvidence: "Big Show [1] | starts 2026-10-31T20:00:00-05:00", description: "A rockabilly revue.", eventLink: 1 }))],
+      [reply(candidate({ dateEvidence: "Big Show [1] | starts 2026-10-31 20:00", description: "A rockabilly revue.", eventLink: 1 }))],
       page,
     );
 
-    expect(requests[0]!.messages[1]!.content).toContain("Big Show [1] | starts 2026-10-31T20:00:00-05:00 | A rockabilly revue.");
+    expect(requests[0]!.messages[1]!.content).toContain("Big Show [1] | starts 2026-10-31 20:00 | A rockabilly revue.");
     expect(dataset.events[0]).toMatchObject({
       status: "active",
       start: "2026-10-31T20:00:00-05:00",
       description: "A rockabilly revue.",
-      evidence: { date: "Big Show | starts 2026-10-31T20:00:00-05:00" },
+      evidence: { date: "Big Show | starts 2026-10-31 20:00" },
       eventUrl: "https://knuckleheads.test/shows/big-show",
     });
   });

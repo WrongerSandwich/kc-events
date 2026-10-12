@@ -14,10 +14,10 @@ import type { CompletionRequest, FetchResult } from "./ports.js";
 import type { Source } from "./registry.js";
 import { deriveRecurrence } from "./recurrence.js";
 import { toKind, toNeighborhood } from "./taxonomy.js";
-import { fromLocal } from "./time.js";
+import { fromLocal, toLocalIso } from "./time.js";
 
 /** A page body longer than this is cut before it reaches the model; venue calendars rarely need more, link markers included. */
-const MAX_PAGE_CHARS = 70_000;
+export const MAX_PAGE_CHARS = 70_000;
 
 /**
  * A whole anchor element: its attributes (group 1), read one at a time so a quoted value holding ">"
@@ -168,7 +168,7 @@ export interface PageReading {
 export function readPage(page: FetchResult, config: RunConfig): PageReading {
   if (!isHtml(page.body)) return { text: pageText(page.body), links: [] };
   const links: string[] = [];
-  const number = (href: string): number | undefined => {
+  const linkNumber: LinkNumber = (href) => {
     const link = linkTarget(href, page, config);
     if (link === undefined || samePage(link, page.url) || samePage(link, page.finalUrl)) return undefined;
     const n = links.indexOf(link) + 1;
@@ -176,13 +176,16 @@ export function readPage(page: FetchResult, config: RunConfig): PageReading {
   };
   const marked = withoutScripts(page.body).replace(ANCHOR, (_, attributes: string, content: string) => {
     const href = attributes.match(HREF);
-    const n = href ? number(href[1] ?? href[2] ?? href[3] ?? "") : undefined;
+    const n = href ? linkNumber(href[1] ?? href[2] ?? href[3] ?? "") : undefined;
     // Spaced as the tags were, so adjacent anchors do not run together once the tags are gone.
     return n === undefined ? ` ${content} ` : ` ${content} [${n}] `;
   });
-  const section = eventDataSection(page.body, number);
+  const section = eventDataSection(page.body, linkNumber, config.timezone);
   return { text: capped(section ? `${htmlText(marked)}\n\n${section}` : htmlText(marked)), links };
 }
+
+/** The number a link to this href is marked with, given the first time it is asked for; undefined for a link not marked. */
+type LinkNumber = (href: string) => number | undefined;
 
 function isHtml(body: string): boolean {
   return /<\s*(!doctype|html|body|div)\b/i.test(body);
@@ -194,61 +197,70 @@ function withoutScripts(body: string): string {
 
 /**
  * A whole tag: its name, then its attributes read one at a time, so a quoted value holding ">" (a
- * utility class such as `[&>span]:underline`) cannot end it early and spill the rest into the text.
+ * utility class such as `[&>span]:underline`) cannot end it early and spill the rest into the text. A
+ * quoted value stops at a "<", so a quote left open cannot run on through the text and the tags after it.
  */
-const TAG = /<\/?[a-z][^\s<>/]*(?:\s+[^\s<>"'=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s<>"']+))?)*\s*\/?>/gi;
+const TAG = /<\/?[a-z][^\s<>/]*(?:\s+[^\s<>"'=]+(?:\s*=\s*(?:"[^"<]*"|'[^'<]*'|[^\s<>"']+))?)*\s*\/?>/gi;
 
 /** HTML becomes readable text; anything else (an ICS or RSS feed) is passed through. Both are capped. */
 export function pageText(body: string): string {
   return capped(isHtml(body) ? htmlText(body) : body);
 }
 
+/** HTML as the lines of text a browser would show, uncapped. */
 function htmlText(body: string): string {
-  return decoded(
-    withoutScripts(body)
-      .replace(/<br\s*\/?>|<\/(p|div|li|h[1-6]|tr|section|article|header|footer)>/gi, "\n")
-      .replace(TAG, " ")
-      .replace(/<[^>]+>/g, " "),
-  )
-    .replace(/[ \t\u00a0]+/g, " ")
+  return decoded(withoutTags(withoutScripts(body).replace(/<br\s*\/?>|<\/(p|div|li|h[1-6]|tr|section|article|header|footer)>/gi, "\n")))
+    .replace(/[ \t ]+/g, " ")
     .replace(/\s*\n\s*/g, "\n")
     .trim();
+}
+
+/** Every tag made a space: whole tags first, then whatever a malformed one left. */
+function withoutTags(html: string): string {
+  return html.replace(TAG, " ").replace(/<[^>]+>/g, " ");
 }
 
 function decoded(text: string): string {
   return text.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, decodeCharacterReference);
 }
 
-/** A reading longer than the cap is cut at the end of the last line that fits, so no listing is left half a line. */
-function capped(text: string): string {
-  if (text.length <= MAX_PAGE_CHARS) return text;
-  const lineEnd = text.lastIndexOf("\n", MAX_PAGE_CHARS);
-  return `${text.slice(0, lineEnd > 0 ? lineEnd : MAX_PAGE_CHARS)}\n[page truncated]`;
+/** Text longer than the cap is cut at the end of the last line that fits, so no line is left half read. */
+function capped(text: string, cap = MAX_PAGE_CHARS, mark = "\n[page truncated]"): string {
+  if (text.length <= cap) return text;
+  const lineEnd = text.lastIndexOf("\n", cap);
+  return `${text.slice(0, lineEnd > 0 ? lineEnd : cap)}${mark}`;
 }
 
-const LD_JSON = /<script\b[^>]*\btype\s*=\s*["']?application\/ld\+json\b[^>]*>([\s\S]*?)<\/script\s*>/gi;
+/** An `application/ld+json` script's opening tag; its body runs to the next `</script`, found by `indexOf`, so no unclosed script costs a rescan. */
+const LD_JSON_OPENING = /<script\b[^<>]{0,500}?\btype\s*=\s*["']?application\/ld\+json\b[^<>]{0,500}>/gi;
 /** The most of an event's own description the section carries; the model writes two sentences from it. */
-const MAX_EVENT_DATA_DESCRIPTION = 400;
+const MAX_EVENT_DATA_DESCRIPTION = 300;
+/** The most the section takes of the reading, so a page listing its whole year in code (Replay Lounge: 145 events) leaves room for its text. */
+export const MAX_EVENT_DATA_CHARS = 20_000;
 
 /**
  * The page's schema.org events (its `application/ld+json` scripts), one line each: name and its link's
- * number, start, end, place, and description, as the page's code gives them. Calendars often give the
+ * number, start and end as local wall-clock times, place, and description. Calendars often give the
  * time or the blurb only there (#98), and the text drops scripts. Undefined when the page has none.
  */
-function eventDataSection(body: string, number: (href: string) => number | undefined): string | undefined {
+function eventDataSection(body: string, linkNumber: LinkNumber, timeZone: string): string | undefined {
   const events: Record<string, unknown>[] = [];
-  for (const [, json] of body.matchAll(LD_JSON)) {
+  for (const opening of body.matchAll(LD_JSON_OPENING)) {
+    const start = opening.index + opening[0].length;
+    const end = body.indexOf("</script", start);
+    if (end === -1) break;
     try {
-      collectEvents(JSON.parse(json ?? ""), events);
+      collectEvents(JSON.parse(body.slice(start, end)), events);
     } catch {
       // A script that is not JSON says nothing the model could use.
     }
   }
-  const lines = new Set(events.map((event) => eventDataLine(event, number)).filter((line) => line !== undefined));
-  return lines.size === 0 ? undefined : ["Event data in the page's code (schema.org):", ...lines].join("\n");
+  const lines = new Set(events.map((event) => eventDataLine(event, linkNumber, timeZone)).filter((line) => line !== undefined));
+  if (lines.size === 0) return undefined;
+  return capped(["Event data in the page's code (schema.org)", ...lines].join("\n"), MAX_EVENT_DATA_CHARS, "\n[event data truncated]");
 }
 
-/** Every object typed as an event (Event, MusicEvent, TheaterEvent\u2026), wherever it sits; an event's own parts are not walked. */
+/** Every object typed as an event (Event, MusicEvent, TheaterEvent, and so on), wherever it sits; an event's own parts are not walked. */
 function collectEvents(value: unknown, into: Record<string, unknown>[]): void {
   if (Array.isArray(value)) {
     for (const item of value) collectEvents(item, into);
@@ -260,21 +272,44 @@ function collectEvents(value: unknown, into: Record<string, unknown>[]): void {
   else for (const child of Object.values(value)) collectEvents(child, into);
 }
 
-function eventDataLine(event: Record<string, unknown>, number: (href: string) => number | undefined): string | undefined {
+/** One event's line, or undefined for one with no name or no start. */
+function eventDataLine(event: Record<string, unknown>, linkNumber: LinkNumber, timeZone: string): string | undefined {
   const name = plainText(event.name);
-  const start = plainText(event.startDate);
+  const start = localDateTime(plainText(event.startDate), timeZone);
   if (!name || !start) return undefined;
-  const n = typeof event.url === "string" ? number(event.url) : undefined;
-  const end = plainText(event.endDate);
+  const n = typeof event.url === "string" ? linkNumber(event.url) : undefined;
+  const end = localDateTime(plainText(event.endDate), timeZone);
   const place = placeText(event.location);
-  const description = plainText(event.description);
+  const description = clipped(plainText(event.description), MAX_EVENT_DATA_DESCRIPTION);
   return [
     n === undefined ? name : `${name} [${n}]`,
     `starts ${start}`,
     ...(end ? [`ends ${end}`] : []),
     ...(place ? [`at ${place}`] : []),
-    ...(description ? [description.length > MAX_EVENT_DATA_DESCRIPTION ? `${description.slice(0, MAX_EVENT_DATA_DESCRIPTION).trimEnd()}\u2026` : description] : []),
+    ...(description ? [description] : []),
   ].join(" | ");
+}
+
+const DATE_TIME = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}:\d{2})(?::\d{2}(?:\.\d+)?)?(Z|[+-]\d{2}:?\d{2})?)?$/i;
+
+/**
+ * An event data date or date-time as the model should read it: "2026-10-16 19:00" in the run's
+ * timezone, whatever offset the page wrote it in (UTC included), so the model does no offset
+ * arithmetic; a date alone stays a date. Anything else is left as the page gave it.
+ */
+function localDateTime(value: string, timeZone: string): string {
+  const match = value.match(DATE_TIME);
+  if (!match) return value;
+  const [, date, time, offset] = match;
+  if (!time) return date!;
+  if (!offset) return `${date} ${time}`;
+  const instant = new Date(value.replace(" ", "T"));
+  if (Number.isNaN(instant.getTime())) return value;
+  return toLocalIso(instant, timeZone).slice(0, 16).replace("T", " ");
+}
+
+function clipped(text: string, cap: number): string {
+  return text.length > cap ? `${text.slice(0, cap).trimEnd()}…` : text;
 }
 
 /** A place's name, street, and town, whichever it gives; the first, when there are several. */
@@ -283,10 +318,12 @@ function placeText(location: unknown): string {
   if (typeof place === "string") return plainText(place);
   if (place === null || typeof place !== "object") return "";
   const { name, address } = place as Record<string, unknown>;
-  const parts =
-    address !== null && typeof address === "object"
-      ? [name, (address as Record<string, unknown>).streetAddress, (address as Record<string, unknown>).addressLocality]
-      : [name, address];
+  if (address === null || typeof address !== "object") return joinedParts([name, address]);
+  const { streetAddress, addressLocality } = address as Record<string, unknown>;
+  return joinedParts([name, streetAddress, addressLocality]);
+}
+
+function joinedParts(parts: unknown[]): string {
   return [...new Set(parts.map(plainText).filter(Boolean))].join(", ");
 }
 
@@ -296,7 +333,7 @@ function placeText(location: unknown): string {
  */
 function plainText(value: unknown): string {
   if (typeof value !== "string") return "";
-  return decoded(decoded(value).replace(TAG, " ").replace(/<[^>]+>/g, " "))
+  return decoded(withoutTags(decoded(value)))
     .replace(/\s+/g, " ")
     .trim();
 }
