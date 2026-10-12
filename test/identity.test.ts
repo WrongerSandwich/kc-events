@@ -465,3 +465,50 @@ describe("the same end date of a limited run (#68)", () => {
     expect(sameEvent(opening, noEnd, [opening, noEnd], {})).toBe(false);
   });
 });
+
+describe("two recurring records at one venue (#119)", () => {
+  // The 2026-10-12 dataset's two published pairs: a market read from two hosts of its own site, and a district's night under its short and full names on one page.
+  const district = "Crossroads Arts District";
+  const short = { primaryUrl: "https://kccrossroads.org/", title: "First Friday", venue: district, recurrence: "recurring" as const };
+  const full = { ...short, title: "First Friday in the Crossroads", eventUrl: "https://kccrossroads.org/this-first-friday/" };
+  const market = { primaryUrl: "https://thecitymarket.org/events", title: "Farmers Market", venue: "City Market", recurrence: "recurring" as const };
+  const otherHost = { ...market, primaryUrl: "https://thecitymarketkc.org/events" };
+
+  it("matches the same title on two hosts at one venue", () => {
+    expect(matchSighting(otherHost, [market], {})).toEqual({ kind: "matched", event: market, rule: "recurring" });
+    expect(sameEvent(market, otherHost, [market, otherHost], {})).toBe(true);
+  });
+
+  it("matches a shortened title on one page at one venue, the venue worded otherwise", () => {
+    expect(matchSighting(full, [short], {})).toEqual({ kind: "matched", event: short, rule: "recurring" });
+    expect(matchSighting({ ...short, venue: "The Crossroads Arts District" }, [full], {})).toEqual({ kind: "matched", event: full, rule: "recurring" });
+    expect(sameEvent(short, full, [short, full], {})).toBe(true);
+  });
+
+  it("is two events when a shortened title is on another page", () => {
+    const openMic = { primaryUrl: "https://bar.test/calendar", title: "Open Mic", venue: "Bar A", recurrence: "recurring" as const };
+    const comedy = { ...openMic, primaryUrl: "https://bar.test/comedy", title: "Open Mic Comedy" };
+    expect(findMatch(comedy, [openMic], {})).toBeUndefined();
+    expect(sameEvent(openMic, comedy, [openMic, comedy], {})).toBe(false);
+  });
+
+  it("is two events at two venues", () => {
+    const gallery = { ...otherHost, venue: "Apex Artspace" };
+    expect(findMatch(gallery, [market], {})).toBeUndefined();
+    expect(sameEvent(market, gallery, [market, gallery], {})).toBe(false);
+  });
+
+  it("never matches a record with no venue", () => {
+    const venueless = { ...otherHost, venue: undefined };
+    expect(findMatch(venueless, [market], {})).toBeUndefined();
+    expect(findMatch(market, [venueless], {})).toBeUndefined();
+    expect(sameEvent(market, venueless, [market, venueless], {})).toBe(false);
+  });
+
+  it("never joins a recurring record and a dated one", () => {
+    const dated = { ...otherHost, recurrence: "one-off" as const, start: "2026-10-17" };
+    expect(findMatch(dated, [market], {})).toBeUndefined();
+    expect(findMatch(market, [dated], {})).toBeUndefined();
+    expect(sameEvent(market, dated, [market, dated], {})).toBe(false);
+  });
+});

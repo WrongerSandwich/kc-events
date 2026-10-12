@@ -32,7 +32,23 @@ import {
 } from "./curation.js";
 import { discoveryQueries, excludedSourceOnHost, isIndexPage, isLead, onAdmittedHost, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { hostOf, onHost, pageKey, samePage, sameSite } from "./hosts.js";
-import { calendarDate, daysApart, matchSighting, nearDates, normalizeName, oneMonthOf, sameEnd, sameEvent, sameName, sameText, variantTitles, type MatchRule, type VenueAliases } from "./identity.js";
+import {
+  calendarDate,
+  daysApart,
+  matchSighting,
+  nearDates,
+  normalizeName,
+  oneMonthOf,
+  sameEnd,
+  sameEvent,
+  sameName,
+  sameRecurringEvent,
+  sameText,
+  scheduleSaysWhen,
+  variantTitles,
+  type MatchRule,
+  type VenueAliases,
+} from "./identity.js";
 import type { ExcludedSource, Registry, Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
@@ -794,15 +810,18 @@ function applySighting(
 
 /**
  * Folds records that turn out to be the same event (ADR 0007, amended): any two not expired that
- * match each other under the identity rules, recurring events aside, which never fuzzily match.
- * The record seen first is kept, a tie going to the one earlier in the dataset, which was created
- * first; the other expires as duplicate, naming the kept record (duplicateOf), so a later sighting
- * of it goes to the kept record (#77). One fold sets the first-seen rule aside: a dated record
- * that is one month of a recurring event folds into it (firstMonthPair). A kept record that is
- * not active takes an active duplicate's reading under its own id and first-seen. Either way the kept
- * record ends with the judgment of the pair's later-judged record (withLaterJudgment). Folding
- * repeats until nothing matches, since a fold can leave a venue-less record with one candidate
- * where it had two. The result depends only on the dataset. Returns which record each duplicate was folded into.
+ * match each other under the identity rules, two dated records under the dated rules and two
+ * recurring records under the recurring one (#119); a dated and a recurring record are never a
+ * pair but under the month rule. The record seen first is kept, a tie going to the one earlier in
+ * the dataset, which was created first; the other expires as duplicate, naming the kept record
+ * (duplicateOf), so a later sighting of it goes to the kept record (#77). One fold sets the
+ * first-seen rule aside: a dated record that is one month of a recurring event folds into it
+ * (firstMonthPair). A kept record that is not active takes an active duplicate's reading under its
+ * own id and first-seen. Two recurring records' fold ends with the fuller schedule of the pair
+ * (withFullerSchedule). Either way the kept record ends with the judgment of the pair's
+ * later-judged record (withLaterJudgment). Folding repeats until nothing matches, since a fold can
+ * leave a venue-less record with one candidate where it had two. The result depends only on the
+ * dataset. Returns which record each duplicate was folded into.
  */
 function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event[]; foldedInto: Map<string, string> } {
   const byId = new Map(events.map((e) => [e.id, e]));
@@ -813,26 +832,43 @@ function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event
   };
   for (let pair = nextPair(); pair; pair = nextPair()) {
     const [kept, duplicate] = pair;
-    // A recurring record keeps its own reading, even when hidden: a month's dates would make it dated.
-    // Re-verification checks a hidden one against its page this run.
-    const takesReading = kept.status !== "active" && duplicate.status === "active" && kept.recurrence !== "recurring";
-    byId.set(kept.id, withLaterJudgment(takesReading ? refresh(kept, duplicate) : kept, duplicate));
+    // A recurring record keeps its own reading against a dated month's, even when hidden: the month's
+    // dates would make it dated. Re-verification checks a hidden one against its page this run.
+    const takesReading = kept.status !== "active" && duplicate.status === "active" && (kept.recurrence !== "recurring" || duplicate.recurrence === "recurring");
+    byId.set(kept.id, withLaterJudgment(withFullerSchedule(takesReading ? refresh(kept, duplicate) : kept, duplicate), duplicate));
     byId.set(duplicate.id, { ...expire(duplicate, "duplicate"), duplicateOf: kept.id });
     foldedInto.set(duplicate.id, kept.id);
   }
   return { events: [...byId.values()], foldedInto };
 }
 
-/** The first two records, in order seen (ties in dataset order), that are the same event: the one to keep, then its duplicate. */
+/**
+ * The first two records, in order seen (ties in dataset order), that are the same event: the one to
+ * keep, then its duplicate. Two dated records are compared under every rule but the recurring one
+ * (sameEvent), two recurring records under the recurring rule alone (#119): the exact rule ignores
+ * venue, and two recurring readings of one page with one title and no venue are not published.
+ */
 function firstMatchingPair(events: Event[], aliases: VenueAliases): [Event, Event] | undefined {
-  const live = events
-    .filter((e) => e.status !== "expired" && e.recurrence !== "recurring")
-    .sort((a, b) => Date.parse(a.firstSeen) - Date.parse(b.firstSeen));
+  const live = events.filter((e) => e.status !== "expired").sort((a, b) => Date.parse(a.firstSeen) - Date.parse(b.firstSeen));
+  const dated = live.filter((e) => e.recurrence !== "recurring");
+  const samePair = (a: Event, b: Event) =>
+    a.recurrence === "recurring" ? b.recurrence === "recurring" && sameRecurringEvent(a, b, aliases) : b.recurrence !== "recurring" && sameEvent(a, b, dated, aliases);
   for (const [j, later] of live.entries()) {
-    const kept = live.slice(0, j).find((earlier) => sameEvent(earlier, later, live, aliases));
+    const kept = live.slice(0, j).find((earlier) => samePair(earlier, later));
     if (kept) return [kept, later];
   }
   return undefined;
+}
+
+/**
+ * The record a fold keeps, with the duplicate's schedule when the kept record's only repeats its
+ * title and the duplicate's says when (#119): "First Friday" gives way to "First Friday of every
+ * month". Where both or neither say when, the kept record's stands. Only two recurring records
+ * carry a schedule, so any other pair is left as it is.
+ */
+function withFullerSchedule(kept: Event, duplicate: Event): Event {
+  if (scheduleSaysWhen(kept) || !scheduleSaysWhen(duplicate) || kept.recurrence !== "recurring") return kept;
+  return { ...kept, schedule: duplicate.schedule, evidence: { ...kept.evidence, date: duplicate.evidence.date } };
 }
 
 /**

@@ -3,8 +3,9 @@
  * that, its own page (eventUrl) on one calendar date, whatever its title or venue, when the times
  * agree; failing that, the same normalized title (or one cut short, or on the same date one with a
  * series name in front) at the same venue on a date within a few days, or the same or shortened
- * title at the same venue ending on one date, whatever the starts; or, for a sighting that names
- * no venue, on the same date the one known event that qualifies, or the one preferred among
+ * title at the same venue ending on one date, whatever the starts, or, both recurring, the same
+ * title at the same venue on any page or a shortened one on the same page; or, for a sighting that
+ * names no venue, on the same date the one known event that qualifies, or the one preferred among
  * several; failing all of that, a dated sighting may be one month of a recurring event on the same
  * page. Ids are opaque and fixed at first-seen; matching never compares them, and only follows one
  * as a pointer from a record folded as a duplicate to the record it was folded into.
@@ -71,7 +72,7 @@ export interface EventIdentity {
 }
 
 /** Which rule matched a sighting to a known event. */
-export type MatchRule = "page-and-title" | "own-page" | "fuzzy" | "same-end" | "venueless" | "month";
+export type MatchRule = "page-and-title" | "own-page" | "fuzzy" | "same-end" | "recurring" | "venueless" | "month";
 
 /**
  * What a sighting is to the known events: one of them, by a rule; ambiguous, a venue-less sighting
@@ -85,8 +86,9 @@ const NONE = { kind: "none" } as const;
  * The known event a sighting is, if any, and by which rule: the match on primary page and title
  * first (among several such records, the one whose date is nearest), then the match on own page
  * and calendar date (#66), then the fuzzy match on title, venue, and nearby date, then the match
- * on title, venue, and end date (#68), then for a sighting with no venue the known event with its
- * title on its date, then a recurring event the sighting is one month of. A record folded as a
+ * on title, venue, and end date (#68), then for a recurring sighting the recurring event with its
+ * title at its venue (#119), then for a sighting with no venue the known event with its title on
+ * its date, then a recurring event the sighting is one month of. A record folded as a
  * duplicate stands for the record it was folded into, as far as that chain goes within `known`:
  * the match is that record, and its date is the one compared.
  */
@@ -106,6 +108,10 @@ export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, 
   for (const k of known) {
     const sameEnd = sameEndDate(sighting, k, aliases) ? standsFor(k) : undefined;
     if (sameEnd) return { kind: "matched", event: sameEnd, rule: "same-end" };
+  }
+  for (const k of known) {
+    const recurring = sameRecurringEvent(sighting, k, aliases) ? standsFor(k) : undefined;
+    if (recurring) return { kind: "matched", event: recurring, rule: "recurring" };
   }
   const venueless = candidateForVenueless(sighting, known);
   if (venueless.kind === "matched") return venueless;
@@ -151,6 +157,7 @@ export function sameEvent(a: EventIdentity, b: EventIdentity, live: readonly Eve
     sameOwnPageOnDate(a, b) ||
     sameEventFuzzily(a, b, aliases) ||
     sameEndDate(a, b, aliases) ||
+    sameRecurringEvent(a, b, aliases) ||
     venuelessTwins(a, b) ||
     matchedEvent(candidateForVenueless(a, live)) === b ||
     matchedEvent(candidateForVenueless(b, live)) === a
@@ -369,6 +376,30 @@ function sameEventFuzzily(a: EventIdentity, b: EventIdentity, aliases: VenueAlia
 function sameEndDate(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
   if (a.venue === undefined || b.venue === undefined) return false;
   return sameEnd(a, b) && sameOrShortenedTitle(a.title, b.title) && sameVenue(a.venue, b.venue, aliases);
+}
+
+/**
+ * Two recurring records at the same venue with the same title on any page, or with one title the
+ * other cut short on the same primary page (#119): a market read from two hosts of its own site, or
+ * a district's night under its short and full names on one page. A recurring record has no date, so
+ * no rule that compares one reaches it. A shortened title joins only on one page: "Open Mic" and
+ * "Open Mic Comedy" at one venue on two pages are two things. A record with no venue never
+ * qualifies, and a dated record never matches under this rule: a month of a recurring event is
+ * the month rule's.
+ */
+export function sameRecurringEvent(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
+  if (a.recurrence !== "recurring" || b.recurrence !== "recurring" || a.venue === undefined || b.venue === undefined) return false;
+  const titles = sameName(a.title, b.title) || (onSamePage(a, b) && sameOrShortenedTitle(a.title, b.title));
+  return titles && sameVenue(a.venue, b.venue, aliases);
+}
+
+/**
+ * Whether a recurring record's schedule says when, rather than only repeating its title (#119): a
+ * reading of "First Friday" whose schedule is "First Friday" adds nothing; "First Friday of every
+ * month" does. Compared like names: case and punctuation apart.
+ */
+export function scheduleSaysWhen(e: { title: string; schedule?: string }): boolean {
+  return e.schedule !== undefined && !sameName(e.schedule, e.title);
 }
 
 /** Whether two events both give an end, on one calendar date: two readings of one run, however their starts differ. */

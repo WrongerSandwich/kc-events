@@ -187,15 +187,34 @@ describe("folding duplicates", () => {
     expect(report.counts.expired.duplicate).toBe(0);
   });
 
-  it("never folds a recurring event", async () => {
-    const recurring = (primaryUrl: string): Event => {
-      const { start: _start, ...e } = event("Gallery Tour", "Bar A", primaryUrl, "2026-10-14", { recurrence: "recurring", schedule: "every Tuesday at 7pm" });
-      return { ...e, evidence: { date: "Tuesdays, 7pm", venue: "Bar A" } };
+  it("folds two recurring records at one venue, the record seen first keeping the fuller schedule (#119)", async () => {
+    const crossroads = "Crossroads Arts District";
+    const recurring = (title: string, schedule: string, overrides: Partial<Event> = {}): Event => {
+      const { start: _start, ...e } = event(title, crossroads, "https://kccrossroads.org/", "2026-11-06", { recurrence: "recurring", schedule, ...overrides });
+      return { ...e, evidence: { date: schedule, venue: crossroads } };
     };
+    const short = recurring("First Friday", "First Friday");
+    const full = recurring("First Friday in the Crossroads", "First Friday of every month", { firstSeen: RUN_TWO, eventUrl: "https://kccrossroads.org/this-first-friday/" });
 
-    const { dataset } = await quietRun(withEvents([recurring("https://bara.test/"), recurring("https://bara.test/tour")]));
+    const { dataset, report } = await quietRun(withEvents([full, short]));
 
-    expect(dataset.events.map((e) => e.status)).toEqual(["active", "active"]);
+    expect(byId(dataset).get(short.id)).toMatchObject({ status: "active", title: "First Friday", schedule: "First Friday of every month", firstSeen: RUN_ONE, lastChanged: WEEK_1_ISO });
+    expect(byId(dataset).get(full.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: short.id });
+    expect(report.counts.expired.duplicate).toBe(1);
+  });
+
+  it("leaves a fold's schedule alone when both or neither say when", async () => {
+    const tour = (primaryUrl: string, schedule: string, overrides: Partial<Event> = {}): Event => {
+      const { start: _start, ...e } = event("Gallery Tour", "Bar A", primaryUrl, "2026-10-14", { recurrence: "recurring", schedule, ...overrides });
+      return { ...e, evidence: { date: schedule, venue: "Bar A" } };
+    };
+    const kept = tour("https://bara.test/", "every Tuesday at 7pm");
+    const later = tour("https://bara.test/tour", "Tuesdays, 7pm", { firstSeen: RUN_TWO });
+
+    const { dataset } = await quietRun(withEvents([kept, later]));
+
+    expect(byId(dataset).get(kept.id)).toMatchObject({ status: "active", schedule: "every Tuesday at 7pm" });
+    expect(byId(dataset).get(later.id)).toMatchObject({ status: "expired", expiryReason: "duplicate" });
   });
 
   it("does not revive a duplicate when its page lists the event again; the record it was folded into takes the sighting", async () => {
