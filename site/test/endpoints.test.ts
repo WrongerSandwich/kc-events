@@ -3,6 +3,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
+import { alwaysTherePicks } from "../src/always-there";
+import { pickAlwaysThere } from "../src/lib/always-there";
+import { venueLine } from "../src/lib/events";
 import { faviconSvg } from "../src/lib/mark";
 
 const dist = new URL("../dist/", import.meta.url);
@@ -64,6 +67,21 @@ describe("committed data", () => {
       expect(html).toContain('"@type":"WebSite"');
       expect(html).toContain('"@type":"ItemList"');
       expect(html).toContain("explore?q={search_term_string}");
+    });
+
+    it("leaves a schedule that only repeats its title out of an Always there row", () => {
+      const html = read("index.html");
+      const detail = (id: string) => html.match(new RegExp(`href="/e/${id}"[^>]*>.*?</a><span class="detail"[^>]*>(.*?)</span>`))?.[1]?.replaceAll("&#39;", "'").replaceAll("&quot;", "\"").replaceAll("&amp;", "&");
+      const rows = pickAlwaysThere(events, alwaysTherePicks);
+      expect(rows.length, "the committed dataset has Always there rows").toBeGreaterThan(0);
+      for (const e of rows) {
+        // Every row ends on its venue line, and none opens by repeating its own title.
+        expect(detail(e.id), e.title).toMatch(new RegExp(`${RegExp.escape(venueLine(e))}$`));
+        expect(detail(e.id), e.title).not.toMatch(new RegExp(`^${RegExp.escape(e.title)} ·`, "i"));
+      }
+      // While First Friday's record holds the schedule "First Friday" (since the 2026-10-12 run), its row is the venue alone.
+      const firstFriday = rows.find((e) => e.title === "First Friday" && e.schedule === "First Friday");
+      if (firstFriday) expect(detail(firstFriday.id)).toBe("Crossroads Arts District");
     });
 
     it("gives a recurring event's page no Add to calendar link, and a dated one's page has it", () => {

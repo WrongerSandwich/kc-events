@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { alwaysTherePicks } from "../src/always-there";
-import { pickAlwaysThere } from "../src/lib/always-there";
+import { alwaysThereDetail, pickAlwaysThere } from "../src/lib/always-there";
 import { events } from "../src/generated/events";
 import { event } from "./fixtures/event";
 
@@ -29,6 +29,31 @@ describe("pickAlwaysThere", () => {
   it("does not match a title word inside another word", () => {
     const e = recurring({ title: "Triviality night", primaryUrl: "https://www.replaylounge.com/" });
     expect(pickAlwaysThere([e], [{ title: "Trivia", host: "replaylounge.com" }])).toEqual([]);
+  });
+});
+
+describe("alwaysThereDetail", () => {
+  const detailOf = (title: string, schedule: string | undefined) => alwaysThereDetail(recurring({ title, schedule, venue: "Crossroads Arts District" }));
+
+  it("leaves out a schedule equal to the title once case and punctuation are folded", () => {
+    expect(detailOf("First Friday", "first friday.")).toBe("Crossroads Arts District");
+  });
+
+  it("leaves out a schedule the title already holds as whole words", () => {
+    expect(detailOf("First Friday in the Crossroads", "First Friday")).toBe("Crossroads Arts District");
+  });
+
+  it("keeps a schedule that says more than the title", () => {
+    expect(detailOf("First Friday", "First Friday of every month")).toBe("First Friday of every month · Crossroads Arts District");
+  });
+
+  it("keeps a schedule found in the title only inside a word", () => {
+    expect(detailOf("Weeklyish Jam", "Weekly")).toBe("Weekly · Crossroads Arts District");
+  });
+
+  it("shows the venue line alone when there is no schedule", () => {
+    expect(detailOf("First Friday", undefined)).toBe("Crossroads Arts District");
+    expect(alwaysThereDetail(recurring({ schedule: undefined, venue: "Union Station", room: "Gallery" }))).toBe("Union Station · Gallery");
   });
 });
 
