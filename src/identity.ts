@@ -1,12 +1,12 @@
 /**
  * Event identity (ADR 0007): an event is its primary page plus its normalized title; failing
  * that, its own page (eventUrl) on one calendar date, whatever its title or venue, when the times
- * agree; failing that, the same normalized title (or one cut short, or on the same date one with a series name in
- * front) at the same venue on a date within a few days, or, for a sighting that names no venue, on
- * the same date the one known event that qualifies, or the one preferred among several; failing all
- * of that, a dated sighting may be one month of a recurring event on the same page. Ids are opaque
- * and fixed at first-seen; matching never compares them, and only follows one as a pointer from a
- * record folded as a duplicate to the record it was folded into.
+ * agree; failing that, the same normalized title (or one cut short, or on the same date one with a
+ * series name in front) at the same venue on a date within a few days, or, for a sighting that
+ * names no venue, on the same date the one known event that qualifies, or the one preferred among
+ * several; failing all of that, a dated sighting may be one month of a recurring event on the same
+ * page. Ids are opaque and fixed at first-seen; matching never compares them, and only follows one
+ * as a pointer from a record folded as a duplicate to the record it was folded into.
  */
 
 import type { EventStatus, RecurrenceClass } from "./dataset.js";
@@ -57,7 +57,7 @@ export interface EventIdentity {
   start?: string;
   /** An expired known event is no candidate for a venue-less sighting. */
   status?: EventStatus;
-  /** The event's own page, when its primary page links one: a tie-breaker for a venue-less sighting. */
+  /** The event's own page, when its primary page links one: with the date, a key of its own (#66), and a tie-breaker for a venue-less sighting. */
   eventUrl?: string;
   /** A recurring event has no date; a dated sighting may be one month of it. */
   recurrence?: RecurrenceClass;
@@ -82,10 +82,10 @@ const NONE = { kind: "none" } as const;
  * The known event a sighting is, if any, and by which rule: the match on primary page and title
  * first (among several such records, the one whose date is nearest), then the match on own page
  * and calendar date (#66), then the fuzzy match on title, venue, and nearby date, then for a
- * sighting with no venue the known event with its title
- * on its date, then a recurring event the sighting is one month of. A record folded as a duplicate
- * stands for the record it was folded into, as far as that chain goes within `known`: the match is
- * that record, and its date is the one compared.
+ * sighting with no venue the known event with its title on its date, then a recurring event the
+ * sighting is one month of. A record folded as a duplicate stands for the record it was folded
+ * into, as far as that chain goes within `known`: the match is that record, and its date is the
+ * one compared.
  */
 export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases): Match<T> {
   const standsFor = (k: T) => throughDuplicates(k, known);
