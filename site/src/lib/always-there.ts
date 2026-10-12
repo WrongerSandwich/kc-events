@@ -26,6 +26,7 @@ export function pickAlwaysThere(events: readonly PublishedEvent[], picks: readon
  */
 export function alwaysThereDetail(e: PublishedEvent): string {
   const schedule = e.schedule ?? "";
+  // An empty schedule needs its own test: holdsWords would look for a double space and say no.
   const addsNothing = fold(schedule) === "" || holdsWords(e.title, schedule);
   return addsNothing ? venueLine(e) : `${schedule} · ${venueLine(e)}`;
 }

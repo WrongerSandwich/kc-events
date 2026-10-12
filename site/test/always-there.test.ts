@@ -33,26 +33,26 @@ describe("pickAlwaysThere", () => {
 });
 
 describe("alwaysThereDetail", () => {
-  const at = (title: string, schedule: string | undefined) => alwaysThereDetail(recurring({ title, schedule, venue: "Crossroads Arts District" }));
+  const detailOf = (title: string, schedule: string | undefined) => alwaysThereDetail(recurring({ title, schedule, venue: "Crossroads Arts District" }));
 
   it("leaves out a schedule equal to the title once case and punctuation are folded", () => {
-    expect(at("First Friday", "first friday.")).toBe("Crossroads Arts District");
+    expect(detailOf("First Friday", "first friday.")).toBe("Crossroads Arts District");
   });
 
   it("leaves out a schedule the title already holds as whole words", () => {
-    expect(at("First Friday in the Crossroads", "First Friday")).toBe("Crossroads Arts District");
+    expect(detailOf("First Friday in the Crossroads", "First Friday")).toBe("Crossroads Arts District");
   });
 
   it("keeps a schedule that says more than the title", () => {
-    expect(at("First Friday", "First Friday of every month")).toBe("First Friday of every month · Crossroads Arts District");
+    expect(detailOf("First Friday", "First Friday of every month")).toBe("First Friday of every month · Crossroads Arts District");
   });
 
   it("keeps a schedule found in the title only inside a word", () => {
-    expect(at("Weeklyish Jam", "Weekly")).toBe("Weekly · Crossroads Arts District");
+    expect(detailOf("Weeklyish Jam", "Weekly")).toBe("Weekly · Crossroads Arts District");
   });
 
   it("shows the venue line alone when there is no schedule", () => {
-    expect(at("First Friday", undefined)).toBe("Crossroads Arts District");
+    expect(detailOf("First Friday", undefined)).toBe("Crossroads Arts District");
     expect(alwaysThereDetail(recurring({ schedule: undefined, venue: "Union Station", room: "Gallery" }))).toBe("Union Station · Gallery");
   });
 });
