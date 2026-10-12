@@ -13,6 +13,10 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+## Checks that wait on a real run
+
+A ticket closes when its code has landed and its tests pass. An acceptance item that only a real weekly run can confirm ("after the next run, the 11 pairs have folded") does not hold the ticket open: it moves to the one open issue labelled `post-run-check`, and the ticket closes pointing there. If no such issue is open, create one (`gh issue create --label post-run-check`), titled for the next run's date and the tickets it checks; if one is open, add a section to it (`gh issue edit <n> --body-file`), headed by the ticket number and the commits, with one box per check and enough detail (ids, titles, how to group the dataset) to check it against `data/events.json` without re-reading the ticket. After a successful run, whoever reads it checks every box, says which run (date and commit) confirmed it, and closes the issue; a box that fails reopens or files the ticket it came from. First used for #66 and #68 (#121).
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_
