@@ -32,7 +32,7 @@ import {
 } from "./curation.js";
 import { discoveryQueries, excludedSourceOnHost, isIndexPage, isLead, onAdmittedHost, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
 import { hostOf, onHost, pageKey, samePage, sameSite } from "./hosts.js";
-import { calendarDate, daysApart, matchSighting, nearDates, normalizeName, oneMonthOf, sameEvent, sameName, sameText, variantTitles, type MatchRule, type VenueAliases } from "./identity.js";
+import { calendarDate, daysApart, matchSighting, nearDates, normalizeName, oneMonthOf, sameEnd, sameEvent, sameName, sameText, variantTitles, type MatchRule, type VenueAliases } from "./identity.js";
 import type { ExcludedSource, Registry, Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
@@ -657,8 +657,8 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
     }
     // A verified sighting far from the known event's date, on a page that also lists the event on or near its date
     // (in this reading, before or after this sighting), is a second event: the page lists the show twice. Not one
-    // matched on its closing date (#68): its start is another reading of the one run, not another night.
-    if (event.status === "active" && !cancelled && rule !== "same-end" && !nearDates(event, known) && listsNear(known, sighting, sightings)) {
+    // that ends on the event's end date (#68): its start is another reading of the one run, not another night.
+    if (event.status === "active" && !cancelled && !nearDates(event, known) && !sameEnd(event, known) && listsNear(known, sighting, sightings)) {
       if (!isPast(event, today)) create(event);
       continue;
     }
@@ -736,11 +736,11 @@ function hasNearerSighting(known: Event, sighting: Sighting, sightings: Sighting
  * Whether a cancelled sighting says anything about the known event it matched (#77): not when it is
  * one month of a recurring event (a month off is not the standing event's cancellation), nor when
  * its date is outside the fuzzy window of the event's (a later night's cancellation is not this
- * night's). Such a sighting is no listing of the event at all. One matched on its closing date
- * (#68) reaches whatever its start: a run that closes on that date is the one run.
+ * night's). Such a sighting is no listing of the event at all. One that ends on the event's end
+ * date (#68) reaches whatever its start: a run that closes on that date is the one run.
  */
 function cancellationReaches(sighting: Event, known: Event, rule: MatchRule): boolean {
-  return rule !== "month" && (rule === "same-end" || nearDates(sighting, known));
+  return rule !== "month" && (nearDates(sighting, known) || sameEnd(sighting, known));
 }
 
 /**

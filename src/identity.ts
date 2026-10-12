@@ -2,9 +2,9 @@
  * Event identity (ADR 0007): an event is its primary page plus its normalized title; failing
  * that, its own page (eventUrl) on one calendar date, whatever its title or venue, when the times
  * agree; failing that, the same normalized title (or one cut short, or on the same date one with a
- * series name in front) at the same venue on a date within a few days, or, for a limited run, the
- * same or shortened title at the same venue closing on one date whatever the starts; or, for a sighting that
- * names no venue, on the same date the one known event that qualifies, or the one preferred among
+ * series name in front) at the same venue on a date within a few days, or the same or shortened
+ * title at the same venue ending on one date, whatever the starts; or, for a sighting that names
+ * no venue, on the same date the one known event that qualifies, or the one preferred among
  * several; failing all of that, a dated sighting may be one month of a recurring event on the same
  * page. Ids are opaque and fixed at first-seen; matching never compares them, and only follows one
  * as a pointer from a record folded as a duplicate to the record it was folded into.
@@ -84,11 +84,11 @@ const NONE = { kind: "none" } as const;
 /**
  * The known event a sighting is, if any, and by which rule: the match on primary page and title
  * first (among several such records, the one whose date is nearest), then the match on own page
- * and calendar date (#66), then the fuzzy match on title, venue, and nearby date, then the match on
- * title, venue, and closing date (#68), then for a sighting with no venue the known event with its title on its date, then a recurring event the
- * sighting is one month of. A record folded as a duplicate stands for the record it was folded
- * into, as far as that chain goes within `known`: the match is that record, and its date is the
- * one compared.
+ * and calendar date (#66), then the fuzzy match on title, venue, and nearby date, then the match
+ * on title, venue, and end date (#68), then for a sighting with no venue the known event with its
+ * title on its date, then a recurring event the sighting is one month of. A record folded as a
+ * duplicate stands for the record it was folded into, as far as that chain goes within `known`:
+ * the match is that record, and its date is the one compared.
  */
 export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases): Match<T> {
   const standsFor = (k: T) => throughDuplicates(k, known);
@@ -104,8 +104,8 @@ export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, 
     if (fuzzy) return { kind: "matched", event: fuzzy, rule: "fuzzy" };
   }
   for (const k of known) {
-    const run = sameLimitedRun(sighting, k, aliases) ? standsFor(k) : undefined;
-    if (run) return { kind: "matched", event: run, rule: "same-end" };
+    const sameEnd = sameEndDate(sighting, k, aliases) ? standsFor(k) : undefined;
+    if (sameEnd) return { kind: "matched", event: sameEnd, rule: "same-end" };
   }
   const venueless = candidateForVenueless(sighting, known);
   if (venueless.kind === "matched") return venueless;
@@ -150,7 +150,7 @@ export function sameEvent(a: EventIdentity, b: EventIdentity, live: readonly Eve
     (samePageAndTitle(a, b) && nearDates(a, b)) ||
     sameOwnPageOnDate(a, b) ||
     sameEventFuzzily(a, b, aliases) ||
-    sameLimitedRun(a, b, aliases) ||
+    sameEndDate(a, b, aliases) ||
     venuelessTwins(a, b) ||
     matchedEvent(candidateForVenueless(a, live)) === b ||
     matchedEvent(candidateForVenueless(b, live)) === a
@@ -363,11 +363,17 @@ function sameEventFuzzily(a: EventIdentity, b: EventIdentity, aliases: VenueAlia
  * same venue (#68), whatever their starts: a limited run is named by when it closes, and one source
  * gives an exhibition's opening, another the day it listed it, and a third no start at all. A time
  * on the end is not compared. A record with no venue never qualifies, so the same closing date at
- * two venues stays two events.
+ * two venues stays two events. The title is the same or cut short only, not one with a series name
+ * in front: that form belongs to one reading of one listing, which the fuzzy match takes on one date.
  */
-function sameLimitedRun(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
-  if (a.venue === undefined || b.venue === undefined || a.end === undefined || b.end === undefined) return false;
-  return calendarDate(a.end) === calendarDate(b.end) && sameOrShortenedTitle(a.title, b.title) && sameVenue(a.venue, b.venue, aliases);
+function sameEndDate(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
+  if (a.venue === undefined || b.venue === undefined) return false;
+  return sameEnd(a, b) && sameOrShortenedTitle(a.title, b.title) && sameVenue(a.venue, b.venue, aliases);
+}
+
+/** Whether two events both give an end, on one calendar date: two readings of one run, however their starts differ. */
+export function sameEnd(a: EventIdentity, b: EventIdentity): boolean {
+  return a.end !== undefined && b.end !== undefined && calendarDate(a.end) === calendarDate(b.end);
 }
 
 /**

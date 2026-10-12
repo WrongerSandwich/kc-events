@@ -674,4 +674,28 @@ describe("the same end date of a limited run (#68)", () => {
     expect(byId(dataset).get(opening.id)).toMatchObject({ status: "active", end: "2026-12-06" });
     expect(report.counts).toMatchObject({ new: 0, found: 1 });
   });
+
+  it("reads a page listing the exhibition twice, at its opening and from another day, as one run, not a second night", async () => {
+    const opening = exhibition("https://www.nermanmuseum.org/exhibitions/", "2026-06-12");
+    const ARTSJOCO = "https://artsjoco.org/acjc/calendar-of-events/";
+    const artsjoco = source("Arts JoCo", { urls: [ARTSJOCO], kind: "arts" });
+    const listing = (startDate: string) => candidateAt(artsjoco, { title: "Sport and Spectator", startDate, startTime: null, endDate: "2026-12-06", venue: NERMAN, venueEvidence: NERMAN });
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([opening]), { sources: [artsjoco], pages: { [ARTSJOCO]: PAGE }, completions: [reply(listing("2026-06-12"), listing("2026-09-25"))], config });
+
+    expect(dataset.events).toHaveLength(1);
+    expect(report.counts).toMatchObject({ new: 0, found: 1 });
+  });
+
+  it("lets a cancellation reach the exhibition from a page giving another start", async () => {
+    const opening = exhibition("https://www.nermanmuseum.org/exhibitions/", "2026-06-12");
+    const ARTSJOCO = "https://artsjoco.org/acjc/calendar-of-events/";
+    const artsjoco = source("Arts JoCo", { urls: [ARTSJOCO], kind: "arts" });
+    const cancelled = candidateAt(artsjoco, { title: "Sport and Spectator", startDate: "2026-09-25", startTime: null, endDate: "2026-12-06", venue: NERMAN, venueEvidence: NERMAN, notice: "cancelled" });
+
+    const { dataset } = await runWith(WEEK_1, withEvents([opening]), { sources: [artsjoco], pages: { [ARTSJOCO]: PAGE }, completions: [reply(cancelled)], config });
+
+    expect(dataset.events).toHaveLength(1);
+    expect(byId(dataset).get(opening.id)).toMatchObject({ status: "expired", expiryReason: "cancelled" });
+  });
 });
