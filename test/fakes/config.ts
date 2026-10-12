@@ -19,5 +19,5 @@ export function testConfig(overrides: Partial<RunConfig> = {}): RunConfig {
 }
 
 export function testPrompts() {
-  return { extractionRules: "TEST EXTRACTION RULES", curationPrompt: "TEST CURATION PROMPT" };
+  return { extractionRules: "TEST EXTRACTION RULES", curationPrompt: "TEST CURATION PROMPT", eventPageRules: "TEST EVENT PAGE RULES" };
 }

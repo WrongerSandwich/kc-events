@@ -27,7 +27,7 @@ The web presence a page belongs to: its registrable domain, approximately the pu
 _Avoid_: domain (when meaning this), host (which is the full hostname)
 
 **Own page**:
-The event's own page (`eventUrl`), when the primary page links one: its details or its tickets, on the primary page's site or a ticketing platform the config lists; a link anywhere else is no own page (ADR 0009). Where the site's "Details and tickets" sends the reader. Named by the extractor as a link number, resolved by the job against the page's own anchors, never fetched, and no part of verifying. Two records with one own page on one date are one event (ADR 0007, amended #66). An event whose primary page links none sends the reader to the primary page instead.
+The event's own page (`eventUrl`), when the primary page links one: its details or its tickets, on the primary page's site or a ticketing platform the config lists; a link anywhere else is no own page (ADR 0009). Where the site's "Details and tickets" sends the reader. Named by the extractor as a link number, resolved by the job against the page's own anchors, and no part of verifying. Never fetched, but for a registry source flagged `readEventPages`, whose events' own pages are read for the time the list does not give, and only the time (ADR 0009, amended #123). Two records with one own page on one date are one event (ADR 0007, amended #66). An event whose primary page links none sends the reader to the primary page instead.
 _Avoid_: event page (the site's page for the event), ticket link, link-out
 
 **Recurrence class**:

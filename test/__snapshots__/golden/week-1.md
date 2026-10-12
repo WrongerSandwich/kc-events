@@ -50,6 +50,10 @@ Started 2026-10-02T22:15:00-05:00, finished 2026-10-02T22:15:00-05:00. Horizon 8
 | Recordbar | fetched | 1 |  |
 | Midland | fetched | 1 |  |
 
+## Own pages
+
+_None._
+
 ## Discovery
 
 1 search, 0 index pages read for links, 1 primary page extracted.

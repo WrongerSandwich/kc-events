@@ -50,6 +50,10 @@ Started 2026-10-09T22:15:00-05:00, finished 2026-10-09T22:15:00-05:00. Horizon 8
 | Recordbar | fetched | 1 |  |
 | Midland | failed | 0 | https://midland.test/calendar: connect ECONNREFUSED |
 
+## Own pages
+
+_None._
+
 ## Discovery
 
 1 search, 0 index pages read for links, 0 primary pages extracted.

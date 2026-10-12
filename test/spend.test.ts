@@ -70,7 +70,7 @@ describe("spend cap", () => {
       totalUsd: 0.06,
       capUsd: 0.05,
       capHit: true,
-      shortfall: { pagesNotExtracted: 1, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 2 },
+      shortfall: { pagesNotExtracted: 1, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 2, ownPagesNotRead: 0 },
       modelCalls: [
         { model: "test/extraction", costUsd: 0.03 },
         { model: "test/extraction", costUsd: 0.03 },
@@ -139,7 +139,7 @@ describe("spend cap", () => {
       totalUsd: 0.035,
       capUsd: 5,
       capHit: false,
-      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 },
+      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0, ownPagesNotRead: 0 },
     });
   });
 
@@ -157,7 +157,7 @@ describe("spend cap", () => {
       totalUsd: 0.06,
       capUsd: 0.05,
       capHit: false,
-      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0 },
+      shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0, ownPagesNotRead: 0 },
     });
   });
 

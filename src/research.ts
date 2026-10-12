@@ -110,6 +110,7 @@ export async function research({ root, args, env, adapters = realAdapters }: Res
   const prompts = {
     extractionRules: await readFile(join(root, "prompts", "extraction-rules.md"), "utf8"),
     curationPrompt: await readFile(join(root, "prompts", "curation-prompt.md"), "utf8"),
+    eventPageRules: await readFile(join(root, "prompts", "event-page-rules.md"), "utf8"),
   };
   const registry = parseRegistry(parseYaml(await readFile(join(dataDir, "registry.yaml"), "utf8")));
   const dataset = existsSync(datasetPath) ? parseDataset(JSON.parse(await readFile(datasetPath, "utf8")), config) : emptyDataset();

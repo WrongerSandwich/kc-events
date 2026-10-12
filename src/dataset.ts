@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { DEFAULT_PLATFORM_HOSTS, ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
-import { onHost, sameSite } from "./hosts.js";
+import { onHost, samePage, sameSite } from "./hosts.js";
 
 /** Bump when the published dataset's shape changes; downstream readers key on it. */
 export const DATASET_SCHEMA_VERSION = 1;
@@ -87,6 +87,11 @@ const eventFields = z.strictObject({
   evidence: z.strictObject({
     date: z.string().min(1).optional(),
     venue: z.string().min(1).optional(),
+    /**
+     * Where the start's time was read when the primary page gave the date only (#123): the event's own page and the
+     * words on it that give the time. Present only on a start that carries a time, from the event's own page.
+     */
+    time: z.strictObject({ page: httpUrl, quote: z.string().min(1) }).optional(),
   }),
 });
 
@@ -96,6 +101,11 @@ const eventFields = z.strictObject({
  */
 export function citedDate(e: { recurrence: RecurrenceClass; start?: string; end?: string; schedule?: string }): string | undefined {
   return e.recurrence === "recurring" ? e.schedule : (e.start ?? e.end);
+}
+
+/** Whether a stored date carries a time of day, rather than being a bare date. */
+export function hasTime(iso: string | undefined): boolean {
+  return iso !== undefined && iso.length > 10;
 }
 
 /**
@@ -146,6 +156,9 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     })
     .refine((e) => e.eventUrl === undefined || ownPageAllowed(e.eventUrl, e.primaryUrl, platformHosts), {
       message: "an event's own page is on its primary page's site or a ticketing platform",
+    })
+    .refine((e) => e.evidence.time === undefined || (hasTime(e.start) && e.eventUrl !== undefined && samePage(e.evidence.time.page, e.eventUrl)), {
+      message: "a time quoted from an own page is on a start that carries a time, and from the event's own page",
     })
     .refine((e) => e.unplaced === undefined || e.neighborhood === ELSEWHERE_IN_THE_METRO, {
       message: "only an event in the elsewhere-in-the-metro catch-all is marked unplaced",

@@ -1,5 +1,6 @@
 import { ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
-import { EXPIRY_REASONS, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
+import { EXPIRY_REASONS, hasTime, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
+import { buildOwnPageRequest, ownPageTime } from "./own-page.js";
 import { splitArchived } from "./archive.js";
 import { ageUnsighted, expire, expireIndexCited, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
 import {
@@ -52,7 +53,7 @@ import {
 import type { ExcludedSource, Registry, Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
-import type { CandidateTally, EventRef, RunReport, SourceReport } from "./report.js";
+import type { CandidateTally, EventRef, OwnPagesReport, RunReport, SourceReport } from "./report.js";
 import { awayGame, skipReason, type SkipReason } from "./skip.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList, placeStored } from "./taxonomy.js";
@@ -70,6 +71,8 @@ export interface Prompts {
   extractionRules: string;
   /** The curation prompt document, sent with every curation call. */
   curationPrompt: string;
+  /** The event page rules, sent with every read of an event's own page for its time (#123). */
+  eventPageRules: string;
 }
 
 export interface RunInput {
@@ -139,8 +142,10 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   // A record no reading ever verified goes stale when no lane has sighted it for four runs that could have (#82).
   const sighted = new Set([...touched, ...reverified.sighted]);
   const aged = reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: couldHaveSighted(e, laneOutcome.attempts, registry, config) }));
+  // A flagged source's events its list dates but does not time have their own page read for the time (#123).
+  const ownPages = await readOwnPages(aged, sighted, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   // A reading places an event from its page; one no page placed this run is placed from what is stored.
-  const placed = placeOffList(aged, neighborhoods, config, registry);
+  const placed = placeOffList(ownPages.events, neighborhoods, config, registry);
   // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
   const madeUncitable = new Set([...merged.uncitable, ...reverified.uncitable]);
   const uncitable = placed.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
@@ -158,6 +163,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     queriesNotSearched: discovery.queriesNotSearched,
     leadsNotFollowed: discovery.leadsNotFollowed,
     eventsNotCurated: curation.notCurated,
+    ownPagesNotRead: ownPages.notRead,
   };
 
   const finishedIso = toLocalIso(ports.clock.now(), config.timezone);
@@ -198,6 +204,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     reverification: { problems: reverified.problems },
     curation: curation.report,
     sources: sourceReports,
+    ownPages: ownPages.report,
     failingSources: registryLane.failingSources,
     offListNeighborhoods: placed.report,
     unmappableNeighborhoods: unmappableNeighborhoods(dataset.events, live),
@@ -946,6 +953,17 @@ function keepsStart(known: Event, sighting: Event, rule: MatchRule | undefined):
   return known.start !== undefined && calendarDate(sighting.start) !== calendarDate(known.start);
 }
 
+/**
+ * Whether a re-reading keeps the time an event's own page gave its start (#123): the reading gives the
+ * same date with no time, and the same own page. The time stands, with its quote, and the own page is
+ * not read again; a new date, a time of the list's own, or another own page drops it.
+ */
+function keepsOwnPageTime(known: Event, sighting: Event): boolean {
+  const { time } = known.evidence;
+  if (time === undefined || sighting.start === undefined || hasTime(sighting.start) || sighting.eventUrl === undefined) return false;
+  return calendarDate(sighting.start) === calendarDate(known.start) && samePage(sighting.eventUrl, time.page);
+}
+
 /** The new reading under the known event's identity and curation, by the field rules refresh gives. */
 function refreshReading(known: Event, sighting: Event): Event {
   const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };
@@ -959,11 +977,13 @@ function refreshReading(known: Event, sighting: Event): Event {
     ...keepIfSame("description", known.description, sighting.description, sameText),
     ...keepIfSame("eventUrl", known.eventUrl, sighting.eventUrl, samePage),
     ...(holdsSchedule(known, sighting) ? { schedule: known.schedule } : {}),
+    ...(keepsOwnPageTime(known, sighting) ? { start: known.start } : {}),
     evidence: {
       ...sighting.evidence,
       ...keepIfSame("date", known.evidence.date, sighting.evidence.date, sameQuote),
       ...keepIfSame("venue", known.evidence.venue, sighting.evidence.venue, sameQuote),
       ...(holdsSchedule(known, sighting) ? { date: known.evidence.date } : {}),
+      ...(keepsOwnPageTime(known, sighting) ? { time: known.evidence.time } : {}),
     },
     id: known.id,
     firstSeen: known.firstSeen,
@@ -1184,6 +1204,96 @@ function sightingFor(event: Event, sightings: Sighting[], aliases: VenueAliases)
     return [{ sighting, rule: match.rule }];
   });
   return matching.sort((a, b) => daysApart(a.sighting.event, event) - daysApart(b.sighting.event, event))[0];
+}
+
+/**
+ * The own-page time (#123, ADR 0009 amended). For an active registry source flagged `readEventPages`,
+ * every active dated event of it that a page with standing read this run, that starts from today
+ * through the horizon on a date with no time, and that has an own page, has that page fetched (the
+ * source's way, through the fetch policy) and read for the time, one call each. A time on the list's
+ * date, quoted from the page, joins the start; the list stays the primary page, so identity, standing
+ * and the date and venue quotes are untouched. Another date is left for a person and reported. Any
+ * failure, a fetch or a model call, costs only the time: the event stays as the list read it, with no
+ * strike or outage. Once the spend cap is reached, the pages still to read are counted and left. A time
+ * once read is kept while the list gives the same date with no time and the same own page (refresh),
+ * so a page is read again only when one of those changes.
+ */
+async function readOwnPages(
+  events: Event[],
+  sighted: Set<string>,
+  registry: Registry,
+  ports: Ports & { model: CappedModel },
+  context: ExtractionContext,
+  rules: string,
+): Promise<{ events: Event[]; report: OwnPagesReport[]; notRead: number }> {
+  const { config, today } = context;
+  const lastDay = horizonEnd(today, config.horizonWeeks);
+  const flagged = registry.sources.filter((s) => s.status === "active" && s.readEventPages);
+  const report = flagged.map((s): OwnPagesReport => ({ source: s.name, read: 0, timed: 0, dateDisagreements: 0, failed: 0, problems: [] }));
+  let notRead = 0;
+  const wantsTime = (e: Event) => {
+    const date = calendarDate(e.start);
+    return (
+      e.status === "active" && sighted.has(e.id) && e.eventUrl !== undefined && date !== undefined && !hasTime(e.start) && date >= today && date <= lastDay
+    );
+  };
+
+  const read = [];
+  for (const event of events) {
+    const { lead } = event;
+    const at = lead.lane === "registry" ? flagged.findIndex((s) => s.name === lead.source) : -1;
+    if (at === -1 || !wantsTime(event)) {
+      read.push(event);
+      continue;
+    }
+    const [source, line] = [flagged[at]!, report[at]!];
+    const url = event.eventUrl!;
+    if (ports.model.exhausted()) {
+      notRead++;
+      read.push(event);
+      continue;
+    }
+    const fetched = await fetchReadable(url, ...fetcherFor(source, ports));
+    if (!("page" in fetched)) {
+      line.failed++;
+      line.problems.push(`"${event.title}": ${fetched.problem}; no time taken`);
+      read.push(event);
+      continue;
+    }
+    const reading = readPage(fetched.page, config);
+    let reply: Awaited<ReturnType<ModelPort["complete"]>>;
+    try {
+      reply = await ports.model.complete(buildOwnPageRequest(event, fetched.page, reading, rules, config, today));
+    } catch (error) {
+      if (error instanceof SpendCapReached) notRead++;
+      else {
+        line.failed++;
+        line.problems.push(`"${event.title}": ${url} not read: ${modelFailed(error)}`);
+      }
+      read.push(event);
+      continue;
+    }
+    const outcome = ownPageTime(reply.value, event, reading, quotableText(reading), config.timezone);
+    if (outcome.kind === "unreadable") {
+      line.failed++;
+      line.problems.push(`"${event.title}": the reply for ${url} was not in the expected shape`);
+      read.push(event);
+      continue;
+    }
+    line.read++;
+    if (outcome.kind === "timed") {
+      line.timed++;
+      read.push({ ...event, start: outcome.start, evidence: { ...event.evidence, time: { page: url, quote: outcome.quote } } });
+      continue;
+    }
+    if (outcome.kind === "disagrees") {
+      line.dateDisagreements++;
+      line.problems.push(`"${event.title}": ${url} gives ${outcome.date}, the list ${calendarDate(event.start)}; no time taken`);
+    }
+    if (outcome.kind === "untimed" && outcome.problem !== undefined) line.problems.push(`"${event.title}": ${url} ${outcome.problem}; no time taken`);
+    read.push(event);
+  }
+  return { events: read, report, notRead };
 }
 
 /** What the two lanes leave for re-verification: which events they sighted, which the hold released this run, and which pages they tried. */

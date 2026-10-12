@@ -15,6 +15,19 @@ export interface SourceReport {
   detail?: string;
 }
 
+/**
+ * One flagged source's own-page reads this run (#123): pages read, times filled, dates that disagreed
+ * with the list, reads that failed, and a line for each of the last two and for any time not taken.
+ */
+export interface OwnPagesReport {
+  source: string;
+  read: number;
+  timed: number;
+  dateDisagreements: number;
+  failed: number;
+  problems: string[];
+}
+
 /** Candidates the run's page readings dropped or could not cite, by cause. */
 export interface CandidateTally {
   /** Dropped because their page placed them outside the geography, or as an away game a team's schedule names no venue for (#81). */
@@ -81,7 +94,7 @@ export interface RunReport {
      * What the cap left undone: fetched pages never extracted, events never re-verified,
      * discovery searches never made and leads never followed, and events due for curation never judged.
      */
-    shortfall: { pagesNotExtracted: number; eventsNotReverified: number; queriesNotSearched: number; leadsNotFollowed: number; eventsNotCurated: number };
+    shortfall: { pagesNotExtracted: number; eventsNotReverified: number; queriesNotSearched: number; leadsNotFollowed: number; eventsNotCurated: number; ownPagesNotRead: number };
     /** Every model call that went out, with what OpenRouter's activity page lists it by; the JSON twin only. */
     modelCalls: ModelCall[];
   };
@@ -117,6 +130,8 @@ export interface RunReport {
     problems: string[];
   };
   sources: SourceReport[];
+  /** Own pages read for a time the list does not give, by flagged source (#123). */
+  ownPages: OwnPagesReport[];
   /** Registry sources at three or more consecutive failures. */
   failingSources: string[];
   /**
@@ -203,7 +218,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     totalUsd: z.number().nonnegative(),
     capUsd: z.number().positive(),
     capHit: z.boolean(),
-    shortfall: z.strictObject({ pagesNotExtracted: count, eventsNotReverified: count, queriesNotSearched: count, leadsNotFollowed: count, eventsNotCurated: count }),
+    shortfall: z.strictObject({ pagesNotExtracted: count, eventsNotReverified: count, queriesNotSearched: count, leadsNotFollowed: count, eventsNotCurated: count, ownPagesNotRead: countSince }),
     modelCalls: listSince(
       z.union([
         z.strictObject({ model: z.string(), servedBy: servedBy.optional(), costUsd: z.number().nonnegative() }),
@@ -222,6 +237,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   reverification: z.strictObject({ problems: z.array(z.string()) }).default({ problems: [] }),
   curation: z.strictObject({ calls: count, judged: count, flagged: count, problems: z.array(z.string()) }),
   sources: z.array(z.strictObject({ name: z.string(), result: z.enum(["fetched", "failed", "blocked", "excluded"]), extracted: count, detail: z.string().optional() })),
+  ownPages: listSince(z.strictObject({ source: z.string(), read: count, timed: count, dateDisagreements: count, failed: count, problems: z.array(z.string()) })),
   failingSources: z.array(z.string()),
   offListNeighborhoods: listSince(z.strictObject({ stored: z.string(), placed: z.string(), events: count })),
   unmappableNeighborhoods: z.array(
@@ -278,7 +294,7 @@ ${EXPIRY_REASONS.map((reason) => `| Expired: ${reason} | ${counts.expired[reason
 
 ## Spend
 
-${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified, ${plural(spend.shortfall.queriesNotSearched, "discovery search", "discovery searches")} not made, ${plural(spend.shortfall.leadsNotFollowed, "discovery lead")} not followed, ${plural(spend.shortfall.eventsNotCurated, "event")} not curated; they stay as they were and are checked next run.` : ""}
+${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified, ${plural(spend.shortfall.queriesNotSearched, "discovery search", "discovery searches")} not made, ${plural(spend.shortfall.leadsNotFollowed, "discovery lead")} not followed, ${plural(spend.shortfall.eventsNotCurated, "event")} not curated, ${plural(spend.shortfall.ownPagesNotRead, "own page")} not read for a time; they stay as they were and are checked next run.` : ""}
 
 ## Sources
 
@@ -291,6 +307,15 @@ ${
         ...report.sources.map((s) => `| ${tableCell(s.name)} | ${s.result} | ${s.extracted} | ${tableCell(s.detail ?? "")} |`),
       ].join("\n")
 }
+
+## Own pages
+
+${markdownList(
+  report.ownPages.flatMap((o) => [
+    `${o.source}: ${plural(o.read, "own page")} read, ${plural(o.timed, "time")} filled, ${plural(o.dateDisagreements, "date disagreement")}, ${plural(o.failed, "failure")}`,
+    ...o.problems.map((p) => `${o.source}: ${p}`),
+  ]),
+)}
 
 ## Discovery
 

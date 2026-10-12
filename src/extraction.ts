@@ -484,8 +484,13 @@ export function quotableText(reading: PageReading): string {
 
 /** The first of the quotes, date then venue, that is not in the page's quotable text, as a report phrase. */
 function quoteNotOnPage(quotes: { date: string; venue: string }, quotable: string): string | undefined {
-  const missing = (["date", "venue"] as const).find((field) => !quotable.includes(comparable(quotes[field])));
+  const missing = (["date", "venue"] as const).find((field) => !quotedOn(quotes[field], quotable));
   return missing === undefined ? undefined : `quoted "${quotes[missing]}" for its ${missing}`;
+}
+
+/** Whether a quote is on a page, given the page's quotable text (quotableText). */
+export function quotedOn(quote: string, quotable: string): boolean {
+  return quotable.includes(comparable(quote));
 }
 
 /**
@@ -534,7 +539,7 @@ export function normalizeUrl(url: string, fallback: string): string {
  * must be a real calendar date (it survives a round trip through Date unchanged) and a time a real
  * clock time; a blank one counts as none given. A date with an unusable time keeps the date.
  */
-function localIso(date: string | null, time: string | null, timezone: string): { iso?: string; problem?: string } {
+export function localIso(date: string | null, time: string | null, timezone: string): { iso?: string; problem?: string } {
   const day = nonEmpty(date);
   const clock = nonEmpty(time);
   if (day === undefined) return {};

@@ -175,7 +175,9 @@ sources:
     kind: music
     neighborhood: Lawrence
     checkHints: KU's performing arts center; the list mixes the Lied Series with KU School of Music events.
+    readEventPages: true
     status: active
+    notes: The list gives no times; each event's own page does, in its text (#123).
 
   - name: Lawrence Arts Center
     urls:

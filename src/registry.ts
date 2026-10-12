@@ -11,6 +11,8 @@ const sourceFields = {
   fetch: z.enum(["plain", "browser"]).optional(),
   /** A CSS selector the browser waits for instead of the network going quiet; browser fetch only. */
   waitFor: z.string().min(1).optional(),
+  /** Read each listed event's own page for the time the list does not give (#123, ADR 0009 amended); only the time is taken. */
+  readEventPages: z.boolean().optional(),
 };
 
 /** A source the job checks on every run, or one it knows about and deliberately does not fetch. */

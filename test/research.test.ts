@@ -60,6 +60,7 @@ describe("a research run's files", () => {
     );
     await writeFile(join(root, "prompts", "extraction-rules.md"), "RULES");
     await writeFile(join(root, "prompts", "curation-prompt.md"), "CURATION");
+    await writeFile(join(root, "prompts", "event-page-rules.md"), "EVENT PAGE RULES");
     await writeFile(join(root, "data", "registry.yaml"), stringify({ sources: [knuckleheads] }));
   });
   afterEach(() => rm(root, { recursive: true, force: true }));

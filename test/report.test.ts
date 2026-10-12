@@ -35,7 +35,7 @@ const full: RunReport = {
     totalUsd: 5.01234,
     capUsd: 5,
     capHit: true,
-    shortfall: { pagesNotExtracted: 2, eventsNotReverified: 1, queriesNotSearched: 3, leadsNotFollowed: 1, eventsNotCurated: 4 },
+    shortfall: { pagesNotExtracted: 2, eventsNotReverified: 1, queriesNotSearched: 3, leadsNotFollowed: 1, eventsNotCurated: 4, ownPagesNotRead: 0 },
     modelCalls: [{ model: "test/extraction", servedBy: { model: "test/extraction", provider: "Test", generationId: "gen-1" }, costUsd: 0.01 }, { model: "test/curation", error: "timed out" }],
   },
   discovery: {
@@ -53,6 +53,7 @@ const full: RunReport = {
     { name: "Pipe | Hall", result: "failed", extracted: 0, detail: "HTTP 503 | retry later\n  then gave up" },
     { name: "Blocked Place", result: "blocked", extracted: 0, detail: "robots.txt disallows the page" },
   ],
+  ownPages: [{ source: "Lied", read: 3, timed: 2, dateDisagreements: 1, failed: 0, problems: ["\"Show\": https://lied.test/event/show gives 2026-10-13, the list 2026-10-12; no time taken"] }],
   failingSources: ["Pipe | Hall"],
   offListNeighborhoods: [{ stored: "Downtown East", placed: "Crossroads", events: 2 }],
   unmappableNeighborhoods: [
@@ -114,7 +115,7 @@ describe("the run report", () => {
 
       ## Spend
 
-      5.0123 USD of a 5 USD cap. **Cap hit: no model calls were made after it.** Shortfall: 2 pages not extracted, 1 event not re-verified, 3 discovery searches not made, 1 discovery lead not followed, 4 events not curated; they stay as they were and are checked next run.
+      5.0123 USD of a 5 USD cap. **Cap hit: no model calls were made after it.** Shortfall: 2 pages not extracted, 1 event not re-verified, 3 discovery searches not made, 1 discovery lead not followed, 4 events not curated, 0 own pages not read for a time; they stay as they were and are checked next run.
 
       ## Sources
 
@@ -123,6 +124,11 @@ describe("the run report", () => {
       | Knuckleheads | fetched | 12 |  |
       | Pipe \\| Hall | failed | 0 | HTTP 503 \\| retry later then gave up |
       | Blocked Place | blocked | 0 | robots.txt disallows the page |
+
+      ## Own pages
+
+      - Lied: 3 own pages read, 2 times filled, 1 date disagreement, 0 failures
+      - Lied: "Show": https://lied.test/event/show gives 2026-10-13, the list 2026-10-12; no time taken
 
       ## Discovery
 
