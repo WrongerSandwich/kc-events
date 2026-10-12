@@ -74,6 +74,9 @@ export const candidateSchema = z.object({
 
 export const extractionReplySchema = z.object({ events: z.array(candidateSchema) });
 
+/** The longest quote the model may give for a date, a venue, or an own page's time. */
+export const MAX_QUOTE = 500;
+
 /**
  * The longest each free-text field the model writes may be, so one runaway page cannot grow the
  * dataset past what the site will build. Checked candidate by candidate rather than in the response
@@ -84,8 +87,8 @@ export const cappedCandidateSchema = candidateSchema.extend({
   title: z.string().max(200),
   venue: z.string().max(150).nullable(),
   description: z.string().max(300).nullable(),
-  dateEvidence: z.string().max(500).nullable(),
-  venueEvidence: z.string().max(500).nullable(),
+  dateEvidence: z.string().max(MAX_QUOTE).nullable(),
+  venueEvidence: z.string().max(MAX_QUOTE).nullable(),
   schedule: z.string().max(200).nullable(),
 });
 
@@ -99,7 +102,7 @@ export function overCap(candidate: Candidate): { field: string; cap: number } | 
 export type Candidate = z.infer<typeof candidateSchema>;
 
 /** Two minutes for one page; a call past it costs only its page, not the weekly run's time budget. */
-const EXTRACTION_TIMEOUT_MS = 120_000;
+export const EXTRACTION_TIMEOUT_MS = 120_000;
 
 /** The strict JSON schema sent as the response format on every extraction call. */
 export const extractionResponseFormat = strictResponseFormat("extracted_events", extractionReplySchema);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { emptyDataset } from "../src/dataset.js";
+import { emptyDataset, parseDataset } from "../src/dataset.js";
+import { givesTime } from "../src/own-page.js";
 import { renderReportMarkdown } from "../src/report.js";
 import { candidateAt, source, WEEK_1, WEEK_2 } from "./fakes/fixtures.js";
 import { testConfig } from "./fakes/config.js";
@@ -125,6 +126,13 @@ describe("an event's own page read for its time (#123)", () => {
     expect(report.ownPages[0]!.problems[0]).toContain("not on the page");
   });
 
+  it("a quote on the page that does not give the time, the date alone, is dropped", async () => {
+    const { dataset, report } = await runAt(WEEK_1, { completions: [listed(), timed({ timeEvidence: "October 12, 2026" })] });
+
+    expect(dataset.events[0]).toMatchObject({ status: "active", start: "2026-10-12" });
+    expect(report.ownPages[0]!.problems[0]).toContain("does not give 19:00");
+  });
+
   it.each([
     ["no time", { time: null }],
     ["no quote", { timeEvidence: null }],
@@ -206,10 +214,35 @@ describe("an event's own page read for its time (#123)", () => {
   });
 });
 
+describe("whether a quote gives a time", () => {
+  it.each([
+    ["Monday • October 12, 2026 • 7:00 pm", "19:00"],
+    ["7pm", "19:00"],
+    ["7 p.m.", "19:00"],
+    ["Doors 6, show 19:00", "19:00"],
+    ["at 7:30 PM", "19:30"],
+    ["10 am tour", "10:00"],
+    ["12 noon, or 12 pm", "12:00"],
+    ["7.00", "19:00"],
+  ])("%s gives %s", (quote, time) => {
+    expect(givesTime(quote, time)).toBe(true);
+  });
+
+  it.each([
+    ["October 12, 2026", "12:00"],
+    ["7 pm", "07:00"],
+    ["7:00 pm", "07:00"],
+    ["7:30 pm", "19:00"],
+    ["17:00", "19:00"],
+    ["Monday • October 12, 2026", "19:00"],
+  ])("%s does not give %s", (quote, time) => {
+    expect(givesTime(quote, time)).toBe(false);
+  });
+});
+
 describe("the dataset schema and the own page's time (#123)", () => {
   it("refuses a time quote on an untimed start, or from a page other than the event's own", async () => {
     const { dataset } = await runAt(WEEK_1);
-    const { parseDataset } = await import("../src/dataset.js");
     const event = dataset.events[0]!;
     const withEvent = (e: unknown) => ({ ...dataset, events: [e] });
     expect(() => parseDataset(withEvent({ ...event, start: "2026-10-12" }))).toThrow(/time/);

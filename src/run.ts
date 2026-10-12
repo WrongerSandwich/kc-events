@@ -1228,8 +1228,12 @@ async function readOwnPages(
 ): Promise<{ events: Event[]; report: OwnPagesReport[]; notRead: number }> {
   const { config, today } = context;
   const lastDay = horizonEnd(today, config.horizonWeeks);
-  const flagged = registry.sources.filter((s) => s.status === "active" && s.readEventPages);
-  const report = flagged.map((s): OwnPagesReport => ({ source: s.name, read: 0, timed: 0, dateDisagreements: 0, failed: 0, problems: [] }));
+  /** Each flagged source by name, with its line in the report. */
+  const flagged = new Map(
+    registry.sources
+      .filter((s) => s.status === "active" && s.readEventPages)
+      .map((source) => [source.name, { source, line: { source: source.name, read: 0, timed: 0, dateDisagreements: 0, failed: 0, problems: [] } as OwnPagesReport }]),
+  );
   let notRead = 0;
   const wantsTime = (e: Event) => {
     const date = calendarDate(e.start);
@@ -1241,12 +1245,12 @@ async function readOwnPages(
   const read = [];
   for (const event of events) {
     const { lead } = event;
-    const at = lead.lane === "registry" ? flagged.findIndex((s) => s.name === lead.source) : -1;
-    if (at === -1 || !wantsTime(event)) {
+    const flaggedSource = lead.lane === "registry" ? flagged.get(lead.source) : undefined;
+    if (!flaggedSource || !wantsTime(event)) {
       read.push(event);
       continue;
     }
-    const [source, line] = [flagged[at]!, report[at]!];
+    const { source, line } = flaggedSource;
     const url = event.eventUrl!;
     if (ports.model.exhausted()) {
       notRead++;
@@ -1273,7 +1277,7 @@ async function readOwnPages(
       read.push(event);
       continue;
     }
-    const outcome = ownPageTime(reply.value, event, reading, quotableText(reading), config.timezone);
+    const outcome = ownPageTime(reply.value, event, reading, config.timezone);
     if (outcome.kind === "unreadable") {
       line.failed++;
       line.problems.push(`"${event.title}": the reply for ${url} was not in the expected shape`);
@@ -1293,7 +1297,7 @@ async function readOwnPages(
     if (outcome.kind === "untimed" && outcome.problem !== undefined) line.problems.push(`"${event.title}": ${url} ${outcome.problem}; no time taken`);
     read.push(event);
   }
-  return { events: read, report, notRead };
+  return { events: read, report: [...flagged.values()].map((f) => f.line), notRead };
 }
 
 /** What the two lanes leave for re-verification: which events they sighted, which the hold released this run, and which pages they tried. */

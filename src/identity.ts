@@ -11,7 +11,7 @@
  * as a pointer from a record folded as a duplicate to the record it was folded into.
  */
 
-import type { EventStatus, RecurrenceClass } from "./dataset.js";
+import { hasTime, type EventStatus, type RecurrenceClass } from "./dataset.js";
 import { hostOf, samePage } from "./hosts.js";
 
 /** How far apart two dates can be and still be the same event under the fuzzy match. */
@@ -330,7 +330,7 @@ export function sameMoment(a: string | undefined, b: string | undefined): boolea
 }
 
 /** The HH:MM of a date-time as written (local, with its offset); none for a bare date. */
-const timeOfDay = (iso: string | undefined) => (iso !== undefined && iso.length > 10 ? iso.slice(11, 16) : undefined);
+const timeOfDay = (iso: string | undefined) => (hasTime(iso) ? iso!.slice(11, 16) : undefined);
 
 /** Whole days between two events' calendar dates; none when either has no date, which is as near as can be. */
 export function daysApart(a: EventIdentity, b: EventIdentity): number {
