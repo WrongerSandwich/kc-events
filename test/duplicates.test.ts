@@ -203,6 +203,31 @@ describe("folding duplicates", () => {
     expect(report.counts.expired.duplicate).toBe(1);
   });
 
+  it("holds the fuller schedule when the page gives the short reading again after the fold", async () => {
+    const crossroads = source("Crossroads Arts District", { urls: ["https://kccrossroads.org/"], kind: "other", neighborhood: "Crossroads" });
+    const recurring = (title: string, schedule: string, overrides: Partial<Event> = {}): Event => {
+      const { start: _start, ...e } = event(title, crossroads.name, crossroads.urls[0]!, "2026-11-06", { recurrence: "recurring", schedule, ...overrides });
+      return { ...e, evidence: { date: schedule, venue: crossroads.name } };
+    };
+    // The pair as the fold left it in the run before: the kept record with the fuller schedule, the other pointing at it.
+    const short = recurring("First Friday", "First Friday of every month");
+    const full = recurring("First Friday in the Crossroads", "First Friday of every month", { firstSeen: RUN_TWO, status: "expired", expiryReason: "duplicate", duplicateOf: short.id });
+    const reading = (title: string, schedule: string) =>
+      candidateAt(crossroads, { title, startDate: null, startTime: null, schedule, dateEvidence: schedule, venueEvidence: crossroads.name });
+
+    // The page lists the short reading first, and the first verified reading of a run is the one that stands.
+    const { dataset } = await runWith(WEEK_1, withEvents([short, full]), {
+      sources: [crossroads],
+      pages: { [crossroads.urls[0]!]: PAGE },
+      completions: [reply(reading("First Friday", "First Friday"), reading("First Friday in the Crossroads", "First Friday of every month"))],
+      config,
+    });
+
+    expect(dataset.events).toHaveLength(2);
+    expect(byId(dataset).get(short.id)).toMatchObject({ status: "active", title: "First Friday", schedule: "First Friday of every month", evidence: { date: "First Friday of every month" } });
+    expect(byId(dataset).get(full.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: short.id });
+  });
+
   it("leaves a fold's schedule alone when both or neither say when", async () => {
     const tour = (primaryUrl: string, schedule: string, overrides: Partial<Event> = {}): Event => {
       const { start: _start, ...e } = event("Gallery Tour", "Bar A", primaryUrl, "2026-10-14", { recurrence: "recurring", schedule, ...overrides });

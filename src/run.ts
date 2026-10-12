@@ -844,15 +844,16 @@ function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event
 
 /**
  * The first two records, in order seen (ties in dataset order), that are the same event: the one to
- * keep, then its duplicate. Two dated records are compared under every rule but the recurring one
- * (sameEvent), two recurring records under the recurring rule alone (#119): the exact rule ignores
- * venue, and two recurring readings of one page with one title and no venue are not published.
+ * keep, then its duplicate. Two dated records are compared under sameEvent, as before; two
+ * recurring records under the recurring rule alone (#119), not the exact rule too: that one ignores
+ * venue, and two recurring readings of one page with one title and no venue cannot be published,
+ * so there is nothing to fold. A dated and a recurring record are never a pair here.
  */
 function firstMatchingPair(events: Event[], aliases: VenueAliases): [Event, Event] | undefined {
   const live = events.filter((e) => e.status !== "expired").sort((a, b) => Date.parse(a.firstSeen) - Date.parse(b.firstSeen));
   const dated = live.filter((e) => e.recurrence !== "recurring");
   const samePair = (a: Event, b: Event) =>
-    a.recurrence === "recurring" ? b.recurrence === "recurring" && sameRecurringEvent(a, b, aliases) : b.recurrence !== "recurring" && sameEvent(a, b, dated, aliases);
+    a.recurrence === "recurring" ? sameRecurringEvent(a, b, aliases) : b.recurrence !== "recurring" && sameEvent(a, b, dated, aliases);
   for (const [j, later] of live.entries()) {
     const kept = live.slice(0, j).find((earlier) => samePair(earlier, later));
     if (kept) return [kept, later];
@@ -861,14 +862,30 @@ function firstMatchingPair(events: Event[], aliases: VenueAliases): [Event, Even
 }
 
 /**
- * The record a fold keeps, with the duplicate's schedule when the kept record's only repeats its
- * title and the duplicate's says when (#119): "First Friday" gives way to "First Friday of every
- * month". Where both or neither say when, the kept record's stands. Only two recurring records
- * carry a schedule, so any other pair is left as it is.
+ * The record a fold keeps, with the duplicate's schedule and date quote when the kept record's
+ * schedule only repeats one of the pair's titles and the duplicate's says when (#119): "First
+ * Friday" gives way to "First Friday of every month". Where both or neither say when, the kept
+ * record's stands. Only from a duplicate on the kept record's own primary page: the quote must be
+ * on the page the record cites (ADR 0002). Only two recurring records carry a schedule, so any
+ * other pair is left as it is.
  */
 function withFullerSchedule(kept: Event, duplicate: Event): Event {
-  if (scheduleSaysWhen(kept) || !scheduleSaysWhen(duplicate) || kept.recurrence !== "recurring") return kept;
+  if (kept.recurrence !== "recurring" || !samePage(kept.primaryUrl, duplicate.primaryUrl)) return kept;
+  const titles = [kept.title, duplicate.title];
+  if (scheduleSaysWhen(kept.schedule, titles) || !scheduleSaysWhen(duplicate.schedule, titles)) return kept;
   return { ...kept, schedule: duplicate.schedule, evidence: { ...kept.evidence, date: duplicate.evidence.date } };
+}
+
+/**
+ * Whether a re-reading of a recurring event from its own primary page gives a schedule that only
+ * repeats one of the event's titles where the stored one says when (#119): the page bills "First
+ * Friday" once with "First Friday of every month" and once with "First Friday", and the kept record
+ * should not flap between them. The stored schedule and its date quote stand.
+ */
+function holdsSchedule(known: Event, sighting: Event): boolean {
+  if (sighting.recurrence !== "recurring" || !samePage(known.primaryUrl, sighting.primaryUrl)) return false;
+  const titles = [known.title, sighting.title];
+  return scheduleSaysWhen(known.schedule, titles) && !scheduleSaysWhen(sighting.schedule, titles);
 }
 
 /**
@@ -896,7 +913,8 @@ function firstMonthPair(events: Event[]): [Event, Event] | undefined {
  * and description when the new one differs only in whitespace or punctuation, the stored own page when
  * the new one is the same page (samePage), and each stored quote when the quote check cannot tell it
  * from the new one, so it is on the page just as surely (#82): the weekly diff carries what changed,
- * not how a reading happened to spell it.
+ * not how a reading happened to spell it. A recurring event's stored schedule, with its quote, stands
+ * over a new one from the same page that only repeats a title (#119, holdsSchedule).
  */
 function refresh(known: Event, sighting: Event): Event {
   const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };
@@ -909,10 +927,12 @@ function refresh(known: Event, sighting: Event): Event {
     ...(variantTitles(known.title, sighting.title) ? { title: known.title } : keepIfSame("title", known.title, sighting.title, sameText)),
     ...keepIfSame("description", known.description, sighting.description, sameText),
     ...keepIfSame("eventUrl", known.eventUrl, sighting.eventUrl, samePage),
+    ...(holdsSchedule(known, sighting) ? { schedule: known.schedule } : {}),
     evidence: {
       ...sighting.evidence,
       ...keepIfSame("date", known.evidence.date, sighting.evidence.date, sameQuote),
       ...keepIfSame("venue", known.evidence.venue, sighting.evidence.venue, sameQuote),
+      ...(holdsSchedule(known, sighting) ? { date: known.evidence.date } : {}),
     },
     id: known.id,
     firstSeen: known.firstSeen,

@@ -97,21 +97,17 @@ export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, 
   const onPage = known.filter((k) => samePageAndTitle(sighting, k)).flatMap((k) => standsFor(k) ?? []);
   const direct = onPage.reduce<T | undefined>((nearest, k) => (nearest === undefined || daysApart(sighting, k) < daysApart(sighting, nearest) ? k : nearest), undefined);
   if (direct) return { kind: "matched", event: direct, rule: "page-and-title" };
-  for (const k of known) {
-    const ownPage = sameOwnPageOnDate(sighting, k) ? standsFor(k) : undefined;
-    if (ownPage) return { kind: "matched", event: ownPage, rule: "own-page" };
-  }
-  for (const k of known) {
-    const fuzzy = sameEventFuzzily(sighting, k, aliases) ? standsFor(k) : undefined;
-    if (fuzzy) return { kind: "matched", event: fuzzy, rule: "fuzzy" };
-  }
-  for (const k of known) {
-    const sameEnd = sameEndDate(sighting, k, aliases) ? standsFor(k) : undefined;
-    if (sameEnd) return { kind: "matched", event: sameEnd, rule: "same-end" };
-  }
-  for (const k of known) {
-    const recurring = sameRecurringEvent(sighting, k, aliases) ? standsFor(k) : undefined;
-    if (recurring) return { kind: "matched", event: recurring, rule: "recurring" };
+  const pairRules: [MatchRule, (a: EventIdentity, b: EventIdentity) => boolean][] = [
+    ["own-page", sameOwnPageOnDate],
+    ["fuzzy", (a, b) => sameEventFuzzily(a, b, aliases)],
+    ["same-end", (a, b) => sameEndDate(a, b, aliases)],
+    ["recurring", (a, b) => sameRecurringEvent(a, b, aliases)],
+  ];
+  for (const [rule, same] of pairRules) {
+    for (const k of known) {
+      const event = same(sighting, k) ? standsFor(k) : undefined;
+      if (event) return { kind: "matched", event, rule };
+    }
   }
   const venueless = candidateForVenueless(sighting, known);
   if (venueless.kind === "matched") return venueless;
@@ -389,17 +385,17 @@ function sameEndDate(a: EventIdentity, b: EventIdentity, aliases: VenueAliases):
  */
 export function sameRecurringEvent(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
   if (a.recurrence !== "recurring" || b.recurrence !== "recurring" || a.venue === undefined || b.venue === undefined) return false;
-  const titles = sameName(a.title, b.title) || (onSamePage(a, b) && sameOrShortenedTitle(a.title, b.title));
-  return titles && sameVenue(a.venue, b.venue, aliases);
+  const titlesMatch = sameName(a.title, b.title) || (onSamePage(a, b) && sameOrShortenedTitle(a.title, b.title));
+  return titlesMatch && sameVenue(a.venue, b.venue, aliases);
 }
 
 /**
- * Whether a recurring record's schedule says when, rather than only repeating its title (#119): a
- * reading of "First Friday" whose schedule is "First Friday" adds nothing; "First Friday of every
- * month" does. Compared like names: case and punctuation apart.
+ * Whether a recurring event's schedule says when, rather than only repeating one of the titles the
+ * event goes by (#119): a reading of "First Friday" whose schedule is "First Friday" adds nothing;
+ * "First Friday of every month" does. Compared like names: case and punctuation apart.
  */
-export function scheduleSaysWhen(e: { title: string; schedule?: string }): boolean {
-  return e.schedule !== undefined && !sameName(e.schedule, e.title);
+export function scheduleSaysWhen(schedule: string | undefined, titles: readonly string[]): boolean {
+  return schedule !== undefined && titles.every((title) => !sameName(schedule, title));
 }
 
 /** Whether two events both give an end, on one calendar date: two readings of one run, however their starts differ. */
