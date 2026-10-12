@@ -57,10 +57,12 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin);
   .always { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
   /* Two lines a row: the name, then when and where. Schedules run long ("Saturdays & Sundays, April–November; …"),
      so they get the full width rather than a narrow right-hand column. */
-  .always li { display: grid; padding-block: var(--space-2); border-bottom: 1px solid var(--rule); }
+  /* The icon gets its own column and the link shares the row's columns, so the detail line starts exactly where the
+     title's text does, whatever the two lines' font sizes. */
+  .always li { display: grid; grid-template-columns: auto 1fr; column-gap: var(--space-2); padding-block: var(--space-2); border-bottom: 1px solid var(--rule); }
   .always li:last-child { border-bottom: 0; }
-  .always a { display: flex; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
-  .always .detail { font-size: var(--text-sm); color: var(--fg-muted); padding-left: calc(1.15em + var(--space-2)); }
-  .icon { flex: none; color: var(--hue); margin-right: var(--space-2); }
+  .always a { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
+  .always .detail { grid-column: 2; font-size: var(--text-sm); color: var(--fg-muted); }
+  .icon { color: var(--hue); }
   .explore { margin-block: var(--space-12); font-size: var(--text-lg); font-weight: var(--weight-strong); }
 </style>
