@@ -36,13 +36,13 @@ describe("unmappable neighborhoods in the run report", () => {
   it("the first run, with no record before it, lists every record in the catch-all with what the extractor proposed", async () => {
     const { dataset, report } = await runOver([olathe(), candidate({ title: "Nowhere Show", neighborhood: null })]);
 
-    expect(dataset.events.map((e) => e.proposedNeighborhood)).toEqual(["Olathe", undefined]);
+    expect(dataset.events.map((e) => e.unplaced)).toEqual([{ proposed: "Olathe" }, {}]);
     expect(report.unmappableNeighborhoods).toEqual([
       { eventId: dataset.events[0]!.id, eventTitle: "Suburban Show", venue: "Some Hall", proposed: "Olathe", listedBefore: false },
       { eventId: dataset.events[1]!.id, eventTitle: "Nowhere Show", venue: "recordBar", listedBefore: false },
     ]);
     const markdown = renderReportMarkdown(report);
-    expect(markdown).toContain("2 events end the run in the catch-all, none of them listed in an earlier report.");
+    expect(markdown).toContain("In the catch-all as the run ends: 2 events, none of them in an earlier report.");
     expect(markdown).toContain('- Suburban Show at Some Hall: the extractor proposed "Olathe"');
     expect(markdown).toContain("- Nowhere Show at recordBar: no neighborhood proposed");
   });
@@ -57,7 +57,7 @@ describe("unmappable neighborhoods in the run report", () => {
       ["Nowhere Show", true],
     ]);
     const markdown = renderReportMarkdown(report);
-    expect(markdown).toContain("2 events end the run in the catch-all, all of them listed in an earlier report.");
+    expect(markdown).toContain("In the catch-all as the run ends: 2 events, all of them in an earlier report.");
     expect(markdown).not.toContain("- Suburban Show at Some Hall");
   });
 
@@ -80,8 +80,21 @@ describe("unmappable neighborhoods in the run report", () => {
     const { dataset, report } = await runOver([olathe({ neighborhood: "Westport" })], { dataset: first.dataset, now: WEEK_2 });
 
     expect(dataset.events[0]).toMatchObject({ neighborhood: "Westport" });
-    expect(dataset.events[0]).not.toHaveProperty("proposedNeighborhood");
+    expect(dataset.events[0]).not.toHaveProperty("unplaced");
     expect(report.unmappableNeighborhoods).toEqual([]);
+  });
+
+  it("a record in the catch-all written before the mark was kept is listed, and marked, whether or not the run reads it", async () => {
+    // Before #104 the report listed readings, not records, so a record sitting in the catch-all may never have been listed.
+    const first = await runOver([olathe(), candidate({ title: "Nowhere Show", neighborhood: null })]);
+    const older = { ...first.dataset, events: first.dataset.events.map(({ unplaced: _, ...e }) => e) };
+    const { dataset, report } = await runOver([olathe()], { dataset: older, now: WEEK_2 });
+
+    expect(report.unmappableNeighborhoods.map((u) => [u.eventTitle, u.listedBefore])).toEqual([
+      ["Suburban Show", false],
+      ["Nowhere Show", false],
+    ]);
+    expect(dataset.events.map((e) => e.unplaced)).toEqual([{ proposed: "Olathe" }, {}]);
   });
 
   it("new records with no venue are counted in one line, not listed one by one", async () => {
@@ -93,7 +106,7 @@ describe("unmappable neighborhoods in the run report", () => {
 
     expect(report.unmappableNeighborhoods).toHaveLength(3);
     const markdown = renderReportMarkdown(report);
-    expect(markdown).toContain("3 events end the run in the catch-all, none of them listed in an earlier report.");
+    expect(markdown).toContain("In the catch-all as the run ends: 3 events, none of them in an earlier report.");
     expect(markdown).toContain("- 2 new ones with no venue");
     expect(markdown).not.toContain("Mystery Night");
     expect(markdown).toContain('- Suburban Show at Some Hall: the extractor proposed "Olathe"');

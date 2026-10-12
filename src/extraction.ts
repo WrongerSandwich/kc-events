@@ -374,9 +374,9 @@ export type CandidateOrigin = PageOrigin & {
 };
 
 /**
- * One candidate after cite-or-drop: the event as read off a page this run, with, when its address
- * mapped to no neighborhood on the list, what the extractor proposed instead; and whether the page
- * says it is cancelled.
+ * One candidate after cite-or-drop: the event as read off a page this run (marked unplaced, with what
+ * the extractor proposed instead, when its address mapped to no neighborhood on the list), and
+ * whether the page says it is cancelled.
  */
 export interface Sighting {
   event: Event;
@@ -439,8 +439,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     ...(when.end !== undefined ? { end: when.end } : {}),
     ...(when.schedule !== undefined ? { schedule: when.schedule } : {}),
     ...(venue !== undefined ? { venue } : {}),
-    neighborhood: placement.neighborhood,
-    ...(placement.proposed !== undefined ? { proposedNeighborhood: placement.proposed } : {}),
+    ...placement,
     primaryUrl,
     ...(eventUrl !== undefined ? { eventUrl } : {}),
     kind: toKind(candidate.kind, context.config.kinds),

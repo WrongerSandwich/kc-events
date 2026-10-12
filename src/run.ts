@@ -1399,7 +1399,9 @@ function originFor(event: Event, url: string, registry: Registry): PageOrigin {
  * Every event not expired whose stored neighborhood is off the list, placed again (see placeStored),
  * and for the report, each stored value, where it went, and how many events. A config that renames or
  * regroups neighborhoods would otherwise leave the old names on every event no page re-reads,
- * unnoticed. An expired event is left as it is: a reading that revives it places it from its page.
+ * unnoticed. One in the catch-all not marked unplaced, placed there before #104 or by this, is marked with
+ * no proposal, so the next report knows this one counted it (#104). An expired event is left as it is: a
+ * reading that revives it places it from its page.
  */
 function placeOffList(events: Event[], list: string[], config: RunConfig, registry: Registry) {
   const report: RunReport["offListNeighborhoods"] = [];
@@ -1408,11 +1410,12 @@ function placeOffList(events: Event[], list: string[], config: RunConfig, regist
     const { lead } = event;
     const source = lead.lane === "registry" ? registry.sources.find((s) => s.name === lead.source) : undefined;
     const neighborhood = placeStored(event.neighborhood, list, config, source?.neighborhood);
-    if (neighborhood === event.neighborhood) return event;
+    const mark = neighborhood === ELSEWHERE_IN_THE_METRO && event.unplaced === undefined ? { unplaced: {} } : {};
+    if (neighborhood === event.neighborhood) return { ...event, ...mark };
     const line = report.find((r) => r.stored === event.neighborhood && r.placed === neighborhood);
     if (line) line.events++;
     else report.push({ stored: event.neighborhood, placed: neighborhood, events: 1 });
-    return { ...event, neighborhood };
+    return { ...event, neighborhood, ...mark };
   });
   return { events: placed, report };
 }
@@ -1496,16 +1499,21 @@ function countExpired(previous: Event[], events: Event[]): Record<ExpiryReason, 
  * The run report's unmappable neighborhoods (#104): every record not expired that ends the run in the
  * catch-all, read from the records rather than this run's readings, since a reading in the catch-all
  * may not be the one that stands. Each is marked listed before when it began the run in the catch-all,
- * not expired, with the same proposal, so the last report listed it; it is counted but not listed again.
+ * not expired, marked unplaced with the same proposal: a run since #104 wrote it so, and that run's
+ * report listed it, or counted it when it had no venue. It is counted now but not listed again.
  */
 function unmappableNeighborhoods(previous: Event[], events: Event[]): RunReport["unmappableNeighborhoods"] {
-  const unplaced = (e: Event) => e.status !== "expired" && e.neighborhood === ELSEWHERE_IN_THE_METRO;
-  const before = new Map(previous.filter(unplaced).map((e) => [e.id, e.proposedNeighborhood]));
-  return events.filter(unplaced).map((e) => ({
-    eventId: e.id,
-    eventTitle: e.title,
-    ...(e.venue !== undefined ? { venue: e.venue } : {}),
-    ...(e.proposedNeighborhood !== undefined ? { proposed: e.proposedNeighborhood } : {}),
-    listedBefore: before.has(e.id) && before.get(e.id) === e.proposedNeighborhood,
-  }));
+  const inCatchAll = (e: Event) => e.status !== "expired" && e.neighborhood === ELSEWHERE_IN_THE_METRO;
+  const proposedBefore = new Map(previous.filter((e) => inCatchAll(e) && e.unplaced !== undefined).map((e) => [e.id, e.unplaced!.proposed]));
+  return events.filter(inCatchAll).map((e) => {
+    const proposed = e.unplaced?.proposed;
+    return {
+      eventId: e.id,
+      eventTitle: e.title,
+      ...(e.venue !== undefined ? { venue: e.venue } : {}),
+      ...(proposed !== undefined ? { proposed } : {}),
+      // A record marked with no proposal maps to undefined, so has() tells it from one not marked or not there.
+      listedBefore: proposedBefore.has(e.id) && proposedBefore.get(e.id) === proposed,
+    };
+  });
 }

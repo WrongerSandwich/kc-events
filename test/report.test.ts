@@ -148,7 +148,7 @@ describe("the run report", () => {
 
       ## Unmappable neighborhoods
 
-      3 events end the run in the catch-all, 1 of them listed in an earlier report.
+      In the catch-all as the run ends: 3 events, 1 of them in an earlier report.
 
       - Barn Dance at Red Barn: the extractor proposed "Kearney"
       - 1 new one with no venue

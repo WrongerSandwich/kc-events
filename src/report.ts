@@ -127,9 +127,10 @@ export interface RunReport {
   /**
    * Unmappable neighborhoods: every record not expired that ends the run in the elsewhere-in-the-metro
    * catch-all (#104), with the neighborhood or city the extractor proposed instead, when it proposed
-   * one, and whether an earlier report listed it: the record was in the catch-all as the run began,
-   * with the same proposal. The Markdown lists only the rest. Reports before #104 listed this run's
-   * readings instead, with no id and nothing listed before.
+   * one, and whether an earlier report listed it (or counted it, having no venue): the record began the
+   * run in the catch-all, marked unplaced by a run since #104, with the same proposal. The Markdown
+   * lists only the rest. Reports before #104 listed this run's readings instead, with no id and
+   * nothing listed before.
    */
   unmappableNeighborhoods: { eventId?: string; eventTitle: string; venue?: string; proposed?: string; listedBefore: boolean }[];
   /**
@@ -157,6 +158,8 @@ export interface RunReport {
 const count = z.number().int().nonnegative();
 /** A count, or a list, that a report written before it existed does not carry: zero, or empty. */
 const countSince = count.default(0);
+/** A flag that a report written before it existed does not carry: false. */
+const flagSince = z.boolean().default(false);
 const listSince = <T extends z.ZodType>(item: T) => z.array(item).default([]);
 const eventRef = z.strictObject({ title: z.string(), primaryUrl: z.string() });
 const hostEvents = z.strictObject({ host: z.string(), events: count });
@@ -222,7 +225,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   failingSources: z.array(z.string()),
   offListNeighborhoods: listSince(z.strictObject({ stored: z.string(), placed: z.string(), events: count })),
   unmappableNeighborhoods: z.array(
-    z.strictObject({ eventId: z.string().optional(), eventTitle: z.string(), venue: z.string().optional(), proposed: z.string().optional(), listedBefore: z.boolean().default(false) }),
+    z.strictObject({ eventId: z.string().optional(), eventTitle: z.string(), venue: z.string().optional(), proposed: z.string().optional(), listedBefore: flagSince }),
   ),
   promotionSuggestions: z.array(z.strictObject({ host: z.string(), runsSeen: count, exampleUrl: z.string(), heldEvents: countSince })),
   heldForPromotion: listSince(hostEvents),
@@ -354,21 +357,21 @@ ${markdownList(report.promotionSuggestions.map((p) => `${p.host}: events found i
 
 /**
  * The records ending the run in the catch-all (#104): a line counting them all and those an earlier
- * report listed, then the rest, but for those with no venue, which are counted in one line.
+ * report listed or counted, then the rest, but for those with no venue, which are counted in one line.
  */
-function unmappableSection(unplaced: RunReport["unmappableNeighborhoods"]): string {
-  if (unplaced.length === 0) return markdownList([]);
-  const before = unplaced.filter((u) => u.listedBefore).length;
-  const ofThem = before === 0 ? "none of them" : before === unplaced.length ? "all of them" : `${before} of them`;
-  const fresh = unplaced.filter((u) => !u.listedBefore);
-  const venueless = fresh.filter((u) => u.venue === undefined).length;
+function unmappableSection(inCatchAll: RunReport["unmappableNeighborhoods"]): string {
+  if (inCatchAll.length === 0) return markdownList([]);
+  const before = inCatchAll.filter((u) => u.listedBefore).length;
+  const ofThem = before === 0 ? "none" : before === inCatchAll.length ? "all" : `${before}`;
+  const newHere = inCatchAll.filter((u) => !u.listedBefore);
+  const venueless = newHere.filter((u) => u.venue === undefined).length;
   const lines = [
-    ...fresh
+    ...newHere
       .filter((u) => u.venue !== undefined)
       .map((u) => `${u.eventTitle} at ${u.venue}: ${u.proposed !== undefined ? `the extractor proposed "${u.proposed}"` : "no neighborhood proposed"}`),
     ...(venueless > 0 ? [`${plural(venueless, "new one", "new ones")} with no venue`] : []),
   ];
-  const total = `${plural(unplaced.length, "event")} end${unplaced.length === 1 ? "s" : ""} the run in the catch-all, ${ofThem} listed in an earlier report.`;
+  const total = `In the catch-all as the run ends: ${plural(inCatchAll.length, "event")}, ${ofThem} of them in an earlier report.`;
   return lines.length === 0 ? total : `${total}\n\n${markdownList(lines)}`;
 }
 

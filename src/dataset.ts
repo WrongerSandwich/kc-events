@@ -45,11 +45,12 @@ const eventFields = z.strictObject({
   venue: z.string().min(1).optional(),
   neighborhood: z.string().min(1),
   /**
-   * The neighborhood or city the extractor proposed for an address on no neighborhood on the list, as the reading
-   * that placed the event in the elsewhere-in-the-metro catch-all gave it (#104); absent otherwise. The run report
-   * lists a record in the catch-all again only when this changed.
+   * Present on an event in the elsewhere-in-the-metro catch-all (#104), with the neighborhood or city the extractor
+   * proposed instead when the reading that put it there proposed one; absent elsewhere, and on a record in the
+   * catch-all no run has written since #104. The run report lists a record in the catch-all only when it began the
+   * run without this, or with another proposal.
    */
-  proposedNeighborhood: z.string().min(1).optional(),
+  unplaced: z.strictObject({ proposed: z.string().min(1).optional() }).optional(),
   primaryUrl: httpUrl,
   /** The event's own page, linked from the primary page: where the site sends the reader. Never fetched; absent when the primary page links to none. */
   eventUrl: httpUrl.optional(),
@@ -146,8 +147,8 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     .refine((e) => e.eventUrl === undefined || ownPageAllowed(e.eventUrl, e.primaryUrl, platformHosts), {
       message: "an event's own page is on its primary page's site or a ticketing platform",
     })
-    .refine((e) => e.proposedNeighborhood === undefined || e.neighborhood === ELSEWHERE_IN_THE_METRO, {
-      message: "only an event in the elsewhere-in-the-metro catch-all carries a proposed neighborhood",
+    .refine((e) => e.unplaced === undefined || e.neighborhood === ELSEWHERE_IN_THE_METRO, {
+      message: "only an event in the elsewhere-in-the-metro catch-all is marked unplaced",
     });
 
 const eventSchema = eventSchemaFor(DEFAULT_PLATFORM_HOSTS);
