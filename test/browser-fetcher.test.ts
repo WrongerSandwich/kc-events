@@ -30,6 +30,8 @@ class FakePage {
   current = "about:blank";
   /** How long after its document loads the page's script renders what a selector waits for; never, by default. */
   renderedAfterMs = Infinity;
+  /** The timeout its document's load was given. */
+  gotoTimeout?: number;
   private readonly main = { page: () => this };
   constructor(
     readonly context: FakeContext,
@@ -72,19 +74,31 @@ class FakePage {
     await opened.request("https://ads.test/", { navigation: true });
     return opened;
   }
-  async goto(url: string) {
+  async goto(url: string, { timeout }: { timeout?: number } = {}) {
+    this.gotoTimeout = timeout;
     if ((await this.request(url, { type: "document", navigation: true })) === "abort") throw new Error("net::ERR_BLOCKED_BY_CLIENT");
     this.current = url;
     await this.script(this);
     return { status: () => 200 };
   }
-  async waitForLoadState() {}
-  /** As Playwright does: the selector within the timeout, or a timeout error once it has passed, on the faked clock. */
+  async waitForLoadState(_state: string, { timeout }: { timeout: number }) {
+    this.rendered("page.waitForLoadState", timeout);
+  }
   async waitForSelector(_selector: string, { timeout }: { timeout: number }) {
-    if (!vi.isFakeTimers()) return;
+    this.rendered("page.waitForSelector", timeout);
+  }
+  /**
+   * As Playwright's waits do, on the faked clock: the page rendered (its selector there, its network
+   * quiet) within the timeout, or a timeout error once it has passed. Without a faked clock, at once.
+   */
+  private rendered(wait: string, timeout: number) {
+    if (!vi.isFakeTimers()) {
+      if (this.renderedAfterMs !== Infinity) throw new Error("a page that renders late needs the faked clock");
+      return;
+    }
     if (this.renderedAfterMs <= timeout) return void vi.setSystemTime(Date.now() + this.renderedAfterMs);
     vi.setSystemTime(Date.now() + timeout);
-    throw new Error(`page.waitForSelector: Timeout ${timeout}ms exceeded.`);
+    throw new Error(`${wait}: Timeout ${timeout}ms exceeded.`);
   }
   async content() {
     return "<html><body>Big Show</body></html>";
@@ -252,9 +266,19 @@ describe("browser fetcher", () => {
     expect(Date.now() - started).toBe(30_000);
   });
 
+  it("fails a page with no selector whose network never goes quiet, after 30 s, naming the timeout", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    browserRunning();
+    const fetcher = createBrowserFetcher(plainFetcher());
+    const started = Date.now();
+
+    await expect(fetcher.fetch(CALENDAR)).rejects.toThrow("waitForLoadState: Timeout 30000ms exceeded");
+    expect(Date.now() - started).toBe(30_000);
+  });
+
   it("starts the page's deadline once its origin's crawl delay has passed, not before", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    browserRunning(async (page) => void (page.renderedAfterMs = 25_000));
+    const browser = browserRunning(async (page) => void (page.renderedAfterMs = 25_000));
     const plain = plainFetcher();
     // The plain walk of the same URL has just booked the origin, which asks for 10 s between requests.
     plain.policy.setCrawlDelay(new URL(CALENDAR).origin, 10);
@@ -264,6 +288,7 @@ describe("browser fetcher", () => {
 
     expect(await fetcher.fetch(CALENDAR, { waitFor: ".event" })).toMatchObject({ status: 200 });
     expect(Date.now() - started).toBe(35_000);
+    expect(browser.contexts[0]!.pages[0]!.gotoTimeout).toBe(30_000);
   });
 
   it("closes a popup the page opens and loads nothing for it", async () => {

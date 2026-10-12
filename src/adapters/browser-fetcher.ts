@@ -7,8 +7,8 @@ import { USER_AGENT } from "./identity.js";
 /** What the page's own script may skip loading: none of it carries listings. */
 const SKIPPED_RESOURCES = new Set(["image", "media", "font"]);
 /**
- * One page's deadline, from the end of its origin's pause to its HTML read: the load, then the
- * selector or the network going quiet. Longer than the plain fetcher's, since rendering a calendar
+ * One page's deadline, from the end of its origin's pause: the load, then the selector or the
+ * network going quiet, must be done by then. Longer than the plain fetcher's, since rendering a calendar
  * takes seconds the plain request does not (Screenland's, about 7).
  */
 const PAGE_TIMEOUT_MS = 30_000;
@@ -40,9 +40,8 @@ export interface BrowserFetcherOptions {
  * (what the page itself loads, its scripts and data, is not a page the job asked for). The plain
  * fetcher's policy holds too: no request the page makes goes to a host on the machine's own network,
  * the load waits its origin's crawl delay, and a rendered page over the byte budget is refused. It
- * identifies itself with the job's user agent, not a stock browser's; one attempt within a 30 s
- * deadline of its own, twice the plain fetcher's and started once the crawl delay has passed, cached
- * by URL and selector.
+ * identifies itself with the job's user agent, not a stock browser's; one attempt within a deadline
+ * of its own, started once the crawl delay has passed, cached by URL and selector.
  *
  * The page runs a stranger's script, so it is given little: Chromium's sandbox wherever the host can
  * provide one (a loud warning where it cannot), and a context of its own per fetch, with no
@@ -76,7 +75,7 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel, warn = cons
     browser ??= launch(channel, warn);
     const context = await (await browser).newContext({ userAgent: USER_AGENT, acceptDownloads: false, serviceWorkers: "block" });
     // Set once the origin's pause is over, so waiting to be polite does not count against the page.
-    let deadline = Infinity;
+    let deadline = 0;
     const remaining = () => Math.max(1, deadline - Date.now());
     let page: Page | undefined;
     // Why the page's own navigation stopped, if a check below stopped it: a disallowed URL, or a
