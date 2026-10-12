@@ -2,7 +2,8 @@
  * Event identity (ADR 0007): an event is its primary page plus its normalized title; failing
  * that, its own page (eventUrl) on one calendar date, whatever its title or venue, when the times
  * agree; failing that, the same normalized title (or one cut short, or on the same date one with a
- * series name in front) at the same venue on a date within a few days, or, for a sighting that
+ * series name in front) at the same venue on a date within a few days, or, for a limited run, the
+ * same or shortened title at the same venue closing on one date whatever the starts; or, for a sighting that
  * names no venue, on the same date the one known event that qualifies, or the one preferred among
  * several; failing all of that, a dated sighting may be one month of a recurring event on the same
  * page. Ids are opaque and fixed at first-seen; matching never compares them, and only follows one
@@ -55,6 +56,8 @@ export interface EventIdentity {
   venue?: string;
   /** ISO date or date-time; its local calendar date is what the fuzzy match compares. */
   start?: string;
+  /** ISO date or date-time; a limited run is named by its closing calendar date (#68). */
+  end?: string;
   /** An expired known event is no candidate for a venue-less sighting. */
   status?: EventStatus;
   /** The event's own page, when its primary page links one: with the date, a key of its own (#66), and a tie-breaker for a venue-less sighting. */
@@ -68,7 +71,7 @@ export interface EventIdentity {
 }
 
 /** Which rule matched a sighting to a known event. */
-export type MatchRule = "page-and-title" | "own-page" | "fuzzy" | "venueless" | "month";
+export type MatchRule = "page-and-title" | "own-page" | "fuzzy" | "same-end" | "venueless" | "month";
 
 /**
  * What a sighting is to the known events: one of them, by a rule; ambiguous, a venue-less sighting
@@ -81,8 +84,8 @@ const NONE = { kind: "none" } as const;
 /**
  * The known event a sighting is, if any, and by which rule: the match on primary page and title
  * first (among several such records, the one whose date is nearest), then the match on own page
- * and calendar date (#66), then the fuzzy match on title, venue, and nearby date, then for a
- * sighting with no venue the known event with its title on its date, then a recurring event the
+ * and calendar date (#66), then the fuzzy match on title, venue, and nearby date, then the match on
+ * title, venue, and closing date (#68), then for a sighting with no venue the known event with its title on its date, then a recurring event the
  * sighting is one month of. A record folded as a duplicate stands for the record it was folded
  * into, as far as that chain goes within `known`: the match is that record, and its date is the
  * one compared.
@@ -99,6 +102,10 @@ export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, 
   for (const k of known) {
     const fuzzy = sameEventFuzzily(sighting, k, aliases) ? standsFor(k) : undefined;
     if (fuzzy) return { kind: "matched", event: fuzzy, rule: "fuzzy" };
+  }
+  for (const k of known) {
+    const run = sameLimitedRun(sighting, k, aliases) ? standsFor(k) : undefined;
+    if (run) return { kind: "matched", event: run, rule: "same-end" };
   }
   const venueless = candidateForVenueless(sighting, known);
   if (venueless.kind === "matched") return venueless;
@@ -143,6 +150,7 @@ export function sameEvent(a: EventIdentity, b: EventIdentity, live: readonly Eve
     (samePageAndTitle(a, b) && nearDates(a, b)) ||
     sameOwnPageOnDate(a, b) ||
     sameEventFuzzily(a, b, aliases) ||
+    sameLimitedRun(a, b, aliases) ||
     venuelessTwins(a, b) ||
     matchedEvent(candidateForVenueless(a, live)) === b ||
     matchedEvent(candidateForVenueless(b, live)) === a
@@ -348,6 +356,18 @@ function sameEventFuzzily(a: EventIdentity, b: EventIdentity, aliases: VenueAlia
     (sameOrShortenedTitle(a.title, b.title) || (calendarDate(a.start) === calendarDate(b.start) && sameTitleWithSeries(a.title, b.title))) &&
     sameVenue(a.venue, b.venue, aliases)
   );
+}
+
+/**
+ * Two records that both give an end, on one calendar date, with the same or shortened title at the
+ * same venue (#68), whatever their starts: a limited run is named by when it closes, and one source
+ * gives an exhibition's opening, another the day it listed it, and a third no start at all. A time
+ * on the end is not compared. A record with no venue never qualifies, so the same closing date at
+ * two venues stays two events.
+ */
+function sameLimitedRun(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
+  if (a.venue === undefined || b.venue === undefined || a.end === undefined || b.end === undefined) return false;
+  return calendarDate(a.end) === calendarDate(b.end) && sameOrShortenedTitle(a.title, b.title) && sameVenue(a.venue, b.venue, aliases);
 }
 
 /**

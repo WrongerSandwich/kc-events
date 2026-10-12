@@ -656,8 +656,9 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
       continue;
     }
     // A verified sighting far from the known event's date, on a page that also lists the event on or near its date
-    // (in this reading, before or after this sighting), is a second event: the page lists the show twice.
-    if (event.status === "active" && !cancelled && !nearDates(event, known) && listsNear(known, sighting, sightings)) {
+    // (in this reading, before or after this sighting), is a second event: the page lists the show twice. Not one
+    // matched on its closing date (#68): its start is another reading of the one run, not another night.
+    if (event.status === "active" && !cancelled && rule !== "same-end" && !nearDates(event, known) && listsNear(known, sighting, sightings)) {
       if (!isPast(event, today)) create(event);
       continue;
     }
@@ -735,10 +736,11 @@ function hasNearerSighting(known: Event, sighting: Sighting, sightings: Sighting
  * Whether a cancelled sighting says anything about the known event it matched (#77): not when it is
  * one month of a recurring event (a month off is not the standing event's cancellation), nor when
  * its date is outside the fuzzy window of the event's (a later night's cancellation is not this
- * night's). Such a sighting is no listing of the event at all.
+ * night's). Such a sighting is no listing of the event at all. One matched on its closing date
+ * (#68) reaches whatever its start: a run that closes on that date is the one run.
  */
 function cancellationReaches(sighting: Event, known: Event, rule: MatchRule): boolean {
-  return rule !== "month" && nearDates(sighting, known);
+  return rule !== "month" && (rule === "same-end" || nearDates(sighting, known));
 }
 
 /**

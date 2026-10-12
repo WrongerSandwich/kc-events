@@ -637,3 +637,41 @@ describe("the same own page on one date (#66)", () => {
     expect(report.counts.expired.duplicate).toBe(0);
   });
 });
+
+describe("the same end date of a limited run (#68)", () => {
+  // The 2026-10-12 dataset's "Sport and Spectator" cluster: evt_e135e4bd220b, evt_1fc163367760, evt_2695c2b8d33a.
+  const NERMAN = "Nerman Museum of Contemporary Art";
+  const exhibition = (primaryUrl: string, start: string | undefined, overrides: Partial<Event> = {}): Event => {
+    const record = event("Sport and Spectator", NERMAN, primaryUrl, start ?? "", { recurrence: "limited-run", end: "2026-12-06", kind: "arts", ...overrides });
+    if (start !== undefined) return record;
+    const { start: _start, ...noStart } = record;
+    return { ...noStart, evidence: { venue: NERMAN } };
+  };
+
+  it("folds the three records of one exhibition, whatever their starts, into the one seen first", async () => {
+    const opening = exhibition("https://www.nermanmuseum.org/exhibitions/", "2026-06-12");
+    const listed = exhibition("https://artsjoco.org/acjc/calendar-of-events/", "2026-09-25", { firstSeen: RUN_TWO });
+    const homepage = exhibition("https://www.nermanmuseum.org/", undefined, { firstSeen: "2026-10-10T12:46:13-05:00" });
+
+    const { dataset, report } = await quietRun(withEvents([listed, homepage, opening]));
+
+    const after = byId(dataset);
+    expect(after.get(opening.id)).toMatchObject({ status: "active", start: "2026-06-12" });
+    expect(after.get(listed.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: opening.id });
+    expect(after.get(homepage.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: opening.id });
+    expect(report.counts.expired.duplicate).toBe(2);
+  });
+
+  it("takes a sighting listing the exhibition from the day a calendar listed it as the known record, not a second run", async () => {
+    const opening = exhibition("https://www.nermanmuseum.org/exhibitions/", "2026-06-12");
+    const ARTSJOCO = "https://artsjoco.org/acjc/calendar-of-events/";
+    const artsjoco = source("Arts JoCo", { urls: [ARTSJOCO], kind: "arts" });
+    const listing = candidateAt(artsjoco, { title: "Sport and Spectator", startDate: "2026-09-25", startTime: null, endDate: "2026-12-06", venue: NERMAN, venueEvidence: NERMAN });
+
+    const { dataset, report } = await runWith(WEEK_1, withEvents([opening]), { sources: [artsjoco], pages: { [ARTSJOCO]: PAGE }, completions: [reply(listing)], config });
+
+    expect(dataset.events).toHaveLength(1);
+    expect(byId(dataset).get(opening.id)).toMatchObject({ status: "active", end: "2026-12-06" });
+    expect(report.counts).toMatchObject({ new: 0, found: 1 });
+  });
+});

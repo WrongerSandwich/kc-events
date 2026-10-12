@@ -421,3 +421,47 @@ describe("the same own page on one date (#66)", () => {
     expect(matchSighting({ ...stored, start: "2026-11-19" }, [other, stored], {})).toEqual({ kind: "matched", event: stored, rule: "page-and-title" });
   });
 });
+
+describe("the same end date of a limited run (#68)", () => {
+  // The 2026-10-12 dataset's Nerman cluster: the opening on the museum's exhibitions page, the day artsjoco listed it, and no start on the homepage.
+  const nerman = "Nerman Museum of Contemporary Art";
+  const opening = { primaryUrl: "https://www.nermanmuseum.org/exhibitions/", title: "Sport and Spectator", venue: nerman, start: "2026-06-12", end: "2026-12-06" };
+  const listed = { ...opening, primaryUrl: "https://artsjoco.org/acjc/calendar-of-events/", start: "2026-09-25" };
+  const homepage = { ...opening, primaryUrl: "https://www.nermanmuseum.org/", start: undefined };
+
+  it("matches a record with no start to one with a start, the venue worded otherwise", () => {
+    const campus = { primaryUrl: "https://americanroyal.com/livestock/", title: "American Royal Livestock Show", venue: "New American Royal Campus", start: "2026-10-08", end: "2026-10-18" };
+    const discovered = { ...campus, primaryUrl: "https://kcparent.test/royal", venue: "American Royal New Campus", start: undefined };
+    expect(matchSighting(discovered, [campus], {})).toEqual({ kind: "matched", event: campus, rule: "same-end" });
+    expect(findMatch(campus, [discovered], {})).toBe(discovered);
+    expect(sameEvent(campus, discovered, [campus, discovered], {})).toBe(true);
+    expect(matchSighting(homepage, [opening], {})).toEqual({ kind: "matched", event: opening, rule: "same-end" });
+  });
+
+  it("matches starts 105 days apart; a time on the end is ignored, but another end date is another run", () => {
+    expect(matchSighting(listed, [opening], {})).toEqual({ kind: "matched", event: opening, rule: "same-end" });
+    expect(sameEvent(opening, listed, [opening, listed], {})).toBe(true);
+    expect(findMatch({ ...listed, end: "2026-12-06T17:00:00-06:00" }, [opening], {})).toBe(opening);
+    expect(findMatch({ ...listed, end: "2026-12-05" }, [opening], {})).toBeUndefined();
+  });
+
+  it("is two events at two venues", () => {
+    const elsewhere = { ...listed, venue: "Kemper Museum of Contemporary Art" };
+    expect(findMatch(elsewhere, [opening], {})).toBeUndefined();
+    expect(sameEvent(opening, elsewhere, [opening, elsewhere], {})).toBe(false);
+  });
+
+  it("never matches a record with no venue", () => {
+    const venueless = { ...homepage, venue: undefined };
+    expect(findMatch(venueless, [opening], {})).toBeUndefined();
+    expect(findMatch(opening, [venueless], {})).toBeUndefined();
+    expect(sameEvent(opening, venueless, [opening, venueless], {})).toBe(false);
+  });
+
+  it("leaves a pair with no end on one side to the other rules: starts outside the window stay two events", () => {
+    const noEnd = { ...listed, end: undefined };
+    expect(findMatch(noEnd, [opening], {})).toBeUndefined();
+    expect(findMatch(listed, [{ ...opening, end: undefined }], {})).toBeUndefined();
+    expect(sameEvent(opening, noEnd, [opening, noEnd], {})).toBe(false);
+  });
+});
