@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DEFAULT_PLATFORM_HOSTS, type RunConfig } from "./config.js";
+import { DEFAULT_PLATFORM_HOSTS, ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
 import { onHost, sameSite } from "./hosts.js";
 
 /** Bump when the published dataset's shape changes; downstream readers key on it. */
@@ -44,6 +44,12 @@ const eventFields = z.strictObject({
   /** Absent only while unverified: the page named no venue that could be cited. */
   venue: z.string().min(1).optional(),
   neighborhood: z.string().min(1),
+  /**
+   * The neighborhood or city the extractor proposed for an address on no neighborhood on the list, as the reading
+   * that placed the event in the elsewhere-in-the-metro catch-all gave it (#104); absent otherwise. The run report
+   * lists a record in the catch-all again only when this changed.
+   */
+  proposedNeighborhood: z.string().min(1).optional(),
   primaryUrl: httpUrl,
   /** The event's own page, linked from the primary page: where the site sends the reader. Never fetched; absent when the primary page links to none. */
   eventUrl: httpUrl.optional(),
@@ -139,6 +145,9 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     })
     .refine((e) => e.eventUrl === undefined || ownPageAllowed(e.eventUrl, e.primaryUrl, platformHosts), {
       message: "an event's own page is on its primary page's site or a ticketing platform",
+    })
+    .refine((e) => e.proposedNeighborhood === undefined || e.neighborhood === ELSEWHERE_IN_THE_METRO, {
+      message: "only an event in the elsewhere-in-the-metro catch-all carries a proposed neighborhood",
     });
 
 const eventSchema = eventSchemaFor(DEFAULT_PLATFORM_HOSTS);

@@ -151,8 +151,8 @@ describe("recurrence, kind, geography, and neighborhood", () => {
 
     expect(dataset.events.map((e) => e.neighborhood)).toEqual(["Elsewhere in the metro", "Elsewhere in the metro"]);
     expect(report.unmappableNeighborhoods).toEqual([
-      { eventTitle: "Suburban Show", venue: "Some Hall", proposed: "Olathe" },
-      { eventTitle: "Nowhere Show", venue: "recordBar" },
+      { eventId: dataset.events[0]!.id, eventTitle: "Suburban Show", venue: "Some Hall", proposed: "Olathe", listedBefore: false },
+      { eventId: dataset.events[1]!.id, eventTitle: "Nowhere Show", venue: "recordBar", listedBefore: false },
     ]);
     expect(renderReportMarkdown(report)).toContain('- Suburban Show at Some Hall: the extractor proposed "Olathe"');
   });
@@ -186,9 +186,9 @@ describe("recurrence, kind, geography, and neighborhood", () => {
   });
 
   it("an address the extractor itself put in the catch-all is flagged without a proposal, not as a page with no location", async () => {
-    const { report } = await runOver([candidate({ neighborhood: "Elsewhere in the metro" })]);
+    const { dataset, report } = await runOver([candidate({ neighborhood: "Elsewhere in the metro" })]);
 
-    expect(report.unmappableNeighborhoods).toEqual([{ eventTitle: "Big Show", venue: "recordBar" }]);
+    expect(report.unmappableNeighborhoods).toEqual([{ eventId: dataset.events[0]!.id, eventTitle: "Big Show", venue: "recordBar", listedBefore: false }]);
     expect(renderReportMarkdown(report)).toContain("- Big Show at recordBar: no neighborhood proposed");
   });
 });

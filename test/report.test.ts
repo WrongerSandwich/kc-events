@@ -55,7 +55,11 @@ const full: RunReport = {
   ],
   failingSources: ["Pipe | Hall"],
   offListNeighborhoods: [{ stored: "Downtown East", placed: "Crossroads", events: 2 }],
-  unmappableNeighborhoods: [{ eventTitle: "Barn Dance", venue: "Red Barn", proposed: "Kearney" }, { eventTitle: "Pop-up" }],
+  unmappableNeighborhoods: [
+    { eventId: "evt_1", eventTitle: "Barn Dance", venue: "Red Barn", proposed: "Kearney", listedBefore: false },
+    { eventId: "evt_2", eventTitle: "Pop-up", listedBefore: false },
+    { eventId: "evt_3", eventTitle: "Corn Maze", venue: "Some Farm", proposed: "Louisburg", listedBefore: true },
+  ],
   promotionSuggestions: [{ host: "promoter.test", runsSeen: 2, exampleUrl: "https://promoter.test/show", heldEvents: 3 }],
   heldForPromotion: [{ host: "promoter.test", events: 3 }],
   releasedForPromotion: [{ host: "newvenue.test", events: 2 }],
@@ -144,8 +148,10 @@ describe("the run report", () => {
 
       ## Unmappable neighborhoods
 
+      3 events end the run in the catch-all, 1 of them listed in an earlier report.
+
       - Barn Dance at Red Barn: the extractor proposed "Kearney"
-      - Pop-up at an unnamed venue: no neighborhood proposed
+      - 1 new one with no venue
 
       ## Stored neighborhoods off the list
 

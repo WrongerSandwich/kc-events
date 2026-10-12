@@ -1,4 +1,4 @@
-import type { RunConfig } from "./config.js";
+import { ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
 import { EXPIRY_REASONS, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
 import { splitArchived } from "./archive.js";
 import { ageUnsighted, expire, expireIndexCited, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
@@ -200,7 +200,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     sources: sourceReports,
     failingSources: registryLane.failingSources,
     offListNeighborhoods: placed.report,
-    unmappableNeighborhoods: unmappableNeighborhoods([...extraction.sightings, ...discovery.sightings, ...reverified.sightings]),
+    unmappableNeighborhoods: unmappableNeighborhoods(dataset.events, live),
     promotionSuggestions: promotion.promotionSuggestions,
     heldForPromotion: held.heldByHost,
     releasedForPromotion: held.releasedByHost,
@@ -1493,17 +1493,19 @@ function countExpired(previous: Event[], events: Event[]): Record<ExpiryReason, 
 }
 
 /**
- * The run report's unmappable neighborhoods: every sighting this run whose address landed in the
- * catch-all, once per title and venue. A cancelled sighting has nothing to place.
+ * The run report's unmappable neighborhoods (#104): every record not expired that ends the run in the
+ * catch-all, read from the records rather than this run's readings, since a reading in the catch-all
+ * may not be the one that stands. Each is marked listed before when it began the run in the catch-all,
+ * not expired, with the same proposal, so the last report listed it; it is counted but not listed again.
  */
-function unmappableNeighborhoods(sightings: Sighting[]): RunReport["unmappableNeighborhoods"] {
-  const seen = new Set<string>();
-  const flagged: RunReport["unmappableNeighborhoods"] = [];
-  for (const { event, cancelled, unmappable } of sightings) {
-    const key = `${normalizeName(event.title)}\n${normalizeName(event.venue ?? "")}`;
-    if (!unmappable || cancelled || seen.has(key)) continue;
-    seen.add(key);
-    flagged.push({ eventTitle: event.title, ...(event.venue !== undefined ? { venue: event.venue } : {}), ...unmappable });
-  }
-  return flagged;
+function unmappableNeighborhoods(previous: Event[], events: Event[]): RunReport["unmappableNeighborhoods"] {
+  const unplaced = (e: Event) => e.status !== "expired" && e.neighborhood === ELSEWHERE_IN_THE_METRO;
+  const before = new Map(previous.filter(unplaced).map((e) => [e.id, e.proposedNeighborhood]));
+  return events.filter(unplaced).map((e) => ({
+    eventId: e.id,
+    eventTitle: e.title,
+    ...(e.venue !== undefined ? { venue: e.venue } : {}),
+    ...(e.proposedNeighborhood !== undefined ? { proposed: e.proposedNeighborhood } : {}),
+    listedBefore: before.has(e.id) && before.get(e.id) === e.proposedNeighborhood,
+  }));
 }

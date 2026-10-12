@@ -38,25 +38,25 @@ export function neighborhoodList(config: RunConfig, registry: Registry): string[
   return list;
 }
 
-/** Where an address landed: a neighborhood on the list, or the catch-all with what the extractor proposed instead. */
-export type Placement = { neighborhood: string } | { neighborhood: typeof ELSEWHERE_IN_THE_METRO; unmappable: { proposed?: string } };
+/** Where an address landed: a neighborhood on the list, or the catch-all with what the extractor proposed instead, when it proposed something off the list. */
+export type Placement = { neighborhood: string; proposed?: string };
 
 /**
  * The neighborhood the extractor proposed, from the list; anything off it, or nothing at all,
- * lands in the elsewhere-in-the-metro catch-all and is marked unmappable so the report flags it.
+ * lands in the elsewhere-in-the-metro catch-all, which the report lists, with the proposal when there was one.
  */
 export function toNeighborhood(proposed: string | null, list: readonly string[]): Placement {
   const listed = fromList(proposed, list);
   if (listed !== undefined && listed !== ELSEWHERE_IN_THE_METRO) return { neighborhood: listed };
   const offList = proposed !== null && listed === undefined && normalizeName(proposed) !== "";
-  return { neighborhood: ELSEWHERE_IN_THE_METRO, unmappable: offList ? { proposed: proposed.trim() } : {} };
+  return { neighborhood: ELSEWHERE_IN_THE_METRO, ...(offList ? { proposed: proposed.trim() } : {}) };
 }
 
 /**
  * A stored neighborhood placed again against today's list, for an event no page placed this run: the
  * list's own spelling; for the name of a region (written before neighborhoods were grouped under
  * regions), the event's registry source's neighborhood when that region lists it, so the event keeps
- * its region; anything else, the catch-all. Not flagged as unmappable: that flag reports what an
+ * its region; anything else, the catch-all. It gets no proposed neighborhood: that records what an
  * extractor proposed, and nothing was proposed here.
  */
 export function placeStored(stored: string, list: readonly string[], config: RunConfig, sourceNeighborhood?: string): string {

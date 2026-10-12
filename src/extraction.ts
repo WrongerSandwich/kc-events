@@ -374,14 +374,13 @@ export type CandidateOrigin = PageOrigin & {
 };
 
 /**
- * One candidate after cite-or-drop: the event as read off a page this run, whether the page says
- * it is cancelled, and, when its address mapped to no neighborhood on the list, what the
- * extractor proposed instead.
+ * One candidate after cite-or-drop: the event as read off a page this run, with, when its address
+ * mapped to no neighborhood on the list, what the extractor proposed instead; and whether the page
+ * says it is cancelled.
  */
 export interface Sighting {
   event: Event;
   cancelled: boolean;
-  unmappable?: { proposed?: string };
   /** Why a date or time the model wrote could not be used, which made the candidate uncitable. */
   dateProblem?: string;
   /** Which quote of an otherwise citable candidate is not on its page, which held it unverified. */
@@ -441,6 +440,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     ...(when.schedule !== undefined ? { schedule: when.schedule } : {}),
     ...(venue !== undefined ? { venue } : {}),
     neighborhood: placement.neighborhood,
+    ...(placement.proposed !== undefined ? { proposedNeighborhood: placement.proposed } : {}),
     primaryUrl,
     ...(eventUrl !== undefined ? { eventUrl } : {}),
     kind: toKind(candidate.kind, context.config.kinds),
@@ -460,7 +460,6 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   return {
     event,
     cancelled: candidate.notice === "cancelled",
-    ...("unmappable" in placement ? { unmappable: placement.unmappable } : {}),
     ...(dateProblem !== undefined ? { dateProblem } : {}),
     ...(quoteProblem !== undefined ? { quoteProblem } : {}),
   };

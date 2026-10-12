@@ -125,10 +125,13 @@ export interface RunReport {
    */
   offListNeighborhoods: { stored: string; placed: string; events: number }[];
   /**
-   * Unmappable neighborhoods: events whose address landed in the elsewhere-in-the-metro catch-all,
-   * with the neighborhood or city the extractor proposed instead, when it proposed one.
+   * Unmappable neighborhoods: every record not expired that ends the run in the elsewhere-in-the-metro
+   * catch-all (#104), with the neighborhood or city the extractor proposed instead, when it proposed
+   * one, and whether an earlier report listed it: the record was in the catch-all as the run began,
+   * with the same proposal. The Markdown lists only the rest. Reports before #104 listed this run's
+   * readings instead, with no id and nothing listed before.
    */
-  unmappableNeighborhoods: { eventTitle: string; venue?: string; proposed?: string }[];
+  unmappableNeighborhoods: { eventId?: string; eventTitle: string; venue?: string; proposed?: string; listedBefore: boolean }[];
   /**
    * Hosts the discovery lane has found events on in two or more runs, including this one, suggested
    * for promotion into the registry; never added to it automatically.
@@ -218,7 +221,9 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   sources: z.array(z.strictObject({ name: z.string(), result: z.enum(["fetched", "failed", "blocked", "excluded"]), extracted: count, detail: z.string().optional() })),
   failingSources: z.array(z.string()),
   offListNeighborhoods: listSince(z.strictObject({ stored: z.string(), placed: z.string(), events: count })),
-  unmappableNeighborhoods: z.array(z.strictObject({ eventTitle: z.string(), venue: z.string().optional(), proposed: z.string().optional() })),
+  unmappableNeighborhoods: z.array(
+    z.strictObject({ eventId: z.string().optional(), eventTitle: z.string(), venue: z.string().optional(), proposed: z.string().optional(), listedBefore: z.boolean().default(false) }),
+  ),
   promotionSuggestions: z.array(z.strictObject({ host: z.string(), runsSeen: count, exampleUrl: z.string(), heldEvents: countSince })),
   heldForPromotion: listSince(hostEvents),
   releasedForPromotion: listSince(hostEvents),
@@ -312,11 +317,7 @@ ${markdownList(report.failingSources)}
 
 ## Unmappable neighborhoods
 
-${markdownList(
-  report.unmappableNeighborhoods.map(
-    (c) => `${c.eventTitle} at ${c.venue ?? "an unnamed venue"}: ${c.proposed !== undefined ? `the extractor proposed "${c.proposed}"` : "no neighborhood proposed"}`,
-  ),
-)}
+${unmappableSection(report.unmappableNeighborhoods)}
 
 ## Stored neighborhoods off the list
 
@@ -349,6 +350,26 @@ ${markdownList([
 
 ${markdownList(report.promotionSuggestions.map((p) => `${p.host}: events found in ${p.runsSeen} runs, ${plural(p.heldEvents, "held event")} promotion would release, e.g. ${p.exampleUrl}`))}
 `;
+}
+
+/**
+ * The records ending the run in the catch-all (#104): a line counting them all and those an earlier
+ * report listed, then the rest, but for those with no venue, which are counted in one line.
+ */
+function unmappableSection(unplaced: RunReport["unmappableNeighborhoods"]): string {
+  if (unplaced.length === 0) return markdownList([]);
+  const before = unplaced.filter((u) => u.listedBefore).length;
+  const ofThem = before === 0 ? "none of them" : before === unplaced.length ? "all of them" : `${before} of them`;
+  const fresh = unplaced.filter((u) => !u.listedBefore);
+  const venueless = fresh.filter((u) => u.venue === undefined).length;
+  const lines = [
+    ...fresh
+      .filter((u) => u.venue !== undefined)
+      .map((u) => `${u.eventTitle} at ${u.venue}: ${u.proposed !== undefined ? `the extractor proposed "${u.proposed}"` : "no neighborhood proposed"}`),
+    ...(venueless > 0 ? [`${plural(venueless, "new one", "new ones")} with no venue`] : []),
+  ];
+  const total = `${plural(unplaced.length, "event")} end${unplaced.length === 1 ? "s" : ""} the run in the catch-all, ${ofThem} listed in an earlier report.`;
+  return lines.length === 0 ? total : `${total}\n\n${markdownList(lines)}`;
 }
 
 function eventList(events: EventRef[]): string {
