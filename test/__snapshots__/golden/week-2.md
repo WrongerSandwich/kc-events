@@ -17,6 +17,7 @@ Started 2026-10-09T22:15:00-05:00, finished 2026-10-09T22:15:00-05:00. Horizon 8
 | Not struck: starts after the last date the page listed | 0 |
 | Unverified by outage limit | 0 |
 | Unverified by an uncitable re-reading | 0 |
+| Kept on its stored citation | 0 |
 | Not created: a venue-less sighting fitting more than one known event, none preferred | 0 |
 | Held for promotion | 0 |
 | Released for promotion | 0 |
@@ -83,6 +84,10 @@ _None._
 _None._
 
 ## Unverified by an uncitable re-reading
+
+_None._
+
+## Kept on its stored citation
 
 _None._
 

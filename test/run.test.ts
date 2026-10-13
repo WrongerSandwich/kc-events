@@ -48,6 +48,7 @@ describe("run", () => {
       beyondListingUnstruck: 0,
       unverifiedByOutageLimit: 0,
       unverifiedByUncitableReading: 0,
+      keptOnStoredCitation: 0,
       venuelessAmbiguous: 0,
       heldForPromotion: 0,
       releasedForPromotion: 0,
@@ -72,6 +73,7 @@ describe("run", () => {
     expect(report.releasedForPromotion).toEqual([]);
     expect(report.outageLimited).toEqual([]);
     expect(report.uncitableReadings).toEqual([]);
+    expect(report.keptOnStoredCitation).toEqual([]);
     expect(report.cancellationsFromElsewhere).toEqual([]);
     expect(report.identityChurn).toEqual([]);
   });

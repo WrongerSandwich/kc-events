@@ -388,6 +388,11 @@ export interface Sighting {
   dateProblem?: string;
   /** Which quote of an otherwise citable candidate is not on its page, which held it unverified. */
   quoteProblem?: string;
+  /**
+   * The page's quotable text, carried by a sighting held only on a quote, so that a known event's
+   * stored quotes can be checked against the page this run read (#124).
+   */
+  pageText?: string;
 }
 
 /**
@@ -463,7 +468,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     event,
     cancelled: candidate.notice === "cancelled",
     ...(dateProblem !== undefined ? { dateProblem } : {}),
-    ...(quoteProblem !== undefined ? { quoteProblem } : {}),
+    ...(quoteProblem !== undefined ? { quoteProblem, pageText: origin.quotableText } : {}),
   };
 }
 

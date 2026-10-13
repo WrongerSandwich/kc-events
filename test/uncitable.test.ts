@@ -124,3 +124,113 @@ describe("an uncitable re-reading", () => {
     expect(second.report.counts).toMatchObject({ unverifiedByUncitableReading: 0 });
   });
 });
+
+describe("a re-reading of an active event's own page whose quote is not on the page (#124)", () => {
+  const DATE_QUOTE = "Sat, Dec 12 · Show 8:00 PM";
+  const VENUE_QUOTE = "Knuckleheads, 1 Main St";
+  const LISTING = { status: 200, body: `<html><body><p>Big Show</p><p>${DATE_QUOTE}</p><p>Buy Tickets</p><p>${VENUE_QUOTE}</p></body></html>` };
+  // The model stitches the date line to a button below it: not one span of the page's text.
+  const STITCHED = "Sat, Dec 12 · Show 8:00 PM · Buy Tickets";
+
+  const quoting = (now: Date, dataset: Dataset, page: CannedPage, reading: Record<string, unknown>) =>
+    runWith(now, dataset, {
+      sources: [knuckleheads],
+      pages: { [CALENDAR_URL]: page },
+      completions: [reply(candidate(reading)), reply()],
+      pagesCarryQuotes: false,
+    });
+  const listed = () => quoting(WEEK_1, emptyDataset(), LISTING, { dateEvidence: DATE_QUOTE, venueEvidence: VENUE_QUOTE });
+  const struck = (dataset: Dataset): Dataset => ({ ...dataset, events: dataset.events.map((e) => ({ ...e, verificationFailures: 1, consecutiveOutages: 1 })) });
+
+  it("keeps the event active on its stored reading when its stored quotes are still on the page and the reading agrees", async () => {
+    const first = await listed();
+    const stored = only(first.dataset);
+
+    const kept = await quoting(week(2), struck(first.dataset), LISTING, { dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE });
+
+    expect(only(kept.dataset)).toMatchObject({
+      id: stored.id,
+      status: "active",
+      start: stored.start,
+      venue: stored.venue,
+      evidence: stored.evidence,
+      lastVerified: weekIso(2),
+      verificationFailures: 0,
+      consecutiveOutages: 0,
+    });
+    expect(kept.report.counts).toMatchObject({ unverifiedByUncitableReading: 0, keptOnStoredCitation: 1 });
+    expect(kept.report.uncitableReadings).toEqual([]);
+    expect(kept.report.keptOnStoredCitation).toEqual([{ title: "Big Show", primaryUrl: CALENDAR_URL, failedQuote: `quoted "${STITCHED}" for its date` }]);
+    const markdown = renderReportMarkdown(kept.report);
+    expect(markdown).toContain("| Kept on its stored citation | 1 |");
+    expect(markdown).toContain(`## Kept on its stored citation\n\n- Big Show: ${CALENDAR_URL} (quoted "${STITCHED}" for its date)`);
+  });
+
+  it("hides the event, as before, when its stored date quote is no longer on the page", async () => {
+    const first = await listed();
+    const changed = { status: 200, body: `<html><body><p>Big Show</p><p>Saturday December 12</p><p>${VENUE_QUOTE}</p></body></html>` };
+
+    const hidden = await quoting(week(2), first.dataset, changed, { dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE });
+
+    expect(only(hidden.dataset)).toMatchObject({ status: "unverified", lastVerified: weekIso(1) });
+    expect(hidden.report.uncitableReadings).toEqual([{ title: "Big Show", primaryUrl: CALENDAR_URL }]);
+    expect(hidden.report.keptOnStoredCitation).toEqual([]);
+  });
+
+  it.each([
+    ["start date", { startDate: "2026-12-13" }],
+    ["start time", { startTime: "21:00" }],
+    ["venue", { venue: "Knuckleheads Garage" }],
+  ])("hides the event, as before, when the new reading gives another %s", async (_, disagreeing) => {
+    const first = await listed();
+
+    const hidden = await quoting(week(2), first.dataset, LISTING, { dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE, ...disagreeing });
+
+    expect(only(hidden.dataset)).toMatchObject({ status: "unverified" });
+    expect(hidden.report.uncitableReadings).toHaveLength(1);
+    expect(hidden.report.keptOnStoredCitation).toEqual([]);
+  });
+
+  it("keeps the event when the new reading's venue differs only in case and spacing", async () => {
+    const first = await listed();
+
+    const kept = await quoting(week(2), first.dataset, LISTING, { dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE, venue: "  KNUCKLEHEADS " });
+
+    expect(only(kept.dataset)).toMatchObject({ status: "active", venue: "Knuckleheads" });
+  });
+
+  it("hides the event, as before, when the re-reading has a date that does not exist", async () => {
+    const first = await listed();
+
+    const hidden = await quoting(week(2), first.dataset, LISTING, { dateEvidence: DATE_QUOTE, venueEvidence: VENUE_QUOTE, startTime: "24:00" });
+
+    expect(only(hidden.dataset)).toMatchObject({ status: "unverified" });
+    expect(hidden.report.uncitableReadings).toHaveLength(1);
+    expect(hidden.report.keptOnStoredCitation).toEqual([]);
+  });
+
+  it("leaves an event already unverified unverified", async () => {
+    const first = await listed();
+    const unverified = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, status: "unverified" as const })) };
+
+    const again = await quoting(week(2), unverified, LISTING, { dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE });
+
+    expect(only(again.dataset)).toMatchObject({ status: "unverified", lastVerified: weekIso(1) });
+    expect(again.report.keptOnStoredCitation).toEqual([]);
+  });
+
+  it("keeps the event when re-verification re-reads its page", async () => {
+    const first = await listed();
+
+    // Only re-verification reads the old page now.
+    const kept = await runWith(week(2), first.dataset, {
+      sources: [moved],
+      pages: { [moved.urls[0]!]: PAGE, [CALENDAR_URL]: LISTING },
+      completions: [reply(), reply(candidate({ dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE })), reply()],
+      pagesCarryQuotes: false,
+    });
+
+    expect(only(kept.dataset)).toMatchObject({ status: "active", lastVerified: weekIso(2) });
+    expect(kept.report.keptOnStoredCitation).toHaveLength(1);
+  });
+});

@@ -19,6 +19,7 @@ const full: RunReport = {
     beyondListingUnstruck: 1,
     unverifiedByOutageLimit: 1,
     unverifiedByUncitableReading: 1,
+    keptOnStoredCitation: 1,
     venuelessAmbiguous: 1,
     heldForPromotion: 5,
     releasedForPromotion: 2,
@@ -66,6 +67,7 @@ const full: RunReport = {
   releasedForPromotion: [{ host: "newvenue.test", events: 2 }],
   outageLimited: [{ title: "Quiet Show", primaryUrl: "https://down.test/calendar" }],
   uncitableReadings: [{ title: "Wobble Night", primaryUrl: "https://venue.test/calendar" }],
+  keptOnStoredCitation: [{ title: "Steady Night", primaryUrl: "https://venue.test/calendar", failedQuote: 'quoted "Fri · Buy Tickets" for its date' }],
   cancellationsFromElsewhere: [{ title: "Big Show", primaryUrl: "https://venue.test/calendar", reportedBy: "https://blog.test/news" }],
   identityChurn: [{ title: "Big Show: Encore", primaryUrl: "https://venue.test/calendar", was: { title: "Big Show", primaryUrl: "https://venue.test/old" } }],
 };
@@ -92,6 +94,7 @@ describe("the run report", () => {
       | Not struck: starts after the last date the page listed | 1 |
       | Unverified by outage limit | 1 |
       | Unverified by an uncitable re-reading | 1 |
+      | Kept on its stored citation | 1 |
       | Not created: a venue-less sighting fitting more than one known event, none preferred | 1 |
       | Held for promotion | 5 |
       | Released for promotion | 2 |
@@ -171,6 +174,10 @@ describe("the run report", () => {
 
       - Wobble Night: https://venue.test/calendar
 
+      ## Kept on its stored citation
+
+      - Steady Night: https://venue.test/calendar (quoted "Fri · Buy Tickets" for its date)
+
       ## Cancellations from elsewhere
 
       - https://blog.test/news says Big Show (https://venue.test/calendar) is cancelled; the event was left as it was
@@ -196,13 +203,13 @@ describe("the run report", () => {
   });
 
   it("fills the fields a report from before them does not carry", () => {
-    const { reverification, offListNeighborhoods, heldForPromotion, releasedForPromotion, outageLimited, uncitableReadings, cancellationsFromElsewhere, identityChurn, ...older } = full;
-    const { archived, heldThroughOutage, quoteNotOnPage, expired, ...counts } = full.counts;
+    const { reverification, offListNeighborhoods, heldForPromotion, releasedForPromotion, outageLimited, uncitableReadings, keptOnStoredCitation, cancellationsFromElsewhere, identityChurn, ...older } = full;
+    const { archived, heldThroughOutage, quoteNotOnPage, keptOnStoredCitation: keptCount, expired, ...counts } = full.counts;
     const { stale, ...expiredBefore } = expired;
     const parsed = parseRunReport({ ...older, counts: { ...counts, expired: expiredBefore }, spend: { ...full.spend, modelCalls: undefined } });
 
-    expect(parsed.counts).toMatchObject({ archived: 0, heldThroughOutage: 0, quoteNotOnPage: 0, expired: { ...expiredBefore, stale: 0 } });
-    expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], identityChurn: [], spend: { modelCalls: [] } });
+    expect(parsed.counts).toMatchObject({ archived: 0, heldThroughOutage: 0, quoteNotOnPage: 0, keptOnStoredCitation: 0, expired: { ...expiredBefore, stale: 0 } });
+    expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], identityChurn: [], keptOnStoredCitation: [], spend: { modelCalls: [] } });
   });
 
   it("refuses a key it does not name", () => {

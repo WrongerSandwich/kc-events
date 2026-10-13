@@ -75,6 +75,8 @@ export interface RunReport {
     unverifiedByOutageLimit: number;
     /** Active events made unverified this run because their page still lists them but a re-reading cited no date or venue. */
     unverifiedByUncitableReading: number;
+    /** Active events an own-page reading held only on a quote left active on their stored citation (#124). */
+    keptOnStoredCitation: number;
     /** Venue-less sightings that fit two or more known events with none preferred, so no record was made: nothing publishable anyway (#77). */
     venuelessAmbiguous: number;
     /** Discovery-led events held for promotion this run (ADR 0012): found on a host no active registry source is on and no ticketing platform, new this run or read before the rule. */
@@ -162,6 +164,12 @@ export interface RunReport {
   /** The events unverified by an uncitable re-reading this run; a model wobble shows up here. Re-checked each run until a reading is verified again. */
   uncitableReadings: EventRef[];
   /**
+   * The events kept active on their stored citation this run (#124): a re-reading of their own page
+   * quoted something not on it, but their stored quotes are on it and the reading agrees. The failed
+   * quote is the model's, kept here so its variance stays visible.
+   */
+  keptOnStoredCitation: (EventRef & { failedQuote: string })[];
+  /**
    * Cancellations the run did not apply: a page off the event's own site, found by discovery, said a
    * known event is cancelled (ADR 0008, amended #75). The event was left as it was; its own page decides.
    */
@@ -202,6 +210,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     beyondListingUnstruck: countSince,
     unverifiedByOutageLimit: countSince,
     unverifiedByUncitableReading: countSince,
+    keptOnStoredCitation: countSince,
     venuelessAmbiguous: countSince,
     heldForPromotion: countSince,
     releasedForPromotion: countSince,
@@ -248,6 +257,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   releasedForPromotion: listSince(hostEvents),
   outageLimited: listSince(eventRef),
   uncitableReadings: listSince(eventRef),
+  keptOnStoredCitation: listSince(eventRef.extend({ failedQuote: z.string() })),
   cancellationsFromElsewhere: listSince(eventRef.extend({ reportedBy: z.string() })),
   identityChurn: listSince(eventRef.extend({ was: eventRef })),
 });
@@ -278,6 +288,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Not struck: starts after the last date the page listed | ${counts.beyondListingUnstruck} |
 | Unverified by outage limit | ${counts.unverifiedByOutageLimit} |
 | Unverified by an uncitable re-reading | ${counts.unverifiedByUncitableReading} |
+| Kept on its stored citation | ${counts.keptOnStoredCitation} |
 | Not created: a venue-less sighting fitting more than one known event, none preferred | ${counts.venuelessAmbiguous} |
 | Held for promotion | ${counts.heldForPromotion} |
 | Released for promotion | ${counts.releasedForPromotion} |
@@ -358,6 +369,10 @@ ${eventList(report.outageLimited)}
 ## Unverified by an uncitable re-reading
 
 ${eventList(report.uncitableReadings)}
+
+## Kept on its stored citation
+
+${markdownList(report.keptOnStoredCitation.map((e) => `${e.title}: ${e.primaryUrl} (${e.failedQuote})`))}
 
 ## Cancellations from elsewhere
 

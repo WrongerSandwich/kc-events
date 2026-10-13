@@ -92,12 +92,13 @@ describe("evidence on the page", () => {
     expect(dataset.events[0]).toMatchObject({ status: "active" });
   });
 
-  it("an active event re-read with a quote not on its page is made unverified, not refreshed", async () => {
+  it("an active event re-read with a quote not on its page, from a page that no longer carries its stored quotes, is made unverified, not refreshed", async () => {
     const first = await runAt();
+    const rewritten = { ...LISTING, body: LISTING.body!.replace("Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM", "Saturday, October 31 · Show at 8") };
 
     const second = await runWith(week(2), first.dataset, {
       sources: [knuckleheads],
-      pages: { [CALENDAR_URL]: LISTING },
+      pages: { [CALENDAR_URL]: rewritten },
       completions: [reply(candidate({ dateEvidence: "October 31st" }))],
       pagesCarryQuotes: false,
     });

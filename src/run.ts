@@ -10,6 +10,7 @@ import {
   normalizeUrl,
   overCap,
   quotableText,
+  quotedOn,
   readPage,
   sameQuote,
   type ExtractionContext,
@@ -117,7 +118,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   // Discovery runs after the registry lane, so a page the registry already read is not read again.
   const discovery = await discover({ ...ports, model }, extractionContext, registry, registryLane.attempts.tried);
   // Registry sightings merge first: an event both lanes found keeps its registry lead.
-  const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], today, config);
+  const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], today, startedIso, config);
   // Past events, events citing an index page as their primary page, and promotions or non-public events
   // stored before the skip (#81) expire before re-verification, so nothing is fetched to check a date
   // already gone, a page that is never read, or an event no reading may keep. Duplicates fold after
@@ -149,6 +150,9 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
   const madeUncitable = new Set([...merged.uncitable, ...reverified.uncitable]);
   const uncitable = placed.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
+  // Kept on its stored citation and still active (#124): the failed quote shows, so model variance stays visible.
+  const keptOn = new Map([...merged.kept, ...reverified.kept]);
+  const kept = placed.events.filter((e) => keptOn.has(e.id) && e.status === "active");
   const changed = markChanged(dataset.events, placed.events, startedIso);
   const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
   assertModelReached(model);
@@ -185,6 +189,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       beyondListingUnstruck: reverified.beyondListingUnstruck,
       unverifiedByOutageLimit: reverified.outageLimited.length,
       unverifiedByUncitableReading: uncitable.length,
+      keptOnStoredCitation: kept.length,
       venuelessAmbiguous: merged.counts.venuelessAmbiguous,
       heldForPromotion: countEvents(held.heldByHost),
       releasedForPromotion: countEvents(held.releasedByHost),
@@ -213,6 +218,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     releasedForPromotion: held.releasedByHost,
     outageLimited: reverified.outageLimited.map(titleAndUrl),
     uncitableReadings: uncitable.map(titleAndUrl),
+    keptOnStoredCitation: kept.map((e) => ({ ...titleAndUrl(e), failedQuote: keptOn.get(e.id)! })),
     cancellationsFromElsewhere: merged.cancellationsFromElsewhere,
     identityChurn: identityChurn(dataset.events, events),
   };
@@ -641,7 +647,7 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
  * what. When one page lists the show twice within the fuzzy window, the night nearest the stored
  * start is the event's reading, whichever the page gives first (#78); the other confirms it at most.
  */
-function mergeSightings(existing: Event[], sightings: Sighting[], today: string, config: RunConfig) {
+function mergeSightings(existing: Event[], sightings: Sighting[], today: string, nowIso: string, config: RunConfig) {
   const aliases = config.venueAliases;
   const events = [...existing];
   const touched = new Set<string>();
@@ -649,6 +655,7 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
   const created = new Set<string>();
   const readVerified = new Set<string>();
   const uncitable = new Set<string>();
+  const kept = new Map<string, string>();
   const cancellationsFromElsewhere: RunReport["cancellationsFromElsewhere"] = [];
   let venuelessAmbiguous = 0;
 
@@ -693,10 +700,12 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
     if (event.status === "active" && !cancelled && hasNearerSighting(known, sighting, sightings, events.filter(matchable), config)) continue;
     touched.add(known.id);
     if (event.status === "active" && rule !== "month") readVerified.add(known.id);
-    const applied = applySighting(known, { event, cancelled }, standing, rule);
+    const applied = applySighting(known, sighting, standing, rule, nowIso);
     events[events.indexOf(known)] = applied.event;
     if (applied.refreshed && !created.has(known.id)) refreshed.add(known.id);
     if (applied.uncitable) uncitable.add(known.id);
+    if (applied.keptOn !== undefined) kept.set(known.id, applied.keptOn);
+    else if (applied.refreshed) kept.delete(known.id);
   }
 
   // Events this run made unverified are counted on their own, not as held.
@@ -705,6 +714,7 @@ function mergeSightings(existing: Event[], sightings: Sighting[], today: string,
     events,
     touched,
     uncitable,
+    kept,
     cancellationsFromElsewhere,
     counts: { found: touched.size, new: created.size, updated: refreshed.size, heldUnverified, venuelessAmbiguous },
   };
@@ -796,23 +806,60 @@ function matchable(event: Event): boolean {
  * title and date alone. A dated sighting that is one month of a recurring event confirms it and no
  * more, whatever its page (#77): a month's dates would make the standing event dated. Short of a
  * cancellation, the page still lists the event, so it is not missing and any strike and any run of
- * outages is cleared. A page with no standing never gets here (#78): it clears nothing.
+ * outages is cleared. A page with no standing never gets here (#78): it clears nothing. One
+ * exception to hiding (#124): an own-page reading held only because a quote is not on the page
+ * keeps an active event on its stored reading, verified now (keptOn, the failed quote), when the
+ * event's stored quotes are on the page this run read and the reading agrees with the stored one
+ * (keepsStoredCitation): the page has not changed, only the model's quote has.
  */
 function applySighting(
   known: Event,
-  { event, cancelled }: Sighting,
+  sighting: Sighting,
   standing: Exclude<Standing, "none">,
   rule: MatchRule,
-): { event: Event; refreshed: boolean; uncitable: boolean } {
+  nowIso: string,
+): { event: Event; refreshed: boolean; uncitable: boolean; keptOn?: string } {
+  const { event, cancelled } = sighting;
   const fromOwnPage = standing === "own-page";
   const confirmsOnly = rule === "month";
   const mayCancel = !confirmsOnly && (fromOwnPage || event.status === "active");
   if (cancelled && mayCancel) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
   if (event.status === "active" && !confirmsOnly) return { event: refresh(known, event, rule), refreshed: true, uncitable: false };
   const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
-  if (known.status === "active" && fromOwnPage && !confirmsOnly) return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
+  if (known.status === "active" && fromOwnPage && !confirmsOnly) {
+    if (keepsStoredCitation(known, sighting)) return { event: { ...listed, lastVerified: nowIso }, refreshed: false, uncitable: false, keptOn: sighting.quoteProblem! };
+    return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
+  }
   const cleared = known.verificationFailures === 0 && known.consecutiveOutages === 0;
   return { event: cleared ? known : listed, refreshed: false, uncitable: false };
+}
+
+/**
+ * Whether an active event read from its own page by a reading held only on a quote (#124) stays on
+ * its stored citation: the stored date and venue quotes are both on the page this run read, and the
+ * reading agrees with the stored one, the same calendar date (and time, when both give one) or the
+ * same schedule for a recurring event, and the same venue, case and spacing aside. Any other failed
+ * reading (a date that does not exist, no date or venue at all) carries no page text and hides it.
+ */
+function keepsStoredCitation(known: Event, { event, pageText }: Sighting): boolean {
+  if (pageText === undefined) return false;
+  const { date, venue } = known.evidence;
+  if (date === undefined || venue === undefined || !quotedOn(date, pageText) || !quotedOn(venue, pageText)) return false;
+  return sameWhen(event, known) && sameIgnoringCase(event.venue, known.venue);
+}
+
+function sameWhen(reading: Event, known: Event): boolean {
+  if (known.recurrence === "recurring" || reading.recurrence === "recurring") {
+    return known.recurrence === reading.recurrence && sameIgnoringCase(reading.schedule, known.schedule);
+  }
+  if (calendarDate(reading.start) === undefined || calendarDate(reading.start) !== calendarDate(known.start)) return false;
+  return !hasTime(reading.start) || !hasTime(known.start) || reading.start!.slice(11, 16) === known.start!.slice(11, 16);
+}
+
+/** Two texts that are the same once case and runs of whitespace are set aside; an absent one matches nothing. */
+function sameIgnoringCase(a: string | undefined, b: string | undefined): boolean {
+  const plain = (text: string) => text.trim().replace(/\s+/g, " ").toLowerCase();
+  return a !== undefined && b !== undefined && plain(a) === plain(b);
 }
 
 /**
@@ -1128,6 +1175,7 @@ async function reverify(
   let beyondListingUnstruck = 0;
   const outageLimited: Event[] = [];
   const uncitable = new Set<string>();
+  const kept = new Map<string, string>();
   const checked = events.map((event) => {
     if (!pending.includes(event)) return event;
     const url = event.primaryUrl;
@@ -1157,10 +1205,11 @@ async function reverify(
       return strike(event);
     }
     // The page read here is the event's primary page, whatever page the sighting cites.
-    const applied = applySighting(event, listed.sighting, "own-page", listed.rule);
+    const applied = applySighting(event, listed.sighting, "own-page", listed.rule, context.nowIso);
     listedHere.add(event.id);
     if (applied.refreshed) refreshed.add(event.id);
     if (applied.uncitable) uncitable.add(event.id);
+    if (applied.keptOn !== undefined) kept.set(event.id, applied.keptOn);
     return applied.event;
   });
   return {
@@ -1175,6 +1224,7 @@ async function reverify(
     beyondListingUnstruck,
     outageLimited,
     uncitable,
+    kept,
     sightings: [...sightingsAt.values()].flat(),
     problems,
   };
