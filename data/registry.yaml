@@ -229,6 +229,14 @@ sources:
     checkHints: The homepage carries the season with dates. Theater at 3828 Main St; each production is a limited run.
     status: active
 
+  - name: The Coterie
+    urls: [https://thecoterie.org/2026-2027-season/]
+    kind: theater/dance
+    neighborhood: Crown Center
+    checkHints: Family theatre; the season page lists each production with its run. A production with no venue named plays The Coterie's theatre, whose address is the page's footer (2450 Grand Blvd, Crown Center). Some runs play elsewhere for part or all of their dates, and the text then says where and when; where the text and the date badge differ, the text is right. A stretch "for students and educators" is a school run, not public, so Electric Poe is its public run only, Oct 14 – Nov 1 at Union Cemetery. "Venues & Dates Announcing Soon" has no dates yet.
+    status: active
+    notes: Added for #127; Crown Center listed Electric Poe at the shops over both its school and public runs.
+
   - name: Kansas City Actors Theatre
     urls: [https://www.kcactors.org/all-shows/]
     kind: theater/dance
@@ -457,7 +465,7 @@ sources:
     urls: [https://www.crowncenter.com/events]
     kind: other
     neighborhood: Crown Center
-    checkHints: The district's calendar, 2450 Grand Blvd; exhibits in the shops, events on the square, and shows by its theaters. Read the kind from each listing; a Musical Theater Heritage or Coterie run listed here is theater/dance.
+    checkHints: The district's calendar, 2450 Grand Blvd; exhibits in the shops, events on the square, and shows by its theaters. Read the kind from each listing; a Musical Theater Heritage run listed here is theater/dance. Skip The Coterie's productions, which this page lists at the shops whatever their venue and dates, without naming The Coterie; The Coterie source carries them. In the 2026–27 season they are Electric Poe, The Pigeon Gets a Big Time Holiday Extravaganza!, JACKED! A Beanstalk Remix, The Gingerbread Kid, Madagascar – A Musical Adventure, Baby Rave, Kidtropolis and Electric Renaissance.
     status: active
     notes: Discovery read eleven events from this page before it was a source (2026-10-10).
 
