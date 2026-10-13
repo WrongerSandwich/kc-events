@@ -82,8 +82,8 @@ export function resultEvents(groups: readonly ResultGroup[]): PublishedEvent[] {
 export function groupResults(events: PublishedEvent[], f: Filters, today: string, saved: ReadonlySet<string>): ResultGroup[] {
   const hits = events.filter((e) => matches(e, f, today, saved));
 
-  // A shortlist keeps the order its sender gave it; the venue sort still groups it by venue.
-  if (f.ids.length > 0 && f.sort === "date") {
+  // A shortlist keeps the order its sender gave it, whatever the sort.
+  if (f.ids.length > 0) {
     const byId = new Map(hits.map((e) => [e.id, e]));
     const listed = f.ids.map((id) => byId.get(id)).filter((e): e is PublishedEvent => e !== undefined);
     if (listed.length === 0) return [];

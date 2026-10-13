@@ -9,11 +9,13 @@
   // Sharing needs the browser, so the button renders only once mounted: without JavaScript there is no button that
   // does nothing.
   let mounted = $state(false);
-  onMount(() => { mounted = true; });
-
   // What came of the last click, said beside the button: "Link copied", or the link itself when it could not be copied.
   let note = $state<{ copied: true } | { failed: string } | undefined>();
   let clear: ReturnType<typeof setTimeout> | undefined;
+  onMount(() => {
+    mounted = true;
+    return () => clearTimeout(clear);
+  });
 
   async function share() {
     clearTimeout(clear);

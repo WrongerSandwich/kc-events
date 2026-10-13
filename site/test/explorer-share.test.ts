@@ -42,6 +42,15 @@ describe("a shortlist link (#132)", () => {
     expect(screen.getByRole("button", { name: "Remove Shortlist (3)" })).toBeInTheDocument();
   });
 
+  it("says so when none of its events is left, rather than passing everything off as the shortlist", async () => {
+    history.replaceState(null, "", "/explore?ids=evt_gone,evt_nope");
+    render(Explorer);
+    await tick();
+    expect(screen.getByText("None of this shortlist's events are still to come. Showing everything instead.")).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: "film" }));
+    expect(screen.queryByText(/None of this shortlist's events/)).toBeNull();
+  });
+
   it("narrows by the other filters, and its pill clears only the shortlist", async () => {
     history.replaceState(null, "", "/explore?ids=evt_film,evt_jazz,evt_talk&kind=music");
     render(Explorer);

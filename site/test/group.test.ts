@@ -207,8 +207,8 @@ describe("shortlist (#132)", () => {
     expect(resultEvents(groupResults([...all, past], f({ ids: ["past", "tue"] }), today, none)).map((e) => e.id)).toEqual(["tue"]);
   });
 
-  it("groups a shortlist by venue under the venue sort", () => {
+  it("keeps the link's order and heading under the venue sort too", () => {
     const groups = groupResults(all, f({ ids: ["fri7", "tue"], sort: "venue" }), today, none);
-    expect(groups.map((g) => g.heading)).toEqual(["Library", "recordBar"]);
+    expect(groups.map((g) => [g.heading, g.events.map((e) => e.id)])).toEqual([["Shortlist · 2 events", ["fri7", "tue"]]]);
   });
 });

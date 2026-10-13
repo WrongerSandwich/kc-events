@@ -202,6 +202,10 @@ The notice shown on every page when the last successful run is more than nine da
 The page that lets a reader slice every active event by date, kind, region, don't-miss, recurrence, and search, with the filters in the URL so a view can be shared.
 _Avoid_: browse page, search page, list view
 
+**Shortlist**:
+A handful of events named in an explorer link (`/explore?ids=evt_a,evt_b`), shown in the order the link gives them, under "Shortlist · N events". The saved view's Share saved builds one from the visitor's saves still to come; ids of events no longer to come drop silently.
+_Avoid_: list, collection, playlist
+
 **Event page**:
 The page for one active event, at `/e/<id>`: its date, venue, why-line when flagged, description when there is one, primary link, calendar file, last-verified stamp, and corrections link.
 _Avoid_: detail page, listing page
