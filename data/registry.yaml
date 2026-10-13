@@ -298,14 +298,14 @@ sources:
     notes: Discovery read seven events from it before it was a source (2026-10-10).
 
   - name: Screenland Armour
-    urls: [https://www.screenland.com/calendar]
+    urls: [https://www.screenland.com/coming-soon]
     kind: film
     neighborhood: North Kansas City
-    checkHints: Cinema at 408 Armour Rd, North Kansas City. A first-run film's daily showtimes are one limited run; a live commentary, live score, anniversary print, or series night (Friday Night Frights, Backyard Movies) is a one-off on its date.
+    checkHints: Cinema at 408 Armour Rd, North Kansas City. Each title on this list carries the date of its first showing. List only special screenings, each a one-off on its date (a repertory or anniversary showing, a 35mm, 70mm or 4K print, a live commentary or live score, a sneak preview, a series night such as Friday Night Frights, Backyard Movies or SHOCKtober), and leave out a first-run release, which opens here for an ordinary run. A title naming another place, such as "(Elmwood Cemetery Screening)", is held there, not at the cinema.
     fetch: browser
-    waitFor: button.showing
+    waitFor: .list-complete-item .absolute-top-right
     status: active
-    notes: The calendar renders by script and never goes network-quiet (checked 2026-10-10). Discovery read its HUMP! festival listing off a ticketing page before it was a source.
+    notes: Was /calendar, which redirects by script to /now-playing, a day picker that renders only today's showings and keeps the day out of the URL, so every film was dated today (#125, 2026-10-12). /coming-soon renders by script and never goes network-quiet under the browser fetcher; a title carousel renders before the dated list, so waitFor is the date badge of one listing (checked 2026-10-12). robots.txt disallows /graphql, the API behind both. Discovery read its HUMP! festival listing off a ticketing page before it was a source.
 
   - name: Kemper Museum of Contemporary Art
     urls: [https://www.kemperart.org/]
