@@ -386,13 +386,12 @@ export interface Sighting {
   cancelled: boolean;
   /** Why a date or time the model wrote could not be used, which made the candidate uncitable. */
   dateProblem?: string;
-  /** Which quote of an otherwise citable candidate is not on its page, which held it unverified. */
-  quoteProblem?: string;
   /**
-   * The page's quotable text, carried by a sighting held only on a quote, so that a known event's
-   * stored quotes can be checked against the page this run read (#124).
+   * Which quote of an otherwise citable candidate is not on its page, which held it unverified, with
+   * the page's quotable text, so a known event's stored quotes can be checked against the page this
+   * run read (#124).
    */
-  pageText?: string;
+  quoteProblem?: { phrase: string; pageText: string };
 }
 
 /**
@@ -468,7 +467,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     event,
     cancelled: candidate.notice === "cancelled",
     ...(dateProblem !== undefined ? { dateProblem } : {}),
-    ...(quoteProblem !== undefined ? { quoteProblem, pageText: origin.quotableText } : {}),
+    ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText: origin.quotableText } } : {}),
   };
 }
 

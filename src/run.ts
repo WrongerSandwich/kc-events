@@ -43,6 +43,7 @@ import {
   oneMonthOf,
   sameEnd,
   sameEvent,
+  sameMoment,
   sameName,
   sameRecurringEvent,
   sameText,
@@ -118,7 +119,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   // Discovery runs after the registry lane, so a page the registry already read is not read again.
   const discovery = await discover({ ...ports, model }, extractionContext, registry, registryLane.attempts.tried);
   // Registry sightings merge first: an event both lanes found keeps its registry lead.
-  const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], today, startedIso, config);
+  const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], extractionContext);
   // Past events, events citing an index page as their primary page, and promotions or non-public events
   // stored before the skip (#81) expire before re-verification, so nothing is fetched to check a date
   // already gone, a page that is never read, or an event no reading may keep. Duplicates fold after
@@ -610,7 +611,7 @@ async function extractPage(
     }
     if (sighting.quoteProblem !== undefined) {
       tally.quoteNotOnPage++;
-      problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.quoteProblem}, which is not on the page, and was held unverified`);
+      problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.quoteProblem.phrase}, which is not on the page, and was held unverified`);
     }
     sightings.push(sighting);
   }
@@ -647,7 +648,7 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
  * what. When one page lists the show twice within the fuzzy window, the night nearest the stored
  * start is the event's reading, whichever the page gives first (#78); the other confirms it at most.
  */
-function mergeSightings(existing: Event[], sightings: Sighting[], today: string, nowIso: string, config: RunConfig) {
+function mergeSightings(existing: Event[], sightings: Sighting[], { today, nowIso, config }: ExtractionContext) {
   const aliases = config.venueAliases;
   const events = [...existing];
   const touched = new Set<string>();
@@ -827,7 +828,7 @@ function applySighting(
   if (event.status === "active" && !confirmsOnly) return { event: refresh(known, event, rule), refreshed: true, uncitable: false };
   const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
   if (known.status === "active" && fromOwnPage && !confirmsOnly) {
-    if (keepsStoredCitation(known, sighting)) return { event: { ...listed, lastVerified: nowIso }, refreshed: false, uncitable: false, keptOn: sighting.quoteProblem! };
+    if (keepsStoredCitation(known, sighting)) return { event: { ...listed, lastVerified: nowIso }, refreshed: false, uncitable: false, keptOn: sighting.quoteProblem!.phrase };
     return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
   }
   const cleared = known.verificationFailures === 0 && known.consecutiveOutages === 0;
@@ -839,25 +840,25 @@ function applySighting(
  * its stored citation: the stored date and venue quotes are both on the page this run read, and the
  * reading agrees with the stored one, the same calendar date (and time, when both give one) or the
  * same schedule for a recurring event, and the same venue, case and spacing aside. Any other failed
- * reading (a date that does not exist, no date or venue at all) carries no page text and hides it.
+ * reading (a date that does not exist, no date or venue at all) has no quote problem and hides it.
  */
-function keepsStoredCitation(known: Event, { event, pageText }: Sighting): boolean {
-  if (pageText === undefined) return false;
+function keepsStoredCitation(known: Event, { event, quoteProblem }: Sighting): boolean {
+  if (quoteProblem === undefined) return false;
+  const { pageText } = quoteProblem;
   const { date, venue } = known.evidence;
   if (date === undefined || venue === undefined || !quotedOn(date, pageText) || !quotedOn(venue, pageText)) return false;
-  return sameWhen(event, known) && sameIgnoringCase(event.venue, known.venue);
+  return sameWhen(event, known) && sameAsideFromCaseAndSpacing(event.venue, known.venue);
 }
 
 function sameWhen(reading: Event, known: Event): boolean {
   if (known.recurrence === "recurring" || reading.recurrence === "recurring") {
-    return known.recurrence === reading.recurrence && sameIgnoringCase(reading.schedule, known.schedule);
+    return known.recurrence === reading.recurrence && sameAsideFromCaseAndSpacing(reading.schedule, known.schedule);
   }
-  if (calendarDate(reading.start) === undefined || calendarDate(reading.start) !== calendarDate(known.start)) return false;
-  return !hasTime(reading.start) || !hasTime(known.start) || reading.start!.slice(11, 16) === known.start!.slice(11, 16);
+  return calendarDate(reading.start) !== undefined && sameMoment(reading.start, known.start);
 }
 
 /** Two texts that are the same once case and runs of whitespace are set aside; an absent one matches nothing. */
-function sameIgnoringCase(a: string | undefined, b: string | undefined): boolean {
+function sameAsideFromCaseAndSpacing(a: string | undefined, b: string | undefined): boolean {
   const plain = (text: string) => text.trim().replace(/\s+/g, " ").toLowerCase();
   return a !== undefined && b !== undefined && plain(a) === plain(b);
 }
