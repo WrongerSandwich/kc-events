@@ -504,7 +504,7 @@ sources:
     urls: [https://powellgardens.org/]
     kind: outdoors/community
     neighborhood: Elsewhere in the metro
-    checkHints: The homepage carries the event list; /events is a 404. Botanical garden near Kingsville; seasonal festivals like Dark Forest are limited runs.
+    checkHints: The homepage carries the event list; /events is a 404. Botanical garden near Kingsville. Dark Forest runs on separate weekends (the banner quotes them all), so it is one event at its next span. Fire Feast is Dark Forest's add-on dinner, sold only with a Dark Forest ticket, so it is part of Dark Forest, not a separate event.
     status: active
 
   - name: Kansas City Renaissance Festival
