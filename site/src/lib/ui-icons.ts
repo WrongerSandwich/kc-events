@@ -10,6 +10,7 @@ export const uiIcons = {
   "calendar-plus": `<path d="M16 18h6"/><path d="M16 2v3"/><path d="M19 15v6"/><path d="M21 11.5V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h8.3"/><path d="M3 9h18"/><path d="M8 2v3"/>`, // lucide: calendar-plus
   "chevron-right": `<path d="m9 18 6-6-6-6"/>`, // lucide: chevron-right
   "x": `<path d="M18 6 6 18"/><path d="m6 6 12 12"/>`, // lucide: x
+  "share": `<path d="M12 2v13"/><path d="m16 6-4-4-4 4"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>`, // lucide: share
 } as const;
 
 export type UiIconName = keyof typeof uiIcons;

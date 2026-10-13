@@ -275,7 +275,7 @@ describe("Explorer", () => {
     const row = screen.getByRole("article");
     expect(within(row).getByText("Passed")).toBeInTheDocument();
     expect(row.querySelector(".when")).toHaveTextContent("Fri Oct 9 · 7:00 pm"); // no day heading carries it
-    expect(screen.getByRole("button", { name: "Export this view" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Export saved" })).toBeDisabled();
   });
 
   it("brings saves' last days up to the dataset's on mount", () => {

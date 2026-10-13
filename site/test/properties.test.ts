@@ -21,6 +21,8 @@ const filters: fc.Arbitrary<Filters> = fc.record({
   saved: fc.boolean(),
   q: fc.string({ unit: "grapheme" }).map((s) => s.trim()),
   sort: fc.constantFrom("date" as const, "venue" as const),
+  // Well-formed ids once each, in any order (parseQuery is not told the published ones here, so any is kept).
+  ids: fc.uniqueArray(fc.stringMatching(/^evt_[A-Za-z0-9_-]{1,12}$/), { maxLength: 6 }),
 });
 
 describe("query", () => {
