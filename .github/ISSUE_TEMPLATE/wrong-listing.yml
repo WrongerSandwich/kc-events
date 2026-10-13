@@ -1,0 +1,27 @@
+name: Wrong listing
+description: A date, venue, or anything else on kcthisweek.com is wrong.
+title: "Wrong listing: "
+labels: [bug, needs-triage]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What is wrong
+      description: What the listing says, and what is right if you know it (a link that shows it helps).
+    validations:
+      required: true
+  - type: input
+    id: event
+    attributes:
+      label: Event on kcthisweek.com
+      description: The event's page on this site, if the report is about one event.
+  - type: input
+    id: primary-page
+    attributes:
+      label: Primary page
+      description: The page the listing was read from.
+  - type: input
+    id: event-page
+    attributes:
+      label: Event page
+      description: The event's own page, when the listing links one.

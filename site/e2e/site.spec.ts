@@ -448,7 +448,7 @@ test("the site's page for an event sends the reader to the event's own page and 
   const verified = page.locator(".verified");
   await expect(verified).toContainText("Date and venue verified Oct 3 from the list at example.com.");
   await expect(verified.getByRole("link", { name: "the list at example.com" })).toHaveAttribute("href", "https://example.com/recordbar/frizzi");
-  await expect(verified.getByRole("link", { name: "Wrong? Report it" })).toHaveAttribute("href", /Event%20page%3A%20https%3A%2F%2Ftickets.example.com%2Ffrizzi/);
+  await expect(verified.getByRole("link", { name: "Wrong? Report it" })).toHaveAttribute("href", /template=wrong-listing\.yml&.*event-page=https%3A%2F%2Ftickets\.example\.com%2Ffrizzi/);
 });
 
 test("an event page says what the event is when the job read a description, and nothing when it did not", async ({ page }) => {
