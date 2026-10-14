@@ -8502,7 +8502,7 @@
       "lastVerified": "2026-10-12T18:58:48-05:00",
       "lastChanged": "2026-10-12T17:17:57-05:00",
       "lastJudged": "2026-10-12T17:17:57-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 1,
       "consecutiveOutages": 0,
       "lead": {
@@ -8516,7 +8516,9 @@
           "page": "https://powellgardens.org/event/fire-feast/",
           "quote": "October 16, 2026\nFriday\n5:30pm -10:00pm"
         }
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_41a40a81ea8a"
     },
     {
       "id": "evt_41a40a81ea8a",
