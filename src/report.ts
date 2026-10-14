@@ -197,8 +197,12 @@ export interface RunChanges {
   /** Active before and now, with the start it had before. */
   moved: (ChangeRef & { from: string })[];
   /** Active before, and expired this run as cancelled or as no longer listed (two strikes). */
-  gone: (ChangeRef & { reason: "cancelled" | "two-strike" })[];
+  gone: (ChangeRef & { reason: GoneReason })[];
 }
+
+/** The expiry reasons that put an event in the changes section's gone: a past, duplicate, or held-back record is not news. */
+export const GONE_REASONS = ["cancelled", "two-strike"] as const satisfies readonly ExpiryReason[];
+export type GoneReason = (typeof GONE_REASONS)[number];
 
 const count = z.number().int().nonnegative();
 /** A count, or a list, that a report written before it existed does not carry: zero, or empty. */
@@ -301,7 +305,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
       comparedWith: z.iso.datetime({ offset: true }).nullable(),
       newPicks: z.array(changeRef),
       moved: z.array(changeRef.extend({ from: z.string() })),
-      gone: z.array(changeRef.extend({ reason: z.enum(["cancelled", "two-strike"]) })),
+      gone: z.array(changeRef.extend({ reason: z.enum(GONE_REASONS) })),
     })
     .optional(),
 });

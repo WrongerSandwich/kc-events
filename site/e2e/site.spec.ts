@@ -725,7 +725,7 @@ test("the changes page lists the run's new picks, moves, new events by kind, and
   await expect(section("Moved")).toContainText("Was Thu Oct 8 · 8:00 pm");
   await expect(section("New this week")).toContainText("10 events first listed in the last seven days.");
   await expect(section("New this week").locator("summary").first()).toHaveText("music 2");
-  await expect(section("Cancelled or gone").locator("li").first()).toHaveText(/Thursday songwriter night\s*Olathe Jazz Hall · Thu Oct 8, 7:00 pm\s*No longer listed by the venue/);
+  await expect(section("Cancelled or gone").locator("li").first()).toHaveText(/Thursday songwriter night\s*Olathe Jazz Hall · Thu Oct 8 · 7:00 pm\s*No longer listed by the venue/);
   await expect(section("Cancelled or gone").getByRole("link").first()).toHaveAttribute("href", "https://example.com/olathe/songwriters");
   await expect(section("Cancelled or gone").locator("li").nth(1)).toHaveText(/Cancelled matinee\s*Cancelled/);
   await expect(page.getByText("Compared with the run of Monday, September 28.")).toBeVisible();

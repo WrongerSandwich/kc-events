@@ -4,12 +4,11 @@ import ChangeRows from "../components/ChangeRows.svelte";
 import UiIcon from "../components/UiIcon.svelte";
 import { changes } from "../generated/changes";
 import { meta } from "../generated/meta";
-import { byKind, emptyLine, goneReason, wasLine } from "../lib/changes";
-import { formatDay, formatLong, formatTime, isDateOnly, localDate } from "../lib/dates";
+import { byKind, emptyLine, goneReason, startLine, wasLine } from "../lib/changes";
+import { formatLong, localDate } from "../lib/dates";
 
 const { newThisWeek, comparison } = changes;
 const kinds = byKind(newThisWeek, meta.kinds);
-const goneWhen = (start: string) => `${formatDay(localDate(start))}${isDateOnly(start) ? "" : `, ${formatTime(start)}`}`;
 const empty = {
   picks: emptyLine(comparison?.newPicks),
   moved: emptyLine(comparison?.moved),
@@ -50,7 +49,7 @@ const empty = {
       {comparison!.gone.map((g) => (
         <li>
           <span class="title">{g.title}</span>
-          {(g.venue !== undefined || g.start !== undefined) && <span class="detail">{[g.venue, g.start === undefined ? undefined : goneWhen(g.start)].filter(Boolean).join(" · ")}</span>}
+          {(g.venue !== undefined || g.start !== undefined) && <span class="detail">{[g.venue, g.start === undefined ? undefined : startLine(g.start)].filter(Boolean).join(" · ")}</span>}
           <span class="detail">{goneReason(g.reason)} · <a href={g.primaryUrl}><UiIcon name="link" />The page it was listed on</a></span>
         </li>
       ))}

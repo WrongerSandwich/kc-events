@@ -1,7 +1,7 @@
 /**
  * Writes meta.ts, events.ts, dont-miss.ts, descriptions.ts, changes.ts, and about.ts for the pages and islands to
- * import (six modules so each island ships only what it renders; descriptions go to the event page alone, the changes
- * to the changes page, and what the site says about the job to the Astro pages), and events.json in the public directory: the published events with their
+ * import (six modules so each page and island ships only what it renders; descriptions go to the event page alone,
+ * the changes to the changes page, and what the site says about the job to the Astro pages), and events.json in the public directory: the published events with their
  * descriptions, never the job's raw file, whose evidence, leads, counters, and held-back records stay in git. Paths and
  * the clock are parameters so a test can write somewhere else.
  */
@@ -33,7 +33,7 @@ export function writeGenerated(opts: { datasetPath: string; configPath: string; 
   writeFileSync(join(opts.outDir, "events.ts"), `${header}import type { PublishedEvent } from "../lib/types";\nexport const events: PublishedEvent[] = ${JSON.stringify(events)};\n`);
   writeFileSync(join(opts.outDir, "descriptions.ts"), `${header}import type { PublishedDescriptions } from "../lib/types";\nexport const descriptions: PublishedDescriptions = ${JSON.stringify(descriptions)};\n`);
   writeFileSync(join(opts.outDir, "changes.ts"), `${header}import type { PublishedChanges } from "../lib/types";\nexport const changes: PublishedChanges = ${JSON.stringify(changes)};\n`);
-  writeFileSync(join(opts.outDir, "about.ts"),`${header}import type { PublishedAbout } from "../lib/types";\nexport const about: PublishedAbout = ${JSON.stringify(about)};\n`);
+  writeFileSync(join(opts.outDir, "about.ts"), `${header}import type { PublishedAbout } from "../lib/types";\nexport const about: PublishedAbout = ${JSON.stringify(about)};\n`);
   const dontMiss = events.filter((e) => e.dontMiss);
   writeFileSync(join(opts.outDir, "dont-miss.ts"), `${header}import type { PublishedEvent } from "../lib/types";\nexport const dontMiss: PublishedEvent[] = ${JSON.stringify(dontMiss)};\n`);
   if (dontMiss.length > MAX_PICKS) {

@@ -1,9 +1,14 @@
 import { formatDay, formatTime, isDateOnly, localDate } from "./dates";
 import type { GoneEvent, PublishedEvent } from "./types";
 
-/** A moved event's line under its row: "Was Wed Oct 14 · 5:30 pm", or "Was Wed Oct 14" for a date with no time. */
+/** A start as the page gives it: "Wed Oct 14 · 5:30 pm", or "Wed Oct 14" for a date with no time. */
+export function startLine(start: string): string {
+  return `${formatDay(localDate(start))}${isDateOnly(start) ? "" : ` · ${formatTime(start)}`}`;
+}
+
+/** A moved event's line under its row: "Was Wed Oct 14 · 5:30 pm". */
 export function wasLine(from: string): string {
-  return `Was ${formatDay(localDate(from))}${isDateOnly(from) ? "" : ` · ${formatTime(from)}`}`;
+  return `Was ${startLine(from)}`;
 }
 
 /** Why an event went, as the page says it: the job's two strikes are the venue's page no longer listing it. */

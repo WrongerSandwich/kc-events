@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { byKind, emptyLine, goneReason, wasLine } from "../src/lib/changes";
+import { byKind, emptyLine, goneReason, startLine, wasLine } from "../src/lib/changes";
 import { event } from "./fixtures/event";
 
 describe("the changes page's lines (#135)", () => {
   it("a moved event says the date it had, with its time when it had one", () => {
     expect(wasLine("2026-10-14T17:30:00-05:00")).toBe("Was Wed Oct 14 · 5:30 pm");
     expect(wasLine("2026-10-14")).toBe("Was Wed Oct 14");
+  });
+
+  it("a gone event's start reads as a moved event's does", () => {
+    expect(startLine("2026-10-08T19:00:00-05:00")).toBe("Thu Oct 8 · 7:00 pm");
+    expect(startLine("2026-10-08")).toBe("Thu Oct 8");
   });
 
   it("a gone event says why in the page's words", () => {
