@@ -12,6 +12,7 @@ describe("sitemapXml", () => {
     expect(xml).toContain("<url><loc>https://www.kcthisweek.com/</loc><lastmod>2026-10-05T06:40:00-05:00</lastmod></url>");
     expect(xml).toContain("<url><loc>https://www.kcthisweek.com/explore</loc><lastmod>2026-10-05T06:40:00-05:00</lastmod></url>");
     expect(xml).toContain("<url><loc>https://www.kcthisweek.com/about</loc><lastmod>2026-10-05T06:40:00-05:00</lastmod></url>");
+    expect(xml).toContain("<url><loc>https://www.kcthisweek.com/changes</loc><lastmod>2026-10-05T06:40:00-05:00</lastmod></url>");
   });
 
   it("dates an event's page by when it was last verified", () => {

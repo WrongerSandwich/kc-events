@@ -1,0 +1,80 @@
+---
+import Base from "../layouts/Base.astro";
+import ChangeRows from "../components/ChangeRows.svelte";
+import UiIcon from "../components/UiIcon.svelte";
+import { changes } from "../generated/changes";
+import { meta } from "../generated/meta";
+import { byKind, emptyLine, goneReason, startLine, wasLine } from "../lib/changes";
+import { formatLong, localDate } from "../lib/dates";
+
+const { newThisWeek, comparison } = changes;
+const kinds = byKind(newThisWeek, meta.kinds);
+const empty = {
+  picks: emptyLine(comparison?.newPicks),
+  moved: emptyLine(comparison?.moved),
+  newThisWeek: emptyLine(newThisWeek),
+  gone: emptyLine(comparison?.gone),
+};
+---
+<Base title="What changed" description="New picks, events that moved, events new this week, and events cancelled or no longer listed, since the last weekly run." wide>
+  <h1>What changed</h1>
+  <p class="lede">From the run of {formatLong(localDate(meta.lastSuccessfulRun))}.</p>
+
+  <section aria-labelledby="new-picks">
+    <h2 id="new-picks" class="section-heading">New picks</h2>
+    {empty.picks ? <p class="none">{empty.picks}</p> : <ChangeRows rows={comparison!.newPicks.map((event) => ({ event }))} />}
+  </section>
+
+  <section aria-labelledby="moved">
+    <h2 id="moved" class="section-heading">Moved</h2>
+    {empty.moved ? <p class="none">{empty.moved}</p> : <ChangeRows rows={comparison!.moved.map(({ event, from }) => ({ event, was: wasLine(from) }))} />}
+  </section>
+
+  <section aria-labelledby="new-this-week">
+    <h2 id="new-this-week" class="section-heading">New this week</h2>
+    {empty.newThisWeek ? <p class="none">{empty.newThisWeek}</p> : <>
+      <p class="note">{newThisWeek.length === 1 ? "1 event" : `${newThisWeek.length} events`} first listed in the last seven days.</p>
+      {kinds.map(({ kind, events }) => (
+        <details class="kind">
+          <summary>{kind} <span class="count">{events.length}</span></summary>
+          <ChangeRows rows={events.map((event) => ({ event }))} />
+        </details>
+      ))}
+    </>}
+  </section>
+
+  <section aria-labelledby="gone">
+    <h2 id="gone" class="section-heading">Cancelled or gone</h2>
+    {empty.gone ? <p class="none">{empty.gone}</p> : <ul class="gone">
+      {comparison!.gone.map((g) => (
+        <li>
+          <span class="title">{g.title}</span>
+          {(g.venue !== undefined || g.start !== undefined) && <span class="detail">{[g.venue, g.start === undefined ? undefined : startLine(g.start)].filter(Boolean).join(" · ")}</span>}
+          <span class="detail">{goneReason(g.reason)} · <a href={g.primaryUrl}><UiIcon name="link" />The page it was listed on</a></span>
+        </li>
+      ))}
+    </ul>}
+  </section>
+
+  {comparison !== undefined && <p class="compared">
+    {comparison.comparedWith === null ? "This was the first run; there is nothing earlier to compare with." : `Compared with the run of ${formatLong(localDate(comparison.comparedWith))}.`}
+  </p>}
+</Base>
+
+<style>
+  h1 { margin-top: var(--space-8); }
+  .lede { color: var(--fg-muted); margin-top: var(--space-2); }
+  .section-heading { font-size: var(--text-xl); margin-top: var(--space-12); }
+  .none, .note { color: var(--fg-muted); margin-top: var(--space-2); }
+  /* New this week runs long, so each kind is one closed line with its count, opening to its rows. */
+  .kind { margin-top: var(--space-2); border-bottom: 1px solid var(--rule); }
+  .kind summary { cursor: pointer; padding-block: var(--space-2); font-weight: var(--weight-medium); }
+  .count { color: var(--fg-muted); font-weight: normal; margin-left: var(--space-1); }
+  .kind[open] summary { border-bottom: 1px solid var(--rule); }
+  .gone { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
+  .gone li { display: grid; gap: 2px; padding-block: var(--space-2); border-bottom: 1px solid var(--rule); }
+  .gone .title { font-weight: var(--weight-medium); }
+  .gone .detail { font-size: var(--text-sm); color: var(--fg-muted); }
+  .gone a { color: var(--fg); text-decoration: underline; }
+  .compared { margin-top: var(--space-12); font-size: var(--text-sm); color: var(--fg-muted); }
+</style>

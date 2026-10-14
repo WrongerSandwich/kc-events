@@ -106,3 +106,7 @@ _None._
 ## Promotion suggestions
 
 _None._
+
+## Changes (first run)
+
+- Big Show (https://knuckleheads.test/calendar), a new pick

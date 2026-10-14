@@ -99,7 +99,7 @@ The part of the metro a venue is in, from a controlled list, shown on the site i
 One execution of the research job: check sources, discover, extract, verify, curate, publish.
 
 **Run report**:
-The committed record of one run: counts, spend against the cap, per-source results, sources failing repeatedly, unmappable neighborhoods, and promotion suggestions.
+The committed record of one run: counts, spend against the cap, per-source results, sources failing repeatedly, unmappable neighborhoods, and promotion suggestions. Since #135 its JSON twin also records the run's changes against the run its dataset came from: new picks, moves, and events gone, which the changes page shows.
 
 **Promotion**:
 Moving a source that the discovery lane has found events on in two runs into the registry. The run tracks discovery sources by host (a ticketing platform is no one source and is never suggested). Always a suggestion in the run report, acted on by hand; never automatic. Promoting a host releases the events held for promotion from it on the next run (ADR 0012); each suggestion says how many it would release.
@@ -209,3 +209,7 @@ _Avoid_: list, collection, playlist
 **Event page**:
 The page for one active event, at `/e/<id>`: its date, venue, why-line when flagged, description when there is one, primary link, calendar file, last-verified stamp, and corrections link.
 _Avoid_: detail page, listing page
+
+**Changes page**:
+The page at `/changes` listing what the last run changed against the run before it: new picks (active and flagged, not flagged before), moved events (active before and now, the start on another day or time, from a start not yet passed), events gone (active before, expired as cancelled or two-strike), and events new this week (first seen in the seven days through the run).
+_Avoid_: changelog, what's new, digest

@@ -704,7 +704,7 @@ for (const path of ["/", "/explore?kind=music", "/e/evt_e2e000000001"]) {
   });
 }
 
-for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/about", "/404"]) {
+for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/changes", "/about", "/404"]) {
   test(`${path} makes no third-party requests and does not scroll sideways at 320px`, async ({ page }) => {
     const foreign: string[] = [];
     page.on("request", (r) => { if (!r.url().startsWith("http://localhost:4321")) foreign.push(r.url()); });
@@ -716,3 +716,19 @@ for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/about", "/404"]) {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 }
+
+test("the changes page lists the run's new picks, moves, new events by kind, and what went, against the run before (#135)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/changes");
+  const section = (name: string) => page.getByRole("region", { name });
+  await expect(section("New picks").getByRole("link", { name: "Fabio Frizzi plays Fulci" })).toHaveAttribute("href", "/e/evt_e2e000000001");
+  await expect(section("Moved").getByRole("link", { name: "Friday night jazz" })).toBeVisible();
+  await expect(section("Moved")).toContainText("Was Thu Oct 8 · 8:00 pm");
+  await expect(section("New this week")).toContainText("10 events first listed in the last seven days.");
+  await expect(section("New this week").locator("summary").first()).toHaveText("music 2");
+  await expect(section("Cancelled or gone").locator("li").first()).toHaveText(/Thursday songwriter night\s*Olathe Jazz Hall · Thu Oct 8 · 7:00 pm\s*No longer listed by the venue/);
+  await expect(section("Cancelled or gone").getByRole("link").first()).toHaveAttribute("href", "https://example.com/olathe/songwriters");
+  await expect(section("Cancelled or gone").locator("li").nth(1)).toHaveText(/Cancelled matinee\s*Cancelled/);
+  await expect(page.getByText("Compared with the run of Monday, September 28.")).toBeVisible();
+  await expect(page.locator(".site-footer").getByRole("link", { name: "What changed" })).toHaveAttribute("href", "/changes");
+  await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+});

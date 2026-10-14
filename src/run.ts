@@ -2,6 +2,7 @@ import { ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
 import { EXPIRY_REASONS, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
 import { buildOwnPageRequest, LISTING_LINE_LENGTH, readOwnPageReply } from "./own-page.js";
 import { splitArchived } from "./archive.js";
+import { runChanges } from "./changes.js";
 import { ageUnsighted, expire, expireIndexCited, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
 import {
   buildExtractionRequest,
@@ -224,6 +225,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     keptOnStoredCitation: kept.map((e) => ({ ...titleAndUrl(e), failedQuote: keptOn.get(e.id)! })),
     cancellationsFromElsewhere: merged.cancellationsFromElsewhere,
     identityChurn: identityChurn(dataset.events, events),
+    changes: runChanges(dataset.events, events, dataset.lastSuccessfulRun, today),
   };
 
   return {

@@ -1965,5 +1965,83 @@
         "primaryUrl": "https://www.screenland.com/now-playing"
       }
     }
-  ]
+  ],
+  "changes": {
+    "comparedWith": "2026-10-11T10:19:50-05:00",
+    "newPicks": [
+      {
+        "id": "evt_a4653be33dab",
+        "title": "The Nature of Artificial Intelligence",
+        "primaryUrl": "https://www.lindahall.org/experience/events/"
+      },
+      {
+        "id": "evt_c1ec338a3f3d",
+        "title": "Fire Feast",
+        "primaryUrl": "https://powellgardens.org/"
+      },
+      {
+        "id": "evt_34307d022112",
+        "title": "Legacy Tour 2026",
+        "primaryUrl": "https://www.midlandkc.com/events"
+      }
+    ],
+    "moved": [
+      {
+        "id": "evt_bcf735efeaff",
+        "title": "Tower After Hours",
+        "primaryUrl": "https://www.theworldwar.org/events",
+        "from": "2026-10-14T17:30:00-05:00"
+      },
+      {
+        "id": "evt_7f03baf06d42",
+        "title": "Andrew's Video Void! 2nd Annual Video Potluck",
+        "primaryUrl": "https://www.straycatfilmcenter.com/screeningsandevents",
+        "from": "2026-11-22T18:30:00-06:00"
+      }
+    ],
+    "gone": [
+      {
+        "id": "evt_bbf5417fc2a3",
+        "title": "Slice of My Heart Emo Night",
+        "primaryUrl": "https://powerandlightdistrict.com/events-and-entertainment",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_dd2c3efdff2b",
+        "title": "Walktober 2026: Truman Courthouse",
+        "primaryUrl": "https://kcparks.org/events/month/?place_types=parks&shortcode=550bcfbb",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_92accb4d207a",
+        "title": "United We Play",
+        "primaryUrl": "https://www.trumanlibrary.gov/events",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_fdac6201c68a",
+        "title": "Open Jam",
+        "primaryUrl": "https://thebirdkc.com/",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_6918e2791e0d",
+        "title": "Bargain Bin Vampire Mixtape",
+        "primaryUrl": "https://www.straycatfilmcenter.com/screeningsandevents",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_9e9a3b1b6bdd",
+        "title": "2nd Annual Video Potluck",
+        "primaryUrl": "https://www.straycatfilmcenter.com/screeningsandevents",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_94f670344e7b",
+        "title": "Vampire Cocktail Party",
+        "primaryUrl": "https://kccrossroads.org/",
+        "reason": "two-strike"
+      }
+    ]
+  }
 }

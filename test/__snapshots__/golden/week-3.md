@@ -106,3 +106,7 @@ _None._
 ## Promotion suggestions
 
 _None._
+
+## Changes since the run of 2026-10-09T22:15:00-05:00
+
+- Gone Show (https://knuckleheads.test/calendar), no longer listed

@@ -181,7 +181,28 @@ export interface RunReport {
   cancellationsFromElsewhere: (EventRef & { reportedBy: string })[];
   /** Events whose title or primary page changed this run, as they are now and as they were (#82): a flap shows here the week it happens. */
   identityChurn: (EventRef & { was: EventRef })[];
+  /** What changed on the site this run, for its changes page (#135; runChanges). Absent in reports before it. */
+  changes?: RunChanges;
 }
+
+/** An event in the changes section: its id, for the site to find it by, and what the Markdown lists. */
+export type ChangeRef = EventRef & { id: string };
+
+/** The run's difference from the dataset it started from, as the site's changes page shows it (#135). */
+export interface RunChanges {
+  /** The last successful run of the dataset this run started from; null on the first run. */
+  comparedWith: string | null;
+  /** Active and flagged don't-miss now, and not flagged before. */
+  newPicks: ChangeRef[];
+  /** Active before and now, with the start it had before. */
+  moved: (ChangeRef & { from: string })[];
+  /** Active before, and expired this run as cancelled or as no longer listed (two strikes). */
+  gone: (ChangeRef & { reason: GoneReason })[];
+}
+
+/** The expiry reasons that put an event in the changes section's gone: a past, duplicate, or held-back record is not news. */
+export const GONE_REASONS = ["cancelled", "two-strike"] as const satisfies readonly ExpiryReason[];
+export type GoneReason = (typeof GONE_REASONS)[number];
 
 const count = z.number().int().nonnegative();
 /** A count, or a list, that a report written before it existed does not carry: zero, or empty. */
@@ -190,6 +211,7 @@ const countSince = count.default(0);
 const flagSince = z.boolean().default(false);
 const listSince = <T extends z.ZodType>(item: T) => z.array(item).default([]);
 const eventRef = z.strictObject({ title: z.string(), primaryUrl: z.string() });
+const changeRef = eventRef.extend({ id: z.string() });
 const hostEvents = z.strictObject({ host: z.string(), events: count });
 const servedBy = z.strictObject({ model: z.string(), provider: z.string().optional(), generationId: z.string() });
 
@@ -278,6 +300,14 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   keptOnStoredCitation: listSince(eventRef.extend({ failedQuote: z.string() })),
   cancellationsFromElsewhere: listSince(eventRef.extend({ reportedBy: z.string() })),
   identityChurn: listSince(eventRef.extend({ was: eventRef })),
+  changes: z
+    .strictObject({
+      comparedWith: z.iso.datetime({ offset: true }).nullable(),
+      newPicks: z.array(changeRef),
+      moved: z.array(changeRef.extend({ from: z.string() })),
+      gone: z.array(changeRef.extend({ reason: z.enum(GONE_REASONS) })),
+    })
+    .optional(),
 });
 
 /** Reads a committed JSON twin, filling the fields it predates. */
@@ -410,7 +440,18 @@ ${markdownList([
 ## Promotion suggestions
 
 ${markdownList(report.promotionSuggestions.map((p) => `${p.host}: events found in ${p.runsSeen} runs, ${plural(p.heldEvents, "held event")} promotion would release, e.g. ${p.exampleUrl}`))}
-`;
+${report.changes === undefined ? "" : changesSection(report.changes)}`;
+}
+
+/** The site's changes page in words (#135): new picks, moves with the start they had, and what went. */
+function changesSection(changes: RunChanges): string {
+  const heading = changes.comparedWith === null ? "## Changes (first run)" : `## Changes since the run of ${changes.comparedWith}`;
+  const lines = [
+    ...changes.newPicks.map((e) => `${e.title} (${e.primaryUrl}), a new pick`),
+    ...changes.moved.map((e) => `${e.title} (${e.primaryUrl}), from ${e.from}`),
+    ...changes.gone.map((e) => `${e.title} (${e.primaryUrl}), ${e.reason === "cancelled" ? "cancelled" : "no longer listed"}`),
+  ];
+  return `\n${heading}\n\n${markdownList(lines)}\n`;
 }
 
 /**

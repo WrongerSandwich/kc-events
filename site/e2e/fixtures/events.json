@@ -274,6 +274,31 @@
         "date": "Opens Wed Oct 28 at 10 am, through Nov 18",
         "venue": "The Edge of Hell"
       }
+    },
+    {
+      "id": "evt_e2e000000012",
+      "title": "Thursday songwriter night",
+      "start": "2026-10-08T19:00:00-05:00",
+      "venue": "Olathe Jazz Hall",
+      "neighborhood": "Olathe",
+      "primaryUrl": "https://example.com/olathe/songwriters",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-09-20T16:05:31-05:00",
+      "lastVerified": "2026-09-28T21:47:36-05:00",
+      "status": "expired",
+      "verificationFailures": 2,
+      "lead": {
+        "lane": "registry",
+        "source": "Olathe Jazz Hall"
+      },
+      "evidence": {
+        "date": "Thu Oct 8, 7pm",
+        "venue": "Olathe Jazz Hall"
+      },
+      "lastChanged": "2026-10-05T06:10:00-05:00",
+      "expiryReason": "two-strike"
     }
   ],
   "sourceState": {},
