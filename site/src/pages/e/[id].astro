@@ -52,7 +52,7 @@ const jsonLd = eventJsonLd(event, { description, image: shareImage.url });
     {description && <p class="about">{description}</p>}
     <p class="primary"><a href={details}>Details and tickets at {hostOf(details)}</a></p>
     <div class="actions">
-      <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} />
+      <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} shareText={`${line} · ${venueLine(event)}`} />
       {isDated(event) && <a class="ics" href={`/e/${event.id}.ics`} download><UiIcon name="calendar-plus" />Add to calendar</a>}
     </div>
     <p class="verified">Date and venue verified {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}. <a href={reportHref}>Wrong? Report it</a>.</p>

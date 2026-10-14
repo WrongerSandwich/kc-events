@@ -40,8 +40,10 @@ function searchable(e: PublishedEvent): string {
  */
 export function matches(e: PublishedEvent, f: Filters, today: string, saved: ReadonlySet<string>): boolean {
   if (isPast(e, today) && !(f.saved && saved.has(e.id))) return false;
+  if (f.ids.length > 0 && !f.ids.includes(e.id)) return false;
   if (!isDated(e)) {
-    if (!f.recurring) return false;
+    // A shortlist that names an always-there event shows it without the switch.
+    if (!f.recurring && f.ids.length === 0) return false;
   } else {
     const range = dateRange(f.when, today);
     if (range !== undefined && !inRange(e, range)) return false;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { groupResults, resultEvents, rowDateLine } from "../src/lib/group";
+import { SHORTLIST_GROUP, groupResults, resultEvents, rowDateLine } from "../src/lib/group";
 import { DEFAULT_FILTERS, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
 
@@ -184,5 +184,31 @@ describe("rowDateLine", () => {
     expect(rowDateLine(opensLater, today, true)).toBe("Tue Oct 20–Sat Nov 14");
     expect(rowDateLine(festLater, today, true)).toBe("Thu Oct 29–Sat Oct 31");
     expect(rowDateLine(trivia, today, true)).toBe("Tuesdays");
+  });
+});
+
+describe("shortlist (#132)", () => {
+  it("lists exactly the shortlisted events, in the link's order, under one Shortlist heading", () => {
+    const groups = groupResults(all, f({ ids: ["fri7", "trivia", "onNow", "tue"] }), today, none);
+    expect(groups.map((g) => [g.key, g.heading, g.collapsed, g.events.map((e) => e.id)])).toEqual([
+      [SHORTLIST_GROUP, "Shortlist · 4 events", false, ["fri7", "trivia", "onNow", "tue"]],
+    ]);
+  });
+
+  it("applies the other filters on top, counting what is left", () => {
+    const groups = groupResults(all, f({ ids: ["fri7", "tue", "friAll"], when: { from: "2026-10-09", to: "2026-10-09" } }), today, none);
+    expect(groups.map((g) => [g.heading, g.events.map((e) => e.id)])).toEqual([["Shortlist · 2 events", ["fri7", "friAll"]]]);
+    expect(groupResults(all, f({ ids: ["tue"] }), today, none)[0]!.heading).toBe("Shortlist · 1 event");
+    expect(groupResults(all, f({ ids: ["tue"], kinds: ["film"] }), today, none)).toEqual([]);
+  });
+
+  it("leaves out a shortlisted event that has passed", () => {
+    const past = event({ id: "past", title: "Gone", start: "2026-10-01T19:00:00-05:00" });
+    expect(resultEvents(groupResults([...all, past], f({ ids: ["past", "tue"] }), today, none)).map((e) => e.id)).toEqual(["tue"]);
+  });
+
+  it("keeps the link's order and heading under the venue sort too", () => {
+    const groups = groupResults(all, f({ ids: ["fri7", "tue"], sort: "venue" }), today, none);
+    expect(groups.map((g) => [g.heading, g.events.map((e) => e.id)])).toEqual([["Shortlist · 2 events", ["fri7", "tue"]]]);
   });
 });

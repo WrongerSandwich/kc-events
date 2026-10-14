@@ -4,19 +4,20 @@
   import { meta } from "../generated/meta";
   import { downloadText } from "../lib/download";
   import { isDated, isPast, lastDay } from "../lib/events";
-  import { groupResults, PASSED_GROUP, resultEvents } from "../lib/group";
+  import { groupResults, PASSED_GROUP, resultEvents, SHORTLIST_GROUP } from "../lib/group";
   import { toIcs } from "../lib/ics";
-  import { DEFAULT_FILTERS, filterPills, isDefault, parseQuery, toQuery, type Filters } from "../lib/query";
+  import { DEFAULT_FILTERS, filterPills, isDefault, parseQuery, shortlistQuery, toQuery, type Filters } from "../lib/query";
   import { saves } from "../lib/saves";
   import { slugify } from "../lib/slugs";
   import { siteConfig } from "../site.config";
   import FilterRail from "./FilterRail.svelte";
   import KindIcon from "./KindIcon.svelte";
   import ResultRow from "./ResultRow.svelte";
+  import ShareButton from "./ShareButton.svelte";
   import UiIcon from "./UiIcon.svelte";
   import { islandClock } from "./clock.svelte";
 
-  const known = { kinds: meta.kinds, regions: meta.regions };
+  const kindsAndRegions = { kinds: meta.kinds, regions: meta.regions };
   // Server-rendered with the build's date and default filters; the visitor's take over on mount (the hydration rule),
   // and the date stays current through the shared clock (clock.svelte.ts).
   const clock = islandClock();
@@ -30,13 +31,20 @@
   let mounted = $state(false);
   // The bar's height, so the sticky group headings sit just under it however it wraps (search takes a line on phones).
   let barHeight = $state(0);
+  // A shortlist link none of whose events is still to come parses to no shortlist; say so until the next change, so
+  // the full list it opens on is not taken for the shortlist.
+  let shortlistGone = $state(false);
   let bar: HTMLElement;
   let search: HTMLInputElement;
   let pillList: HTMLElement | undefined = $state();
   let results: HTMLElement;
 
   onMount(() => {
-    filters = parseQuery(new URLSearchParams(location.search), known);
+    // A shortlist keeps only the ids of events still to come, so its pill counts what it can show.
+    const ids = events.filter((e) => !isPast(e, today)).map((e) => e.id);
+    const params = new URLSearchParams(location.search);
+    filters = parseQuery(params, { ...kindsAndRegions, ids });
+    shortlistGone = (params.get("ids") ?? "") !== "" && filters.ids.length === 0;
     // The explorer has every event, so it brings each save's last day up to this build's (a migrated save has none).
     saves().refresh(new Map(events.map((e) => [e.id, lastDay(e)])));
     const unsubscribe = saves().subscribe((s) => { saved = new Set(s.keys()); });
@@ -48,6 +56,7 @@
 
   async function change(next: Filters) {
     filters = next;
+    shortlistGone = false;
     const q = toQuery(next);
     history.replaceState(null, "", q === "" ? location.pathname : `${location.pathname}?${q}`);
     // Scrolled past the results' top, a new slice would open mid-list; bring its first result up under the bar. The
@@ -105,10 +114,21 @@
   // A passed save (the saved view lists them) has nothing left to put in a calendar.
   let exportable = $derived(listed.filter((e) => isDated(e) && !isPast(e, today)));
 
-  function exportView() {
+  function exportIcs(filename: string, list: typeof events, calendarName: string) {
     // new Date() is fine here: this is a component, not lib/ (the no-clock grep covers lib only).
-    downloadText("kc-this-week.ics", toIcs(exportable, { siteName: siteConfig.name, stamp: new Date().toISOString(), calendarName: siteConfig.name }), "text/calendar");
+    downloadText(filename, toIcs(list, { siteName: siteConfig.name, stamp: new Date().toISOString(), calendarName }), "text/calendar");
   }
+
+  // The saved view's Share and Export (#132) take every save still to come, in date order, whatever else the view
+  // narrows to: what is saved is the list, the view's filters only how it is looked at.
+  let upcomingSaves = $derived(resultEvents(groupResults(events, { ...DEFAULT_FILTERS, saved: true, recurring: true }, today, saved)).filter((e) => !isPast(e, today)));
+  const savedName = `${siteConfig.name} · saved`;
+
+  function shareSaved() {
+    return { title: savedName, url: `${location.origin}/explore?${shortlistQuery(upcomingSaves.map((e) => e.id))}` };
+  }
+
+
 </script>
 
 <svelte:window onkeydown={focusSearch} />
@@ -131,7 +151,12 @@
       {/if}
     </div>
     <p role="status" class="visually-hidden">{announced}</p>
-    <button type="button" class="export" disabled={!mounted || exportable.length === 0} onclick={exportView}>Export this view</button>
+    {#if filters.saved}
+      <ShareButton label="Share saved" data={shareSaved} disabled={upcomingSaves.length === 0} />
+      <button type="button" class="export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}>Export saved</button>
+    {:else}
+      <button type="button" class="export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs("kc-this-week.ics", exportable, siteConfig.name)}>Export this view</button>
+    {/if}
     {#if !isDefault(filters)}<button type="button" class="clear" onclick={() => change(DEFAULT_FILTERS)}>Clear filters</button>{/if}
   </div>
 
@@ -144,6 +169,7 @@
 
   <!-- Focusable only through the skip link. -->
   <section class="results" id="results" bind:this={results} tabindex="-1" aria-label="Events">
+    {#if shortlistGone}<p class="empty">None of this shortlist's events are still to come. Showing everything instead.</p>{/if}
     {#if count === 0}
       {#if pills.length > 0}
         <p class="empty">No events match <strong>{pills.map((p) => p.label).join(" · ")}</strong>. <button type="button" class="link" onclick={() => change(DEFAULT_FILTERS)}>Clear them</button> to see everything.</p>
@@ -154,7 +180,7 @@
     <!-- A row carries its day where no day heading does: the venue sort, and the saved view's passed saves. -->
     {#snippet rows(g: typeof groups[number])}
       {#each g.events as event (event.id)}
-        <ResultRow {event} {today} withDay={filters.sort === "venue" || g.key === PASSED_GROUP} />
+        <ResultRow {event} {today} withDay={filters.sort === "venue" || g.key === PASSED_GROUP || g.key === SHORTLIST_GROUP} />
       {/each}
     {/snippet}
     {#each groups as g (g.key)}

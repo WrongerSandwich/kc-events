@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FILTERS, QUERY_KEYS, WHEN_LABELS, filterPills, isDefault, parseQuery, toQuery, type Filters } from "../src/lib/query";
+import { DEFAULT_FILTERS, QUERY_KEYS, WHEN_LABELS, filterPills, isDefault, parseQuery, shortlistQuery, toQuery, type Filters } from "../src/lib/query";
 
 const known = { kinds: ["music", "film", "theater/dance"], regions: ["Central KC", "Kansas City, Kansas", "Elsewhere in the metro"] };
 const parse = (s: string) => parseQuery(new URLSearchParams(s), known);
@@ -23,6 +23,7 @@ describe("query state", () => {
       saved: true,
       q: "jazz night",
       sort: "venue",
+      ids: [],
     });
     expect(isDefault(f)).toBe(false);
   });
@@ -112,7 +113,7 @@ describe("query state", () => {
   });
 
   it("lists every key the query string can carry, for the page's before-hydration check", () => {
-    const all: Filters = { when: { preset: "7d" }, kinds: ["music"], regions: ["Central KC"], dontMiss: true, recurring: true, saved: true, q: "jazz", sort: "venue" };
+    const all: Filters = { when: { preset: "7d" }, kinds: ["music"], regions: ["Central KC"], dontMiss: true, recurring: true, saved: true, q: "jazz", sort: "venue", ids: ["evt_a1"] };
     expect([...new URLSearchParams(toQuery(all)).keys()].sort()).toEqual([...QUERY_KEYS].sort());
   });
 
@@ -131,5 +132,45 @@ describe("query state", () => {
     expect(without["“jazz”"]).toEqual({ ...f, q: "" });
     // Kind pills say which kind they are, so they can carry its icon and tint.
     expect(pills.filter((p) => p.kind !== undefined).map((p) => p.kind)).toEqual(["music", "film"]);
+  });
+
+  it("names a shortlist as one pill, Shortlist (N), whose removal clears it and nothing else", () => {
+    const f: Filters = { ...DEFAULT_FILTERS, ids: ["evt_a1", "evt_b2"], when: { preset: "weekend" } };
+    const pills = filterPills(f);
+    expect(pills.map((p) => p.label)).toEqual(["Shortlist (2)", "Through Sunday"]);
+    expect(pills[0]!.without).toEqual({ ...f, ids: [] });
+  });
+});
+
+describe("shortlist ids (#132)", () => {
+  const withIds = { ...known, ids: ["evt_a1", "evt_b2", "evt_c3"] };
+  const parseIds = (s: string) => parseQuery(new URLSearchParams(s), withIds).ids;
+
+  it("reads ids as a comma list, keeping their order", () => {
+    expect(parseIds("ids=evt_c3,evt_a1")).toEqual(["evt_c3", "evt_a1"]);
+  });
+
+  it("drops unknown, malformed, blank, and repeated ids silently", () => {
+    expect(parseIds("ids=evt_zz,evt_b2,,evt_b2,nope,evt_a1")).toEqual(["evt_b2", "evt_a1"]);
+    expect(parseIds("ids=")).toEqual([]);
+    expect(parseIds("ids=evt_zz")).toEqual([]);
+  });
+
+  it("accepts any well-formed id when the published ids are not given", () => {
+    expect(parse("ids=evt_zz,bad%20id,evt_a1").ids).toEqual(["evt_zz", "evt_a1"]);
+  });
+
+  it("writes ids with plain commas, first, and round-trips with the other filters", () => {
+    const f = parseQuery(new URLSearchParams("ids=evt_b2,evt_a1&when=weekend"), withIds);
+    expect(f).toEqual({ ...DEFAULT_FILTERS, ids: ["evt_b2", "evt_a1"], when: { preset: "weekend" } });
+    const q = toQuery(f);
+    expect(q).toBe("ids=evt_b2,evt_a1&when=weekend");
+    expect(parseQuery(new URLSearchParams(q), withIds)).toEqual(f);
+    expect(isDefault({ ...DEFAULT_FILTERS, ids: [] })).toBe(true);
+    expect(isDefault({ ...DEFAULT_FILTERS, ids: ["evt_a1"] })).toBe(false);
+  });
+
+  it("builds a shortlist link from ids alone", () => {
+    expect(shortlistQuery(["evt_a1", "evt_b2"])).toBe("ids=evt_a1,evt_b2");
   });
 });

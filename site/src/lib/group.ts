@@ -7,6 +7,8 @@ import type { PublishedEvent } from "./types";
 
 /** The saved view's last group: saves that have passed, listed with their days since no day heading carries them. */
 export const PASSED_GROUP = "passed";
+/** A shortlist's one group (#132): its events in the link's order, each row carrying its day. */
+export const SHORTLIST_GROUP = "shortlist";
 
 /** `collapsed`: shown as one closed line with its count, opening to its rows. */
 export type ResultGroup = { key: string; heading: string; events: PublishedEvent[]; collapsed: boolean };
@@ -79,6 +81,14 @@ export function resultEvents(groups: readonly ResultGroup[]): PublishedEvent[] {
  */
 export function groupResults(events: PublishedEvent[], f: Filters, today: string, saved: ReadonlySet<string>): ResultGroup[] {
   const hits = events.filter((e) => matches(e, f, today, saved));
+
+  // A shortlist keeps the order its sender gave it, whatever the sort.
+  if (f.ids.length > 0) {
+    const byId = new Map(hits.map((e) => [e.id, e]));
+    const listed = f.ids.map((id) => byId.get(id)).filter((e): e is PublishedEvent => e !== undefined);
+    if (listed.length === 0) return [];
+    return [{ key: SHORTLIST_GROUP, heading: `Shortlist · ${listed.length} ${listed.length === 1 ? "event" : "events"}`, events: listed, collapsed: false }];
+  }
 
   if (f.sort === "venue") {
     const sorted = [...hits].sort((a, b) => a.venue.localeCompare(b.venue) || sortStart(a).localeCompare(sortStart(b)) || a.title.localeCompare(b.title));

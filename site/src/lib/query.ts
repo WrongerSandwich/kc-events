@@ -27,14 +27,34 @@ export type Filters = {
   saved: boolean;
   q: string;
   sort: Sort;
+  /** A shortlist (#132): exactly these events, in this order; empty for none. */
+  ids: string[];
 };
 
 /** Every key toQuery can write; the explore page checks for them before the explorer hydrates. */
-export const QUERY_KEYS = ["when", "kind", "region", "dontmiss", "recurring", "saved", "q", "sort"] as const;
+export const QUERY_KEYS = ["ids", "when", "kind", "region", "dontmiss", "recurring", "saved", "q", "sort"] as const;
 
-export const DEFAULT_FILTERS: Filters = { when: { preset: "all" }, kinds: [], regions: [], dontMiss: false, recurring: false, saved: false, q: "", sort: "date" };
+export const DEFAULT_FILTERS: Filters = { when: { preset: "all" }, kinds: [], regions: [], dontMiss: false, recurring: false, saved: false, q: "", sort: "date", ids: [] };
 
-export type Known = { kinds: readonly string[]; regions: readonly string[] };
+/** `ids`, the published events' ids, drops a shortlisted id that is not one; without it any well-formed id is kept. */
+export type Known = { kinds: readonly string[]; regions: readonly string[]; ids?: readonly string[] };
+
+/** An event id's shape; it needs no escaping in a query string, so a shortlist link keeps its plain commas. */
+const ID = /^evt_[A-Za-z0-9_-]+$/;
+
+function parseIds(raw: string | null, known: readonly string[] | undefined): string[] {
+  const published = known === undefined ? undefined : new Set(known);
+  const out: string[] = [];
+  for (const id of (raw ?? "").split(",")) {
+    if (ID.test(id) && (published === undefined || published.has(id)) && !out.includes(id)) out.push(id);
+  }
+  return out;
+}
+
+/** A shortlist's query string, without "?": `ids=evt_a,evt_b`. */
+export function shortlistQuery(ids: readonly string[]): string {
+  return `ids=${ids.filter((id) => ID.test(id)).join(",")}`;
+}
 
 function parseWhen(raw: string | null): When {
   if (raw === null) return { preset: "all" };
@@ -60,6 +80,7 @@ export function parseQuery(params: URLSearchParams, known: Known): Filters {
     saved: params.get("saved") === "1",
     q: (params.get("q") ?? "").trim(),
     sort: sort === "venue" ? "venue" : "date",
+    ids: parseIds(params.get("ids"), known.ids),
   };
 }
 
@@ -75,7 +96,9 @@ export function toQuery(f: Filters): string {
   if (f.saved) p.set("saved", "1");
   if (f.q.trim() !== "") p.set("q", f.q.trim());
   if (f.sort !== "date") p.set("sort", f.sort);
-  return p.toString();
+  const rest = p.toString();
+  if (f.ids.length === 0) return rest;
+  return rest === "" ? shortlistQuery(f.ids) : `${shortlistQuery(f.ids)}&${rest}`;
 }
 
 export function isDefault(f: Filters): boolean {
@@ -88,6 +111,7 @@ export type FilterPill = { label: string; kind?: string; without: Filters };
 /** The filters that narrow the results, one pill each, in words ("Through Sunday", "music", "“jazz”"); sort narrows nothing and has none. */
 export function filterPills(f: Filters): FilterPill[] {
   const out: FilterPill[] = [];
+  if (f.ids.length > 0) out.push({ label: `Shortlist (${f.ids.length})`, without: { ...f, ids: [] } });
   const when = "from" in f.when ? (f.when.from === f.when.to ? formatShort(f.when.from) : formatRange(f.when.from, f.when.to)) : f.when.preset === "all" ? undefined : WHEN_LABELS[f.when.preset];
   if (when !== undefined) out.push({ label: when, without: { ...f, when: DEFAULT_FILTERS.when } });
   for (const k of f.kinds) out.push({ label: k, kind: k, without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
