@@ -1,0 +1,2209 @@
+{
+  "runDate": "2026-10-13",
+  "startedAt": "2026-10-13T22:13:36-05:00",
+  "finishedAt": "2026-10-13T22:48:24-05:00",
+  "horizonWeeks": 8,
+  "counts": {
+    "found": 632,
+    "new": 87,
+    "updated": 455,
+    "reverified": 7,
+    "heldUnverified": 99,
+    "heldThroughOutage": 0,
+    "heldSourceExcluded": 0,
+    "beyondHorizonUnstruck": 4,
+    "beyondListingUnstruck": 5,
+    "unverifiedByOutageLimit": 0,
+    "unverifiedByUncitableReading": 2,
+    "keptOnStoredCitation": 1,
+    "venuelessAmbiguous": 0,
+    "heldForPromotion": 16,
+    "releasedForPromotion": 0,
+    "outsideGeography": 13,
+    "skippedPromotion": 3,
+    "skippedNotPublic": 0,
+    "overCap": 0,
+    "unusableDates": 0,
+    "quoteNotOnPage": 118,
+    "expired": {
+      "past": 14,
+      "two-strike": 8,
+      "cancelled": 0,
+      "index-page": 0,
+      "duplicate": 2,
+      "promotion": 0,
+      "not-public": 0,
+      "stale": 10
+    },
+    "archived": 0
+  },
+  "spend": {
+    "totalUsd": 0.3053671,
+    "capUsd": 5,
+    "capHit": false,
+    "shortfall": {
+      "pagesNotExtracted": 0,
+      "eventsNotReverified": 0,
+      "queriesNotSearched": 0,
+      "leadsNotFollowed": 0,
+      "eventsNotCurated": 0,
+      "ownPagesNotRead": 0
+    },
+    "modelCalls": [
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947743-0HhLq1R7c84hQUhIgJ96"
+        },
+        "costUsd": 0.0032163
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947769-8opGt2YgnDUJ4ylwAbMc"
+        },
+        "costUsd": 0.003106925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947792-YU4UDh4EWehFHjpi2IbM"
+        },
+        "costUsd": 0.0024258
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947811-wpPVyLfPXMPRBMItdecj"
+        },
+        "costUsd": 0.0020453
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947826-3ccVEHSDiUvK3hRC0N0m"
+        },
+        "costUsd": 0.00247855
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947849-AzMlHC54b41n83JyNXye"
+        },
+        "costUsd": 0.002497675
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947876-TfTNMEP6uOtN4BirjKsf"
+        },
+        "costUsd": 0.00091155
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947881-oUOoeUokgXt3BnfEGym0"
+        },
+        "costUsd": 0.00115555
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947889-V4AU3NPK2H1dbmAVloje"
+        },
+        "costUsd": 0.0008958
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947894-WLxye5sNu1PRtGJsRD9R"
+        },
+        "costUsd": 0.00296205
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947931-QN4VtZBULoDD83cZuueX"
+        },
+        "costUsd": 0.0021668
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947951-N0Rk6wXzLaDwaJvCX6bp"
+        },
+        "costUsd": 0.00237055
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791947975-eyxmjOcc8lwZofVDshf9"
+        },
+        "costUsd": 0.003948175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948009-YklF4sbfan41sXsmbrRq"
+        },
+        "costUsd": 0.002795175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948039-ZZXJ7HcB6F3vNLGWV9zr"
+        },
+        "costUsd": 0.00199155
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948059-taVGjDlq0csjDVJsoiky"
+        },
+        "costUsd": 0.001388425
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948079-LLWqg5TlayPxDls1Bpw4"
+        },
+        "costUsd": 0.001541925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948091-ZaV1kD16wmMpSbuCVeD9"
+        },
+        "costUsd": 0.00232605
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948115-IS7IKpTOvc2CsCwCEV4k"
+        },
+        "costUsd": 0.001018425
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948121-xXEjf6SkFW7KgpgkzQKC"
+        },
+        "costUsd": 0.001604175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948132-sanvfABqPvUuE7nBgMO7"
+        },
+        "costUsd": 0.000948425
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948135-CUcJ2hVI3lVCWu75Sg7H"
+        },
+        "costUsd": 0.00198905
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948154-HYSphdqiCLr3L29P8HiA"
+        },
+        "costUsd": 0.00040371
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948155-gJUEbjqz01VytD5cONBi"
+        },
+        "costUsd": 0.00163955
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948160-5nYzboe0YD93qmmjyU4m"
+        },
+        "costUsd": 0.00369305
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948194-mbxFudzP3yob3xjkBjmf"
+        },
+        "costUsd": 0.001619675
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948210-MDSUl2FfzJveOd6cph1V"
+        },
+        "costUsd": 0.0017733
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948224-acPmgqLtHdMAG4SgFqv6"
+        },
+        "costUsd": 0.00265305
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948241-WdmZQm6NARIRttfkejbu"
+        },
+        "costUsd": 0.0044083
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948284-b4cuAa96k89TqdcCDEb6"
+        },
+        "costUsd": 0.002062425
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948306-S9gVd5SVPWn7cgO1xL1l"
+        },
+        "costUsd": 0.00092555
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948310-3JYLSeUXstgJSK7XdwSY"
+        },
+        "costUsd": 0.00141605
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948319-ajdpWK0TW9duk5tPPBxl"
+        },
+        "costUsd": 0.00186055
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948336-v8P7PX0NWBLm8tqiJ3cy"
+        },
+        "costUsd": 0.0043123
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948376-bIo6WDO9XM0zYLIHbfNE"
+        },
+        "costUsd": 0.00473855
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948420-5mdO7id7BHNEBdBcfMUV"
+        },
+        "costUsd": 0.002247925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948439-CXz8pM4dMnh3ugcLllc1"
+        },
+        "costUsd": 0.0056058
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948471-MBqBUpqnl2KIQa8G0FR5"
+        },
+        "costUsd": 0.00213805
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948489-p1nJeDt1eWuIFd5ZQMCf"
+        },
+        "costUsd": 0.0016223
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948500-n5cXgfGXzaUFL2xsgNHT"
+        },
+        "costUsd": 0.00355355
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948534-HLdXXJbzCvaTPkqEi4Ms"
+        },
+        "costUsd": 0.001635925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948548-OIfgzcLIbWQOdsABtblT"
+        },
+        "costUsd": 0.00231155
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948572-lW0EwRVQMVQeMznez4uO"
+        },
+        "costUsd": 0.00125555
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948579-XgfICA890GjfDMHSWXvA"
+        },
+        "costUsd": 0.00150455
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948587-9kSlU6vQa3yFJAh3lNbH"
+        },
+        "costUsd": 0.002206925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948606-r0ihD3r9jhCGjVyhD4GX"
+        },
+        "costUsd": 0.00196155
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948621-5RTG5MlsCCVsCiUxPAgn"
+        },
+        "costUsd": 0.001777925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948637-NIKgLKgT6RpRzp1lRIC2"
+        },
+        "costUsd": 0.0023148
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948661-KI7U5J5xiO73iV1Cn3bz"
+        },
+        "costUsd": 0.002922675
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948697-ZTwq1NGhBJrk2S4cTA6E"
+        },
+        "costUsd": 0.001997675
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948717-UvJufCdgjV1hMQiEbLUH"
+        },
+        "costUsd": 0.001914675
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948733-BOrTg34FrpRWTci0jdha"
+        },
+        "costUsd": 0.00410355
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948764-blWSDNCdm7qGmd7xHmYy"
+        },
+        "costUsd": 0.0022283
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948790-zuBT7uZeAHQUZXDneB8g"
+        },
+        "costUsd": 0.00175405
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948801-BdlozmAYmZBPhdRJeXoH"
+        },
+        "costUsd": 0.001815425
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948817-A0wIfNz4xtTLT2s7zenB"
+        },
+        "costUsd": 0.002141925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948847-bdP2IQBxkq3Ypr8GXJyg"
+        },
+        "costUsd": 0.00098905
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948853-FT76FBcCjeFPKm2Ft270"
+        },
+        "costUsd": 0.00015945
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948857-By6OMko9dbJtLsr9ob9W"
+        },
+        "costUsd": 0.0001117
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948859-XT6mCRR87PxzAOZeN9pb"
+        },
+        "costUsd": 0.000296075
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948861-0MOH2tw5XcPNxyepceY1"
+        },
+        "costUsd": 0.0002022
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948865-ylLfECB53JAbSOS5mMST"
+        },
+        "costUsd": 0.00286345
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948876-aqmUX3x1haVgwEKzZW4J"
+        },
+        "costUsd": 0.0003022
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948881-ffqf5hfop7bnTvkOmczb"
+        },
+        "costUsd": 0.00041645
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948883-K7OGgQEs2mBoPwrJkTTD"
+        },
+        "costUsd": 0.00023645
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948886-Er5UoRBeHX4LLpfPVp3F"
+        },
+        "costUsd": 0.0010467
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948900-fhz6IAb0cKnJKLxG2TaI"
+        },
+        "costUsd": 0.00852995
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948986-0gDQjcR2v2FKC8QZpMxk"
+        },
+        "costUsd": 0.000651925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791948989-eawNBKU4Zp5aAT8LWVo1"
+        },
+        "costUsd": 0.00394598
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949041-9UZFfYZ4P59Mn8SGpUdx"
+        },
+        "costUsd": 0.001357425
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949061-Zq2VFDePOsYDsIRMwVIJ"
+        },
+        "costUsd": 0.0007978
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949064-ToWTCKXSJBiSK55cd5Fm"
+        },
+        "costUsd": 0.00016897
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949068-eqyC2j1QXPXG4gL0i0xQ"
+        },
+        "costUsd": 0.000230095
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949076-FAbIRv0vwBvrMKi5XUiH"
+        },
+        "costUsd": 0.000416095
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949080-2dlQL0ig9yUnUZsl507I"
+        },
+        "costUsd": 0.00014022
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949082-lorqGua34OtWPGvLyxgC"
+        },
+        "costUsd": 0.00024522
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949085-a8cCklIsUNJYrFFmTsEt"
+        },
+        "costUsd": 0.00141447
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949105-fOrr8hcfgoH12cnTWqnR"
+        },
+        "costUsd": 0.000256095
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949110-Df0r13BCyRKxnfW8l3Cp"
+        },
+        "costUsd": 0.00026047
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949114-gQ6tktnyfvIeYcfdmDbC"
+        },
+        "costUsd": 0.00190197
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949138-kWTTlcunvoaTVvQ26in0"
+        },
+        "costUsd": 0.001701845
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949154-cIpLpGlGw4ZekWNraVnP"
+        },
+        "costUsd": 0.000219095
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949168-iYtUOXp0MUpRnCtc50wU"
+        },
+        "costUsd": 0.0011378
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949171-hcjwXND8Ed4DjNy6PPdN"
+        },
+        "costUsd": 0.00047123
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949176-oyHPML7M4B5WVuBLYMQf"
+        },
+        "costUsd": 0.000163605
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949197-VFgxz4tOM6CXSifLrz6Q"
+        },
+        "costUsd": 0.0006563
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949200-tqJ2xU90F5fJGyH1Jy4N"
+        },
+        "costUsd": 0.00015547
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949203-73VTVIaRGAWmOwxhbq4v"
+        },
+        "costUsd": 0.000181095
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949206-nit61V6qYS5Grvx0owUB"
+        },
+        "costUsd": 0.00016872
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949219-AspeqhbFd0oQcEs8zBqJ"
+        },
+        "costUsd": 0.001226675
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949229-7JZVxofF2pLuu2GQUDag"
+        },
+        "costUsd": 0.001067325
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949250-K3NX1PG3G4wpzOTdYHcM"
+        },
+        "costUsd": 0.000183825
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949252-mljjTTZ84HA3nGWLi8XL"
+        },
+        "costUsd": 0.000547825
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949263-VrYzEIaJeGZdyVXJKpnX"
+        },
+        "costUsd": 0.002088925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949285-XBJz3QrclP7JyfXdx93l"
+        },
+        "costUsd": 0.000311075
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949289-lyk0uxCLlTNZj5qUdCUN"
+        },
+        "costUsd": 0.0002217
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949297-C1gWfPNOe4n1GeBQJExY"
+        },
+        "costUsd": 0.001406925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949320-iQpMDJ7x4FAy2n8WIWJ0"
+        },
+        "costUsd": 0.00493555
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949369-6B8zhe5mpwQnOWhpbji5"
+        },
+        "costUsd": 0.000846105
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949382-pcCGaA1zN30veMwVeFxX"
+        },
+        "costUsd": 0.001326355
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949413-DIvuwCcVe0ZjIyx3duhu"
+        },
+        "costUsd": 0.001875925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949426-Ps7pYtNrZEuYTEoBBNpG"
+        },
+        "costUsd": 0.00173787
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949454-6AN0C2hYSJQkGnxOj15O"
+        },
+        "costUsd": 0.001543345
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949478-m4BJWUpiSqH3lel6HWWm"
+        },
+        "costUsd": 0.00217197
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949508-x6SlovVjP8afbpxpeBMF"
+        },
+        "costUsd": 0.00054905
+      },
+      {
+        "model": "anthropic/claude-sonnet-5.5",
+        "servedBy": {
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "Azure",
+          "generationId": "gen-1791949513-6XulrNZB4U7CzQDVasbL"
+        },
+        "costUsd": 0.020966
+      },
+      {
+        "model": "anthropic/claude-sonnet-5.5",
+        "servedBy": {
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "Azure",
+          "generationId": "gen-1791949519-NW5my9pja173g67zZnye"
+        },
+        "costUsd": 0.030292
+      },
+      {
+        "model": "anthropic/claude-sonnet-5.5",
+        "servedBy": {
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "Azure",
+          "generationId": "gen-1791949531-yuGvEj3pHhOE78R5oTIx"
+        },
+        "costUsd": 0.020362
+      },
+      {
+        "model": "anthropic/claude-sonnet-5.5",
+        "servedBy": {
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "Azure",
+          "generationId": "gen-1791949537-9uoPifX6JzIMmHZhQQ69"
+        },
+        "costUsd": 0.019538
+      },
+      {
+        "model": "anthropic/claude-sonnet-5.5",
+        "servedBy": {
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "Azure",
+          "generationId": "gen-1791949542-aZPzsET78XFRJ0XiE2Pn"
+        },
+        "costUsd": 0.02426
+      },
+      {
+        "model": "anthropic/claude-sonnet-5.5",
+        "servedBy": {
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "Azure",
+          "generationId": "gen-1791949550-qqDJjixsmKP9OkHHhxLu"
+        },
+        "costUsd": 0.004668
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949552-3hYDP3Ajdo4wpAUXIhaW"
+        },
+        "costUsd": 0.00040105
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949555-Lh2ZsAbZa3PvZBaTb3rk"
+        },
+        "costUsd": 0.000526675
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949564-jgjAfHy4xeTJ59VAX6d8"
+        },
+        "costUsd": 0.0006788
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949573-qsAGjpm9SrfKQjEpa3h2"
+        },
+        "costUsd": 0.000690175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949579-WwkDC9Wlqa3PVsAo878g"
+        },
+        "costUsd": 0.000518175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949583-Zd8nZHuwLi0qoXMGMXgL"
+        },
+        "costUsd": 0.000447425
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949588-WqfMIY49Gpi96SS2T0jh"
+        },
+        "costUsd": 0.00024955
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949591-dsdJax9lDIW6Jj6CpSEp"
+        },
+        "costUsd": 0.000323925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949595-PXWTgpOFpsZdaKWUrClZ"
+        },
+        "costUsd": 0.000804925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1791949605-N4DVLBZ8bDOF6H4uSMiU"
+        },
+        "costUsd": 0.000499425
+      }
+    ]
+  },
+  "discovery": {
+    "enabled": true,
+    "queries": 10,
+    "aggregatorPages": 10,
+    "pagesExtracted": 44,
+    "problems": [
+      "https://www.ticketmaster.com/metallica-m72-world-tour-kansas-city-missouri-05-29-2027/event/0600652CA7DC8453: HTTP 401",
+      "\"Chris Stapleton's All-American Road Show\" on https://www.livenation.com/venue/KovZ917ASlK/morton-amphitheater-events quoted \"Morton Amphitheater\n6150 NW Music Blvd\nKansas City, MO 64150\" for its venue, which is not on the page, and was held unverified",
+      "\"Thomas Rhett: The Soundtrack to Life Tour\" on https://www.livenation.com/venue/KovZ917ASlK/morton-amphitheater-events quoted \"Morton Amphitheater\n6150 NW Music Blvd\nKansas City, MO 64150\" for its venue, which is not on the page, and was held unverified",
+      "\"Jay Webb\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nJay Webb\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Blake Camp Band\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nBlake Camp Band\nHonkytonk\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Rob Trib\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nRob Trib\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Reyes Brothers\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nReyes Brothers\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"Big Mike\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nBig Mike\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Teddy & The Rough Riders\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nTeddy & The Rough Riders\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Mariachi El Bronx\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nMariachi El Bronx\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"The Geronimo Company\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nThe Geronimo Company\nThe Fling\n(9p)\" for its date, which is not on the page, and was held unverified",
+      "\"TBA\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nTBA\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Jackie Myers Duo\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nJackie Myers Duo\n(5:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Nick Shcnebelen\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nNick Shcnebelen\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Sean McNown\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nSean McNown\n(5:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Harrison Gordon\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 13\nHarrison Gordon\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Coco Montoya\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nCoco Montoya\n(7:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Microwave\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nMicrowave\nFree Throw\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Jazz Lab\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nJazz Lab\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Early Show\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nEarly Show\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Curlz of Oz\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nCurlz of Oz\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Peter Schlamb Trio\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nPeter Schlamb Trio\n(6:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Lonnie McFadden\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nLonnie McFadden\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Mark Slimm Trio\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nMark Slimm Trio\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"Caleb Blacksher\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nCaleb Blacksher\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Mooncrow\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nMooncrow\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Geronimo & Company\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nGeronimo & Company\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Mark Lowery\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nMark Lowery\n(5p)\" for its date, which is not on the page, and was held unverified",
+      "\"Charles Williams Trio\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nCharles Williams Trio\n(6:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Scotty Eggleson\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nScotty Eggleson\n(7:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Howard Mahan\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nHoward Mahan\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Quinn Harvey\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nQuinn Harvey\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"George Arbuckle\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nGeorge Arbuckle\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Cameron Russell\" on https://www.kansascitymusic.com/ quoted \"Wednesday October 14\nCameron Russell\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Alien Ant Farm\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nAlien Ant Farm\n(7:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Chloe McFadden\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\n​​Chloe McFadden\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Lonnie McFadden\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nLonnie McFadden\n(6:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Kevin \"Church\" Johnson\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nKevin \"Church\" Johnson\n(7:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Mark Slimm Trio\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nMark Slimm Trio\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Let Down\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nLet Down\nLuciano\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Siilk\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nSiilk\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Max James\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nMax James\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Mooncrow\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nMooncrow\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Tim Whitmer\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nTim Whitmer\n(5p)\" for its date, which is not on the page, and was held unverified",
+      "\"Jackie Myers Duo\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nJackie Myers Duo\n(5:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Fasy Johnny Ricker\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nFasy Johnny Ricker\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Garrett Childers\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nGarrett Childers\n(5p)\" for its date, which is not on the page, and was held unverified",
+      "\"Hazzard County\" on https://www.kansascitymusic.com/ quoted \"Thursday October 15\nHazzard County\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"KC Symphony - Music of Motown\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nKC Symphony - Music of Motown\n(8p)\nKauffman Center\n1601 Broadway\nKansas City, MO\n(816) 994-7200\nhttp://www.kauffmancenter.org\n​\n***\nSaturday October 17\nKC Symphony - Music of Motown\n(8p)\nKauffman Center\n1601 Broadway\nKansas City, MO\n(816) 994-7200\nhttp://www.kauffmancenter.org\n​\n***\nSunday October 18\nKC Symphony - Music of Motown\n(2p)\" for its date, which is not on the page, and was held unverified",
+      "\"Demola\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nDemola\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"Lyal Stickland\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nLyal Stickland\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"TBA\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nTBA\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"Jackie Myers Trio\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nJackie Myers Trio\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"Rob Tribb Jam\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nRob Tribb Jam\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Lonnie McFadden\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nLonnie McFadden\n(6:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"The Kawsies\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nThe Kawsies\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"RSS Trio\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\n​​RSS Trio\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Musicology band\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nMusicology band\n(5:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Adrian Bartholomew\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nAdrian Bartholomew\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"XParte'\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nXParte'\n(5p)\" for its date, which is not on the page, and was held unverified",
+      "\"Dane Justice\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nDane Justice\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Ramblers\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nRamblers\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Chloe McFadden Duo\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nChloe McFadden Duo\n(5:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Damian McCarthy\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nDamian McCarthy\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Stone Cutters Union\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nStone Cutters Union\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Max Groove\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nMax Groove\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Shuan Munday\" on https://www.kansascitymusic.com/ quoted \"Friday October 16\nShuan Munday\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Bright Eyes\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nBright Eyes\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"KC Bones\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nBilly Ebeling Jam\n​(12:30p)\nKC Bones\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"The Tribe Band\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nThe Tribe Band\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"Piaget Experience\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nPiaget Experience\n(4:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Lonnie McFadden\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nLonnie McFadden\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Mark Slimm Trio\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nMark Slimm Trio\n(9:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Joshu Estrada\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nJoshu Estrada\n(8:30-10:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Dogzilla\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nDogzilla\n(5p)\" for its date, which is not on the page, and was held unverified",
+      "\"Holmes Street\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nHolmes Street\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Chloe Rose\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nChloe Rose\n(2p)\" for its date, which is not on the page, and was held unverified",
+      "\"Bram Widjnands Polka\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nBram Widjnands Polka\n(3p)\" for its date, which is not on the page, and was held unverified",
+      "\"Nick Schnebelen\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nMama Ray Legacy Jam\n(2p)\nNick Schnebelen\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Desperate Electric\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nDesperate Electric\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Max Groove\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nMax Groove\n(6:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Second Hand Smoke\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nSecond Hand Smoke\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Hysteria\" on https://www.kansascitymusic.com/ quoted \"Saturday October 17\nHysteria\nParadise KC\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Hot Club of Cowtown\" on https://www.kansascitymusic.com/ quoted \"Sunday October 18\nLevee Town Jam\n(1p)\nHot Club of Cowtown\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Allyssa Murray\" on https://www.kansascitymusic.com/ quoted \"Sunday October 18\nAllyssa Murray\n(6:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Chloe McFadden\" on https://www.kansascitymusic.com/ quoted \"Sunday October 18\nJazz Brunch w/Millie & Dan\n(10a)\nChloe McFadden\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Mengel Brothers\" on https://www.kansascitymusic.com/ quoted \"Sunday October 18\n​Mengel Brothers\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Zach Mufasa\" on https://www.kansascitymusic.com/ quoted \"Sunday October 18\nZach Mufasa\n(5p)\" for its date, which is not on the page, and was held unverified",
+      "\"Bram Widjnans\" on https://www.kansascitymusic.com/ quoted \"Sunday October 18\nBram Widjnans\n(3p)\" for its date, which is not on the page, and was held unverified",
+      "\"Brody Buster\" on https://www.kansascitymusic.com/ quoted \"Sunday October 18\nBrody Buster\n(5p)\" for its date, which is not on the page, and was held unverified",
+      "\"Grasshopper\" on https://www.kansascitymusic.com/ quoted \"Sunday October 18\nGrasshopper\n(9p)\" for its date, which is not on the page, and was held unverified",
+      "\"Dan & Chrystal\" on https://www.kansascitymusic.com/ quoted \"Sunday October 18\nDan & Chrystal\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"Kyle Hume\" on https://www.kansascitymusic.com/ quoted \"Monday October 19\nKyle Hume\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"UMKC Symphony\" on https://www.kansascitymusic.com/ quoted \"Monday October 19\nUMKC Symphony\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"Sammy Rash\" on https://www.kansascitymusic.com/ quoted \"Monday October 19\nKyle Hume\nSammy Rash\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Mark Slimm Duo\" on https://www.kansascitymusic.com/ quoted \"Monday October 19\nMark Slimm Duo\n(6p)\" for its date, which is not on the page, and was held unverified",
+      "\"Peter Schlamb Duo\" on https://www.kansascitymusic.com/ quoted \"Monday October 19\nPeter Schlamb Duo\n(5:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Song Lab\" on https://www.kansascitymusic.com/ quoted \"Monday October 19\nSong Lab\n(6:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"Sammy Rae\" on https://www.kansascitymusic.com/ quoted \"Tuesday October 20\nSammy Rae\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Trampled By Turtles\" on https://www.kansascitymusic.com/ quoted \"Thursday October 22\nTrampled By Turtles\n(7:30p)\" for its date, which is not on the page, and was held unverified",
+      "\"The Re Members\" on https://www.kansascitymusic.com/ quoted \"Thursday October 22\nThe Re Members\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Madd Honey\" on https://www.kansascitymusic.com/ quoted \"Thursday October 22\nMadd Honey\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Palace\" on https://www.kansascitymusic.com/ quoted \"Friday October 23\nPalace\n(8p)\" for its date, which is not on the page, and was held unverified",
+      "\"Waxahatchee\" on https://www.kansascitymusic.com/ quoted \"Friday October 23\nCaleb Heron\nWaxahatchee\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Interstellar - KC Symphony\" on https://www.kansascitymusic.com/ quoted \"Friday October 23\nInterstellar - KC Symphony\n(7p)\nKauffman Center\n1601 Broadway\nKansas City, MO\n(816) 994-7200\nhttp://www.kauffmancenter.org\n​\n***\nSaturday October 24\nInterstellar - KC Symphony\n(7p)\nKauffman Center\n1601 Broadway\nKansas City, MO\n(816) 994-7200\nhttp://www.kauffmancenter.org\n​\n***\nSunday October 25\nInterstellar - KC Symphony\n(2p)\" for its date, which is not on the page, and was held unverified",
+      "\"Use Your Atlas\" on https://www.kansascitymusic.com/ quoted \"Friday October 23\nUse Your Atlas\nCloud City\nVillage Prairie\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"West End Junction\" on https://www.kansascitymusic.com/ quoted \"Friday October 23\nWest End Junction\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "\"Emmit Ricky\" on https://www.kansascitymusic.com/ quoted \"Saturday October 24\nEmmit Ricky\n(7p)\" for its date, which is not on the page, and was held unverified",
+      "https://www.bandsintown.com/c/kansas-city-mo: HTTP 403",
+      "https://seatgeek.com/cities/kansas-city: HTTP 403",
+      "https://concertfix.com/concerts/kansas-city-mo+comedy: HTTP 403",
+      "https://www.newspressnow.com/local-events?_evDiscoveryPath=%2Fevent%2F144715v-tommy-davidson: HTTP 429",
+      "http://www.kansasspeedway.com/: HTTP 403",
+      "https://do816.com/events/food-drink/2026/10/01: HTTP 403",
+      "https://do816.com/events/food-drink/2026/10/03: HTTP 403",
+      "https://do816.com/events/food-drink/2026/10/04: HTTP 403",
+      "https://www.kcfilmoffice.com/: HTTP 403",
+      "https://seatgeek.com/cities/kansas-city/sports: HTTP 403",
+      "https://www.ticketmaster.com/event/Z7r9jZ1AAvEFz: HTTP 401",
+      "https://www.kcmo.gov/Home/Components/News/News/2977/231: HTTP 403",
+      "robots.txt disallows https://tickets.kauffmancenter.org/"
+    ],
+    "leadsOnExcludedSources": [
+      {
+        "source": "Kansas City Symphony",
+        "reason": "The page names no hall, so under cite-or-drop every concert stays unverified or duplicates the Kauffman Center's listing of the same program (five runs, 2026-10-10). The Kauffman Center source carries the hall.",
+        "leads": 2
+      },
+      {
+        "source": "Funny Bone Comedy Club",
+        "reason": "Cloudflare blocks every non-interactive client with HTTP 403, a headless browser and a browser's user agent included (checked 2026-10-08). Only the club allowing the job's user agent would change that; its acts often play Comedy Club KC and recordBar, which are sources.",
+        "leads": 1
+      }
+    ]
+  },
+  "reverification": {
+    "problems": [
+      "\"Free Weekend Fun: Bach to Nature\" on https://www.nelson-atkins.org/ quoted \"Sat, Oct 17 | 11:00 am – 3:00 pm\nFree Weekend Fun: Bach to Nature\nFREE\nBloch Lobby\nRegister\nSun, Oct 18 | 11:00 am – 3:00 pm\nFree Weekend Fun: Bach to Nature\nFREE\nBloch Lobby\nRegister\nSat, Oct 24 | 11:00 am – 3:00 pm\nFree Weekend Fun: Bach to Nature\nFREE\nBloch Lobby\nRegister\nSun, Oct 25 | 11:00 am – 3:00 pm\nFree Weekend Fun: Bach to Nature\nFREE\nBloch Lobby\nRegister\nSat, Oct 31 | 11:00 am – 3:00 pm\" for its date, which is not on the page, and was held unverified",
+      "Kansas City Repertory Theatre is excluded (The homepage names no theatre for its productions, so one of four verified in five runs (2026-10-10); the production pages name Copaken and Spencer but the run reads only the listed page. Revisit if a season page with venues appears.): 1 event on 1 page not fetched, held as through an outage",
+      "KC Fringe Festival is excluded (Off-season. Nothing dated on the page three runs running (checked 2026-10-10). Activate it again in May 2027.): 1 event on 1 page not fetched, held as through an outage",
+      "Kansas City Symphony is excluded (The page names no hall, so under cite-or-drop every concert stays unverified or duplicates the Kauffman Center's listing of the same program (five runs, 2026-10-10). The Kauffman Center source carries the hall.): 1 event on 1 page not fetched, held as through an outage"
+    ]
+  },
+  "curation": {
+    "calls": 6,
+    "judged": 126,
+    "flagged": 7,
+    "problems": []
+  },
+  "sources": [
+    {
+      "name": "Kauffman Center for the Performing Arts",
+      "result": "fetched",
+      "extracted": 20
+    },
+    {
+      "name": "Kansas City Symphony",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The page names no hall, so under cite-or-drop every concert stays unverified or duplicates the Kauffman Center's listing of the same program (five runs, 2026-10-10). The Kauffman Center source carries the hall."
+    },
+    {
+      "name": "recordBar",
+      "result": "fetched",
+      "extracted": 37
+    },
+    {
+      "name": "The Midland",
+      "result": "fetched",
+      "extracted": 14
+    },
+    {
+      "name": "T-Mobile Center",
+      "result": "fetched",
+      "extracted": 12
+    },
+    {
+      "name": "The Truman",
+      "result": "fetched",
+      "extracted": 20
+    },
+    {
+      "name": "Azura Amphitheater",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "Off-season. The calendar was empty three runs running (checked 2026-10-10). Activate it again in April 2027."
+    },
+    {
+      "name": "Folly Theater",
+      "result": "fetched",
+      "extracted": 9,
+      "detail": "\"Patrick Page: All The Devils Are Here\" on https://follytheater.org/events/ quoted \"Patrick Page: All The Devils Are Here | starts 2026-11-05 19:00 | ends 2026-11-05 21:00\nPatrick Page: All The Devils Are Here | starts 2026-11-06 19:00 | ends 2026-11-06 21:00\" for its date, which is not on the page, and was held unverified"
+    },
+    {
+      "name": "American Jazz Museum",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Harriman-Jewell Series",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "Its homepage names no venue for any performance, so every event is held unverified; its performances are found on the Folly Theater and Lied Center calendars, which name the hall (checked 2026-10-04). It is not rendered by script; the plain fetch reads the season, so a browser does not help (checked 2026-10-08)."
+    },
+    {
+      "name": "Friends of Chamber Music",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Kansas City Chorale",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Midwest Trust Center",
+      "result": "failed",
+      "extracted": 0,
+      "detail": "https://www.jccc.edu/midwest-trust-center/events/: HTTP 403"
+    },
+    {
+      "name": "Knuckleheads",
+      "result": "fetched",
+      "extracted": 13
+    },
+    {
+      "name": "The Bottleneck",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "The Granada",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "Replay Lounge",
+      "result": "fetched",
+      "extracted": 17
+    },
+    {
+      "name": "Lied Center of Kansas",
+      "result": "fetched",
+      "extracted": 15
+    },
+    {
+      "name": "Lawrence Arts Center",
+      "result": "fetched",
+      "extracted": 21
+    },
+    {
+      "name": "Spencer Museum of Art",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Liberty Hall",
+      "result": "fetched",
+      "extracted": 11
+    },
+    {
+      "name": "Kansas City Ballet",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The homepage names no hall for its performances, so none verified in five runs (2026-10-10). The Kauffman Center source carries them with the hall."
+    },
+    {
+      "name": "Kansas City Repertory Theatre",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The homepage names no theatre for its productions, so one of four verified in five runs (2026-10-10); the production pages name Copaken and Spencer but the run reads only the listed page. Revisit if a season page with venues appears."
+    },
+    {
+      "name": "Unicorn Theatre",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "The Coterie",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Kansas City Actors Theatre",
+      "result": "fetched",
+      "extracted": 0
+    },
+    {
+      "name": "American Theatre Guild (Broadway in Kansas City)",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "New Theatre & Restaurant",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "KC Fringe Festival",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "Off-season. Nothing dated on the page three runs running (checked 2026-10-10). Activate it again in May 2027."
+    },
+    {
+      "name": "The Comedy Club of Kansas City",
+      "result": "fetched",
+      "extracted": 9
+    },
+    {
+      "name": "The Bird Comedy Theater",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Nelson-Atkins Museum of Art",
+      "result": "fetched",
+      "extracted": 8
+    },
+    {
+      "name": "Stray Cat Film Center",
+      "result": "fetched",
+      "extracted": 9
+    },
+    {
+      "name": "Screenland Armour",
+      "result": "fetched",
+      "extracted": 47
+    },
+    {
+      "name": "Kemper Museum of Contemporary Art",
+      "result": "fetched",
+      "extracted": 13
+    },
+    {
+      "name": "Linda Hall Library",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Nerman Museum of Contemporary Art",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "Zhou B Art Center KC",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "Charlotte Street Foundation",
+      "result": "fetched",
+      "extracted": 15
+    },
+    {
+      "name": "Crossroads Arts District",
+      "result": "fetched",
+      "extracted": 18
+    },
+    {
+      "name": "Art Garden KC",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "Arts Council of Johnson County",
+      "result": "fetched",
+      "extracted": 20
+    },
+    {
+      "name": "Kansas City Public Library",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "Rainy Day Books",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "Johnson County Library",
+      "result": "fetched",
+      "extracted": 19
+    },
+    {
+      "name": "Truman Library",
+      "result": "fetched",
+      "extracted": 4,
+      "detail": "\"United We Play\" on https://www.trumanlibrary.gov/events quoted \"December\n31\nThursday\nIndependence, MO -\n9:00 a.m. to 5:00 p.m.\nCDT\" for its date, which is not on the page, and was held unverified"
+    },
+    {
+      "name": "Heartland Book Festival",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "Over for the year. The schedule page carries only the past festival's sessions (23 past records; checked 2026-10-10). Activate it again in August 2027."
+    },
+    {
+      "name": "National WWI Museum and Memorial",
+      "result": "fetched",
+      "extracted": 11
+    },
+    {
+      "name": "GEHA Field at Arrowhead Stadium",
+      "result": "fetched",
+      "extracted": 4
+    },
+    {
+      "name": "Kansas City Mavericks",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Sporting Kansas City",
+      "result": "fetched",
+      "extracted": 4
+    },
+    {
+      "name": "Kansas City Current",
+      "result": "fetched",
+      "extracted": 4
+    },
+    {
+      "name": "Power & Light District",
+      "result": "fetched",
+      "extracted": 6
+    },
+    {
+      "name": "Crown Center",
+      "result": "fetched",
+      "extracted": 12
+    },
+    {
+      "name": "Kansas City Convention Center",
+      "result": "fetched",
+      "extracted": 10
+    },
+    {
+      "name": "City Market",
+      "result": "fetched",
+      "extracted": 2
+    },
+    {
+      "name": "American Royal",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "KC Parks and Recreation",
+      "result": "fetched",
+      "extracted": 18,
+      "detail": "\"1890 Midwest Hallowed Event\" on https://kcparks.org/events/ quoted \"October 24 @ 10:00 am - 3:00 pm\" for its date, which is not on the page, and was held unverified; \"Run the Block 5k\" on https://kcparks.org/events/ quoted \"October 24 @ 10:00 am - 3:00 pm\" for its date, which is not on the page, and was held unverified; \"The Snowy Day & Other Stories\" on https://kcparks.org/events/ quoted \"October 24 @ 11:00 am - 2:00 pm\" for its date, which is not on the page, and was held unverified; \"Spooky Skate\" on https://kcparks.org/events/ quoted \"October 27 @ 7:00 pm - 8:30 pm\" for its date, which is not on the page, and was held unverified; \"BRW Spoken Word Poetry Live\" on https://kcparks.org/events/ quoted \"October 28 @ 6:00 pm - 8:00 pm\" for its date, which is not on the page, and was held unverified; \"Fall Senior Sip n’ Paint\" on https://kcparks.org/events/ quoted \"October 30 @ 12:00 pm - 1:30 pm\" for its date, which is not on the page, and was held unverified; \"Floating Pumpkin Patch\" on https://kcparks.org/events/ quoted \"October 30 @ 5:00 pm - 7:00 pm\" for its date, which is not on the page, and was held unverified; \"Halloween Train\" on https://kcparks.org/events/ quoted \"October 31 @ 10:00 am - 6:00 pm\" for its date, which is not on the page, and was held unverified"
+    },
+    {
+      "name": "Kansas City Zoo & Aquarium",
+      "result": "fetched",
+      "extracted": 7
+    },
+    {
+      "name": "Powell Gardens",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Kansas City Renaissance Festival",
+      "result": "fetched",
+      "extracted": 1
+    },
+    {
+      "name": "Musical Theater Heritage",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "robots.txt disallows the site (checked 2026-10-03)."
+    },
+    {
+      "name": "Starlight Theatre",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "The events and tickets pages redirect to a queue-it waiting room whose robots.txt disallows fetching (checked 2026-10-03)."
+    },
+    {
+      "name": "Uptown Theater",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "Even rendered in a browser the site lists no shows; its calendar page only links out to Ticketmaster, and /events/ shows a broken-plugin error (checked 2026-10-08)."
+    },
+    {
+      "name": "Kansas City Royals",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "Off-season. Rendered in a browser, the schedule shows games, but there are none until spring training (checked 2026-10-08 on the September page). Activate it in late February with a browser fetch."
+    },
+    {
+      "name": "Funny Bone Comedy Club",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "Cloudflare blocks every non-interactive client with HTTP 403, a headless browser and a browser's user agent included (checked 2026-10-08). Only the club allowing the job's user agent would change that; its acts often play Comedy Club KC and recordBar, which are sources."
+    },
+    {
+      "name": "Kansas City Museum",
+      "result": "fetched",
+      "extracted": 6
+    },
+    {
+      "name": "Union Station",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "Even rendered in a browser, the list shows only one day's events with no dates on them (exhibitions, shows, the planetarium), and nothing beyond that day (checked 2026-10-08). City Stage productions come in through their presenters."
+    }
+  ],
+  "ownPages": [
+    {
+      "source": "Lied Center of Kansas",
+      "read": 1,
+      "timed": 1,
+      "priced": 1,
+      "aged": 0,
+      "described": 0,
+      "kept": 0,
+      "dateDisagreements": 0,
+      "failed": 0,
+      "problems": []
+    },
+    {
+      "source": "Picks",
+      "read": 10,
+      "timed": 2,
+      "priced": 4,
+      "aged": 4,
+      "described": 6,
+      "kept": 0,
+      "dateDisagreements": 0,
+      "failed": 8,
+      "problems": [
+        "\"The Nature of Artificial Intelligence\": https://events.lindahall.org/thenatureofai: HTTP 403; nothing taken",
+        "\"Twin Peaks: Conversation with the Stars\": robots.txt disallows https://tickets.kauffmancenter.org/overview/25843; nothing taken",
+        "\"An Evening with Goose\": https://www.axs.com/events/1465853/an-evening-with-goose-tickets?skin=midland&src=AEGLIVE_EMIDTMCI030115VEN001: HTTP 403; nothing taken",
+        "\"Legacy Tour 2026\": https://www.axs.com/events/1608378/legacy-tour-2026-tickets?skin=midland&src=AEGLIVE_EMIDTMCI030115VEN001: HTTP 403; nothing taken",
+        "\"Geese\": https://www.axs.com/events/1414742/geese-tickets?skin=midland&src=AEGLIVE_EMIDTMCI030115VEN001: HTTP 403; nothing taken",
+        "\"Hedwig and the Angry Inch Live Commentary with John Cameron Mitchell\": https://www.screenland.com/movie/hedwig-and-the-angry-inch-25th-movie-tour-with-john-cameron-mitchell: page.waitForSelector: Timeout 28902ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.list-complete-item .absolute-top-right')\u001b[22m\n; nothing taken",
+        "\"Hedwig and the Angry Inch 25th Movie Tour with John Cameron Mitchell\": https://www.screenland.com/movie/hedwig-and-the-angry-inch: page.waitForSelector: Timeout 29176ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.list-complete-item .absolute-top-right')\u001b[22m\n; nothing taken",
+        "\"Nosferatu with Live Score by Invincible Czars\": https://www.screenland.com/movie/nosferatu-with-live-score-by-invincible-czars: page.waitForSelector: Timeout 28955ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.list-complete-item .absolute-top-right')\u001b[22m\n; nothing taken"
+      ]
+    }
+  ],
+  "failingSources": [
+    "Midwest Trust Center"
+  ],
+  "offListNeighborhoods": [],
+  "unmappableNeighborhoods": [
+    {
+      "eventId": "evt_bebb5a6a1a8e",
+      "eventTitle": "Matinees for Schools",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_77d82b07e57d",
+      "eventTitle": "FrankenWines",
+      "venue": "Offsite Location",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_387401e4f9b5",
+      "eventTitle": "4-H/FFA Livestock Judging Contest",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_1215eed00cc7",
+      "eventTitle": "Meats Judging Contests",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_edfc7feade97",
+      "eventTitle": "Collegiate Livestock Judging Contest",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_41a40a81ea8a",
+      "eventTitle": "Dark Forest",
+      "venue": "Powell Gardens",
+      "listedBefore": false
+    },
+    {
+      "eventId": "evt_69a5cfe9bfe9",
+      "eventTitle": "Prokofiev’s Sixth and Barber’s Violin Concerto",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_3497b27be11d",
+      "eventTitle": "Les Arts Florissants: The Magic of Monteverdi with William Christie and Paul Agnew, directors",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_67d19425b2bb",
+      "eventTitle": "The Nutcracker",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_53dd647902a7",
+      "eventTitle": "A Christmas Carol 2026",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_3b025957ecc7",
+      "eventTitle": "UPHA American Royal National Championship Horse Show",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_31ac36094859",
+      "eventTitle": "Fall Festival",
+      "venue": "KC Pumpkin Patch",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_86487d2d65a7",
+      "eventTitle": "City Center Live",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_5d2a30d9cce7",
+      "eventTitle": "Truck or Treat",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_0d7688952b9a",
+      "eventTitle": "Holiday Farmers Market",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_71560c05c341",
+      "eventTitle": "See it. Show It. Know It.: Using Creative Movement and Visual Literacy to Deepen Learning with Garrett Brown and Harlan Brownlee",
+      "venue": "Liberty Fine Arts Office",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_0fad64f01426",
+      "eventTitle": "The Nutcracker",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_8e003dc3ffa3",
+      "eventTitle": "Sensory-Friendly Nutcracker",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_9e11c3e694a9",
+      "eventTitle": "NWSL Playoffs Quarter Final",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_b331f253fa21",
+      "eventTitle": "NWSL Playoffs Semi Final",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_5edb3a05d203",
+      "eventTitle": "Floating Pumpkin Patch",
+      "venue": "Tony Aguirre Community Center",
+      "proposed": "Westside",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_46fad0346a64",
+      "eventTitle": "Family Storytime",
+      "venue": "De Soto Library",
+      "proposed": "De Soto",
+      "listedBefore": false
+    },
+    {
+      "eventId": "evt_094394d47ec1",
+      "eventTitle": "Truman Medal for Economic Policy",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_c6c226c17080",
+      "eventTitle": "BIRD MEN",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_187192e4503c",
+      "eventTitle": "Witches Tea",
+      "venue": "Albrecht-Kemper Museum of Art",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_95e75830c0ab",
+      "eventTitle": "Sugarplum Festival",
+      "venue": "Albrecht-Kemper Museum of Art",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_2f71182ef64a",
+      "eventTitle": "Lansing Fall Festival",
+      "venue": "900 Ida St, Lansing, KS 66043",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_0810b8f15105",
+      "eventTitle": "Crossroads Artboards 2027-28 Info Session",
+      "listedBefore": false
+    },
+    {
+      "eventId": "evt_14293739844b",
+      "eventTitle": "Ludwig van Beethoven: The Complete Piano Sonatas with Tatiana Dorokhova - Concert 1",
+      "venue": "1900 Building",
+      "proposed": "Mission Woods",
+      "listedBefore": false
+    },
+    {
+      "eventId": "evt_04afdcdcacef",
+      "eventTitle": "Bonner Springs Farmers' Market",
+      "listedBefore": false
+    },
+    {
+      "eventId": "evt_da3410f8c9da",
+      "eventTitle": "Cars and Coffee",
+      "venue": "Fuel House",
+      "listedBefore": false
+    },
+    {
+      "eventId": "evt_07a775afbc49",
+      "eventTitle": "Exiled KC: Trail of Terrors",
+      "listedBefore": false
+    },
+    {
+      "eventId": "evt_176d62b557f8",
+      "eventTitle": "Halloween Story Trail",
+      "listedBefore": false
+    }
+  ],
+  "promotionSuggestions": [
+    {
+      "host": "kansascitymusic.com",
+      "runsSeen": 2,
+      "exampleUrl": "https://www.kansascitymusic.com/",
+      "heldEvents": 82
+    },
+    {
+      "host": "warehouseonbroadway.com",
+      "runsSeen": 6,
+      "exampleUrl": "https://www.warehouseonbroadway.com/events",
+      "heldEvents": 37
+    },
+    {
+      "host": "kcai.edu",
+      "runsSeen": 6,
+      "exampleUrl": "https://kcai.edu/calendar/",
+      "heldEvents": 8
+    },
+    {
+      "host": "smalterart.com",
+      "runsSeen": 5,
+      "exampleUrl": "https://www.smalterart.com/event",
+      "heldEvents": 2
+    },
+    {
+      "host": "pathwayeducation.org",
+      "runsSeen": 8,
+      "exampleUrl": "https://pathwayeducation.org/events/",
+      "heldEvents": 5
+    }
+  ],
+  "heldForPromotion": [
+    {
+      "host": "kansascitymusic.com",
+      "events": 9
+    },
+    {
+      "host": "bonnersprings.org",
+      "events": 5
+    },
+    {
+      "host": "kcai.edu",
+      "events": 1
+    },
+    {
+      "host": "warehouseonbroadway.com",
+      "events": 1
+    }
+  ],
+  "releasedForPromotion": [],
+  "outageLimited": [],
+  "uncitableReadings": [
+    {
+      "title": "PBR Outlaw Days Festival",
+      "primaryUrl": "https://www.powerandlightdistrict.com/events-and-entertainment/events"
+    },
+    {
+      "title": "NCAA Div. II Women’s Volleyball Championship",
+      "primaryUrl": "https://kcconvention.com/events/"
+    }
+  ],
+  "keptOnStoredCitation": [
+    {
+      "title": "Patrick Page: All The Devils Are Here",
+      "primaryUrl": "https://follytheater.org/events/",
+      "failedQuote": "quoted \"Patrick Page: All The Devils Are Here | starts 2026-11-05 19:00 | ends 2026-11-05 21:00\nPatrick Page: All The Devils Are Here | starts 2026-11-06 19:00 | ends 2026-11-06 21:00\" for its date"
+    }
+  ],
+  "cancellationsFromElsewhere": [],
+  "identityChurn": [
+    {
+      "title": "Golden: A K-Pop Kids Party",
+      "primaryUrl": "https://thegranada.com/events-default/",
+      "was": {
+        "title": "GOLDEN: A K-Pop Kids Party",
+        "primaryUrl": "https://thegranada.com/events-default/"
+      }
+    },
+    {
+      "title": "2026 Ghosting Lawrence: A Theatrical Tour of Downtown Haunts",
+      "primaryUrl": "https://lawrenceartscenter.org/events-at-lawrence-arts-center/",
+      "was": {
+        "title": "Ghosting Lawrence: A Theatrical Tour of Downtown Haunts",
+        "primaryUrl": "https://lawrenceartscenter.org/upcoming-performances-at-lawrence-arts-center/"
+      }
+    },
+    {
+      "title": "Reception & Reading | Recollections: a collaborative exhibition of Poetry & Printmaking",
+      "primaryUrl": "https://artsjoco.org/acjc/calendar-of-events/",
+      "was": {
+        "title": "Reception & Reading: Recollections: a collaborative exhibition of Poetry & Printmaking",
+        "primaryUrl": "https://artsjoco.org/acjc/calendar-of-events/"
+      }
+    },
+    {
+      "title": "VISUAL VOICE: Moments of Abstraction Exhibit",
+      "primaryUrl": "https://kcparks.org/events/",
+      "was": {
+        "title": "Visual Voice: Moments of Abstraction Exhibit",
+        "primaryUrl": "https://kcparks.org/events/"
+      }
+    },
+    {
+      "title": "Keebler® Spookie Stripes Safari",
+      "primaryUrl": "https://kansascityzoo.org/events",
+      "was": {
+        "title": "Keebler Spookie Stripes Safari",
+        "primaryUrl": "https://kansascityzoo.org/events"
+      }
+    },
+    {
+      "title": "The Who’s Tommy",
+      "primaryUrl": "https://artsjoco.org/acjc/calendar-of-events/",
+      "was": {
+        "title": "The Who’s Tommy",
+        "primaryUrl": "https://www.jccc.edu/midwest-trust-center/events/"
+      }
+    },
+    {
+      "title": "Silent Concert: Behind the Spiral",
+      "primaryUrl": "https://www.kemperart.org/",
+      "was": {
+        "title": "Silent Concert: Cosmic Wonder",
+        "primaryUrl": "https://www.kemperart.org/"
+      }
+    },
+    {
+      "title": "Whipped Cream",
+      "primaryUrl": "https://www.powerandlightdistrict.com/events-and-entertainment/events",
+      "was": {
+        "title": "WHIPPED CREAM",
+        "primaryUrl": "https://www.powerandlightdistrict.com/events-and-entertainment/events"
+      }
+    },
+    {
+      "title": "LEGOLAND® Discovery Center: Brick or Treat",
+      "primaryUrl": "https://www.crowncenter.com/events",
+      "was": {
+        "title": "LEGOLAND Discovery Center: Brick or Treat",
+        "primaryUrl": "https://www.crowncenter.com/events"
+      }
+    },
+    {
+      "title": "LOCAL LIVE MUSIC",
+      "primaryUrl": "https://powerandlightdistrict.com/events-and-entertainment",
+      "was": {
+        "title": "Local Live Music",
+        "primaryUrl": "https://powerandlightdistrict.com/events-and-entertainment"
+      }
+    },
+    {
+      "title": "Mystic Nature Featuring Jenny Hahn and House of Cade Black",
+      "primaryUrl": "https://kcai.edu/calendar/",
+      "was": {
+        "title": "Mystic Nature Featuring Jenny Hahn and The House of Cade Black",
+        "primaryUrl": "https://kcai.edu/calendar/"
+      }
+    },
+    {
+      "title": "SCHOOL OF ROCK",
+      "primaryUrl": "https://www.therecordbar.com/shows",
+      "was": {
+        "title": "School of Rock",
+        "primaryUrl": "https://www.therecordbar.com/shows"
+      }
+    },
+    {
+      "title": "KCN Night Hoops",
+      "primaryUrl": "https://kcparks.org/events/",
+      "was": {
+        "title": "KCN Night Hoops",
+        "primaryUrl": "https://kcparks.org/events/month/?place_types=parks&shortcode=550bcfbb"
+      }
+    },
+    {
+      "title": "Palace",
+      "primaryUrl": "https://www.thetrumankc.com/",
+      "was": {
+        "title": "PALACE",
+        "primaryUrl": "https://www.thetrumankc.com/"
+      }
+    },
+    {
+      "title": "Animation Club // REANIMATED: An Evening of Ghastly Shorts",
+      "primaryUrl": "https://www.straycatfilmcenter.com/screeningsandevents",
+      "was": {
+        "title": "REANIMATED: An Evening of Ghastly Shorts",
+        "primaryUrl": "https://www.straycatfilmcenter.com/screeningsandevents"
+      }
+    },
+    {
+      "title": "Ken Russell's The Devils",
+      "primaryUrl": "https://www.screenland.com/coming-soon/",
+      "was": {
+        "title": "Ken Russell's The Devils",
+        "primaryUrl": "https://www.screenland.com/now-playing"
+      }
+    },
+    {
+      "title": "Shadowgrass",
+      "primaryUrl": "https://thebottlenecklive.com/events-default/",
+      "was": {
+        "title": "An Evening With Shadowgrass",
+        "primaryUrl": "https://thebottlenecklive.com/events-default/"
+      }
+    }
+  ],
+  "changes": {
+    "comparedWith": "2026-10-12T19:32:40-05:00",
+    "newPicks": [
+      {
+        "id": "evt_5bbb0adee360",
+        "title": "An Evening with Goose",
+        "primaryUrl": "https://www.midlandkc.com/events"
+      },
+      {
+        "id": "evt_9b23894406c4",
+        "title": "Kansas City Renaissance Festival",
+        "primaryUrl": "https://kcrenfest.com/"
+      },
+      {
+        "id": "evt_2663c3467045",
+        "title": "Electric Poe",
+        "primaryUrl": "https://thecoterie.org/2026-2027-season/"
+      },
+      {
+        "id": "evt_09e5187df336",
+        "title": "Hedwig and the Angry Inch Live Commentary with John Cameron Mitchell",
+        "primaryUrl": "https://www.screenland.com/coming-soon/"
+      },
+      {
+        "id": "evt_bcadd9b8374c",
+        "title": "Hedwig and the Angry Inch 25th Movie Tour with John Cameron Mitchell",
+        "primaryUrl": "https://www.screenland.com/coming-soon/"
+      },
+      {
+        "id": "evt_6b42e0fa86c2",
+        "title": "Nosferatu with Live Score by Invincible Czars",
+        "primaryUrl": "https://www.screenland.com/coming-soon/"
+      }
+    ],
+    "moved": [
+      {
+        "id": "evt_dc3755478229",
+        "title": "APOCALYPSE MEOW",
+        "primaryUrl": "https://www.therecordbar.com/shows",
+        "from": "2026-11-07T19:00:00-06:00"
+      },
+      {
+        "id": "evt_808a751ac999",
+        "title": "Memory Lab Sessions",
+        "primaryUrl": "https://jocolibrary.bibliocommons.com/v2/events",
+        "from": "2026-10-13T09:00:00-05:00"
+      },
+      {
+        "id": "evt_4a66f86ea792",
+        "title": "Toddler Storytime",
+        "primaryUrl": "https://jocolibrary.bibliocommons.com/v2/events",
+        "from": "2026-10-13T09:30:00-05:00"
+      },
+      {
+        "id": "evt_ac1bfc0edbca",
+        "title": "Baby Storytime",
+        "primaryUrl": "https://jocolibrary.bibliocommons.com/v2/events",
+        "from": "2026-10-13T09:30:00-05:00"
+      },
+      {
+        "id": "evt_46fad0346a64",
+        "title": "Family Storytime",
+        "primaryUrl": "https://jocolibrary.bibliocommons.com/v2/events",
+        "from": "2026-10-13T10:00:00-05:00"
+      },
+      {
+        "id": "evt_6266ca9dca80",
+        "title": "Ken Russell's The Devils",
+        "primaryUrl": "https://www.screenland.com/coming-soon/",
+        "from": "2026-10-16"
+      }
+    ],
+    "gone": [
+      {
+        "id": "evt_f22a965daf4d",
+        "title": "Wake // Dj Set",
+        "primaryUrl": "https://www.replaylounge.com/calendar-full/",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_9c327106f7a1",
+        "title": "DJ Carma Lea at Replay",
+        "primaryUrl": "https://www.replaylounge.com/calendar-full/",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_e1c222d1645c",
+        "title": "JON SABILLÓN // DJ SET",
+        "primaryUrl": "https://www.replaylounge.com/calendar-full/",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_692fccbe624e",
+        "title": "Rich Auntie$ // DJ Set",
+        "primaryUrl": "https://www.replaylounge.com/calendar-full/",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_95d555b8a2e4",
+        "title": "Spotlight Members Concert & Holiday Reception featuring The Elders",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_65f5dbb840ca",
+        "title": "ChanceRomance",
+        "primaryUrl": "https://www.replaylounge.com/calendar-full/",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_4cb0e80b1036",
+        "title": "DJ Crush",
+        "primaryUrl": "https://www.replaylounge.com/calendar-full/",
+        "reason": "two-strike"
+      },
+      {
+        "id": "evt_8a9cd73d2a6e",
+        "title": "DJ Carma",
+        "primaryUrl": "https://www.replaylounge.com/calendar-full/",
+        "reason": "two-strike"
+      }
+    ]
+  }
+}
