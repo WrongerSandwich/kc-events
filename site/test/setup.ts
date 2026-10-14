@@ -1,4 +1,9 @@
 import "@testing-library/jest-dom/vitest";
+import { afterAll } from "vitest";
+import { removeTempDirs } from "./fixtures/temp-dir";
+
+// After the whole file, not each test: some files write their fixture while collecting a describe.
+afterAll(removeTempDirs);
 
 // jsdom has no ResizeObserver, which Svelte's size bindings (the explorer's result bar) need; it never reports a size here.
 globalThis.ResizeObserver ??= class { observe() {} unobserve() {} disconnect() {} };

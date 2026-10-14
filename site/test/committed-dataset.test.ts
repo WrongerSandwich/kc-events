@@ -1,11 +1,11 @@
 // @vitest-environment node
-import { mkdtempSync, readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { loadPublished } from "../src/build/load-dataset";
 import { writeGenerated } from "../src/build/write-generated";
+import { tempDir } from "./fixtures/temp-dir";
 
 // The one site test that reads the real clock: every other builds as of the run's day (SITE_TODAY=last-run), so a
 // dataset gone stale fails here, by name, and nowhere else.
@@ -43,7 +43,7 @@ describe("the committed dataset through the site's loader", () => {
   });
 
   it("publishes as /events.json only the projection: active events' public fields with descriptions, no job internals", () => {
-    const dir = mkdtempSync(join(tmpdir(), "kc-committed-"));
+    const dir = tempDir("kc-committed-");
     writeGenerated({ datasetPath, configPath, outDir: join(dir, "generated"), publicDir: join(dir, "public"), today });
     const published = JSON.parse(readFileSync(join(dir, "public", "events.json"), "utf8"));
 

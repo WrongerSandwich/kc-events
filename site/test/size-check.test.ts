@@ -1,6 +1,5 @@
 // @vitest-environment node
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -8,10 +7,11 @@ import { describe, expect, it } from "vitest";
 import { BUDGETS, FIXTURE_PICKS, measure, PICK_BYTES } from "../scripts/size-check";
 import { loadPublished } from "../src/build/load-dataset";
 import { FRONT_PAGE_BYTES, MAX_PICKS } from "../src/build/write-generated";
+import { tempDir } from "./fixtures/temp-dir";
 
 describe("measure", () => {
   it("counts the page and every script and stylesheet it loads, following static chunk imports but not dynamic ones", () => {
-    const dist = mkdtempSync(join(tmpdir(), "kc-size-"));
+    const dist = tempDir("kc-size-");
     mkdirSync(join(dist, "_astro"));
     const files: Record<string, string> = {
       "index.html": `<link rel="stylesheet" href="/_astro/index.A1.css"><astro-island component-url="/_astro/List.B2.js" renderer-url="/_astro/client.C3.js"></astro-island>`,
