@@ -30,6 +30,23 @@ describe("eventJsonLd", () => {
     expect(eventJsonLd(event(), opts)).toMatchObject({ url: "https://www.therecordbar.com/shows" });
   });
 
+  it("offers a stated price: free, one price, or a range, in dollars (#133)", () => {
+    const at = { eventUrl: "https://www.therecordbar.com/shows/a-show" };
+    expect(eventJsonLd(event({ ...at, price: "Free" }), opts)).toMatchObject({
+      offers: { "@type": "Offer", price: 0, priceCurrency: "USD", url: "https://www.therecordbar.com/shows/a-show" },
+    });
+    expect(eventJsonLd(event({ ...at, price: "$30 advance" }), opts)).toMatchObject({ offers: { "@type": "Offer", price: 30, priceCurrency: "USD" } });
+    expect(eventJsonLd(event({ ...at, price: "$25.50 – $45" }), opts)).toMatchObject({
+      offers: { "@type": "AggregateOffer", lowPrice: 25.5, highPrice: 45, priceCurrency: "USD" },
+    });
+  });
+
+  it("offers nothing for no price, or one it cannot state as a number", () => {
+    for (const price of [undefined, "Pay what you can", "Free with museum admission", "€20"]) {
+      expect(eventJsonLd(event(price === undefined ? {} : { price }), opts)).not.toHaveProperty("offers");
+    }
+  });
+
   it("is omitted for a recurring event, which has no start date to state", () => {
     expect(eventJsonLd(event({ recurrence: "recurring", start: undefined, schedule: "Tuesdays" }), opts)).toBeUndefined();
   });

@@ -107,6 +107,8 @@ export function project(e: Event, config: RunConfig): PublishedEvent {
   if (e.end !== undefined) out.end = e.end;
   if (e.schedule !== undefined) out.schedule = e.schedule;
   if (e.whyLine !== undefined) out.whyLine = e.whyLine;
+  if (e.price !== undefined) out.price = e.price;
+  if (e.ages !== undefined) out.ages = e.ages;
   return out;
 }
 

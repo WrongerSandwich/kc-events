@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, venueLine } from "../src/lib/events";
+import { admissionLine, firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, venueLine } from "../src/lib/events";
 import { event } from "./fixtures/event";
 
 describe("venueLine", () => {
@@ -76,5 +76,14 @@ describe("detailsUrl", () => {
   it("is the event's own page when the job found one, else the primary page", () => {
     expect(detailsUrl(event({ eventUrl: "https://www.therecordbar.com/shows/a-show" }))).toBe("https://www.therecordbar.com/shows/a-show");
     expect(detailsUrl(event())).toBe("https://www.therecordbar.com/shows");
+  });
+});
+
+describe("admissionLine (#133)", () => {
+  it("is the price and the age limit as the page stated them, either alone, or nothing", () => {
+    expect(admissionLine(event({ price: "Free", ages: "All ages" }))).toBe("Free · All ages");
+    expect(admissionLine(event({ price: "$25–$45" }))).toBe("$25–$45");
+    expect(admissionLine(event({ ages: "21+" }))).toBe("21+");
+    expect(admissionLine(event())).toBeUndefined();
   });
 });

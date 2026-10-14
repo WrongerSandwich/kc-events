@@ -75,6 +75,12 @@ export function detailsUrl(e: PublishedEvent): string {
   return e.eventUrl ?? e.primaryUrl;
 }
 
+/** What it costs and who may go, as the event's own page stated them ("Free · All ages"); undefined when it stated neither. */
+export function admissionLine(e: PublishedEvent): string | undefined {
+  const line = [e.price, e.ages].filter((s) => s !== undefined).join(" · ");
+  return line === "" ? undefined : line;
+}
+
 /** Where an event is, as cards and lists say it: the venue, then the room when the page named one. */
 export function venueLine(e: PublishedEvent): string {
   return e.room === undefined ? e.venue : `${e.venue} · ${e.room}`;

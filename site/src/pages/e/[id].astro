@@ -13,7 +13,7 @@ import { meta } from "../../generated/meta";
 import { formatDay, formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd } from "../../lib/event-meta";
 import { longDateLine } from "../../lib/date-line";
-import { firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, venueLine } from "../../lib/events";
+import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, venueLine } from "../../lib/events";
 import { reportUrl } from "../../lib/report";
 import { siteConfig } from "../../site.config";
 import type { PublishedEvent } from "../../lib/types";
@@ -33,6 +33,7 @@ const moreLikeThis = events
   .filter((e) => e.id !== event.id && e.kind === event.kind && hasStartDay(e) && firstDay(e)! >= meta.buildToday)
   .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
   .slice(0, 5);
+const admission = admissionLine(event);
 const jsonLd = eventJsonLd(event, { description, image: shareImage.url });
 ---
 <Base title={event.title} description={metaDescription} jsonLd={jsonLd}>
@@ -46,6 +47,7 @@ const jsonLd = eventJsonLd(event, { description, image: shareImage.url });
         <p class="date">{line}</p>
         {/* A neighborhood that is its own region (Lawrence, Elsewhere in the metro) is named once. */}
         <p class="where">{venueLine(event)} · {event.neighborhood}{event.region !== event.neighborhood && ` · ${event.region}`}</p>
+        {admission && <p class="admission">{admission}</p>}
       </div>
     </header>
     {event.whyLine && <p class="why">{event.whyLine}</p>}
@@ -77,7 +79,7 @@ const jsonLd = eventJsonLd(event, { description, image: shareImage.url });
   .kind { display: flex; gap: var(--space-2); align-items: center; margin: 0; }
   h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: var(--space-2) 0; }
   .date { font-size: var(--text-lg); margin: 0; }
-  .where { color: var(--fg-muted); margin: 0; }
+  .where, .admission { color: var(--fg-muted); margin: 0; }
   .why { margin: 0 0 var(--space-4); font-size: var(--text-lg); color: var(--fg-muted); max-width: 38rem; }
   .about { margin: 0 0 var(--space-4); max-width: 38rem; }
   .primary { font-size: var(--text-lg); margin: 0 0 var(--space-4); }

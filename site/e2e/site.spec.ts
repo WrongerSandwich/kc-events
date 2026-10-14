@@ -459,6 +459,18 @@ test("an event page says what the event is when the job read a description, and 
   await expect(page.locator(".about")).toHaveCount(0);
 });
 
+test("the price and age limit an own page gave show on the card and the event page, and in its offers (#133)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/");
+  await expect(page.locator("#pick-evt_e2e000000001 .admission")).toHaveText("$20–$25 · 21+");
+  await on(page, BUILD_DAY, "/e/evt_e2e000000001");
+  await expect(page.locator(".admission")).toHaveText("$20–$25 · 21+");
+  const ld = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
+  expect(ld.offers).toMatchObject({ "@type": "AggregateOffer", lowPrice: 20, highPrice: 25, priceCurrency: "USD" });
+  await on(page, BUILD_DAY, "/e/evt_e2e000000002");
+  await expect(page.locator("article.event")).toBeVisible();
+  await expect(page.locator(".admission")).toHaveCount(0);
+});
+
 test("an event with no page of its own links its primary page and says so", async ({ page }) => {
   await on(page, BUILD_DAY, "/e/evt_e2e000000002");
   await expect(page.getByRole("link", { name: "Details and tickets at example.com" })).toHaveAttribute("href", "https://example.com/westport/comedy");

@@ -53,7 +53,7 @@ Started 2026-10-09T22:15:00-05:00, finished 2026-10-09T22:15:00-05:00. Horizon 8
 
 ## Own pages
 
-_None._
+- Picks: 0 own pages read, 0 times, 0 prices, 0 age limits, 0 descriptions filled, 1 kept from an earlier read, 0 date disagreements, 0 failures
 
 ## Discovery
 

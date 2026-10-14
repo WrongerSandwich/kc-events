@@ -32,6 +32,8 @@ export interface FakePortOptions {
   completions?: ScriptedReply[];
   /** Scripted curation replies, consumed in call order; running out flags nothing. An Error entry is thrown, not returned. */
   curations?: ScriptedReply[];
+  /** What a curation call gets once the scripted ones run out, from its request; nothing flagged unless given. */
+  curate?: (request: CompletionRequest) => CompletionResult;
   /** Search results by query; a query not listed returns nothing, an Error is thrown. */
   searches?: Record<string, SearchResult[] | Error>;
   /** Whether each page with a body carries the quotes the scripted extraction replies make (see `carryingQuotes`); on unless false. */
@@ -53,7 +55,7 @@ function carryingQuotes(pages: Record<string, CannedPage>, completions: Scripted
 }
 
 /** Fake ports that record every call; none of them reach the network. */
-export function fakePorts(now: Date, { pages: canned = {}, completions = [], curations = [], searches = {}, pagesCarryQuotes = true }: FakePortOptions = {}) {
+export function fakePorts(now: Date, { pages: canned = {}, completions = [], curations = [], curate = nothingFlagged, searches = {}, pagesCarryQuotes = true }: FakePortOptions = {}) {
   const pages = pagesCarryQuotes ? carryingQuotes(canned, completions) : canned;
   const calls: string[] = [];
   const requests: CompletionRequest[] = [];
@@ -64,7 +66,7 @@ export function fakePorts(now: Date, { pages: canned = {}, completions = [], cur
       async complete(request) {
         calls.push(`model:${request.model}`);
         requests.push(request);
-        const reply = request.model === TEST_MODELS.curation ? (judgments.shift() ?? nothingFlagged(request)) : replies.shift();
+        const reply = request.model === TEST_MODELS.curation ? (judgments.shift() ?? curate(request)) : replies.shift();
         if (!reply) throw new Error("fake model has no scripted extraction response left");
         if (reply instanceof Error) throw reply;
         return reply;

@@ -508,7 +508,8 @@ export function sameQuote(a: string, b: string): boolean {
   return comparable(a) === comparable(b);
 }
 
-function comparable(text: string): string {
+/** A text as quotes are compared: whitespace runs are one space, no case, and curly quotes, dashes and an ellipsis in their plain forms. */
+export function comparable(text: string): string {
   return text
     .replace(/[‘’‚‛′]/g, "'")
     .replace(/[“”„″]/g, '"')

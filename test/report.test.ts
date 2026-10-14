@@ -54,7 +54,21 @@ const full: RunReport = {
     { name: "Pipe | Hall", result: "failed", extracted: 0, detail: "HTTP 503 | retry later\n  then gave up" },
     { name: "Blocked Place", result: "blocked", extracted: 0, detail: "robots.txt disallows the page" },
   ],
-  ownPages: [{ source: "Lied", read: 3, timed: 2, dateDisagreements: 1, failed: 0, problems: ["\"Show\": https://lied.test/event/show gives 2026-10-13, the list 2026-10-12; no time taken"] }],
+  ownPages: [
+    {
+      source: "Lied",
+      read: 3,
+      timed: 2,
+      priced: 0,
+      aged: 0,
+      described: 0,
+      kept: 0,
+      dateDisagreements: 1,
+      failed: 0,
+      problems: ["\"Show\": https://lied.test/event/show gives 2026-10-13, the list 2026-10-12; nothing taken"],
+    },
+    { source: "Picks", read: 2, timed: 0, priced: 2, aged: 1, described: 1, kept: 4, dateDisagreements: 0, failed: 0, problems: [] },
+  ],
   failingSources: ["Pipe | Hall"],
   offListNeighborhoods: [{ stored: "Downtown East", placed: "Crossroads", events: 2 }],
   unmappableNeighborhoods: [
@@ -118,7 +132,7 @@ describe("the run report", () => {
 
       ## Spend
 
-      5.0123 USD of a 5 USD cap. **Cap hit: no model calls were made after it.** Shortfall: 2 pages not extracted, 1 event not re-verified, 3 discovery searches not made, 1 discovery lead not followed, 4 events not curated, 0 own pages not read for a time; they stay as they were and are checked next run.
+      5.0123 USD of a 5 USD cap. **Cap hit: no model calls were made after it.** Shortfall: 2 pages not extracted, 1 event not re-verified, 3 discovery searches not made, 1 discovery lead not followed, 4 events not curated, 0 own pages not read; they stay as they were and are checked next run.
 
       ## Sources
 
@@ -130,8 +144,9 @@ describe("the run report", () => {
 
       ## Own pages
 
-      - Lied: 3 own pages read, 2 times filled, 1 date disagreement, 0 failures
-      - Lied: "Show": https://lied.test/event/show gives 2026-10-13, the list 2026-10-12; no time taken
+      - Lied: 3 own pages read, 2 times, 0 prices, 0 age limits, 0 descriptions filled, 0 kept from an earlier read, 1 date disagreement, 0 failures
+      - Lied: "Show": https://lied.test/event/show gives 2026-10-13, the list 2026-10-12; nothing taken
+      - Picks: 2 own pages read, 0 times, 2 prices, 1 age limit, 1 description filled, 4 kept from an earlier read, 0 date disagreements, 0 failures
 
       ## Discovery
 

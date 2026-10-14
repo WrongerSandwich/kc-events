@@ -31,6 +31,14 @@ export const leadSchema = z.discriminatedUnion("lane", [
   z.strictObject({ lane: z.literal("discovery"), query: z.string().min(1) }),
 ]);
 
+/** The longest price an event carries, as its own page states it (#133). */
+export const MAX_PRICE = 80;
+/** The longest age limit an event carries, as its own page states it (#133). */
+export const MAX_AGES = 40;
+
+/** A value read from an event's own page: the page and the words on it that give the value. */
+const ownPageQuote = z.strictObject({ page: httpUrl, quote: z.string().min(1) });
+
 const eventFields = z.strictObject({
   id: z.string().min(1),
   title: z.string().min(1),
@@ -55,6 +63,15 @@ const eventFields = z.strictObject({
   primaryUrl: httpUrl,
   /** The event's own page, linked from the primary page: where the site sends the reader. Never fetched; absent when the primary page links to none. */
   eventUrl: httpUrl.optional(),
+  /** The price as the event's own page states it ("Free", "$25–$45"), with its quote under evidence (#133); absent when no own page read gave one. */
+  price: z.string().min(1).max(MAX_PRICE).optional(),
+  /** The age limit as the event's own page states it ("21+", "All ages"), with its quote under evidence (#133); absent when no own page read gave one. */
+  ages: z.string().min(1).max(MAX_AGES).optional(),
+  /**
+   * The event's own page and the run that read it (#133): present from a read on the list's date until the list
+   * gives another date or another own page, so a pick's page is read again only when one of them changes.
+   */
+  ownPageRead: z.strictObject({ page: httpUrl, on: z.iso.date() }).optional(),
   kind: z.string().min(1),
   recurrence: z.enum(RECURRENCE_CLASSES),
   dontMiss: z.boolean(),
@@ -92,7 +109,11 @@ const eventFields = z.strictObject({
      * Where the start's time was read when the primary page gave the date only (#123): the event's own page and the
      * words on it that give the time. Present only on a start that carries a time, from the event's own page.
      */
-    time: z.strictObject({ page: httpUrl, quote: z.string().min(1) }).optional(),
+    time: ownPageQuote.optional(),
+    /** Where the price was read (#133): the event's own page and the words on it that state it. Present exactly when the price is. */
+    price: ownPageQuote.optional(),
+    /** Where the age limit was read (#133): the event's own page and the words on it that state it. Present exactly when the age limit is. */
+    ages: ownPageQuote.optional(),
   }),
 });
 
@@ -102,6 +123,11 @@ const eventFields = z.strictObject({
  */
 export function citedDate(e: { recurrence: RecurrenceClass; start?: string; end?: string; schedule?: string }): string | undefined {
   return e.recurrence === "recurring" ? e.schedule : (e.start ?? e.end);
+}
+
+/** Whether a quote read from an own page, when there is one, is from the event's own page. */
+function fromOwnPage(quote: { page: string } | undefined, eventUrl: string | undefined): boolean {
+  return quote === undefined || (eventUrl !== undefined && samePage(quote.page, eventUrl));
 }
 
 /**
@@ -155,6 +181,12 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     })
     .refine((e) => e.evidence.time === undefined || (hasTime(e.start) && e.eventUrl !== undefined && samePage(e.evidence.time.page, e.eventUrl)), {
       message: "a time quoted from an own page is on a start that carries a time, and from the event's own page",
+    })
+    .refine((e) => (e.price === undefined) === (e.evidence.price === undefined) && fromOwnPage(e.evidence.price, e.eventUrl), {
+      message: "a price carries its quote, from the event's own page, and a price quote its price",
+    })
+    .refine((e) => (e.ages === undefined) === (e.evidence.ages === undefined) && fromOwnPage(e.evidence.ages, e.eventUrl), {
+      message: "an age limit (ages) carries its quote, from the event's own page, and an ages quote its age limit",
     })
     .refine((e) => e.unplaced === undefined || e.neighborhood === ELSEWHERE_IN_THE_METRO, {
       message: "only an event in the elsewhere-in-the-metro catch-all is marked unplaced",

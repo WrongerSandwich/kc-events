@@ -1,6 +1,6 @@
 import { ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
 import { EXPIRY_REASONS, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
-import { buildOwnPageRequest, ownPageTime } from "./own-page.js";
+import { buildOwnPageRequest, LISTING_LINE_LENGTH, readOwnPageReply } from "./own-page.js";
 import { splitArchived } from "./archive.js";
 import { ageUnsighted, expire, expireIndexCited, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
 import {
@@ -73,7 +73,7 @@ export interface Prompts {
   extractionRules: string;
   /** The curation prompt document, sent with every curation call. */
   curationPrompt: string;
-  /** The event page rules, sent with every read of an event's own page for its time (#123). */
+  /** The event page rules, sent with every read of an event's own page (#123, #133). */
   eventPageRules: string;
 }
 
@@ -156,9 +156,11 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const kept = placed.events.filter((e) => keptOn.has(e.id) && e.status === "active");
   const changed = markChanged(dataset.events, placed.events, startedIso);
   const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
+  // Each pick has its own page read for the time, price and age limit, once per date and own page (#133).
+  const picks = await readPicks(curation.events, ownPages.read, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   assertModelReached(model);
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
-  const events = curation.events.map(cleanStoredWhyLine);
+  const events = picks.events.map(cleanStoredWhyLine);
   const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso, events);
   // What expired long enough ago that nothing will revive it leaves the live dataset (#82).
   const { live, archived } = splitArchived(events, today);
@@ -168,7 +170,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     queriesNotSearched: discovery.queriesNotSearched,
     leadsNotFollowed: discovery.leadsNotFollowed,
     eventsNotCurated: curation.notCurated,
-    ownPagesNotRead: ownPages.notRead,
+    ownPagesNotRead: ownPages.notRead + picks.notRead,
   };
 
   const finishedIso = toLocalIso(ports.clock.now(), config.timezone);
@@ -210,7 +212,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     reverification: { problems: reverified.problems },
     curation: curation.report,
     sources: sourceReports,
-    ownPages: ownPages.report,
+    ownPages: [...ownPages.report, ...picks.report],
     failingSources: registryLane.failingSources,
     offListNeighborhoods: placed.report,
     unmappableNeighborhoods: unmappableNeighborhoods(dataset.events, live),
@@ -1012,8 +1014,32 @@ function keepsOwnPageTime(known: Event, sighting: Event): boolean {
   return calendarDate(sighting.start) === calendarDate(known.start) && samePage(sighting.eventUrl, time.page);
 }
 
+/**
+ * Whether a re-reading keeps what an event's own page gave it (#133): the reading gives the same date
+ * and the same own page that was read. The price and age limit stand with their quotes, the own page's
+ * description stands over a shorter one, and the page is not read again; a new date or another own
+ * page drops them, and a pick's page is read again.
+ */
+function keepsOwnPageRead(known: Event, sighting: Event): boolean {
+  const read = known.ownPageRead;
+  if (read === undefined || sighting.start === undefined || sighting.eventUrl === undefined) return false;
+  return calendarDate(sighting.start) === calendarDate(known.start) && samePage(sighting.eventUrl, read.page);
+}
+
+/** What a kept own-page read carries over (keepsOwnPageRead): the read, the price and age limit, and a fuller description. */
+function ownPageFields(known: Event, sighting: Event): Partial<Event> {
+  const fuller = known.description !== undefined && known.description.length > (sighting.description?.length ?? 0);
+  return {
+    ownPageRead: known.ownPageRead!,
+    ...(known.price !== undefined ? { price: known.price } : {}),
+    ...(known.ages !== undefined ? { ages: known.ages } : {}),
+    ...(fuller ? { description: known.description! } : {}),
+  };
+}
+
 /** The new reading under the known event's identity and curation, by the field rules refresh gives. */
 function refreshReading(known: Event, sighting: Event): Event {
+  const ownPageKept = keepsOwnPageRead(known, sighting);
   const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };
   /** The stored value under its field when the new one is the same by the given test, else nothing, so the new one stands. */
   const keepIfSame = (field: string, was: string | undefined, now: string | undefined, same: (a: string, b: string) => boolean) =>
@@ -1026,12 +1052,15 @@ function refreshReading(known: Event, sighting: Event): Event {
     ...keepIfSame("eventUrl", known.eventUrl, sighting.eventUrl, samePage),
     ...(holdsSchedule(known, sighting) ? { schedule: known.schedule } : {}),
     ...(keepsOwnPageTime(known, sighting) ? { start: known.start } : {}),
+    ...(ownPageKept ? ownPageFields(known, sighting) : {}),
     evidence: {
       ...sighting.evidence,
       ...keepIfSame("date", known.evidence.date, sighting.evidence.date, sameQuote),
       ...keepIfSame("venue", known.evidence.venue, sighting.evidence.venue, sameQuote),
       ...(holdsSchedule(known, sighting) ? { date: known.evidence.date } : {}),
       ...(keepsOwnPageTime(known, sighting) ? { time: known.evidence.time } : {}),
+      ...(ownPageKept && known.evidence.price !== undefined ? { price: known.evidence.price } : {}),
+      ...(ownPageKept && known.evidence.ages !== undefined ? { ages: known.evidence.ages } : {}),
     },
     id: known.id,
     firstSeen: known.firstSeen,
@@ -1260,14 +1289,9 @@ function sightingFor(event: Event, sightings: Sighting[], aliases: VenueAliases)
 /**
  * The own-page time (#123, ADR 0009 amended). For an active registry source flagged `readEventPages`,
  * every active dated event of it that a page with standing read this run, that starts from today
- * through the horizon on a date with no time, and that has an own page, has that page fetched (the
- * source's way, through the fetch policy) and read for the time, one call each. A time on the list's
- * date, quoted from the page, joins the start; the list stays the primary page, so identity, standing
- * and the date and venue quotes are untouched. Another date is left for a person and reported. Any
- * failure, a fetch or a model call, costs only the time: the event stays as the list read it, with no
- * strike or outage. Once the spend cap is reached, the pages still to read are counted and left. A time
- * once read is kept while the list gives the same date with no time and the same own page (refresh),
- * so a page is read again only when one of those changes.
+ * through the horizon on a date with no time, and that has an own page, has that page read the
+ * source's way (readOwnPage). A time once read is kept while the list gives the same date with no time
+ * and the same own page (refresh), so a page is read again only when one of those changes.
  */
 async function readOwnPages(
   events: Event[],
@@ -1276,16 +1300,13 @@ async function readOwnPages(
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
   rules: string,
-): Promise<{ events: Event[]; report: OwnPagesReport[]; notRead: number }> {
+): Promise<{ events: Event[]; report: OwnPagesReport[]; notRead: number; read: Set<string> }> {
   const { config, today } = context;
   const lastDay = horizonEnd(today, config.horizonWeeks);
   /** Each flagged source by name, with its line in the report. */
   const flagged = new Map(
-    registry.sources
-      .filter((s) => s.status === "active" && s.readEventPages)
-      .map((source) => [source.name, { source, line: { source: source.name, read: 0, timed: 0, dateDisagreements: 0, failed: 0, problems: [] } as OwnPagesReport }]),
+    registry.sources.filter((s) => s.status === "active" && s.readEventPages).map((source) => [source.name, { source, line: ownPagesLine(source.name) }]),
   );
-  let notRead = 0;
   const wantsTime = (e: Event) => {
     const date = calendarDate(e.start);
     return (
@@ -1293,62 +1314,142 @@ async function readOwnPages(
     );
   };
 
-  const read = [];
+  let notRead = 0;
+  const read = new Set<string>();
+  const out = [];
   for (const event of events) {
     const { lead } = event;
     const flaggedSource = lead.lane === "registry" ? flagged.get(lead.source) : undefined;
     if (!flaggedSource || !wantsTime(event)) {
-      read.push(event);
+      out.push(event);
       continue;
     }
-    const { source, line } = flaggedSource;
-    const url = event.eventUrl!;
-    if (ports.model.exhausted()) {
-      notRead++;
-      read.push(event);
-      continue;
-    }
-    const fetched = await fetchReadable(url, ...fetcherFor(source, ports));
-    if (!("page" in fetched)) {
-      line.failed++;
-      line.problems.push(`"${event.title}": ${fetched.problem}; no time taken`);
-      read.push(event);
-      continue;
-    }
-    const reading = readPage(fetched.page, config);
-    let reply: Awaited<ReturnType<ModelPort["complete"]>>;
-    try {
-      reply = await ports.model.complete(buildOwnPageRequest(event, fetched.page, reading, rules, config, today));
-    } catch (error) {
-      if (error instanceof SpendCapReached) notRead++;
-      else {
-        line.failed++;
-        line.problems.push(`"${event.title}": ${url} not read: ${modelFailed(error)}`);
-      }
-      read.push(event);
-      continue;
-    }
-    const outcome = ownPageTime(reply.value, event, reading, config.timezone);
-    if (outcome.kind === "unreadable") {
-      line.failed++;
-      line.problems.push(`"${event.title}": the reply for ${url} was not in the expected shape`);
-      read.push(event);
-      continue;
-    }
-    line.read++;
-    if (outcome.kind === "timed") {
-      line.timed++;
-      read.push({ ...event, start: outcome.start, evidence: { ...event.evidence, time: { page: url, quote: outcome.quote } } });
-      continue;
-    }
-    if (outcome.kind === "disagrees") {
-      line.dateDisagreements++;
-      line.problems.push(`"${event.title}": ${url} gives ${outcome.date}, the list ${calendarDate(event.start)}; no time taken`);
-    }
-    if (outcome.kind === "untimed" && outcome.problem !== undefined) line.problems.push(`"${event.title}": ${url} ${outcome.problem}; no time taken`);
-    read.push(event);
+    const outcome = await readOwnPage(event, fetcherFor(flaggedSource.source, ports), ports, context, rules, flaggedSource.line);
+    if (outcome === "not-read") notRead++;
+    else read.add(event.id);
+    out.push(outcome === "not-read" ? event : outcome);
   }
-  return { events: read, report: [...flagged.values()].map((f) => f.line), notRead };
+  return { events: out, report: [...flagged.values()].map((f) => f.line), notRead, read };
+}
+
+/**
+ * The second reading for picks (#133). After curation, every active pick with an own page and a date
+ * from today through the horizon has that page read (readOwnPage), the way its source's pages are
+ * fetched, unless the own-page time already read it this run, or a run read it before on the date and
+ * own page the list still gives (refresh keeps that read), which the report counts as kept.
+ */
+async function readPicks(
+  events: Event[],
+  alreadyRead: Set<string>,
+  registry: Registry,
+  ports: Ports & { model: CappedModel },
+  context: ExtractionContext,
+  rules: string,
+): Promise<{ events: Event[]; report: OwnPagesReport[]; notRead: number }> {
+  const { config, today } = context;
+  const lastDay = horizonEnd(today, config.horizonWeeks);
+  const line = ownPagesLine("Picks");
+  const isPick = (e: Event) => {
+    const date = calendarDate(e.start);
+    return e.status === "active" && e.dontMiss && e.eventUrl !== undefined && !alreadyRead.has(e.id) && date !== undefined && date >= today && date <= lastDay;
+  };
+
+  let notRead = 0;
+  let picks = 0;
+  const out = [];
+  for (const event of events) {
+    if (!isPick(event)) {
+      out.push(event);
+      continue;
+    }
+    picks++;
+    if (event.ownPageRead !== undefined && samePage(event.ownPageRead.page, event.eventUrl!)) {
+      line.kept++;
+      out.push(event);
+      continue;
+    }
+    const { lead } = event;
+    const source = lead.lane === "registry" ? registry.sources.find((s): s is Source => s.name === lead.source && s.status === "active") : undefined;
+    const outcome = await readOwnPage(event, source ? fetcherFor(source, ports) : plainly(ports), ports, context, rules, line);
+    if (outcome === "not-read") notRead++;
+    out.push(outcome === "not-read" ? event : outcome);
+  }
+  return { events: out, report: picks > 0 ? [line] : [], notRead };
+}
+
+/** A line of the report's own pages, with nothing read yet. */
+function ownPagesLine(source: string): OwnPagesReport {
+  return { source, read: 0, timed: 0, priced: 0, aged: 0, described: 0, kept: 0, dateDisagreements: 0, failed: 0, problems: [] };
+}
+
+/**
+ * One event's own page fetched by the route given (through the fetch policy) and read, one call, for
+ * the time, price, age limit and description (readOwnPageReply). A time on the list's date joins a
+ * start that has none; the list stays the primary page, so identity, standing and the date and venue
+ * quotes are untouched. The price and age limit are what this read gives, or nothing; a description
+ * replaces only none, or one a list line's length (LISTING_LINE_LENGTH) when the page's is longer.
+ * Another date is left for a person and reported. Any failure, a fetch or a model call, costs only
+ * the read: the event stays as it was, with no strike or outage, and the line says why. Once the
+ * spend cap is reached the page is not read, and the caller counts it.
+ */
+async function readOwnPage(
+  event: Event,
+  route: FetchRoute,
+  ports: Ports & { model: CappedModel },
+  { config, today }: ExtractionContext,
+  rules: string,
+  line: OwnPagesReport,
+): Promise<Event | "not-read"> {
+  const url = event.eventUrl!;
+  const failed = (problem: string) => {
+    line.failed++;
+    line.problems.push(`"${event.title}": ${problem}`);
+    return event;
+  };
+  if (ports.model.exhausted()) return "not-read";
+  const fetched = await fetchReadable(url, ...route);
+  if (!("page" in fetched)) return failed(`${fetched.problem}; nothing taken`);
+  const reading = readPage(fetched.page, config);
+  let reply: Awaited<ReturnType<ModelPort["complete"]>>;
+  try {
+    reply = await ports.model.complete(buildOwnPageRequest(event, fetched.page, reading, rules, config, today));
+  } catch (error) {
+    if (error instanceof SpendCapReached) return "not-read";
+    return failed(`${url} not read: ${modelFailed(error)}`);
+  }
+  const outcome = readOwnPageReply(reply.value, event, reading, config.timezone);
+  if (outcome.kind === "unreadable") return failed(`the reply for ${url} was not in the expected shape`);
+  line.read++;
+  if (outcome.kind === "disagrees") {
+    line.dateDisagreements++;
+    line.problems.push(`"${event.title}": ${url} gives ${outcome.date}, the list ${calendarDate(event.start)}; nothing taken`);
+    return event;
+  }
+  for (const problem of outcome.problems) line.problems.push(`"${event.title}": ${url} ${problem}`);
+  const { start, price, ages, description } = outcome;
+  const timed = start !== undefined && !hasTime(event.start);
+  const described =
+    description !== undefined && (event.description === undefined || (event.description.length <= LISTING_LINE_LENGTH && description.length > event.description.length));
+  if (timed) line.timed++;
+  if (price) line.priced++;
+  if (ages) line.aged++;
+  if (described) line.described++;
+  const { price: _price, ages: _ages, ...unread } = event;
+  const { price: _priceQuote, ages: _agesQuote, ...evidence } = event.evidence;
+  return {
+    ...unread,
+    ...(timed ? { start: start.value } : {}),
+    ...(price ? { price: price.value } : {}),
+    ...(ages ? { ages: ages.value } : {}),
+    ...(described ? { description } : {}),
+    ownPageRead: { page: url, on: today },
+    evidence: {
+      ...evidence,
+      ...(timed ? { time: { page: url, quote: start.quote } } : {}),
+      ...(price ? { price: { page: url, quote: price.quote } } : {}),
+      ...(ages ? { ages: { page: url, quote: ages.quote } } : {}),
+    },
+  };
 }
 
 /** What the two lanes leave for re-verification: which events they sighted, which the hold released this run, and which pages they tried. */

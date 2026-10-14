@@ -40,7 +40,7 @@ const listed = (at: Source = lied, overrides: Record<string, unknown> = {}) =>
 
 /** The own page's reading. */
 const timed = (overrides: Record<string, unknown> = {}): ScriptedReply => ({
-  value: { date: "2026-10-12", time: "19:00", timeEvidence: TIME_QUOTE, ...overrides },
+  value: { date: "2026-10-12", time: "19:00", timeEvidence: TIME_QUOTE, price: null, priceEvidence: null, ages: null, agesEvidence: null, description: null, ...overrides },
   costUsd: 0.002,
 });
 
@@ -68,10 +68,12 @@ describe("an event's own page read for its time (#123)", () => {
       eventUrl: OWN_URL,
       evidence: { date: "Monday, October 12", venue: "Lied Center", time: { page: OWN_URL, quote: TIME_QUOTE } },
     });
-    expect(report.ownPages).toEqual([{ source: "Lied", read: 1, timed: 1, dateDisagreements: 0, failed: 0, problems: [] }]);
+    expect(report.ownPages).toEqual([
+      { source: "Lied", read: 1, timed: 1, priced: 0, aged: 0, described: 0, kept: 0, dateDisagreements: 0, failed: 0, problems: [] },
+    ]);
   });
 
-  it("the own page's request asks only for the one event's date and time", async () => {
+  it("the own page's request asks for the one event's date and time, and what else the page gives (#133)", async () => {
     const { requests } = await runAt(WEEK_1);
     const request = requests[1]!;
     expect(request.model).toBe("test/extraction");
@@ -79,7 +81,16 @@ describe("an event's own page read for its time (#123)", () => {
     expect(request.messages[1]!.content).toContain("Music and Mental Health");
     expect(request.messages[0]!.content).toContain("2026-10-12");
     expect(request.messages[1]!.content).toContain(TIME_QUOTE);
-    expect(Object.keys((request.responseFormat.schema as { properties: object }).properties)).toEqual(["date", "time", "timeEvidence"]);
+    expect(Object.keys((request.responseFormat.schema as { properties: object }).properties)).toEqual([
+      "date",
+      "time",
+      "timeEvidence",
+      "price",
+      "priceEvidence",
+      "ages",
+      "agesEvidence",
+      "description",
+    ]);
   });
 
   it("an own page giving another date leaves the start untimed and says so in the report", async () => {
@@ -88,7 +99,7 @@ describe("an event's own page read for its time (#123)", () => {
     expect(dataset.events[0]).toMatchObject({ status: "active", start: "2026-10-12" });
     expect(dataset.events[0]!.evidence).not.toHaveProperty("time");
     expect(report.ownPages[0]).toMatchObject({ read: 1, timed: 0, dateDisagreements: 1 });
-    expect(report.ownPages[0]!.problems).toEqual([`"Music and Mental Health": ${OWN_URL} gives 2026-10-13, the list 2026-10-12; no time taken`]);
+    expect(report.ownPages[0]!.problems).toEqual([`"Music and Mental Health": ${OWN_URL} gives 2026-10-13, the list 2026-10-12; nothing taken`]);
     expect(renderReportMarkdown(report)).toContain("gives 2026-10-13, the list 2026-10-12");
   });
 

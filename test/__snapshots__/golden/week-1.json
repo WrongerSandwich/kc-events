@@ -10,6 +10,7 @@
       "venue": "Knuckleheads",
       "neighborhood": "East Bottoms",
       "primaryUrl": "https://knuckleheads.test/calendar",
+      "eventUrl": "https://knuckleheads.test/events/big-show",
       "kind": "music",
       "recurrence": "one-off",
       "dontMiss": true,
@@ -24,11 +25,25 @@
       },
       "evidence": {
         "date": "Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM",
-        "venue": "Knuckleheads, 1 Main St"
+        "venue": "Knuckleheads, 1 Main St",
+        "price": {
+          "page": "https://knuckleheads.test/events/big-show",
+          "quote": "Tickets $30 advance"
+        },
+        "ages": {
+          "page": "https://knuckleheads.test/events/big-show",
+          "quote": "21+ only"
+        }
       },
       "lastChanged": "2026-10-02T22:15:00-05:00",
       "whyLine": "A rare club date from a band that plays arenas.",
-      "lastJudged": "2026-10-02T22:15:00-05:00"
+      "lastJudged": "2026-10-02T22:15:00-05:00",
+      "price": "$30 advance",
+      "ages": "21+",
+      "ownPageRead": {
+        "page": "https://knuckleheads.test/events/big-show",
+        "on": "2026-10-02"
+      }
     },
     {
       "id": "evt_e98d443bf1c5",

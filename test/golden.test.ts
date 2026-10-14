@@ -16,7 +16,8 @@ import { candidateAt, PAGE, reply, source, WEEK_1, WEEK_2, WEEK_3 } from "./fake
  * lists a show that drops off its page while a later one stays (struck in week 2, expired two-strike in
  * week 3); Recordbar's calendar redirects to its events page; the Midland's page is down in week 2 and back
  * in week 3. Discovery finds a promoter's page in week 1 (held for promotion; `promoter` is not in the
- * registry, only what candidateAt cites), and curation flags one show.
+ * registry, only what candidateAt cites), and curation flags one show, whose own page is read for its price
+ * and age limit in week 1 and kept from that read after (#133).
  */
 const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms" });
 const recordbar = source("Recordbar", { neighborhood: "Crossroads" });
@@ -26,7 +27,25 @@ const promoter = source("Promoter", { urls: ["https://promoter.test/shows/promot
 const RECORDBAR_EVENTS = "https://recordbar.test/events";
 const PROMOTER_PAGE = promoter.urls[0]!;
 
-const bigShow = candidateAt(knuckleheads, { title: "Big Show", startDate: "2026-10-31" });
+const bigShow = candidateAt(knuckleheads, { title: "Big Show", startDate: "2026-10-31", eventLink: 1 });
+/** Knuckleheads' calendar, linking Big Show's own page as link 1. */
+const KNUCKLEHEADS_PAGE = { status: 200, body: '<html><body>calendar <a href="/events/big-show">Big Show</a></body></html>' };
+const BIG_SHOW_PAGE_URL = "https://knuckleheads.test/events/big-show";
+const BIG_SHOW_PAGE = { status: 200, body: "<html><body><h1>Big Show</h1><p>Sat, Oct 31 · Show 8:00 PM</p><p>Tickets $30 advance</p><p>21+ only</p></body></html>" };
+/** What Big Show's own page gives: its price and age limit, quoted. */
+const bigShowPage: CompletionResult = {
+  value: {
+    date: "2026-10-31",
+    time: "20:00",
+    timeEvidence: "Sat, Oct 31 · Show 8:00 PM",
+    price: "$30 advance",
+    priceEvidence: "Tickets $30 advance",
+    ages: "21+",
+    agesEvidence: "21+ only",
+    description: null,
+  },
+  costUsd: 0.002,
+};
 const closer = candidateAt(knuckleheads, { title: "Season Closer", startDate: "2026-11-28", dateEvidence: "Sat, Nov 28 · 8:00 PM" });
 const goneShow = candidateAt(knuckleheads, { title: "Gone Show", startDate: "2026-11-07", dateEvidence: "Sat, Nov 7 · 8:00 PM" });
 const lateSet = candidateAt(recordbar, { title: "Late Set", startDate: "2026-10-24", startTime: "22:00", dateEvidence: "Sat Oct 24, 10pm" });
@@ -76,7 +95,8 @@ async function pin(week: number, { dataset, report }: { dataset: Dataset; report
 describe("golden three-week scenario", () => {
   it("pins each week's dataset and report", async () => {
     const calendars = (midlandPage: CannedPage): Record<string, CannedPage> => ({
-      [knuckleheads.urls[0]!]: PAGE,
+      [knuckleheads.urls[0]!]: KNUCKLEHEADS_PAGE,
+      [BIG_SHOW_PAGE_URL]: BIG_SHOW_PAGE,
       [recordbar.urls[0]!]: { ...PAGE, finalUrl: RECORDBAR_EVENTS },
       [midland.urls[0]!]: midlandPage,
       [PROMOTER_PAGE]: PAGE,
@@ -85,7 +105,7 @@ describe("golden three-week scenario", () => {
     const week1 = await weekly(WEEK_1, emptyDataset(), {
       pages: calendars(PAGE),
       searches: { [queryAt(WEEK_1)]: [{ url: PROMOTER_PAGE, title: "Promoter Night", snippet: "Live at The Truman" }] },
-      completions: [reply(bigShow, goneShow, closer), reply(lateSet), reply(arenaNight), reply(promoterNight)],
+      completions: [reply(bigShow, goneShow, closer), reply(lateSet), reply(arenaNight), reply(promoterNight), bigShowPage],
     });
     await pin(1, week1);
 
@@ -114,6 +134,7 @@ describe("golden three-week scenario", () => {
     });
     expect(week3.dataset.events.find((e) => e.title === "Late Set")?.primaryUrl).toBe(RECORDBAR_EVENTS);
     expect(week3.dataset.events.filter((e) => e.dontMiss).map((e) => e.title)).toEqual(["Big Show"]);
+    expect(week3.dataset.events.find((e) => e.title === "Big Show")).toMatchObject({ price: "$30 advance", ages: "21+", ownPageRead: { on: "2026-10-02" } });
     expect(week3.dataset.events.find((e) => e.title === "Promoter Night")).toMatchObject({ heldForPromotion: true, lead: { lane: "discovery" } });
   });
 });

@@ -16,13 +16,18 @@ export interface SourceReport {
 }
 
 /**
- * One flagged source's own-page reads this run (#123): pages read, times filled, dates that disagreed
- * with the list, reads that failed, and a line for each of the last two and for any time not taken.
+ * One flagged source's own-page reads this run (#123), or the picks' (#133, source "Picks"): pages
+ * read, times, prices, age limits and descriptions filled, picks kept from an earlier read, dates that
+ * disagreed with the list, reads that failed, and a line for each of the last two and for any value not taken.
  */
 export interface OwnPagesReport {
   source: string;
   read: number;
   timed: number;
+  priced: number;
+  aged: number;
+  described: number;
+  kept: number;
   dateDisagreements: number;
   failed: number;
   problems: string[];
@@ -246,7 +251,20 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   reverification: z.strictObject({ problems: z.array(z.string()) }).default({ problems: [] }),
   curation: z.strictObject({ calls: count, judged: count, flagged: count, problems: z.array(z.string()) }),
   sources: z.array(z.strictObject({ name: z.string(), result: z.enum(["fetched", "failed", "blocked", "excluded"]), extracted: count, detail: z.string().optional() })),
-  ownPages: listSince(z.strictObject({ source: z.string(), read: count, timed: count, dateDisagreements: count, failed: count, problems: z.array(z.string()) })),
+  ownPages: listSince(
+    z.strictObject({
+      source: z.string(),
+      read: count,
+      timed: count,
+      priced: countSince,
+      aged: countSince,
+      described: countSince,
+      kept: countSince,
+      dateDisagreements: count,
+      failed: count,
+      problems: z.array(z.string()),
+    }),
+  ),
   failingSources: z.array(z.string()),
   offListNeighborhoods: listSince(z.strictObject({ stored: z.string(), placed: z.string(), events: count })),
   unmappableNeighborhoods: z.array(
@@ -305,7 +323,7 @@ ${EXPIRY_REASONS.map((reason) => `| Expired: ${reason} | ${counts.expired[reason
 
 ## Spend
 
-${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified, ${plural(spend.shortfall.queriesNotSearched, "discovery search", "discovery searches")} not made, ${plural(spend.shortfall.leadsNotFollowed, "discovery lead")} not followed, ${plural(spend.shortfall.eventsNotCurated, "event")} not curated, ${plural(spend.shortfall.ownPagesNotRead, "own page")} not read for a time; they stay as they were and are checked next run.` : ""}
+${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified, ${plural(spend.shortfall.queriesNotSearched, "discovery search", "discovery searches")} not made, ${plural(spend.shortfall.leadsNotFollowed, "discovery lead")} not followed, ${plural(spend.shortfall.eventsNotCurated, "event")} not curated, ${plural(spend.shortfall.ownPagesNotRead, "own page")} not read; they stay as they were and are checked next run.` : ""}
 
 ## Sources
 
@@ -323,7 +341,7 @@ ${
 
 ${markdownList(
   report.ownPages.flatMap((o) => [
-    `${o.source}: ${plural(o.read, "own page")} read, ${plural(o.timed, "time")} filled, ${plural(o.dateDisagreements, "date disagreement")}, ${plural(o.failed, "failure")}`,
+    `${o.source}: ${plural(o.read, "own page")} read, ${plural(o.timed, "time")}, ${plural(o.priced, "price")}, ${plural(o.aged, "age limit")}, ${plural(o.described, "description")} filled, ${o.kept} kept from an earlier read, ${plural(o.dateDisagreements, "date disagreement")}, ${plural(o.failed, "failure")}`,
     ...o.problems.map((p) => `${o.source}: ${p}`),
   ]),
 )}

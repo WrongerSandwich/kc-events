@@ -1,7 +1,7 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { hostOf, detailsUrl, lastDay, venueLine } from "../lib/events";
+  import { admissionLine, hostOf, detailsUrl, lastDay, venueLine } from "../lib/events";
   import { slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
@@ -16,6 +16,7 @@
   // when its own check is older than that.
   const runDay = localDate(meta.lastSuccessfulRun);
   let checked = $derived(localDate(event.lastVerified));
+  let admission = $derived(admissionLine(event));
 </script>
 
 <!-- The kind's colour fills the date tile and the chip; everything else on the card is ink. The id is the week
@@ -28,6 +29,7 @@
       <span class="visually-hidden">{tile.label}.</span>
       {#if tile.detail}<span class="fact" aria-hidden="true"><UiIcon name="clock" />{tile.detail}</span>{/if}
       <span class="fact"><UiIcon name="map-pin" />{venueLine(event)}, {event.neighborhood}</span>
+      {#if admission}<span class="fact"><UiIcon name="ticket" /><span class="admission">{admission}</span></span>{/if}
     </p>
     {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
     <p class="tags">

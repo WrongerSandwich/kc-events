@@ -111,6 +111,13 @@ venueAliases:
     });
   });
 
+  it("carries the price and age limit an own page gave, and none of their quotes (#133)", () => {
+    const quotes = { price: { page: "https://www.therecordbar.com/shows/a-show", quote: "Tickets $25" }, ages: { page: "https://www.therecordbar.com/shows/a-show", quote: "21+ only" } };
+    const p = loadPublished(write(dataset([activeEvent({ eventUrl: "https://www.therecordbar.com/shows/a-show", price: "$25", ages: "21+", evidence: { ...activeEvent().evidence, ...quotes } })])));
+    expect(p.events[0]).toMatchObject({ price: "$25", ages: "21+" });
+    expect(JSON.stringify(p.events[0])).not.toContain("Tickets");
+  });
+
   it.each(["javascript:alert(1)", "data:text/html,hi", "https://www.therecordbar.com/a\nb"])("refuses %j as a link, in the dataset and in the projection", (url) => {
     expect(() => loadPublished(write(dataset([activeEvent({ eventUrl: url })])))).toThrow(/http/);
     const e = { ...activeEvent(), consecutiveOutages: 0 } as Event;

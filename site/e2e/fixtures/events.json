@@ -12,6 +12,8 @@
       "neighborhood": "Crossroads",
       "primaryUrl": "https://example.com/recordbar/frizzi",
       "eventUrl": "https://tickets.example.com/frizzi",
+      "price": "$20–$25",
+      "ages": "21+",
       "kind": "music",
       "recurrence": "one-off",
       "dontMiss": true,
@@ -26,7 +28,15 @@
       },
       "evidence": {
         "date": "Tue Oct 6 7:00 pm",
-        "venue": "recordBar"
+        "venue": "recordBar",
+        "price": {
+          "page": "https://tickets.example.com/frizzi",
+          "quote": "Tickets $20–$25"
+        },
+        "ages": {
+          "page": "https://tickets.example.com/frizzi",
+          "quote": "21+ show"
+        }
       }
     },
     {

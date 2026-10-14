@@ -19,6 +19,10 @@ export type PublishedEvent = {
   primaryUrl: string;
   /** The event's own page when the job found one linked from the primary page; where "Details and tickets" goes (see detailsUrl). */
   eventUrl?: string;
+  /** The price as the event's own page stated it ("Free", "$25–$45"), when a read of it gave one (#133). */
+  price?: string;
+  /** The age limit as the event's own page stated it ("21+", "All ages"), when a read of it gave one (#133). */
+  ages?: string;
   kind: string;
   recurrence: Recurrence;
   dontMiss: boolean;
