@@ -1,6 +1,6 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { tempDir } from "./temp-dir";
 
 /** A dataset file and a config on disk, as the job writes them, for the build-time loader's tests. */
 export const configYaml = `
@@ -36,7 +36,7 @@ export function dataset(events: unknown[], over: Record<string, unknown> = {}) {
 }
 
 export function write(ds: unknown, config = configYaml) {
-  const dir = mkdtempSync(join(tmpdir(), "kc-site-"));
+  const dir = tempDir("kc-site-");
   const datasetPath = join(dir, "events.json");
   const configPath = join(dir, "research.config.yaml");
   writeFileSync(datasetPath, JSON.stringify(ds));

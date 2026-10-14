@@ -1,11 +1,17 @@
-import { mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { writeAllOrNothing, writeDurably } from "../src/write-files.js";
+
+const made: string[] = [];
+afterEach(async () => {
+  await Promise.all(made.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+});
 
 async function scratch() {
   const dir = await mkdtemp(join(tmpdir(), "kc-write-"));
+  made.push(dir);
   const paths = ["events.json", "report.json", "report.md"].map((name) => join(dir, name));
   for (const path of paths) await writeFile(path, `old ${path}`);
   return { dir, paths };

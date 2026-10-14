@@ -1,11 +1,11 @@
 // @vitest-environment node
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { PRODUCT, USER_AGENT } from "../../src/adapters/identity";
 import { MAX_PICKS, writeGenerated } from "../src/build/write-generated";
 import { activeEvent, configYaml, dataset } from "./fixtures/dataset";
+import { tempDir } from "./fixtures/temp-dir";
 
 /** The value a generated module exports: the JSON after "export const x: T = ". */
 function exported(path: string): any {
@@ -14,7 +14,7 @@ function exported(path: string): any {
 
 describe("writeGenerated", () => {
   it("writes four modules, the don't-miss one holding only flagged events, and publishes the projection with descriptions", () => {
-    const dir = mkdtempSync(join(tmpdir(), "kc-generate-"));
+    const dir = tempDir("kc-generate-");
     const datasetPath = join(dir, "events.json");
     const configPath = join(dir, "research.config.yaml");
     writeFileSync(
@@ -53,7 +53,7 @@ describe("writeGenerated", () => {
   });
 
   it("leaves an event held for promotion (ADR 0012) out of every generated module and the published events.json, verified reading or not", () => {
-    const dir = mkdtempSync(join(tmpdir(), "kc-generate-"));
+    const dir = tempDir("kc-generate-");
     const datasetPath = join(dir, "events.json");
     const configPath = join(dir, "research.config.yaml");
     const held = { status: "unverified", heldForPromotion: true, lead: { lane: "discovery", query: "music events in Kansas City" }, primaryUrl: "https://winery.example/events/a-show" };
@@ -88,7 +88,7 @@ describe("writeGenerated", () => {
     const picks = (n: number) =>
       dataset(Array.from({ length: n }, (_, i) => activeEvent({ id: `evt_${String(i + 1).padStart(12, "0")}`, dontMiss: true, whyLine: "A rare occasion." })));
     const run = (n: number) => {
-      const dir = mkdtempSync(join(tmpdir(), "kc-generate-"));
+      const dir = tempDir("kc-generate-");
       writeFileSync(join(dir, "events.json"), JSON.stringify(picks(n)));
       writeFileSync(join(dir, "research.config.yaml"), configYaml);
       writeGenerated({ datasetPath: join(dir, "events.json"), configPath: join(dir, "research.config.yaml"), outDir: join(dir, "generated"), publicDir: join(dir, "public"), today: "2026-10-05" });

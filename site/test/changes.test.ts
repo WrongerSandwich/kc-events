@@ -1,6 +1,5 @@
 // @vitest-environment node
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { Event } from "../../src/dataset";
@@ -8,6 +7,7 @@ import type { RunChanges } from "../../src/report";
 import { NEW_WITHIN_DAYS, publishedChanges, readRunChanges } from "../src/build/changes";
 import { activeEvent } from "./fixtures/dataset";
 import { event } from "./fixtures/event";
+import { tempDir } from "./fixtures/temp-dir";
 
 const RUN_DAY = "2026-10-05";
 const LAST_RUN = "2026-10-05T06:30:00-05:00";
@@ -68,7 +68,7 @@ describe("the changes page's groups (#135)", () => {
 
 describe("readRunChanges", () => {
   function runsDir(reports: Record<string, { finishedAt: string; changes?: RunChanges }>) {
-    const dir = mkdtempSync(join(tmpdir(), "kc-site-runs-"));
+    const dir = tempDir("kc-site-runs-");
     mkdirSync(join(dir, "runs"));
     for (const [day, r] of Object.entries(reports)) writeFileSync(join(dir, "runs", `${day}.json`), JSON.stringify(report(day, r)));
     return join(dir, "events.json");
