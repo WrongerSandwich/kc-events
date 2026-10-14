@@ -7,13 +7,11 @@
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import { MAX_AGES, MAX_PRICE, type Event } from "./dataset.js";
-import { comparable, EXTRACTION_TIMEOUT_MS, localIso, MAX_QUOTE, quotableText, quotedOn, withoutLinkMarkers, type PageReading } from "./extraction.js";
+import { comparable, EXTRACTION_TIMEOUT_MS, localIso, MAX_DESCRIPTION, MAX_QUOTE, quotableText, quotedOn, withoutLinkMarkers, type PageReading } from "./extraction.js";
 import { calendarDate } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
 
-/** The longest description an own page's reading may give: as long as a list's may be. */
-export const MAX_OWN_PAGE_DESCRIPTION = 300;
 /**
  * A stored description at most this long is a list's line ("X performs with Y."), so an own page's
  * longer one replaces it (#133); a longer stored one stands.
@@ -118,8 +116,8 @@ export function readOwnPageReply(value: unknown, event: Event, reading: PageRead
   const price = stated("price", MAX_PRICE, "price");
   const ages = stated("ages", MAX_AGES, "age limit");
   const description = unmarked(reply.description);
-  const describes = description !== "" && description.length <= MAX_OWN_PAGE_DESCRIPTION;
-  if (description.length > MAX_OWN_PAGE_DESCRIPTION) problems.push(`its description ran past the ${MAX_OWN_PAGE_DESCRIPTION}-character cap; no description taken`);
+  const describes = description !== "" && description.length <= MAX_DESCRIPTION;
+  if (description.length > MAX_DESCRIPTION) problems.push(`its description ran past the ${MAX_DESCRIPTION}-character cap; no description taken`);
   return {
     kind: "read",
     ...(time.start !== undefined ? { start: time.start } : {}),

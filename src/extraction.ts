@@ -74,6 +74,9 @@ export const candidateSchema = z.object({
 
 export const extractionReplySchema = z.object({ events: z.array(candidateSchema) });
 
+/** The longest description the model may write for an event, from a list or an event's own page. */
+export const MAX_DESCRIPTION = 300;
+
 /** The longest quote the model may give for a date, a venue, or an own page's time. */
 export const MAX_QUOTE = 500;
 
@@ -86,7 +89,7 @@ export const MAX_QUOTE = 500;
 export const cappedCandidateSchema = candidateSchema.extend({
   title: z.string().max(200),
   venue: z.string().max(150).nullable(),
-  description: z.string().max(300).nullable(),
+  description: z.string().max(MAX_DESCRIPTION).nullable(),
   dateEvidence: z.string().max(MAX_QUOTE).nullable(),
   venueEvidence: z.string().max(MAX_QUOTE).nullable(),
   schedule: z.string().max(200).nullable(),

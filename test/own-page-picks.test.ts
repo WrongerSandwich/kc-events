@@ -248,6 +248,13 @@ describe("a pick's own page read for its time, price, and ages (#133)", () => {
       expect(report.ownPages).toEqual([expect.objectContaining({ source: "Picks", read: 0, kept: 1 })]);
     });
 
+    it("a list giving a description of its own past a list line's length replaces the own page's", async () => {
+      const first = await runAt(WEEK_1);
+      const revised = "The English band, now a six-piece after its singer left, plays new songs from a live record, with Dagmar Zuniga opening the night.";
+      const { dataset } = await runAt(WEEK_2, { dataset: first.dataset, completions: [listed({ description: revised })] });
+      expect(dataset.events[0]).toMatchObject({ description: revised, price: "$25 – $45" });
+    });
+
     it("a list giving another date has the page read again, and what it gives on the new date replaces the old", async () => {
       const first = await runAt(WEEK_1);
       const moved = { ...OWN_PAGE, body: OWN_PAGE.body.replace("October 17", "October 18").replace(PRICE_QUOTE, "Free admission") };

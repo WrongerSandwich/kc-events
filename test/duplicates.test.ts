@@ -795,6 +795,34 @@ describe("a same-end sighting keeps the stored start (#120)", () => {
     expect(report.counts).toMatchObject({ new: 0, found: 1, updated: 1 });
   });
 
+  it("keeps what the record's own page gave with the start it keeps: price and age limit with their quotes, and the read (#133)", async () => {
+    const OWN = "https://www.nermanmuseum.org/exhibitions/sport-and-spectator/";
+    const quotes = { price: { page: OWN, quote: "Admission is free" }, ages: { page: OWN, quote: "All ages welcome" } };
+    const stored = exhibition(MUSEUM, "2026-06-12", {
+      eventUrl: OWN,
+      price: "free",
+      ages: "All ages",
+      ownPageRead: { page: OWN, on: "2026-09-25" },
+      evidence: { date: OPENING_QUOTE, venue: NERMAN, ...quotes },
+    });
+
+    const { dataset } = await runWith(WEEK_1, withEvents([stored]), {
+      sources: [artsjoco],
+      pages: { [ARTSJOCO]: PAGE },
+      completions: [reply(listing(artsjoco, "2026-09-25", "Sep 25 – Dec 6"))],
+      config,
+    });
+
+    expect(byId(dataset).get(stored.id)).toMatchObject({
+      start: "2026-06-12",
+      eventUrl: OWN,
+      price: "free",
+      ages: "All ages",
+      ownPageRead: { page: OWN, on: "2026-09-25" },
+      evidence: quotes,
+    });
+  });
+
   it("still moves the start on a sighting from the record's own page under the same title", async () => {
     const stored = opening();
 

@@ -978,12 +978,16 @@ function firstMonthPair(events: Event[]): [Event, Event] | undefined {
 function refresh(known: Event, sighting: Event, rule?: MatchRule): Event {
   const refreshed = refreshReading(known, sighting);
   if (!keepsStart(known, sighting, rule)) return refreshed;
-  const { eventUrl: _eventUrl, ...rest } = refreshed;
+  const { eventUrl: _eventUrl, price: _price, ages: _ages, ownPageRead: _ownPageRead, ...rest } = refreshed;
+  // The own page's read (#133) belongs with the start and own page it was read on, and its quotes with the evidence.
   return {
     ...rest,
     start: known.start,
     primaryUrl: known.primaryUrl,
     ...(known.eventUrl !== undefined ? { eventUrl: known.eventUrl } : {}),
+    ...(known.price !== undefined ? { price: known.price } : {}),
+    ...(known.ages !== undefined ? { ages: known.ages } : {}),
+    ...(known.ownPageRead !== undefined ? { ownPageRead: known.ownPageRead } : {}),
     evidence: known.evidence,
   };
 }
@@ -1026,9 +1030,13 @@ function keepsOwnPageRead(known: Event, sighting: Event): boolean {
   return calendarDate(sighting.start) === calendarDate(known.start) && samePage(sighting.eventUrl, read.page);
 }
 
-/** What a kept own-page read carries over (keepsOwnPageRead): the read, the price and age limit, and a fuller description. */
+/**
+ * What a kept own-page read carries over (keepsOwnPageRead): the read, the price and age limit, and the stored
+ * description over a list that still gives none or only a line (LISTING_LINE_LENGTH), which the read replaced.
+ */
 function ownPageFields(known: Event, sighting: Event): Partial<Event> {
-  const fuller = known.description !== undefined && known.description.length > (sighting.description?.length ?? 0);
+  const listLine = sighting.description === undefined || sighting.description.length <= LISTING_LINE_LENGTH;
+  const fuller = listLine && known.description !== undefined && known.description.length > (sighting.description?.length ?? 0);
   return {
     ownPageRead: known.ownPageRead!,
     ...(known.price !== undefined ? { price: known.price } : {}),
