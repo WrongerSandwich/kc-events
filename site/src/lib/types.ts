@@ -63,8 +63,34 @@ export type PublishedAbout = {
   geography: string;
 };
 
+/** An event that went this run: listed as text with its page, since it has no page of its own any more. */
+export type GoneEvent = {
+  title: string;
+  /** The venue's display name, when the expired record is still in the dataset (it always is the week it goes). */
+  venue?: string;
+  start?: string;
+  primaryUrl: string;
+  /** "two-strike": twice not found on its page, which the page calls no longer listed by the venue. */
+  reason: "cancelled" | "two-strike";
+};
+
+/** What the changes page lists (#135), src/generated/changes.ts. */
+export type PublishedChanges = {
+  /** Published events first seen in the week through the last run, by start. */
+  newThisWeek: PublishedEvent[];
+  /** The last run against the one before it; absent when its report records none (reports before #135). */
+  comparison?: {
+    /** The run compared with; null when the last run was the first. */
+    comparedWith: string | null;
+    newPicks: PublishedEvent[];
+    /** Each with the start it had before. */
+    moved: { event: PublishedEvent; from: string }[];
+    gone: GoneEvent[];
+  };
+};
+
 /**
  * What loadPublished returns; the generator writes `events` to src/generated/events.ts, `descriptions` to
- * descriptions.ts, `about` to about.ts, and the rest to meta.ts.
+ * descriptions.ts, `about` to about.ts, `changes` to changes.ts, and the rest to meta.ts.
  */
-export type Published = PublishedMeta & { events: PublishedEvent[]; descriptions: PublishedDescriptions; about: PublishedAbout };
+export type Published = PublishedMeta & { events: PublishedEvent[]; descriptions: PublishedDescriptions; about: PublishedAbout; changes: PublishedChanges };

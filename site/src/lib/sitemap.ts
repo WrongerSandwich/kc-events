@@ -6,7 +6,7 @@ import type { PublishedEvent } from "./types";
  */
 export function sitemapXml(events: PublishedEvent[], opts: { origin: string; lastSuccessfulRun: string }): string {
   const entries = [
-    ...["/", "/explore", "/about"].map((p) => ({ path: p, lastmod: opts.lastSuccessfulRun })),
+    ...["/", "/explore", "/changes", "/about"].map((p) => ({ path: p, lastmod: opts.lastSuccessfulRun })),
     ...events.map((e) => ({ path: `/e/${e.id}`, lastmod: e.lastVerified })),
   ];
   const urls = entries.map((u) => `  <url><loc>${new URL(u.path, opts.origin).href}</loc><lastmod>${u.lastmod}</lastmod></url>`).join("\n");

@@ -13,6 +13,7 @@ import { toLocalDate } from "../../../src/time.ts";
 import { addDays, isDateOnly, isValidDate, localDate } from "../lib/dates";
 import { isPast } from "../lib/events";
 import type { Published, PublishedDescriptions, PublishedEvent } from "../lib/types";
+import { publishedChanges, readRunChanges } from "./changes.ts";
 import { isProductionBuild, knownOrigin } from "./origin.ts";
 
 /** Bumped by hand when the site is updated for a new dataset shape; a job-side bump fails the build until then. */
@@ -162,9 +163,18 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
     console.warn(`site: ${vague.length} published events name a room or a street address for their venue; add it to venueAliases in research.config.yaml if it is inside a known venue: ${tally(vague.map((e) => e.venue))}`);
   }
 
+  const changes = publishedChanges({
+    events: dataset.events,
+    published: events,
+    changes: readRunChanges(opts.datasetPath, dataset.lastSuccessfulRun),
+    runDay,
+    venueAliases: config.venueAliases,
+  });
+
   return {
     events,
     descriptions,
+    changes,
     kinds: config.kinds,
     regions: [...Object.keys(config.neighborhoods), ELSEWHERE_IN_THE_METRO],
     lastSuccessfulRun: dataset.lastSuccessfulRun,

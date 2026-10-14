@@ -17,7 +17,7 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
 
     <h2>How it is made</h2>
     <p>Once a week a research job reads venue and organizer pages directly. A date and a venue are published only when they were read from the event's own page; when the job cannot cite one, the event is held back rather than guessed at. The rules it reads pages by are <a href={extractionRules}>written down in the repository</a>.</p>
-    <p>Every event shows when it was last verified, and the stamp under the site name says when the job last ran. If {siteConfig.staleAfterDays} days pass without a run, every page says so.</p>
+    <p>Every event shows when it was last verified, and the stamp under the site name says when the job last ran. <a href="/changes">What changed</a> lists what the last run added, moved, and took off. If {siteConfig.staleAfterDays} days pass without a run, every page says so.</p>
 
     <h2 id="for-venues">For venues</h2>
     <p>The research job fetches pages once a week as <code>{about.crawler}</code>, with the user agent <code>{about.userAgent}</code>. It obeys <code>robots.txt</code>: to keep it off your site, add a <code>User-agent: {about.crawler}</code> group with <code>Disallow: /</code>. Each listing links to your own event page.</p>
