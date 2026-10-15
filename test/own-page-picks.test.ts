@@ -52,6 +52,9 @@ const ownPage = (overrides: Record<string, unknown> = {}): ScriptedReply => ({
     priceEvidence: PRICE_QUOTE,
     ages: "All Ages",
     agesEvidence: AGES_QUOTE,
+    days: null,
+    daysEvidence: null,
+    daysLink: null,
     description: DESCRIPTION,
     ...overrides,
   },
@@ -111,9 +114,9 @@ describe("a pick's own page read for its time, price, and ages (#133)", () => {
       },
     });
     expect(report.ownPages).toEqual([
-      { source: "Picks", read: 1, timed: 1, priced: 1, aged: 1, described: 1, kept: 0, dateDisagreements: 0, failed: 0, problems: [] },
+      { source: "Picks", read: 1, timed: 1, priced: 1, aged: 1, dayed: 0, described: 1, kept: 0, dateDisagreements: 0, failed: 0, problems: [] },
     ]);
-    expect(renderReportMarkdown(report)).toContain("Picks: 1 own page read, 1 time, 1 price, 1 age limit, 1 description filled, 0 kept");
+    expect(renderReportMarkdown(report)).toContain("Picks: 1 own page read, 1 time, 1 price, 1 age limit, 0 runs' days, 1 description filled, 0 kept");
   });
 
   it("the read comes after curation, and asks for the date, time, price, ages, and description", async () => {
@@ -129,6 +132,9 @@ describe("a pick's own page read for its time, price, and ages (#133)", () => {
       "priceEvidence",
       "ages",
       "agesEvidence",
+      "days",
+      "daysEvidence",
+      "daysLink",
       "description",
     ]);
   });

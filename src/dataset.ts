@@ -36,6 +36,10 @@ export const MAX_PRICE = 80;
 /** The longest age limit an event carries, as its own page states it (#133). */
 export const MAX_AGES = 40;
 
+/** The days of the week, in week order, as a limited run's `days` names them (#143). */
+export const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+export type Weekday = (typeof WEEKDAYS)[number];
+
 /** A value read from an event's own page: the page and the words on it that give the value. */
 const ownPageQuote = z.strictObject({ page: httpUrl, quote: z.string().min(1) });
 
@@ -67,6 +71,17 @@ const eventFields = z.strictObject({
   price: z.string().min(1).max(MAX_PRICE).optional(),
   /** The age limit as the event's own page states it ("21+", "All ages"), with its quote under evidence (#133); absent when no own page read gave one. */
   ages: z.string().min(1).max(MAX_AGES).optional(),
+  /**
+   * The weekdays a limited run plays (#143), in week order, each once, as its own page states them or as the page of
+   * performances it links lists them, with the quote under evidence; absent when no own page read gave them, which the
+   * site takes as every day of its span. Never all seven: that is every day.
+   */
+  days: z
+    .array(z.enum(WEEKDAYS))
+    .min(1)
+    .max(WEEKDAYS.length - 1)
+    .refine((days) => days.every((d, i) => i === 0 || WEEKDAYS.indexOf(days[i - 1]!) < WEEKDAYS.indexOf(d)), { message: "days are in week order, each once" })
+    .optional(),
   /**
    * The event's own page and the run that read it (#133): present from a read on the list's date until the list
    * gives another date or another own page, so a pick's page is read again only when one of them changes.
@@ -114,6 +129,11 @@ const eventFields = z.strictObject({
     price: ownPageQuote.optional(),
     /** Where the age limit was read (#133): the event's own page and the words on it that state it. Present exactly when the age limit is. */
     ages: ownPageQuote.optional(),
+    /**
+     * Where a limited run's days were read (#143): its own page, or the page of performances the own page links, on the
+     * venue's site or a ticketing platform. Present exactly when the days are.
+     */
+    days: ownPageQuote.optional(),
   }),
 });
 
@@ -188,6 +208,15 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     .refine((e) => (e.ages === undefined) === (e.evidence.ages === undefined) && fromOwnPage(e.evidence.ages, e.eventUrl), {
       message: "an age limit (ages) carries its quote, from the event's own page, and an ages quote its age limit",
     })
+    .refine((e) => e.days === undefined || e.recurrence === "limited-run", {
+      message: "only a limited run carries days",
+    })
+    .refine(
+      (e) =>
+        (e.days === undefined) === (e.evidence.days === undefined) &&
+        (e.evidence.days === undefined || (e.eventUrl !== undefined && (samePage(e.evidence.days.page, e.eventUrl) || ownPageAllowed(e.evidence.days.page, e.primaryUrl, platformHosts)))),
+      { message: "a run's days carry their quote, from its own page or a page of performances on its site or a ticketing platform, and a days quote its days" },
+    )
     .refine((e) => e.unplaced === undefined || e.neighborhood === ELSEWHERE_IN_THE_METRO, {
       message: "only an event in the elsewhere-in-the-metro catch-all is marked unplaced",
     });

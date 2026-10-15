@@ -1,6 +1,6 @@
 import { ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
-import { EXPIRY_REASONS, type Dataset, type Event, type ExpiryReason, type SourceState } from "./dataset.js";
-import { buildOwnPageRequest, LISTING_LINE_LENGTH, readOwnPageReply } from "./own-page.js";
+import { EXPIRY_REASONS, ownPageAllowed, type Dataset, type Event, type ExpiryReason, type SourceState, type Weekday } from "./dataset.js";
+import { buildOwnPageRequest, LISTING_LINE_LENGTH, readOwnPageReply, readTicketPageReply, type Quoted } from "./own-page.js";
 import { splitArchived } from "./archive.js";
 import { runChanges } from "./changes.js";
 import { ageUnsighted, expire, expireIndexCited, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
@@ -980,7 +980,7 @@ function firstMonthPair(events: Event[]): [Event, Event] | undefined {
 function refresh(known: Event, sighting: Event, rule?: MatchRule): Event {
   const refreshed = refreshReading(known, sighting);
   if (!keepsStart(known, sighting, rule)) return refreshed;
-  const { eventUrl: _eventUrl, price: _price, ages: _ages, ownPageRead: _ownPageRead, ...rest } = refreshed;
+  const { eventUrl: _eventUrl, price: _price, ages: _ages, days: _days, ownPageRead: _ownPageRead, ...rest } = refreshed;
   // The own page's read (#133) belongs with the start and own page it was read on, and its quotes with the evidence.
   return {
     ...rest,
@@ -989,8 +989,9 @@ function refresh(known: Event, sighting: Event, rule?: MatchRule): Event {
     ...(known.eventUrl !== undefined ? { eventUrl: known.eventUrl } : {}),
     ...(known.price !== undefined ? { price: known.price } : {}),
     ...(known.ages !== undefined ? { ages: known.ages } : {}),
+    ...(keepsDays(known, rest) ? { days: known.days } : {}),
     ...(known.ownPageRead !== undefined ? { ownPageRead: known.ownPageRead } : {}),
-    evidence: known.evidence,
+    evidence: rest.recurrence === "limited-run" ? known.evidence : withoutDaysQuote(known.evidence),
   };
 }
 
@@ -1020,9 +1021,14 @@ function keepsOwnPageTime(known: Event, sighting: Event): boolean {
   return calendarDate(sighting.start) === calendarDate(known.start) && samePage(sighting.eventUrl, time.page);
 }
 
+/** Evidence without a run's days quote, for a record that is no longer a limited run. */
+function withoutDaysQuote({ days: _days, ...evidence }: Event["evidence"]): Event["evidence"] {
+  return evidence;
+}
+
 /**
  * Whether a re-reading keeps what an event's own page gave it (#133): the reading gives the same date
- * and the same own page that was read. The price and age limit stand with their quotes, the own page's
+ * and the same own page that was read. The price, age limit and a run's days (#143) stand with their quotes, the own page's
  * description stands over a shorter one, and the page is not read again; a new date or another own
  * page drops them, and a pick's page is read again.
  */
@@ -1032,8 +1038,13 @@ function keepsOwnPageRead(known: Event, sighting: Event): boolean {
   return calendarDate(sighting.start) === calendarDate(known.start) && samePage(sighting.eventUrl, read.page);
 }
 
+/** Whether a kept own-page read keeps a run's days (#143): the reading still makes it a limited run. */
+function keepsDays(known: Event, sighting: Event): boolean {
+  return known.days !== undefined && sighting.recurrence === "limited-run";
+}
+
 /**
- * What a kept own-page read carries over (keepsOwnPageRead): the read, the price and age limit, and the stored
+ * What a kept own-page read carries over (keepsOwnPageRead): the read, the price and age limit, a run's days, and the stored
  * description over a list that still gives none or only a line (LISTING_LINE_LENGTH), which the read replaced.
  */
 function ownPageFields(known: Event, sighting: Event): Partial<Event> {
@@ -1043,6 +1054,7 @@ function ownPageFields(known: Event, sighting: Event): Partial<Event> {
     ownPageRead: known.ownPageRead!,
     ...(known.price !== undefined ? { price: known.price } : {}),
     ...(known.ages !== undefined ? { ages: known.ages } : {}),
+    ...(keepsDays(known, sighting) ? { days: known.days! } : {}),
     ...(fuller ? { description: known.description! } : {}),
   };
 }
@@ -1071,6 +1083,7 @@ function refreshReading(known: Event, sighting: Event): Event {
       ...(keepsOwnPageTime(known, sighting) ? { time: known.evidence.time } : {}),
       ...(ownPageKept && known.evidence.price !== undefined ? { price: known.evidence.price } : {}),
       ...(ownPageKept && known.evidence.ages !== undefined ? { ages: known.evidence.ages } : {}),
+      ...(ownPageKept && keepsDays(known, sighting) ? { days: known.evidence.days! } : {}),
     },
     id: known.id,
     firstSeen: known.firstSeen,
@@ -1389,7 +1402,7 @@ async function readPicks(
 
 /** A line of the report's own pages, with nothing read yet. */
 function ownPagesLine(source: string): OwnPagesReport {
-  return { source, read: 0, timed: 0, priced: 0, aged: 0, described: 0, kept: 0, dateDisagreements: 0, failed: 0, problems: [] };
+  return { source, read: 0, timed: 0, priced: 0, aged: 0, dayed: 0, described: 0, kept: 0, dateDisagreements: 0, failed: 0, problems: [] };
 }
 
 /**
@@ -1406,10 +1419,11 @@ async function readOwnPage(
   event: Event,
   route: FetchRoute,
   ports: Ports & { model: CappedModel },
-  { config, today }: ExtractionContext,
+  context: ExtractionContext,
   rules: string,
   line: OwnPagesReport,
 ): Promise<Event | "not-read"> {
+  const { config, today } = context;
   const url = event.eventUrl!;
   const failed = (problem: string) => {
     line.failed++;
@@ -1437,29 +1451,80 @@ async function readOwnPage(
   }
   for (const problem of outcome.problems) line.problems.push(`"${event.title}": ${url} ${problem}`);
   const { start, price, ages, description } = outcome;
+  const followed = outcome.days === undefined && outcome.ticketPage !== undefined ? await readTicketPage(event, outcome.ticketPage, route, ports, context, rules, line) : undefined;
+  const days = outcome.days ? { ...outcome.days, page: url } : followed !== "unread" ? followed : undefined;
   const timed = start !== undefined && !hasTime(event.start);
   const described =
     description !== undefined && (event.description === undefined || (event.description.length <= LISTING_LINE_LENGTH && description.length > event.description.length));
   if (timed) line.timed++;
   if (price) line.priced++;
   if (ages) line.aged++;
+  if (days) line.dayed++;
   if (described) line.described++;
-  const { price: _price, ages: _ages, ...unread } = event;
-  const { price: _priceQuote, ages: _agesQuote, ...evidence } = event.evidence;
+  const { price: _price, ages: _ages, days: _days, ...unread } = event;
+  const { price: _priceQuote, ages: _agesQuote, days: _daysQuote, ...evidence } = event.evidence;
   return {
     ...unread,
     ...(timed ? { start: start.value } : {}),
     ...(price ? { price: price.value } : {}),
     ...(ages ? { ages: ages.value } : {}),
+    ...(days ? { days: days.value } : {}),
     ...(described ? { description } : {}),
-    ownPageRead: { page: url, on: today },
+    // A ticket page that could not be read leaves the read unrecorded, so the next run reads both again (#143).
+    ...(followed !== "unread" ? { ownPageRead: { page: url, on: today } } : {}),
     evidence: {
       ...evidence,
       ...(timed ? { time: { page: url, quote: start.quote } } : {}),
       ...(price ? { price: { page: url, quote: price.quote } } : {}),
       ...(ages ? { ages: { page: url, quote: ages.quote } } : {}),
+      ...(days ? { days: { page: days.page, quote: days.quote } } : {}),
     },
   };
+}
+
+/**
+ * A run's ticket page, followed from its own page when that gives no weekdays and links a page of performances (#143),
+ * fetched and read, one more call, for the days alone. It must be on the run's primary page's site, its own page's, or
+ * a ticketing platform. It is fetched through the browser, waiting for the platform's selector, on a platform the
+ * config lists as rendered by script (platformWaitFor), and the source's way otherwise. A page that could not be read
+ * (a fetch or model failure, or the spend cap) is "unread", with a line saying why, so the caller does not record the
+ * read and the next run follows the link again; a page read that gives no days, or none that hold, gives undefined.
+ */
+async function readTicketPage(
+  event: Event,
+  url: string,
+  route: FetchRoute,
+  ports: Ports & { model: CappedModel },
+  { config, today }: ExtractionContext,
+  rules: string,
+  line: OwnPagesReport,
+): Promise<(Quoted<Weekday[]> & { page: string }) | "unread" | undefined> {
+  const note = (text: string) => line.problems.push(`"${event.title}": ${text}`);
+  const unread = (text: string) => {
+    note(`${text}; no days taken, read again next run`);
+    return "unread" as const;
+  };
+  const { platformHosts, platformWaitFor } = config.discovery;
+  if (!ownPageAllowed(url, event.primaryUrl, platformHosts)) {
+    note(`${event.eventUrl} links its performances at ${url}, which is not on the venue's site or a ticketing platform; not followed`);
+    return undefined;
+  }
+  if (ports.model.exhausted()) return unread(`${url} not read: the spend cap was reached`);
+  const waitFor = Object.entries(platformWaitFor).find(([host]) => onHost(url, [host]))?.[1];
+  const [fetcher, options] = waitFor !== undefined ? [ports.browserFetcher, { waitFor }] : route;
+  const fetched = await fetchReadable(url, fetcher, options);
+  if (!("page" in fetched)) return unread(fetched.problem);
+  const reading = readPage(fetched.page, config);
+  let reply: Awaited<ReturnType<ModelPort["complete"]>>;
+  try {
+    reply = await ports.model.complete(buildOwnPageRequest(event, fetched.page, reading, rules, config, today, "ticket"));
+  } catch (error) {
+    return unread(`${url} not read: ${error instanceof SpendCapReached ? "the spend cap was reached" : modelFailed(error)}`);
+  }
+  const outcome = readTicketPageReply(reply.value, reading);
+  if (outcome.kind === "unreadable") return unread(`the reply for ${url} was not in the expected shape`);
+  for (const text of outcome.problems) note(`${url} ${text}`);
+  return outcome.days === undefined ? undefined : { ...outcome.days, page: url };
 }
 
 /** What the two lanes leave for re-verification: which events they sighted, which the hold released this run, and which pages they tried. */

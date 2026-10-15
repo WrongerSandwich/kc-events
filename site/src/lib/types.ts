@@ -23,6 +23,13 @@ export type PublishedEvent = {
   price?: string;
   /** The age limit as the event's own page stated it ("21+", "All ages"), when a read of it gave one (#133). */
   ages?: string;
+  /**
+   * A limited run's weekdays when its own page stated them (#143), as weekday() numbers (0 is Sunday) in the job's week
+   * order, Monday first; without them it is open every day of its span.
+   */
+  days?: number[];
+  /** The days in words ("Fri–Sun"), written by the build (daysPhrase) so the pages need not; present exactly with days. */
+  daysLine?: string;
   kind: string;
   recurrence: Recurrence;
   dontMiss: boolean;

@@ -1,5 +1,5 @@
 import { addDays, comingSunday, formatDay, formatRange, formatShort, formatTime, isDateOnly, weekday } from "./dates";
-import { firstDay, isDated, isOnNow, isPast, isUnderway, lastDay } from "./events";
+import { firstDay, isDated, isOpen, isPast, isUnderway, lastDay } from "./events";
 import type { PublishedEvent } from "./types";
 
 export type Horizon = "through-sunday" | "next-two-weeks" | "further-out";
@@ -61,7 +61,8 @@ export function bucketDontMiss(events: PublishedEvent[], today: string): Record<
   const { sunday, twoWeeks } = horizonBounds(today);
   const end: Record<Horizon, string> = { "through-sunday": sunday, "next-two-weeks": twoWeeks, "further-out": "9999-12-31" };
   for (const h of HORIZONS) {
-    const lingers = (e: PublishedEvent) => (isOnNow(e, today) && lastDay(e)! > end[h] ? 1 : 0);
+    // Open, not on now: a run with days lingers on the days it does not play too (#143).
+    const lingers = (e: PublishedEvent) => (isOpen(e, today) && lastDay(e)! > end[h] ? 1 : 0);
     out[h].sort(
       (a, b) =>
         lingers(a) - lingers(b) ||
@@ -79,7 +80,10 @@ export function closingLine(e: PublishedEvent, today: string): string {
   const last = lastDay(e)!;
   if (first === undefined && !isUnderway(e, today)) return `Closed ${formatDay(last)}`;
   if (e.recurrence === "limited-run") {
-    return isUnderway(e, today) ? `On now, closes ${formatDay(last)}` : `Opens ${formatDay(first!)}, runs through ${formatDay(last)}`;
+    // A run that plays only some weekdays names them, since it is not on every day it is open (#143).
+    const days = e.daysLine;
+    if (isUnderway(e, today)) return `${days ?? "On now"}, closes ${formatDay(last)}`;
+    return `Opens ${formatDay(first!)}, runs ${days ? `${days} ` : ""}through ${formatDay(last)}`;
   }
   return throughLine(e);
 }

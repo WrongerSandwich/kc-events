@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { PRODUCT, USER_AGENT } from "../../../src/adapters/identity.ts";
 import { ELSEWHERE_IN_THE_METRO, parseConfig, type RunConfig } from "../../../src/config.ts";
-import { DATASET_SCHEMA_VERSION, parseDataset, type Event } from "../../../src/dataset.ts";
+import { DATASET_SCHEMA_VERSION, parseDataset, WEEKDAYS, type Event, type Weekday } from "../../../src/dataset.ts";
 import { genericVenueName, venueAndRoom } from "../../../src/identity.ts";
 import { regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
@@ -87,6 +87,22 @@ function tally(values: string[]): string {
   return [...counts].map(([v, c]) => `${v} (${c})`).join(", ");
 }
 
+/**
+ * A run's weekdays in a few characters (#143), written here so no page carries the code: a stretch of three or more in a
+ * row as a span, the rest listed, the last after "&": "Fri–Sun", "Sat & Sun", "Tue, Thu & Sat", "Mon, Wed–Fri".
+ */
+export function daysPhrase(days: readonly Weekday[]): string {
+  const runs: Weekday[][] = [];
+  for (const d of days) {
+    const last = runs.at(-1);
+    if (last !== undefined && WEEKDAYS.indexOf(last.at(-1)!) + 1 === WEEKDAYS.indexOf(d)) last.push(d);
+    else runs.push([d]);
+  }
+  const parts = runs.flatMap((r) => (r.length >= 3 ? [`${r[0]}–${r.at(-1)}`] : r));
+  if (parts.length === 1) return parts[0]!;
+  return runs.at(-1)!.length >= 3 ? parts.join(", ") : `${parts.slice(0, -1).join(", ")} & ${parts.at(-1)}`;
+}
+
 /** The non-null assertions on venue and lastVerified hold because the job schema's refine (src/dataset.ts) requires both on every active event. */
 export function project(e: Event, config: RunConfig): PublishedEvent {
   const { venue, room } = venueAndRoom(e.venue!, config.venueAliases);
@@ -110,6 +126,10 @@ export function project(e: Event, config: RunConfig): PublishedEvent {
   if (e.whyLine !== undefined) out.whyLine = e.whyLine;
   if (e.price !== undefined) out.price = e.price;
   if (e.ages !== undefined) out.ages = e.ages;
+  if (e.days !== undefined) {
+    out.days = e.days.map((d) => (WEEKDAYS.indexOf(d) + 1) % 7);
+    out.daysLine = daysPhrase(e.days);
+  }
   return out;
 }
 

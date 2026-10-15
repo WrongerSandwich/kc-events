@@ -1,6 +1,6 @@
 import { addDays, formatDay, formatTime, isDateOnly } from "./dates";
-import { firstDay, isDated, isMultiDay, isOnNow, isPast, lastDay } from "./events";
-import { dateRange, matches } from "./filter";
+import { firstDay, isDated, isMultiDay, isOnNow, isOpen, isPast, lastDay } from "./events";
+import { dateRange, matches, nextPlayingDay } from "./filter";
 import { throughLine } from "./horizon";
 import type { Filters } from "./query";
 import type { PublishedEvent } from "./types";
@@ -29,6 +29,7 @@ export function rowDateLine(e: PublishedEvent, today: string, withDay = false): 
     const time = isDateOnly(e.start!) ? undefined : formatTime(e.start!);
     if (withDay) return `${formatDay(firstDay(e)!)}${time ? `, ${time}` : ""}–${last}`;
     if (e.recurrence !== "limited-run") return throughLine(e);
+    if (e.daysLine !== undefined) return `${e.daysLine} through ${last}`;
     return time ? `${time}–${last}` : `Runs through ${last}`;
   }
   const start = e.start!;
@@ -51,9 +52,17 @@ function timeOfDay(e: PublishedEvent): string {
   return isDateOnly(e.start!) ? "" : e.start!.slice(11);
 }
 
-/** The days a dated event is listed under: a one-off's every day from today within the when-filter, else its first day. */
+/**
+ * The days a dated event is listed under: a one-off's every day from today within the when-filter, else its first day;
+ * a run with days that is open but does not play today, its next day within the when-filter that it does (#143).
+ */
 function listedDays(e: PublishedEvent, today: string, range: { from: string; to: string } | undefined): string[] {
-  const first = firstDay(e)!; // a start-less run is always on now, so never reaches here
+  if (isOpen(e, today)) {
+    // From the when-filter's first day when that is later; matches has held that it plays before the filter's last.
+    const next = nextPlayingDay(e, range !== undefined && range.from > today ? range.from : today, lastDay(e)!);
+    return next === undefined ? [] : [next];
+  }
+  const first = firstDay(e)!; // a start-less run without days is always on now, so never reaches here
   if (e.recurrence === "limited-run" || !isMultiDay(e)) return [first];
   const from = [first, today, range?.from ?? first].reduce((a, b) => (a > b ? a : b));
   const to = range !== undefined && range.to < lastDay(e)! ? range.to : lastDay(e)!;

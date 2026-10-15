@@ -1,5 +1,5 @@
 import { addDays, comingSunday } from "./dates";
-import { firstDay, isDated, isPast, lastDay } from "./events";
+import { firstDay, isDated, isPast, lastDay, playsOn } from "./events";
 import { fold } from "./fold";
 import type { Filters, When } from "./query";
 import type { PublishedEvent } from "./types";
@@ -23,10 +23,20 @@ export function dateRange(when: When, today: string): { from: string; to: string
   }
 }
 
+/**
+ * The first day from `from` through `to` that a run plays on (playsOn); undefined when it plays on none of them. Here,
+ * with the explorer's code, so the front page does not carry it.
+ */
+export function nextPlayingDay(e: PublishedEvent, from: string, to: string): string | undefined {
+  for (let d = from, n = 0; d <= to && n < 7; d = addDays(d, 1), n++) if (playsOn(e, d)) return d;
+}
+
 function inRange(e: PublishedEvent, range: { from: string; to: string }): boolean {
   const last = lastDay(e)!;
   const first = firstDay(e) ?? range.from; // a start-less run has been on since before any range
-  return first <= range.to && last >= range.from;
+  if (first > range.to || last < range.from) return false;
+  // A run with days must play on one of the range's days it is open (#143).
+  return e.days === undefined || nextPlayingDay(e, first > range.from ? first : range.from, last < range.to ? last : range.to) !== undefined;
 }
 
 /** Everything a search looks in, folded as the terms are, so "cafe" finds "Café" and "johnson county" a region. */

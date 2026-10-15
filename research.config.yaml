@@ -167,9 +167,12 @@ discovery:
     - tixr.com
     - universe.com
     - simpletix.com
+    - ovationtix.com # The Coterie's box office (#143)
   platformIndexPaths: # a platform's listing pages (search, browse, category) are index pages; its event pages are not
     ticketmaster.com: [/discover/, /search] # a prefix matches at a path segment boundary
     eventbrite.com: [/d/, /b/]
+  platformWaitFor: # a platform whose pages render by script: a page of performances on it is fetched through the browser, waiting for this selector (#143)
+    ovationtix.com: .ot_eventDateTitle
 
 # Venue aliases (ADR 0007): a venue's display name, then the other names pages give it, a room inside
 # it or a program that runs there. Event identity treats them all as one venue, so the same show read

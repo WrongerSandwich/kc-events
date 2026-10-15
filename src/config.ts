@@ -72,6 +72,7 @@ export const DEFAULT_PLATFORM_HOSTS = [
   "tixr.com",
   "universe.com",
   "simpletix.com",
+  "ovationtix.com",
 ] as const;
 
 /**
@@ -96,6 +97,11 @@ const discoverySchema = z.strictObject({
   platformIndexPaths: z
     .record(z.string().min(1), z.array(z.string().startsWith("/")).min(1))
     .default(() => structuredClone(DEFAULT_PLATFORM_INDEX_PATHS)),
+  /**
+   * Ticketing platforms whose pages are rendered by script (#143), each with a CSS selector for one rendered listing:
+   * a page of performances on one, followed from an event's own page, is fetched through the browser, waiting for it.
+   */
+  platformWaitFor: z.record(z.string().min(1), z.string().min(1)).default({}),
 });
 
 /**
