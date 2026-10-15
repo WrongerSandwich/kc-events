@@ -1,0 +1,12 @@
+# The end-to-end build's venue table (#137): a venue with events and a full row, and an aliased venue with a row and
+# nothing coming up. The addresses are the real ones; the build only checks their shape.
+- name: recordBar
+  address: 1520 Grand Blvd, Kansas City, MO 64108
+  lat: 39.0929
+  lng: -94.5812
+  url: https://www.therecordbar.com/
+- name: Kauffman Center for the Performing Arts
+  address: 1601 Broadway Blvd, Kansas City, MO 64108
+  lat: 39.0937
+  lng: -94.5857
+  url: https://www.kauffmancenter.org/

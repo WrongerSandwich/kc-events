@@ -15,6 +15,7 @@ import { isPast } from "../lib/events";
 import type { Published, PublishedDescriptions, PublishedEvent } from "../lib/types";
 import { publishedChanges, readRunChanges } from "./changes.ts";
 import { isProductionBuild, knownOrigin } from "./origin.ts";
+import { buildVenues, readVenueTable } from "./venues.ts";
 
 /** Bumped by hand when the site is updated for a new dataset shape; a job-side bump fails the build until then. */
 export const SITE_EXPECTS_SCHEMA_VERSION = 1;
@@ -133,7 +134,8 @@ export function project(e: Event, config: RunConfig): PublishedEvent {
   return out;
 }
 
-export function loadPublished(opts: { datasetPath: string; configPath: string; today?: string }): Published {
+/** `venuesPath`: the venue table (#137); with none, or no file there, every venue page has its events alone. */
+export function loadPublished(opts: { datasetPath: string; configPath: string; venuesPath?: string; today?: string }): Published {
   const config = parseConfig(parseYaml(readFileSync(opts.configPath, "utf8")));
   checkSchemaVersion(DATASET_SCHEMA_VERSION);
   const dataset = parseDataset(JSON.parse(readFileSync(opts.datasetPath, "utf8")), config);
@@ -191,10 +193,18 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; t
     venueAliases: config.venueAliases,
   });
 
+  const venues = buildVenues({
+    rows: readVenueTable(opts.venuesPath),
+    events,
+    recordVenues: dataset.events.flatMap((e) => (e.venue === undefined ? [] : [e.venue])),
+    aliases: config.venueAliases,
+  });
+
   return {
     events,
     descriptions,
     changes,
+    venues,
     kinds: config.kinds,
     regions: [...Object.keys(config.neighborhoods), ELSEWHERE_IN_THE_METRO],
     lastSuccessfulRun: dataset.lastSuccessfulRun,

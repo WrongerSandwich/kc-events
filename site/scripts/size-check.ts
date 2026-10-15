@@ -59,7 +59,8 @@ export const FIXTURE_PICKS = 4;
 export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" }[] = [
   // The front page's code budget: what is left of its real-data budget once a week at the pick ceiling is paid for.
   { page: "index.html", budget: FRONT_PAGE_BYTES - (MAX_PICKS - FIXTURE_PICKS) * PICK_BYTES, build: "fixture" },
-  { page: "explore.html", budget: 50_200, build: "fixture" }, // 50 KB, plus 200 bytes for a run's days (#143)
+  // 50 KB, plus 200 bytes for a run's days (#143) and 250 for each row's link to its venue's page (#137)
+  { page: "explore.html", budget: 50_450, build: "fixture" },
 ];
 
 function main(): void {
@@ -84,13 +85,16 @@ function main(): void {
     const { bytes, assets } = measure(dirs[build], page);
     check(build === "fixture" ? `${page} (fixture data)` : page, budget, bytes, assets);
   }
-  // Event pages share their scripts and differ only in markup, so the largest one is the one that could go over.
-  const eventDir = join(dist, "e");
-  const eventPages = existsSync(eventDir) ? readdirSync(eventDir).filter((f) => f.endsWith(".html")) : [];
-  const largest = eventPages
-    .map((f) => ({ page: `e/${f}`, ...measure(dist, `e/${f}`) }))
-    .reduce<{ page: string; bytes: number; assets: string[] } | undefined>((max, m) => (max === undefined || m.bytes > max.bytes ? m : max), undefined);
-  if (largest) check(`${largest.page} (largest event page)`, 40_000, largest.bytes, largest.assets);
+  // Event pages share their scripts and differ only in markup, so the largest one is the one that could go over; venue
+  // pages (#137) likewise, their markup growing with the venue's events.
+  for (const [dir, kind] of [["e", "event"], ["v", "venue"]] as const) {
+    const pagesDir = join(dist, dir);
+    const pages = existsSync(pagesDir) ? readdirSync(pagesDir).filter((f) => f.endsWith(".html")) : [];
+    const largest = pages
+      .map((f) => ({ page: `${dir}/${f}`, ...measure(dist, `${dir}/${f}`) }))
+      .reduce<{ page: string; bytes: number; assets: string[] } | undefined>((max, m) => (max === undefined || m.bytes > max.bytes ? m : max), undefined);
+    if (largest) check(`${largest.page} (largest ${kind} page)`, 40_000, largest.bytes, largest.assets);
+  }
   if (failed) process.exit(1);
 }
 

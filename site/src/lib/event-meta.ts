@@ -1,7 +1,8 @@
 import { longDateLine } from "./date-line";
 import { hasStartDay, detailsUrl, venueLine } from "./events";
 import { siteConfig } from "../site.config";
-import type { PublishedEvent } from "./types";
+import type { PublishedEvent, PublishedVenue } from "./types";
+import { geoLd, postalAddressLd } from "./venues";
 
 /** The page's meta description: the date line (when there is one), the place, and the why-line. */
 export function eventDescription(e: PublishedEvent, today: string): string {
@@ -45,9 +46,10 @@ export function eventOffers(e: PublishedEvent): object | undefined {
  * after it began has only an end date, which Event consumers read as a malformed listing, so both omit it.
  * The description is the page's description text, then the why-line; `image` is the site's share card (no event
  * imagery, spec section 7). The neighborhood goes in the place's name, since it is not a postal locality. Offers only
- * when the own page stated a price (eventOffers).
+ * when the own page stated a price (eventOffers). The venue's table row (#137), when it has one, gives the place its
+ * street address and position in place of the neighborhood's city.
  */
-export function eventJsonLd(e: PublishedEvent, opts: { description?: string; image: string }): object | undefined {
+export function eventJsonLd(e: PublishedEvent, opts: { description?: string; image: string; venue?: PublishedVenue }): object | undefined {
   if (!hasStartDay(e)) return undefined;
   const description = [opts.description, e.whyLine].filter((s) => s !== undefined && s !== "").join(" ");
   const offers = eventOffers(e);
@@ -62,7 +64,8 @@ export function eventJsonLd(e: PublishedEvent, opts: { description?: string; ima
     location: {
       "@type": "Place",
       name: `${e.venue}, ${e.neighborhood}`,
-      address: { "@type": "PostalAddress", ...postalAddress(e), addressCountry: "US" },
+      address: opts.venue?.address !== undefined ? postalAddressLd(opts.venue.address) : { "@type": "PostalAddress", ...postalAddress(e), addressCountry: "US" },
+      ...(opts.venue?.geo !== undefined && { geo: geoLd(opts.venue.geo) }),
     },
     image: [opts.image],
     url: detailsUrl(e),

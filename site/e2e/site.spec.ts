@@ -684,7 +684,44 @@ test("the dataset is published as the projection, and llms.txt and the sitemap p
   expect(ids).not.toContain("evt_e2e000000010");
   expect(json).not.toContain('"evidence"');
   expect(await (await request.get("/llms.txt")).text()).toContain("/events.json");
-  expect(await (await request.get("/sitemap.xml")).text()).toContain("/e/evt_e2e000000001</loc>");
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  expect(sitemap).toContain("/e/evt_e2e000000001</loc>");
+  expect(sitemap).toContain("/v/recordbar</loc>");
+});
+
+test("a venue page gives the venue's address, map, and site, then its events by day (#137)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/e/evt_e2e000000001");
+  await page.locator(".where").getByRole("link", { name: "recordBar" }).click();
+  await expect(page).toHaveURL(/\/v\/recordbar$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("recordBar");
+  await expect(page.getByText("1520 Grand Blvd, Kansas City, MO 64108")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Map" })).toHaveAttribute("href", "https://www.google.com/maps/search/?api=1&query=39.0929,-94.5812");
+  await expect(page.getByRole("link", { name: "therecordbar.com" })).toHaveAttribute("href", "https://www.therecordbar.com/");
+  await expect(page.getByRole("heading", { level: 2 })).toHaveText(["Tue Oct 6"]);
+  await expect(page.getByRole("heading", { level: 3 })).toHaveText(["Fabio Frizzi plays Fulci"]);
+  const place = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
+  expect(place).toMatchObject({ "@type": "Place", name: "recordBar", address: { streetAddress: "1520 Grand Blvd", postalCode: "64108" }, geo: { latitude: 39.0929 } });
+});
+
+test("a venue with a row and nothing coming up still has its page (#137)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/v/kauffman-center-for-the-performing-arts");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Kauffman Center for the Performing Arts");
+  await expect(page.getByText("Nothing listed at the moment.")).toBeVisible();
+});
+
+test("an explorer row's venue goes to the venue's page (#137)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/explore");
+  await page.locator("a.venue", { hasText: "recordBar" }).click();
+  await expect(page).toHaveURL(/\/v\/recordbar$/);
+});
+
+test("an event at a venue with a row is addressed to its street in its JSON-LD and its calendar file (#137)", async ({ page, request }) => {
+  await on(page, BUILD_DAY, "/e/evt_e2e000000001");
+  const event = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
+  expect(event.location).toMatchObject({ address: { streetAddress: "1520 Grand Blvd", addressLocality: "Kansas City", addressRegion: "MO", postalCode: "64108" } });
+  const ics = (await (await request.get("/e/evt_e2e000000001.ics")).text()).replace(/\r\n[ \t]/g, "");
+  expect(ics).toContain("LOCATION:recordBar\\, 1520 Grand Blvd\\, Kansas City\\, MO 64108\r\n");
+  expect(ics).toContain("GEO:39.0929;-94.5812\r\n");
 });
 
 // The explorer link carries a query so its inline script takes the slice-pending branch.
@@ -704,7 +741,7 @@ for (const path of ["/", "/explore?kind=music", "/e/evt_e2e000000001"]) {
   });
 }
 
-for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/changes", "/about", "/404"]) {
+for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/v/recordbar", "/v/kauffman-center-for-the-performing-arts", "/changes", "/about", "/404"]) {
   test(`${path} makes no third-party requests and does not scroll sideways at 320px`, async ({ page }) => {
     const foreign: string[] = [];
     page.on("request", (r) => { if (!r.url().startsWith("http://localhost:4321")) foreign.push(r.url()); });

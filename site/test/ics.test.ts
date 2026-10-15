@@ -24,6 +24,23 @@ describe("toIcs", () => {
     expect(ics).toContain("LOCATION:Kauffman Center for the Performing Arts\\, Downtown\r\n");
   });
 
+  it("locates an event at its venue's street address and position when its table row has them (#137)", () => {
+    const e = {
+      ...event({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall", neighborhood: "Downtown" }),
+      addressLine: "1601 Broadway Blvd, Kansas City, MO 64108",
+      geo: { lat: 39.0937, lng: -94.5857 },
+    };
+    const ics = toIcs([e], opts).replace(/\r\n[ \t]/g, "");
+    expect(ics).toContain("LOCATION:Kauffman Center for the Performing Arts\\, 1601 Broadway Blvd\\, Kansas City\\, MO 64108\r\n");
+    expect(ics).toContain("GEO:39.0937;-94.5857\r\n");
+  });
+
+  it("writes no GEO for a venue without a position", () => {
+    const ics = toIcs([event()], opts);
+    expect(ics).toContain("LOCATION:recordBar\\, Crossroads\r\n");
+    expect(ics).not.toContain("GEO:");
+  });
+
   it("writes a date-only event as all-day with an exclusive end", () => {
     expect(toIcs([event({ start: "2026-10-09" })], opts)).toBe(fixture("all-day"));
   });

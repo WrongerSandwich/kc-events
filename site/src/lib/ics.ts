@@ -1,7 +1,13 @@
 import { addDays, formatDay, formatShort, isDateOnly, localDate } from "./dates";
 import { firstDay, isDated, lastDay, detailsUrl } from "./events";
 import { nextPlayingDay } from "./filter";
-import type { PublishedEvent } from "./types";
+import type { Geo, PublishedEvent } from "./types";
+
+/**
+ * An event as its calendar file has it: the build adds its venue's street address and position from the venue table
+ * (#137), for LOCATION and GEO; the explorer's export has neither, and LOCATION is the venue and neighborhood.
+ */
+export type IcsEvent = PublishedEvent & { addressLine?: string; geo?: Geo };
 
 /** RFC 5545 TEXT escaping: backslash first, then semicolon, comma, and newline. */
 function escapeText(s: string): string {
@@ -41,7 +47,7 @@ function dateStamp(date: string): string {
   return date.replace(/-/g, "");
 }
 
-function vevent(e: PublishedEvent, siteName: string, stamp: string): string[] {
+function vevent(e: IcsEvent, siteName: string, stamp: string): string[] {
   const lines = [`UID:${e.id}@kc-events`, `DTSTAMP:${utcStamp(stamp)}`];
   const notes: string[] = [];
   const first = firstDay(e);
@@ -71,7 +77,8 @@ function vevent(e: PublishedEvent, siteName: string, stamp: string): string[] {
     if (e.end !== undefined && timedEnd === undefined) notes.push(`Through ${formatDay(last)}.`);
   }
 
-  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.neighborhood}`)}`, `URL:${detailsUrl(e)}`);
+  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.addressLine ?? e.neighborhood}`)}`, `URL:${detailsUrl(e)}`);
+  if (e.geo) lines.push(`GEO:${e.geo.lat};${e.geo.lng}`);
   if (e.whyLine) notes.push(e.whyLine);
   notes.push(`Verified ${formatShort(localDate(e.lastVerified))} by ${siteName}; details at ${detailsUrl(e)}.`);
   lines.push(`DESCRIPTION:${escapeText(notes.join("\n\n"))}`);
@@ -83,7 +90,7 @@ function vevent(e: PublishedEvent, siteName: string, stamp: string): string[] {
  * Published; `calendarName` names it, so Outlook and Google import an export as a calendar of that name, not an
  * unnamed one. A single event's file goes without, so adding it does not offer to make a calendar for one event.
  */
-export function toIcs(events: PublishedEvent[], opts: { siteName: string; stamp: string; calendarName?: string }): string {
+export function toIcs(events: IcsEvent[], opts: { siteName: string; stamp: string; calendarName?: string }): string {
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", `PRODID:-//${opts.siteName}//EN`, "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
   if (opts.calendarName !== undefined) lines.push(`X-WR-CALNAME:${escapeText(opts.calendarName)}`);
   for (const e of events) if (isDated(e)) lines.push(...vevent(e, opts.siteName, opts.stamp));
