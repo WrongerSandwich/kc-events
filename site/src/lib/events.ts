@@ -92,6 +92,11 @@ export function admissionLine(e: PublishedEvent): string | undefined {
 }
 
 /** Where an event is, as cards and lists say it: the venue, then the room when the page named one. */
+/** "Crossroads · Central KC"; a neighborhood that is its own region (Lawrence, Elsewhere in the metro) is named once. */
+export function neighborhoodLine(neighborhood: string, region: string): string {
+  return region === neighborhood ? neighborhood : `${neighborhood} · ${region}`;
+}
+
 export function venueLine(e: PublishedEvent): string {
   return e.room === undefined ? e.venue : `${e.venue} · ${e.room}`;
 }

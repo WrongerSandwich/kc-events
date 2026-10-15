@@ -65,9 +65,13 @@ describe("readVenueTable", () => {
     ]);
   });
 
-  it("has no rows without a file", () => {
+  it("has no rows when given no table", () => {
     expect(readVenueTable(undefined)).toEqual([]);
-    expect(readVenueTable(join(tempDir("kc-venues-"), "absent.yaml"))).toEqual([]);
+  });
+
+  it("refuses a table path with no file there, so a moved table cannot drop every address unnoticed", () => {
+    const path = join(tempDir("kc-venues-"), "absent.yaml");
+    expect(() => readVenueTable(path)).toThrow(`no venue table at ${path}`);
   });
 
   it.each([
@@ -139,12 +143,16 @@ describe("buildVenues", () => {
   });
 
   it("refuses a row for a venue nothing in the dataset or the aliases names", () => {
-    expect(() => build({ rows: [{ ...kauffman, name: "Knuckleheads" }], recordVenues: ["recordBar"] })).toThrow('venue table row "Knuckleheads" names no venue: no event in the dataset is at it and venueAliases has no entry for it');
+    expect(() => build({ rows: [{ ...kauffman, name: "Knuckleheads" }], recordVenues: ["recordBar"] })).toThrow('venue table row "Knuckleheads" names no venue: no event in the dataset is at it, as spelled, and venueAliases has no entry for it');
+  });
+
+  it("refuses a row spelled other than the site spells the venue", () => {
+    expect(() => build({ rows: [{ ...kauffman, name: "the truman" }], recordVenues: ["The Truman"] })).toThrow(/"the truman" names no venue/);
   });
 
   it("refuses two rows for one page", () => {
     const rows = [{ ...kauffman, name: "The Truman" }, { ...kauffman, name: "Truman" }];
-    expect(() => build({ rows, recordVenues: ["The Truman"] })).toThrow('venue table rows "The Truman" and "Truman" are one venue page, /v/truman; keep one');
+    expect(() => build({ rows, recordVenues: ["The Truman", "Truman"] })).toThrow('venue table rows "The Truman" and "Truman" are one venue page, /v/truman; keep one');
   });
 
   it("refuses a venue name with nothing to make a slug from", () => {

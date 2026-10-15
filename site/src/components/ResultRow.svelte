@@ -22,7 +22,7 @@
     <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if passed}<span class="passed-tag">Passed</span>{:else if event.dontMiss}<span class="dont-miss">Don't miss</span>{/if}
   </div>
   <!-- The venue's page (#137), out of the Tab order like the host, so a row stays two stops; the event page links it too.
-       On the venue page itself it is that page, which costs the explorer nothing to leave. -->
+       On a venue page the link is to that page itself: a prop to drop it would cost the explorer's script. -->
   <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><a class="venue" href={venuePath(event.venue)} tabindex="-1">{venueLine(event)}</a><span class="hood">{` · ${event.neighborhood}`}</span></span>
   <KindChip kind={event.kind} />
   <!-- Out of the Tab order, so a row is two stops (title, Save); the event page links the source too. -->

@@ -5,7 +5,7 @@ import { venues } from "../../generated/venues";
 import { isDated } from "../../lib/events";
 import { toIcs } from "../../lib/ics";
 import type { PublishedEvent } from "../../lib/types";
-import { addressLine, venueSlug } from "../../lib/venues";
+import { addressLine, venueNamed } from "../../lib/venues";
 import { siteConfig } from "../../site.config";
 
 export function getStaticPaths() {
@@ -15,8 +15,8 @@ export function getStaticPaths() {
 export const GET: APIRoute = ({ props }) => {
   const event = props.event as PublishedEvent;
   // The venue table's street address and position (#137), when the venue has a row.
-  const venue = venues.find((v) => v.slug === venueSlug(event.venue));
-  const located = { ...event, ...(venue?.address && { address: addressLine(venue.address) }), ...(venue?.geo && { geo: venue.geo }) };
+  const venue = venueNamed(venues, event.venue);
+  const located = { ...event, ...(venue?.address && { addressLine: addressLine(venue.address) }), ...(venue?.geo && { geo: venue.geo }) };
   const body = toIcs([located], { siteName: siteConfig.name, stamp: meta.lastSuccessfulRun });
   return new Response(body, { headers: { "Content-Type": "text/calendar; charset=utf-8" } });
 };

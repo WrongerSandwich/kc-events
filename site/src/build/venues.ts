@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { venueAndRoom, type VenueAliases } from "../../../src/identity.ts";
-import type { PublishedEvent, PublishedVenue, VenueAddress } from "../lib/types";
+import type { Geo, PublishedEvent, PublishedVenue, VenueAddress } from "../lib/types";
 import { venueSlug } from "../lib/venues";
 
 /** The one shape an address may take: street, city, state, and ZIP, so the build can split it for JSON-LD. */
@@ -27,16 +27,20 @@ const ROW = z
   .strict()
   .refine((r) => (r.lat === undefined) === (r.lng === undefined), "has lat without lng, or lng without lat");
 
-export type VenueRow = { name: string; address: VenueAddress; geo?: { lat: number; lng: number }; url?: string };
+export type VenueRow = { name: string; address: VenueAddress; geo?: Geo; url?: string };
 
 function splitAddress(line: string): VenueAddress {
   const [, street, locality, region, postalCode] = ADDRESS.exec(line)!;
   return { street: street!, locality: locality!, region: region as "MO" | "KS", postalCode: postalCode! };
 }
 
-/** The rows of a venue table file; none when there is no file. Throws naming the row that does not parse. */
+/**
+ * The rows of a venue table file; none when no path is given. Throws naming the row that does not parse, and when the
+ * file is not there: a table moved or renamed would otherwise drop every address from the site without a word.
+ */
 export function readVenueTable(path: string | undefined): VenueRow[] {
-  if (path === undefined || !existsSync(path)) return [];
+  if (path === undefined) return [];
+  if (!existsSync(path)) throw new Error(`no venue table at ${path}`);
   const raw: unknown = parseYaml(readFileSync(path, "utf8")) ?? [];
   if (!Array.isArray(raw)) throw new Error(`${path} is not a list of venue rows`);
   return raw.map((item, i) => {
@@ -71,13 +75,14 @@ function mostCommon(values: readonly string[]): string | undefined {
  * on two rows for one page, and on a venue name with no letter or digit to make a slug from.
  */
 export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; recordVenues: readonly string[]; aliases: VenueAliases }): PublishedVenue[] {
-  const known = new Set([...opts.recordVenues.map((n) => venueAndRoom(n, opts.aliases).venue), ...Object.keys(opts.aliases)].map(venueSlug));
+  // The display names exactly as the site shows them, so a row also keeps a venue's spelling: "the truman" is no name.
+  const known = new Set([...opts.recordVenues.map((n) => venueAndRoom(n, opts.aliases).venue), ...Object.keys(opts.aliases)]);
   const rows = new Map<string, VenueRow>();
   for (const row of opts.rows) {
     const { venue } = venueAndRoom(row.name, opts.aliases);
     if (venue !== row.name) throw new Error(`venue table row "${row.name}" is a name venueAliases files under "${venue}"; key the row on "${venue}"`);
     const slug = venueSlug(row.name);
-    if (!known.has(slug)) throw new Error(`venue table row "${row.name}" names no venue: no event in the dataset is at it and venueAliases has no entry for it`);
+    if (!known.has(row.name)) throw new Error(`venue table row "${row.name}" names no venue: no event in the dataset is at it, as spelled, and venueAliases has no entry for it`);
     const other = rows.get(slug);
     if (other !== undefined) throw new Error(`venue table rows "${other.name}" and "${row.name}" are one venue page, /v/${slug}; keep one`);
     rows.set(slug, row);

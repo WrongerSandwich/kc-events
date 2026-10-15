@@ -99,6 +99,9 @@ export type PublishedChanges = {
 /** A venue table row's address (#137), split from its one line ("1601 Broadway Blvd, Kansas City, MO 64108"). */
 export type VenueAddress = { street: string; locality: string; region: "MO" | "KS"; postalCode: string };
 
+/** A venue table row's position (#137), in decimal degrees. */
+export type Geo = { lat: number; lng: number };
+
 /**
  * A venue page, /v/<slug> (#137): every venue a published event is at, and every row of data/venues.yaml. The address,
  * position, and site come from the row; a venue with none has its events and its neighborhood alone.
@@ -109,7 +112,7 @@ export type PublishedVenue = {
   /** The row's name, else the spelling most of its events give. */
   name: string;
   address?: VenueAddress;
-  geo?: { lat: number; lng: number };
+  geo?: Geo;
   /** The venue's own site. */
   url?: string;
   /** The neighborhood most of its published events give; absent when it has none. */

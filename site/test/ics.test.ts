@@ -27,7 +27,7 @@ describe("toIcs", () => {
   it("locates an event at its venue's street address and position when its table row has them (#137)", () => {
     const e = {
       ...event({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall", neighborhood: "Downtown" }),
-      address: "1601 Broadway Blvd, Kansas City, MO 64108",
+      addressLine: "1601 Broadway Blvd, Kansas City, MO 64108",
       geo: { lat: 39.0937, lng: -94.5857 },
     };
     const ics = toIcs([e], opts).replace(/\r\n[ \t]/g, "");

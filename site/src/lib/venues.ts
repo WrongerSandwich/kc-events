@@ -1,5 +1,5 @@
 import { slugify } from "./slugs";
-import type { PublishedVenue, VenueAddress } from "./types";
+import type { Geo, PublishedVenue, VenueAddress } from "./types";
 
 /**
  * A venue page's slug, from the venue's display name (#137): apostrophes dropped, a leading "The" too, so "The Truman"
@@ -14,13 +14,19 @@ export function venuePath(name: string): string {
   return `/v/${venueSlug(name)}`;
 }
 
+/** The venue page a venue name is on; build-time callers only, since the browser has no venue list. */
+export function venueNamed(venues: readonly PublishedVenue[], name: string): PublishedVenue | undefined {
+  const slug = venueSlug(name);
+  return venues.find((v) => v.slug === slug);
+}
+
 /** The address on one line, as the table writes it. */
 export function addressLine(a: VenueAddress): string {
   return `${a.street}, ${a.locality}, ${a.region} ${a.postalCode}`;
 }
 
 /** A map search for the venue's position; a link, never an embedded map or a third-party script. */
-export function mapUrl(geo: { lat: number; lng: number }): string {
+export function mapUrl(geo: Geo): string {
   return `https://www.google.com/maps/search/?api=1&query=${geo.lat},${geo.lng}`;
 }
 
@@ -30,7 +36,7 @@ export function postalAddressLd(a: VenueAddress): object {
 }
 
 /** schema.org GeoCoordinates for a table row's position. */
-export function geoLd(geo: { lat: number; lng: number }): object {
+export function geoLd(geo: Geo): object {
   return { "@type": "GeoCoordinates", latitude: geo.lat, longitude: geo.lng };
 }
 

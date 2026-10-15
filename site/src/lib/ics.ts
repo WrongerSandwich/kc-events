@@ -1,13 +1,13 @@
 import { addDays, formatDay, formatShort, isDateOnly, localDate } from "./dates";
 import { firstDay, isDated, lastDay, detailsUrl } from "./events";
 import { nextPlayingDay } from "./filter";
-import type { PublishedEvent } from "./types";
+import type { Geo, PublishedEvent } from "./types";
 
 /**
  * An event as its calendar file has it: the build adds its venue's street address and position from the venue table
  * (#137), for LOCATION and GEO; the explorer's export has neither, and LOCATION is the venue and neighborhood.
  */
-export type IcsEvent = PublishedEvent & { address?: string; geo?: { lat: number; lng: number } };
+export type IcsEvent = PublishedEvent & { addressLine?: string; geo?: Geo };
 
 /** RFC 5545 TEXT escaping: backslash first, then semicolon, comma, and newline. */
 function escapeText(s: string): string {
@@ -77,7 +77,7 @@ function vevent(e: IcsEvent, siteName: string, stamp: string): string[] {
     if (e.end !== undefined && timedEnd === undefined) notes.push(`Through ${formatDay(last)}.`);
   }
 
-  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.address ?? e.neighborhood}`)}`, `URL:${detailsUrl(e)}`);
+  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.addressLine ?? e.neighborhood}`)}`, `URL:${detailsUrl(e)}`);
   if (e.geo) lines.push(`GEO:${e.geo.lat};${e.geo.lng}`);
   if (e.whyLine) notes.push(e.whyLine);
   notes.push(`Verified ${formatShort(localDate(e.lastVerified))} by ${siteName}; details at ${detailsUrl(e)}.`);

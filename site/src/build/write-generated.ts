@@ -1,9 +1,10 @@
 /**
  * Writes meta.ts, events.ts, dont-miss.ts, descriptions.ts, changes.ts, venues.ts, and about.ts for the pages and
  * islands to import (seven modules so each page and island ships only what it renders; descriptions go to the event
- * page alone, the changes to the changes page, and the venues and what the site says about the job to the Astro pages), and events.json in the public directory: the published events with their
- * descriptions, never the job's raw file, whose evidence, leads, counters, and held-back records stay in git. Paths and
- * the clock are parameters so a test can write somewhere else.
+ * page alone, the changes to the changes page, and the venues and what the site says about the job to the Astro
+ * pages), and events.json in the public directory: the published events with their descriptions, never the job's raw
+ * file, whose evidence, leads, counters, and held-back records stay in git. Paths and the clock are parameters so a
+ * test can write somewhere else.
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
