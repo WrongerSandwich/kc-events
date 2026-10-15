@@ -191,8 +191,22 @@ venueAliases:
   Kauffman Center for the Performing Arts: [Kauffman Center, Muriel Kauffman Theatre, Helzberg Hall]
   Nelson-Atkins Museum of Art: [Nelson-Atkins Museum, Atkins Auditorium, Tivoli Cinema, Galleries, Bloch Lobby]
   Lied Center of Kansas: [Main Auditorium, Pavilion]
-  Museum of Kansas City: [JE Dunn Construction Theater]
+  Museum of Kansas City: [JE Dunn Construction Theater, Corinthian Hall]
   Kansas City Repertory Theatre: [Copaken Stage]
   Kansas City Convention Center: [Bartle Hall, Bartle Exhibit Hall]
   Midwest Trust Center: [Yardley Hall, Polsky Theatre, Midwest Trust Center at Johnson County Community College]
   Kansas City Power & Light District: [Kansas City Power & Light, PBR Big Sky]
+  # #137: Crown Center is one venue page, the Shops and the Square in it.
+  Crown Center: [Crown Center Shops, Crown Center Square]
+  # #137: a library branch is shown with its system, so "Central Library" and "Central Resource Library" are told apart.
+  # Each is its own building; these name it, they put no two branches together.
+  Central Library (Kansas City Public Library): [Central Library]
+  Plaza Branch (Kansas City Public Library): [Plaza Branch]
+  Central Resource Library (Johnson County Library): [Central Resource Library]
+  Blue Valley Library (Johnson County Library): [Blue Valley Library]
+  Oak Park Library (Johnson County Library): [Oak Park Library]
+  Monticello Library (Johnson County Library): [Monticello Library]
+  Corinth Library (Johnson County Library): [Corinth Library]
+  De Soto Library (Johnson County Library): [De Soto Library]
+  Lenexa City Center Library (Johnson County Library): [Lenexa City Center Library]
+  Leawood Pioneer Library (Johnson County Library): [Leawood Pioneer Library]
