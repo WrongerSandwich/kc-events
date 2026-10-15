@@ -26,6 +26,8 @@ export interface OwnPagesReport {
   timed: number;
   priced: number;
   aged: number;
+  /** Limited runs given the weekdays they play (#143). */
+  dayed: number;
   described: number;
   kept: number;
   dateDisagreements: number;
@@ -280,6 +282,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
       timed: count,
       priced: countSince,
       aged: countSince,
+      dayed: countSince,
       described: countSince,
       kept: countSince,
       dateDisagreements: count,
@@ -371,7 +374,7 @@ ${
 
 ${markdownList(
   report.ownPages.flatMap((o) => [
-    `${o.source}: ${plural(o.read, "own page")} read, ${plural(o.timed, "time")}, ${plural(o.priced, "price")}, ${plural(o.aged, "age limit")}, ${plural(o.described, "description")} filled, ${o.kept} kept from an earlier read, ${plural(o.dateDisagreements, "date disagreement")}, ${plural(o.failed, "failure")}`,
+    `${o.source}: ${plural(o.read, "own page")} read, ${plural(o.timed, "time")}, ${plural(o.priced, "price")}, ${plural(o.aged, "age limit")}, ${plural(o.dayed, "run's days", "runs' days")}, ${plural(o.described, "description")} filled, ${o.kept} kept from an earlier read, ${plural(o.dateDisagreements, "date disagreement")}, ${plural(o.failed, "failure")}`,
     ...o.problems.map((p) => `${o.source}: ${p}`),
   ]),
 )}

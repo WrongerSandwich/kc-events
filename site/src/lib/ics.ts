@@ -1,5 +1,6 @@
 import { addDays, formatDay, formatShort, isDateOnly, localDate } from "./dates";
 import { firstDay, isDated, lastDay, detailsUrl } from "./events";
+import { nextPlayingDay } from "./filter";
 import type { PublishedEvent } from "./types";
 
 /** RFC 5545 TEXT escaping: backslash first, then semicolon, comma, and newline. */
@@ -33,6 +34,9 @@ function utcStamp(iso: string): string {
   return new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 }
 
+/** RFC 5545 weekday codes by weekday() number, 0 being Sunday, as a run's published days are (#143). */
+const ICS_WEEKDAYS = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+
 function dateStamp(date: string): string {
   return date.replace(/-/g, "");
 }
@@ -48,8 +52,16 @@ function vevent(e: PublishedEvent, siteName: string, stamp: string): string[] {
     lines.push(`DTSTART;VALUE=DATE:${dateStamp(last)}`, `DTEND;VALUE=DATE:${dateStamp(addDays(last, 1))}`);
     notes.push("Last day.");
   } else if (isDateOnly(e.start!) || (e.end !== undefined && isDateOnly(e.end) && e.recurrence === "limited-run")) {
-    // A date-only start, or a run's date end, makes the whole event all-day; a date end is exclusive.
-    lines.push(`DTSTART;VALUE=DATE:${dateStamp(first)}`, `DTEND;VALUE=DATE:${dateStamp(addDays(last, 1))}`);
+    const playing = e.days === undefined ? undefined : nextPlayingDay(e, first, last);
+    if (playing !== undefined) {
+      // A run with days (#143) is one all-day event a week on each of them, from the first it plays through its last day;
+      // DTSTART is itself an instance, so it is a day the rule names.
+      lines.push(`DTSTART;VALUE=DATE:${dateStamp(playing)}`, `DTEND;VALUE=DATE:${dateStamp(addDays(playing, 1))}`);
+      lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${e.days!.map((n) => ICS_WEEKDAYS[n]).join(",")};UNTIL=${dateStamp(last)}`);
+    } else {
+      // A date-only start, or a run's date end, makes the whole event all-day; a date end is exclusive.
+      lines.push(`DTSTART;VALUE=DATE:${dateStamp(first)}`, `DTEND;VALUE=DATE:${dateStamp(addDays(last, 1))}`);
+    }
   } else {
     // A one-off's date-only end does not say when it ends (#90): it keeps its start time, with the two-hour
     // placeholder an end-less event gets, and its last day goes in the notes.

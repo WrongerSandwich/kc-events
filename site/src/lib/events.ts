@@ -1,4 +1,4 @@
-import { isDateOnly, localDate } from "./dates";
+import { isDateOnly, localDate, weekday } from "./dates";
 import type { PublishedEvent } from "./types";
 
 export function isDated(e: PublishedEvent): boolean {
@@ -56,9 +56,19 @@ export function isUnderway(e: PublishedEvent, today: string): boolean {
   return (first === undefined || first <= today) && lastDay(e)! >= today;
 }
 
-/** A limited run open today: what "On now" lists and the cards call "On now". */
+/** A limited run open today: what "On now" lists and the cards call "On now". A run with days is open only on them (#143). */
 export function isOnNow(e: PublishedEvent, today: string): boolean {
+  return isOpen(e, today) && playsOn(e, today);
+}
+
+/** A limited run whose span includes today, whether or not it plays today (#143): on now, or between its days. */
+export function isOpen(e: PublishedEvent, today: string): boolean {
   return e.recurrence === "limited-run" && isUnderway(e, today);
+}
+
+/** Whether a date falls on one of a run's weekdays (#143); a run without days plays every day. */
+export function playsOn(e: PublishedEvent, date: string): boolean {
+  return !e.days || e.days.includes(weekday(date));
 }
 
 /** "therecordbar.com" for a link label; the input when it is not a URL. */

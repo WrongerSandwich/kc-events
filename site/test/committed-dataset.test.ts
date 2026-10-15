@@ -53,7 +53,7 @@ describe("the committed dataset through the site's loader", () => {
     expect(published.lastSuccessfulRun).toBe(p.lastSuccessfulRun);
     expect(published.events.map((e: { id: string }) => e.id)).toEqual(p.events.map((e) => e.id));
 
-    const allowed = new Set(["id", "title", "start", "end", "schedule", "venue", "room", "neighborhood", "region", "primaryUrl", "eventUrl", "kind", "recurrence", "dontMiss", "whyLine", "lastVerified", "description", "price", "ages"]);
+    const allowed = new Set(["id", "title", "start", "end", "schedule", "venue", "room", "neighborhood", "region", "primaryUrl", "eventUrl", "kind", "recurrence", "dontMiss", "whyLine", "lastVerified", "description", "price", "ages", "days", "daysLine"]);
     for (const e of published.events) {
       for (const key of Object.keys(e)) expect(allowed.has(key), `event ${e.id} publishes "${key}"`).toBe(true);
       expect(e.description).toBe(p.descriptions[e.id]);

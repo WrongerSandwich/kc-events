@@ -40,7 +40,7 @@ const listed = (at: Source = lied, overrides: Record<string, unknown> = {}) =>
 
 /** The own page's reading. */
 const timed = (overrides: Record<string, unknown> = {}): ScriptedReply => ({
-  value: { date: "2026-10-12", time: "19:00", timeEvidence: TIME_QUOTE, price: null, priceEvidence: null, ages: null, agesEvidence: null, description: null, ...overrides },
+  value: { date: "2026-10-12", time: "19:00", timeEvidence: TIME_QUOTE, price: null, priceEvidence: null, ages: null, agesEvidence: null, days: null, daysEvidence: null, daysLink: null, description: null, ...overrides },
   costUsd: 0.002,
 });
 
@@ -69,7 +69,7 @@ describe("an event's own page read for its time (#123)", () => {
       evidence: { date: "Monday, October 12", venue: "Lied Center", time: { page: OWN_URL, quote: TIME_QUOTE } },
     });
     expect(report.ownPages).toEqual([
-      { source: "Lied", read: 1, timed: 1, priced: 0, aged: 0, described: 0, kept: 0, dateDisagreements: 0, failed: 0, problems: [] },
+      { source: "Lied", read: 1, timed: 1, priced: 0, aged: 0, dayed: 0, described: 0, kept: 0, dateDisagreements: 0, failed: 0, problems: [] },
     ]);
   });
 
@@ -89,6 +89,9 @@ describe("an event's own page read for its time (#123)", () => {
       "priceEvidence",
       "ages",
       "agesEvidence",
+      "days",
+      "daysEvidence",
+      "daysLink",
       "description",
     ]);
   });

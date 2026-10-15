@@ -6,7 +6,7 @@
  */
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
-import { MAX_AGES, MAX_PRICE, type Event } from "./dataset.js";
+import { MAX_AGES, MAX_PRICE, WEEKDAYS, type Event, type Weekday } from "./dataset.js";
 import { comparable, EXTRACTION_TIMEOUT_MS, localIso, MAX_DESCRIPTION, MAX_QUOTE, quotableText, quotedOn, withoutLinkMarkers, type PageReading } from "./extraction.js";
 import { calendarDate } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
@@ -30,6 +30,16 @@ export const ownPageReplySchema = z.object({
   priceEvidence: z.string().nullable().describe("The exact text from the page body the price was read from. Null when there is no price."),
   ages: z.string().nullable().describe('The age limit as the page states it: "21+", "All ages". Null when the page gives none.'),
   agesEvidence: z.string().nullable().describe("The exact text from the page body the age limit was read from. Null when there is none."),
+  days: z
+    .array(z.enum(WEEKDAYS))
+    .nullable()
+    .describe("The weekdays a run of several weeks plays, when the page states them or lists its performances. Null when it gives only the span."),
+  daysEvidence: z.string().nullable().describe("The exact text from the page body the weekdays were read from. Null when there are no days."),
+  daysLink: z
+    .number()
+    .int()
+    .nullable()
+    .describe("When the page gives no weekdays: the number of a link on it to a page listing the run's performances with their dates. Null otherwise."),
   description: z
     .string()
     .nullable()
@@ -40,9 +50,18 @@ const ownPageResponseFormat = strictResponseFormat("event_page_details", ownPage
 
 /**
  * One call over one event's own page: the event page rules, this run's dates, and the event the
- * page is for, by title, venue and the date its list gave.
+ * page is for, by title, venue and the date its list gave. A "ticket" call is over the ticket page
+ * a run's own page links (#143), read for its days alone.
  */
-export function buildOwnPageRequest(event: Event, page: FetchResult, reading: PageReading, rules: string, config: RunConfig, today: string): CompletionRequest {
+export function buildOwnPageRequest(
+  event: Event,
+  page: FetchResult,
+  reading: PageReading,
+  rules: string,
+  config: RunConfig,
+  today: string,
+  kind: "own" | "ticket" = "own",
+): CompletionRequest {
   const system = [
     rules,
     "",
@@ -50,6 +69,8 @@ export function buildOwnPageRequest(event: Event, page: FetchResult, reading: Pa
     `- Event: ${event.title}`,
     ...(event.venue !== undefined ? [`- Venue: ${event.venue}`] : []),
     `- The calendar's date: ${calendarDate(event.start)}`,
+    ...(event.end !== undefined ? [`- The calendar's last day: ${calendarDate(event.end)}`] : []),
+    ...(kind === "ticket" ? [`- This page: the run's ticket page, linked from its own page, read for the weekdays it plays (days); leave the other fields null.`] : []),
   ].join("\n");
   return {
     model: config.models.extraction,
@@ -64,8 +85,8 @@ export function buildOwnPageRequest(event: Event, page: FetchResult, reading: Pa
 }
 
 /** A value read from an own page, with the words on it the value comes from. */
-export interface Quoted {
-  value: string;
+export interface Quoted<T = string> {
+  value: T;
   quote: string;
 }
 
@@ -81,7 +102,7 @@ export interface Quoted {
 export type OwnPageReading =
   | { kind: "disagrees"; date: string }
   | { kind: "unreadable" }
-  | { kind: "read"; start?: Quoted; price?: Quoted; ages?: Quoted; description?: string; problems: string[] };
+  | { kind: "read"; start?: Quoted; price?: Quoted; ages?: Quoted; days?: Quoted<Weekday[]>; ticketPage?: string; description?: string; problems: string[] };
 
 export function readOwnPageReply(value: unknown, event: Event, reading: PageReading, timezone: string): OwnPageReading {
   const parsed = ownPageReplySchema.safeParse(value);
@@ -90,7 +111,7 @@ export function readOwnPageReply(value: unknown, event: Event, reading: PageRead
   const day = reply.date?.trim();
   if (day && day !== calendarDate(event.start)) return { kind: "disagrees", date: day };
   const quotable = quotableText(reading);
-  const unmarked = (text: string | null) => (text === null ? "" : withoutLinkMarkers(text, reading.links.length).trim());
+  const unmarked = unmarkedIn(reading);
   const problems: string[] = [];
 
   const time = day ? ownPageTime(reply.time, unmarked(reply.timeEvidence), day, quotable, timezone) : {};
@@ -115,6 +136,8 @@ export function readOwnPageReply(value: unknown, event: Event, reading: PageRead
   };
   const price = stated("price", MAX_PRICE, "price");
   const ages = stated("ages", MAX_AGES, "age limit");
+  const days = event.recurrence === "limited-run" ? statedDays(reply, quotable, unmarked, problems) : undefined;
+  const ticketPage = event.recurrence === "limited-run" && days === undefined ? linkedPage(reply.daysLink, reading, problems) : undefined;
   const description = unmarked(reply.description);
   const describes = description !== "" && description.length <= MAX_DESCRIPTION;
   if (description.length > MAX_DESCRIPTION) problems.push(`its description ran past the ${MAX_DESCRIPTION}-character cap; no description taken`);
@@ -123,9 +146,90 @@ export function readOwnPageReply(value: unknown, event: Event, reading: PageRead
     ...(time.start !== undefined ? { start: time.start } : {}),
     ...(price !== undefined ? { price } : {}),
     ...(ages !== undefined ? { ages } : {}),
+    ...(days !== undefined ? { days } : {}),
+    ...(ticketPage !== undefined ? { ticketPage } : {}),
     ...(describes ? { description } : {}),
     problems,
   };
+}
+
+/**
+ * What a run's ticket page, followed from its own page (#143), gives: its days with their quote, or nothing, with a
+ * line for each problem worth one. Its date, time, price and the rest are the own page's to give, so they are not read.
+ */
+export function readTicketPageReply(value: unknown, reading: PageReading): { kind: "unreadable" } | { kind: "read"; days?: Quoted<Weekday[]>; problems: string[] } {
+  const parsed = ownPageReplySchema.safeParse(value);
+  if (!parsed.success) return { kind: "unreadable" };
+  const problems: string[] = [];
+  const unmarked = unmarkedIn(reading);
+  const days = statedDays(parsed.data, quotableText(reading), unmarked, problems);
+  return { kind: "read", ...(days !== undefined ? { days } : {}), problems };
+}
+
+/**
+ * The weekdays a reply gives a run, in week order and each once, with a quote on the page that names each of them
+ * (givesDays); none when it gives none, or every day of the week, which is what a run without days already means, or
+ * when the quote fails, with a line saying why.
+ */
+function statedDays(
+  reply: z.infer<typeof ownPageReplySchema>,
+  quotable: string,
+  unmarked: (text: string | null) => string,
+  problems: string[],
+): Quoted<Weekday[]> | undefined {
+  const quote = unmarked(reply.daysEvidence);
+  if (reply.days === null || reply.days.length === 0 || !quote) return undefined;
+  const days = WEEKDAYS.filter((d) => reply.days!.includes(d));
+  const problem =
+    days.length === WEEKDAYS.length
+      ? "named every day of the week"
+      : quote.length > MAX_QUOTE
+        ? `its days quote ran past the ${MAX_QUOTE}-character cap`
+        : !quotedOn(quote, quotable)
+          ? `quoted "${quote}" for its days, which is not on the page`
+          : !givesDays(quote, days)
+            ? `quoted "${quote}" for its days, which does not give ${days.join(", ")}`
+            : undefined;
+  if (problem === undefined) return { value: days, quote };
+  problems.push(`${problem}; no days taken`);
+  return undefined;
+}
+
+/** The page a reply's link number names, or none, with a line when the page has no such link. */
+function linkedPage(link: number | null, reading: PageReading, problems: string[]): string | undefined {
+  if (link === null) return undefined;
+  const url = reading.links[link - 1];
+  if (url === undefined) problems.push(`named link ${link} for its performances, which the page does not have; not followed`);
+  return url;
+}
+
+/** Each weekday's names on a page: "Fri", "Friday", "Fridays", "Thurs"; the three-letter form alone needs a word break after it. */
+const DAY_NAMES: Record<Weekday, string> = {
+  Mon: "mon(?:day)?s?",
+  Tue: "tue(?:s|sday)?s?",
+  Wed: "wed(?:nesday)?s?",
+  Thu: "thu(?:r|rs|rsday)?s?",
+  Fri: "fri(?:day)?s?",
+  Sat: "sat(?:urday)?s?",
+  Sun: "sun(?:day)?s?",
+};
+const DAY_NAME = new RegExp(`\\b(?:${WEEKDAYS.map((d) => `(${DAY_NAMES[d]})`).join("|")})\\b\\.?`, "gi");
+/** What joins two weekdays into a span: "Thursday–Sunday", "Thurs - Sun", "Wednesdays through Saturdays". */
+const SPAN_JOIN = /^\s*(?:[-–—]|to|through|thru)\s*$/i;
+
+/**
+ * Whether a quote names every one of the days: by name ("Fridays, Saturdays and Sundays", "Fri & Sat"), inside a span
+ * of them ("Thursday–Sunday"), or as the weekdays of the performances it lists ("Friday 16 October 2026 6:30 pm").
+ */
+export function givesDays(quote: string, days: readonly Weekday[]): boolean {
+  const named = [...quote.matchAll(DAY_NAME)].map((m) => ({ day: WEEKDAYS[m.slice(1).findIndex((g) => g !== undefined)]!, at: m.index, end: m.index + m[0].length }));
+  const covered = new Set(named.map((n) => n.day));
+  for (let i = 1; i < named.length; i++) {
+    const [from, to] = [named[i - 1]!, named[i]!];
+    if (!SPAN_JOIN.test(quote.slice(from.end, to.at))) continue;
+    for (let d = WEEKDAYS.indexOf(from.day); WEEKDAYS[d] !== to.day; d = (d + 1) % WEEKDAYS.length) covered.add(WEEKDAYS[d]!);
+  }
+  return days.every((d) => covered.has(d));
 }
 
 /** The start an own page's time and quote give on the list's date, or why they give none when that is worth a line. */
@@ -137,6 +241,11 @@ function ownPageTime(time: string | null, quote: string, day: string, quotable: 
   if (!quotedOn(quote, quotable)) return { problem: `quoted "${quote}" for its time, which is not on the page` };
   if (!givesTime(quote, at.iso.slice(11, 16))) return { problem: `quoted "${quote}" for its time, which does not give ${time.trim()}` };
   return { start: { value: at.iso, quote } };
+}
+
+/** A reply's text with the page's link markers taken out and trimmed; "" for none. */
+function unmarkedIn(reading: PageReading): (text: string | null) => string {
+  return (text) => (text === null ? "" : withoutLinkMarkers(text, reading.links.length).trim());
 }
 
 /**

@@ -118,6 +118,16 @@ venueAliases:
     expect(JSON.stringify(p.events[0])).not.toContain("Tickets");
   });
 
+  it("carries a run's days, and not their quote; a run without days carries none (#143)", () => {
+    const run = { recurrence: "limited-run" as const, start: "2026-10-14", end: "2026-11-01", eventUrl: "https://www.therecordbar.com/shows/a-show" };
+    const quote = { days: { page: "https://www.therecordbar.com/shows/a-show", quote: "Fridays through Sundays" } };
+    const p = loadPublished(write(dataset([activeEvent({ ...run, days: ["Fri", "Sat", "Sun"], evidence: { ...activeEvent().evidence, ...quote } })])));
+    expect(p.events[0]).toMatchObject({ days: [5, 6, 0], daysLine: "Fri–Sun" });
+    expect(JSON.stringify(p.events[0])).not.toContain("Fridays through");
+    expect(loadPublished(write(dataset([activeEvent(run)]))).events[0]).not.toHaveProperty("days");
+    expect(loadPublished(write(dataset([activeEvent(run)]))).events[0]).not.toHaveProperty("daysLine");
+  });
+
   it.each(["javascript:alert(1)", "data:text/html,hi", "https://www.therecordbar.com/a\nb"])("refuses %j as a link, in the dataset and in the projection", (url) => {
     expect(() => loadPublished(write(dataset([activeEvent({ eventUrl: url })])))).toThrow(/http/);
     const e = { ...activeEvent(), consecutiveOutages: 0 } as Event;
