@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateRange, matches } from "../src/lib/filter";
+import { dateRange, dayCounts, matches } from "../src/lib/filter";
 import { DEFAULT_FILTERS, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
 
@@ -11,6 +11,7 @@ describe("dateRange", () => {
   it("turns presets into inclusive ranges from today", () => {
     expect(dateRange({ preset: "all" }, today)).toBeUndefined();
     expect(dateRange({ preset: "today" }, today)).toEqual({ from: today, to: today });
+    expect(dateRange({ preset: "tomorrow" }, today)).toEqual({ from: "2026-10-06", to: "2026-10-06" });
     expect(dateRange({ preset: "weekend" }, today)).toEqual({ from: today, to: "2026-10-11" });
     expect(dateRange({ preset: "weekend" }, "2026-10-11")).toEqual({ from: "2026-10-11", to: "2026-10-11" });
     expect(dateRange({ preset: "7d" }, today)).toEqual({ from: today, to: "2026-10-11" }); // seven days, today among them
@@ -104,5 +105,15 @@ describe("matches", () => {
     expect(matches(show, f(), "2026-10-10", new Set([show.id]))).toBe(false);
     expect(matches(show, f({ saved: true }), "2026-10-10", new Set([show.id]))).toBe(true);
     expect(matches(show, f({ saved: true }), "2026-10-10", none)).toBe(false);
+  });
+});
+
+describe("dayCounts", () => {
+  const show = event({ id: "show", start: "2026-10-06T19:00:00-05:00" });
+  const run = event({ id: "run", recurrence: "limited-run", start: "2026-10-05", end: "2026-10-07" });
+  const trivia = event({ id: "trivia", recurrence: "recurring", start: undefined, schedule: "Tuesdays" });
+
+  it("counts, for each day from the first, the events the explorer's Today shows on it", () => {
+    expect(dayCounts([show, run, trivia], today, 4)).toEqual({ from: today, counts: [1, 2, 1, 0] });
   });
 });

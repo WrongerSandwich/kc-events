@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { isValidDate, addDays, comingSunday, dayOfMonth, formatDay, formatLong, formatRange, formatShort, formatTime, isDateOnly, localDate, nowIn, todayIn, weekday } from "../src/lib/dates";
+import { isValidDate, addDays, comingSunday, daysBetween, dayOfMonth, formatDay, formatLong, formatRange, formatShort, formatTime, isDateOnly, localDate, nowIn, todayIn, weekday } from "../src/lib/dates";
 import { inTimeZone } from "./fixtures/time-zone";
 
 describe("dates", () => {
   it("takes the local date off either dataset form", () => {
     expect(localDate("2026-10-09T19:00:00-05:00")).toBe("2026-10-09");
     expect(localDate("2026-10-09")).toBe("2026-10-09");
+  });
+
+  it("counts the days between two dates, across the DST change, either way", () => {
+    expect(daysBetween("2026-10-05", "2026-10-05")).toBe(0);
+    expect(daysBetween("2026-10-30", "2026-11-03")).toBe(4);
+    expect(daysBetween("2026-10-06", "2026-10-05")).toBe(-1);
   });
 
   it("adds days across month, year, and the DST change without drift", () => {

@@ -4,6 +4,7 @@ import { formatDay, localDate } from "../lib/dates";
 import { siteConfig } from "../site.config";
 import Mark from "./Mark.astro";
 import SavedLink from "./SavedLink.svelte";
+import TonightLink from "./TonightLink.svelte";
 
 // `wide` matches the header's width to the page's main column (the explorer is wide; everything else is the measure).
 interface Props { wide?: boolean }
@@ -21,7 +22,10 @@ const runDay = localDate(meta.lastSuccessfulRun);
         <a href="/about">About</a>
       </nav>
     </div>
-    <p class="stamp">Researched weekly, last on <time datetime={runDay}>{formatDay(runDay)}</time></p>
+    <div class="sub">
+      <p class="stamp">Researched weekly, last on <time datetime={runDay}>{formatDay(runDay)}</time></p>
+      <TonightLink client:idle />
+    </div>
   </div>
   <!-- The staleness banner, when the run is old: inside the header so it sits right under the site's name. -->
   <slot />
@@ -64,6 +68,8 @@ const runDay = localDate(meta.lastSuccessfulRun);
   nav { display: flex; margin-right: calc(-1 * var(--space-2)); }
   nav :global(a) { display: inline-flex; align-items: center; min-height: var(--tap); padding-inline: var(--space-2); font-size: var(--text-sm); color: var(--fg-muted); }
   nav :global(a:hover) { color: var(--fg); text-decoration: none; }
+  /* The stamp, then what is on tonight at the row's other end; on a phone too narrow for both, it wraps beneath. */
+  .sub { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0 var(--space-3); }
   .stamp { font-size: var(--text-xs); color: var(--fg-faint); }
   /* "KC This Week" is three words: on a phone the name sets smaller and tighter so the nav keeps its row, with room
      to spare while the fallback faces (wider than Josefin and Geist) stand in, or the nav would wrap and then jump. */

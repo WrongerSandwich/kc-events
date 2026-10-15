@@ -64,6 +64,7 @@ describe("query state", () => {
 
   it("keeps the first of a repeated when only if it is valid", () => {
     expect(parse("when=7d&when=today").when).toEqual({ preset: "7d" });
+    expect(parse("when=tomorrow").when).toEqual({ preset: "tomorrow" });
     expect(parse("when=soon&when=today").when).toEqual({ preset: "all" });
   });
 

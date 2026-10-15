@@ -47,6 +47,11 @@ export function addDays(date: string, n: number): string {
   return fromUtc(utc(date) + n * DAY_MS);
 }
 
+/** The days from `from` to `to`: addDays(from, daysBetween(from, to)) is `to`. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((utc(to) - utc(from)) / DAY_MS);
+}
+
 /** 9 for "2026-10-09". */
 export function dayOfMonth(date: string): number {
   return parts(date)[2];

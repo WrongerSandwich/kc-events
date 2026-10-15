@@ -676,6 +676,25 @@ test("the staleness banner appears after nine days", async ({ page }) => {
   await expect(page.getByRole("status").filter({ hasText: "last researched" })).toContainText("This list was last researched on Oct 5 and may have missed changes since.");
 });
 
+// The header's Tonight line (#134), on every kind of page.
+for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/about"]) {
+  test(`${path} says in its header what is on tonight`, async ({ page }) => {
+    await on(page, BUILD_DAY, path);
+    const line = page.locator("header.site-header").getByRole("link", { name: /^(Tonight: \d+ events?|Nothing listed tonight)$/ });
+    await expect(line).toHaveAttribute("href", "/explore?when=today");
+  });
+}
+
+test("the header's Tonight count is the explorer's Today, and from 10 pm tomorrow's", async ({ page }) => {
+  for (const [when, label] of [[BUILD_DAY, "Tonight"], [new Date("2026-10-06T03:30:00Z"), "Tomorrow"]] as const) { // noon; 10:30 pm Monday
+    await on(page, when, "/");
+    const line = page.locator("header.site-header").getByRole("link", { name: new RegExp(`^${label}: `) });
+    const count = /: (\d+ events?)$/.exec((await line.textContent())!)![1]!;
+    await line.click();
+    await expect(page.locator(".explorer .slice .count")).toHaveText(count);
+  }
+});
+
 test("the dataset is published as the projection, and llms.txt and the sitemap point at the pages", async ({ request }) => {
   const json = await (await request.get("/events.json")).text();
   // Eleven in the fixture; the past one is not published, and no job internals are.

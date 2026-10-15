@@ -1,7 +1,7 @@
 import { formatRange, formatShort, isValidDate } from "./dates";
 import { slugify, slugTable } from "./slugs";
 
-export const WHEN_PRESETS = ["today", "fri-sun", "weekend", "7d", "30d", "all"] as const;
+export const WHEN_PRESETS = ["today", "tomorrow", "fri-sun", "weekend", "7d", "30d", "all"] as const;
 export type WhenPreset = (typeof WHEN_PRESETS)[number];
 /**
  * The presets' names in the filter rail and in the empty state's summary. `weekend` is older than "This weekend" and
@@ -9,6 +9,7 @@ export type WhenPreset = (typeof WHEN_PRESETS)[number];
  */
 export const WHEN_LABELS: Record<WhenPreset, string> = {
   today: "Today",
+  tomorrow: "Tomorrow",
   "fri-sun": "This weekend",
   weekend: "Through Sunday",
   "7d": "Next 7 days",

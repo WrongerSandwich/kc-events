@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { PRODUCT, USER_AGENT } from "../../src/adapters/identity";
-import { MAX_PICKS, writeGenerated } from "../src/build/write-generated";
+import { MAX_PICKS, TONIGHT_DAYS, writeGenerated } from "../src/build/write-generated";
 import { activeEvent, configYaml, dataset } from "./fixtures/dataset";
 import { tempDir } from "./fixtures/temp-dir";
 
@@ -44,6 +44,11 @@ describe("writeGenerated", () => {
     // The about page's user agent and the footer's geography come from the job, so they cannot drift from it (#93).
     expect(exported(join(outDir, "about.ts"))).toEqual({ crawler: PRODUCT, userAgent: USER_AGENT, geography: "Kansas City metro on both sides of the state line, plus Lawrence" });
     expect(meta).not.toHaveProperty("about");
+    // The header's Tonight line (#134): each day's count of published events on it, from the build's day for TONIGHT_DAYS.
+    const tonight = exported(join(outDir, "tonight.ts"));
+    expect(tonight.from).toBe("2026-10-05");
+    expect(tonight.counts).toHaveLength(TONIGHT_DAYS);
+    expect(tonight.counts.slice(0, 6)).toEqual([0, 0, 0, 0, 2, 0]);
     const published = JSON.parse(readFileSync(join(publicDir, "events.json"), "utf8"));
     expect(Object.keys(published)).toEqual(["schemaVersion", "generatedAt", "lastSuccessfulRun", "events"]);
     expect(published).toMatchObject({ schemaVersion: 2, generatedAt: "2026-10-05T14:00:00.000Z", lastSuccessfulRun: "2026-10-05T06:30:00-05:00" });

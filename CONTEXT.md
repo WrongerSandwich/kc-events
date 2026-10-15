@@ -198,6 +198,9 @@ The page explaining how the site is made and where to report a wrong listing.
 **Staleness banner**:
 The notice shown on every page when the last successful run is more than nine days old. The site cannot see a failed run (a failed run commits nothing), so age is the proxy: a weekly cadence plus two days of slack.
 
+**Tonight line**:
+The header's count of what is on today, on every page: "Tonight: N events", or "Nothing listed tonight", linking to the explorer's Today; from 10 pm the reader's time, tomorrow's count and the explorer's Tomorrow. It is the explorer's Today rule, counted per day at build and read for the reader's day.
+
 **Explorer**:
 The page that lets a reader slice every active event by date, kind, region, don't-miss, recurrence, and search, with the filters in the URL so a view can be shared.
 _Avoid_: browse page, search page, list view

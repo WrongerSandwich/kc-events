@@ -1,7 +1,7 @@
 import { addDays, comingSunday } from "./dates";
 import { firstDay, isDated, isPast, lastDay, playsOn } from "./events";
 import { fold } from "./fold";
-import type { Filters, When } from "./query";
+import { DEFAULT_FILTERS, type Filters, type When } from "./query";
 import type { PublishedEvent } from "./types";
 
 /** The inclusive local-date range a When means from today; undefined is everything. */
@@ -10,6 +10,7 @@ export function dateRange(when: When, today: string): { from: string; to: string
   switch (when.preset) {
     case "all": return undefined;
     case "today": return { from: today, to: today };
+    case "tomorrow": return { from: addDays(today, 1), to: addDays(today, 1) };
     case "fri-sun": {
       // Friday is two days before the coming Sunday; once it has come, the weekend runs from today.
       const sunday = comingSunday(today);
@@ -37,6 +38,17 @@ function inRange(e: PublishedEvent, range: { from: string; to: string }): boolea
   if (first > range.to || last < range.from) return false;
   // A run with days must play on one of the range's days it is open (#143).
   return e.days === undefined || nextPlayingDay(e, first > range.from ? first : range.from, last < range.to ? last : range.to) !== undefined;
+}
+
+/**
+ * How many events the explorer's Today shows on each of `days` days from `from`, in order: the header's "Tonight" line
+ * (#134), counted at build so no page but the explorer carries the events.
+ */
+export function dayCounts(events: readonly PublishedEvent[], from: string, days: number): { from: string; counts: number[] } {
+  const today: Filters = { ...DEFAULT_FILTERS, when: { preset: "today" } };
+  const counts: number[] = [];
+  for (let i = 0, d = from; i < days; i++, d = addDays(d, 1)) counts.push(events.filter((e) => matches(e, today, d, new Set())).length);
+  return { from, counts };
 }
 
 /** Everything a search looks in, folded as the terms are, so "cafe" finds "Café" and "johnson county" a region. */
