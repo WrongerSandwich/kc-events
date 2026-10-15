@@ -2,6 +2,7 @@
   import { formatShort, localDate } from "../lib/dates";
   import { hostOf, detailsUrl, isPast, lastDay, venueLine } from "../lib/events";
   import { rowDateLine } from "../lib/group";
+  import { venuePath } from "../lib/venues";
   import type { PublishedEvent } from "../lib/types";
   import KindChip from "./KindChip.svelte";
   import SaveButton from "./SaveButton.svelte";
@@ -20,7 +21,9 @@
   <div class="title">
     <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if passed}<span class="passed-tag">Passed</span>{:else if event.dontMiss}<span class="dont-miss">Don't miss</span>{/if}
   </div>
-  <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><span class="venue">{venueLine(event)}</span><span class="hood">{` · ${event.neighborhood}`}</span></span>
+  <!-- The venue's page (#137), out of the Tab order like the host, so a row stays two stops; the event page links it too.
+       On the venue page itself it is that page, which costs the explorer nothing to leave. -->
+  <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><a class="venue" href={venuePath(event.venue)} tabindex="-1">{venueLine(event)}</a><span class="hood">{` · ${event.neighborhood}`}</span></span>
   <KindChip kind={event.kind} />
   <!-- Out of the Tab order, so a row is two stops (title, Save); the event page links the source too. -->
   <a class="host" href={detailsUrl(event)} title={hostOf(detailsUrl(event))} tabindex="-1">{hostOf(detailsUrl(event))}</a>
@@ -62,6 +65,8 @@
   /* Venue and neighborhood give way together, in proportion to their length; from 1024 px only the venue does. */
   .where { display: flex; }
   .venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  /* The venue link reads as the detail it is, in the line's colour; base.css underlines it on hover. */
+  a.venue { color: inherit; }
   .hood { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
   /* Below 800 px the host and the verified stamp leave the row; the event page keeps both. */
   .host, .verified { display: none; }

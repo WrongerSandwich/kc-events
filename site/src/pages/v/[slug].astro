@@ -1,0 +1,47 @@
+---
+import Base from "../../layouts/Base.astro";
+import UiIcon from "../../components/UiIcon.svelte";
+import VenueEvents from "../../components/VenueEvents.svelte";
+import { origin } from "../../build/origin";
+import { events } from "../../generated/events";
+import { venues } from "../../generated/venues";
+import { hostOf } from "../../lib/events";
+import type { PublishedEvent, PublishedVenue } from "../../lib/types";
+import { addressLine, mapUrl, venueJsonLd, venueSlug } from "../../lib/venues";
+
+export function getStaticPaths() {
+  return venues.map((venue) => ({ params: { slug: venue.slug }, props: { venue, events: events.filter((e) => venueSlug(e.venue) === venue.slug) } }));
+}
+const { venue, events: here } = Astro.props as { venue: PublishedVenue; events: PublishedEvent[] };
+
+// A neighborhood that is its own region (Lawrence, Elsewhere in the metro) is named once, as on the event page.
+const area = venue.neighborhood === undefined ? undefined : venue.region !== venue.neighborhood ? `${venue.neighborhood} · ${venue.region}` : venue.neighborhood;
+const where = venue.address !== undefined ? addressLine(venue.address) : venue.neighborhood;
+const description = `What's coming up at ${venue.name}${where === undefined ? "" : `, ${where}`}: ${here.length === 1 ? "1 event" : `${here.length} events`}, checked weekly against the venue's own listings.`;
+const jsonLd = venueJsonLd(venue, new URL(`/v/${venue.slug}`, origin).toString());
+---
+<Base title={venue.name} description={description} jsonLd={jsonLd} wide>
+  <header class="head">
+    <h1>{venue.name}</h1>
+    {venue.address !== undefined && <p class="address">{addressLine(venue.address)}</p>}
+    {area !== undefined && <p class="area">{area}</p>}
+    {(venue.geo !== undefined || venue.url !== undefined) && (
+      <p class="links">
+        {venue.geo !== undefined && <a href={mapUrl(venue.geo)}><UiIcon name="map-pin" />Map</a>}
+        {venue.url !== undefined && <a href={venue.url}><UiIcon name="link" />{hostOf(venue.url)}</a>}
+      </p>
+    )}
+  </header>
+  <section aria-label={`Events at ${venue.name}`}>
+    <VenueEvents events={here} />
+  </section>
+</Base>
+
+<style>
+  .head { margin: var(--space-8) 0 var(--space-4); }
+  h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: 0 0 var(--space-2); }
+  .address { margin: 0; }
+  .area { margin: 0; color: var(--fg-muted); }
+  .links { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: var(--space-3) 0 0; }
+  .links a { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--tap); }
+</style>
