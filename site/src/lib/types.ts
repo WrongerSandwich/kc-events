@@ -60,6 +60,9 @@ export type PublishedDataset = {
   events: (PublishedEvent & { description?: string })[];
 };
 
+/** Each day's count of events the explorer's Today shows on it, from `from` (dayCounts in filter.ts, at build); the header's Tonight line reads it. */
+export type PublishedTonight = { from: string; counts: number[] };
+
 /** What the site says about the job, taken from the job so the words cannot drift from it; only Astro pages read it. */
 export type PublishedAbout = {
   /** The product token in the user agent, which a robots.txt group names. */

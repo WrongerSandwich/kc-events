@@ -42,7 +42,7 @@ export function writeGenerated(opts: { datasetPath: string; configPath: string; 
   writeFileSync(join(opts.outDir, "descriptions.ts"), `${header}import type { PublishedDescriptions } from "../lib/types";\nexport const descriptions: PublishedDescriptions = ${JSON.stringify(descriptions)};\n`);
   writeFileSync(join(opts.outDir, "changes.ts"), `${header}import type { PublishedChanges } from "../lib/types";\nexport const changes: PublishedChanges = ${JSON.stringify(changes)};\n`);
   writeFileSync(join(opts.outDir, "about.ts"), `${header}import type { PublishedAbout } from "../lib/types";\nexport const about: PublishedAbout = ${JSON.stringify(about)};\n`);
-  writeFileSync(join(opts.outDir, "tonight.ts"), `${header}import type { DayCounts } from "../lib/tonight";\nexport const tonight: DayCounts = ${JSON.stringify(dayCounts(events, meta.buildToday, TONIGHT_DAYS))};\n`);
+  writeFileSync(join(opts.outDir, "tonight.ts"), `${header}import type { PublishedTonight } from "../lib/types";\nexport const tonight: PublishedTonight = ${JSON.stringify(dayCounts(events, meta.buildToday, TONIGHT_DAYS))};\n`);
   const dontMiss = events.filter((e) => e.dontMiss);
   writeFileSync(join(opts.outDir, "dont-miss.ts"), `${header}import type { PublishedEvent } from "../lib/types";\nexport const dontMiss: PublishedEvent[] = ${JSON.stringify(dontMiss)};\n`);
   if (dontMiss.length > MAX_PICKS) {

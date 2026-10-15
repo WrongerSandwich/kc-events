@@ -2,7 +2,7 @@ import { addDays, comingSunday } from "./dates";
 import { firstDay, isDated, isPast, lastDay, playsOn } from "./events";
 import { fold } from "./fold";
 import { DEFAULT_FILTERS, type Filters, type When } from "./query";
-import type { PublishedEvent } from "./types";
+import type { PublishedEvent, PublishedTonight } from "./types";
 
 /** The inclusive local-date range a When means from today; undefined is everything. */
 export function dateRange(when: When, today: string): { from: string; to: string } | undefined {
@@ -44,7 +44,7 @@ function inRange(e: PublishedEvent, range: { from: string; to: string }): boolea
  * How many events the explorer's Today shows on each of `days` days from `from`, in order: the header's "Tonight" line
  * (#134), counted at build so no page but the explorer carries the events.
  */
-export function dayCounts(events: readonly PublishedEvent[], from: string, days: number): { from: string; counts: number[] } {
+export function dayCounts(events: readonly PublishedEvent[], from: string, days: number): PublishedTonight {
   const today: Filters = { ...DEFAULT_FILTERS, when: { preset: "today" } };
   const counts: number[] = [];
   for (let i = 0, d = from; i < days; i++, d = addDays(d, 1)) counts.push(events.filter((e) => matches(e, today, d, new Set())).length);

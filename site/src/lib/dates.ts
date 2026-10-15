@@ -109,10 +109,15 @@ export function formatRange(from: string, to: string): string {
   return fm === tm ? `${SHORT_MONTHS[fm - 1]} ${fd}–${td}` : `${SHORT_MONTHS[fm - 1]} ${fd}–${SHORT_MONTHS[tm - 1]} ${td}`;
 }
 
+/** The local hour, 0 to 23, of a date-time. */
+export function hourOf(iso: string): number {
+  return Number(iso.slice(11, 13));
+}
+
 /** "7:00 pm" from the local wall time in a date-time; the offset is ignored because the time is already local. */
 export function formatTime(iso: string): string {
   if (isDateOnly(iso)) throw new Error(`formatTime needs a date-time, got the date-only ${iso}; check isDateOnly first`);
-  const h = Number(iso.slice(11, 13));
+  const h = hourOf(iso);
   const mm = iso.slice(14, 16);
   const suffix = h < 12 ? "am" : "pm";
   const h12 = h % 12 === 0 ? 12 : h % 12;
