@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateRange, dayCounts, matches } from "../src/lib/filter";
+import { dateRange, dayStarts, matches } from "../src/lib/filter";
 import { DEFAULT_FILTERS, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
 
@@ -108,12 +108,15 @@ describe("matches", () => {
   });
 });
 
-describe("dayCounts", () => {
+describe("dayStarts", () => {
   const show = event({ id: "show", start: "2026-10-06T19:00:00-05:00" });
   const run = event({ id: "run", recurrence: "limited-run", start: "2026-10-05", end: "2026-10-07" });
+  const opening = event({ id: "opening", recurrence: "limited-run", start: "2026-10-06T19:30:00-05:00", end: "2026-10-20" });
+  const fest = event({ id: "fest", start: "2026-10-05T12:00:00-05:00", end: "2026-10-07T22:00:00-05:00" });
   const trivia = event({ id: "trivia", recurrence: "recurring", start: undefined, schedule: "Tuesdays" });
 
-  it("counts, for each day from the first, the events the explorer's Today shows on it", () => {
-    expect(dayCounts([show, run, trivia], today, 4)).toEqual({ from: today, counts: [1, 2, 1, 0] });
+  it("gives each day's own events, from the explorer's Today less the runs begun before it, as the minute each starts", () => {
+    // 1440 is on all day: an untimed start, or a day after an event's first. The run counts on its opening day alone.
+    expect(dayStarts([show, run, opening, fest, trivia], today, 4)).toEqual({ from: today, starts: [[720, 1440], [1140, 1170, 1440], [1440], []] });
   });
 });

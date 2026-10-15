@@ -114,6 +114,11 @@ export function hourOf(iso: string): number {
   return Number(iso.slice(11, 13));
 }
 
+/** The local minutes since midnight, 0 to 1439, of a date-time. */
+export function minuteOfDay(iso: string): number {
+  return hourOf(iso) * 60 + Number(iso.slice(14, 16));
+}
+
 /** "7:00 pm" from the local wall time in a date-time; the offset is ignored because the time is already local. */
 export function formatTime(iso: string): string {
   if (isDateOnly(iso)) throw new Error(`formatTime needs a date-time, got the date-only ${iso}; check isDateOnly first`);

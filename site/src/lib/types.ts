@@ -60,8 +60,8 @@ export type PublishedDataset = {
   events: (PublishedEvent & { description?: string })[];
 };
 
-/** Each day's count of events the explorer's Today shows on it, from `from` (dayCounts in filter.ts, at build); the header's Tonight line reads it. */
-export type PublishedTonight = { from: string; counts: number[] };
+/** Each day from `from`, as the minutes its own events start (dayStarts in filter.ts, at build); the header's Tonight line reads it. */
+export type PublishedTonight = { from: string; starts: number[][] };
 
 /** What the site says about the job, taken from the job so the words cannot drift from it; only Astro pages read it. */
 export type PublishedAbout = {

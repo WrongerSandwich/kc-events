@@ -8,7 +8,7 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { dayCounts } from "../lib/filter";
+import { dayStarts } from "../lib/filter";
 import type { PublishedDataset } from "../lib/types";
 import { loadPublished } from "./load-dataset.ts";
 
@@ -19,12 +19,12 @@ import { loadPublished } from "./load-dataset.ts";
 export const PUBLISHED_SCHEMA_VERSION = 2;
 
 /** What the front page may weigh on real data: HTML, CSS, and JS, gzipped. */
-export const FRONT_PAGE_BYTES = 50_900; // 50 KB, plus 200 bytes for a run's days (#143) and 700 for the header's Tonight line (#134)
+export const FRONT_PAGE_BYTES = 51_000; // 50 KB, plus 200 bytes for a run's days (#143) and 800 for the header's Tonight line (#134)
 /**
- * How many days, from the build's, the header's Tonight line has a count for (#134): past the staleness banner and
- * the research horizon both, so a page served until the next run always has one.
+ * How many days, from the build's, the header's Tonight line has a count for (#134): past the staleness banner (every
+ * run rebuilds the site), and no further, since each day's start times weigh on every page.
  */
-export const TONIGHT_DAYS = 42;
+export const TONIGHT_DAYS = 14;
 
 /**
  * The most don't-miss picks the front page was sized for: its code budget, measured on the fixture build, leaves room
@@ -42,7 +42,7 @@ export function writeGenerated(opts: { datasetPath: string; configPath: string; 
   writeFileSync(join(opts.outDir, "descriptions.ts"), `${header}import type { PublishedDescriptions } from "../lib/types";\nexport const descriptions: PublishedDescriptions = ${JSON.stringify(descriptions)};\n`);
   writeFileSync(join(opts.outDir, "changes.ts"), `${header}import type { PublishedChanges } from "../lib/types";\nexport const changes: PublishedChanges = ${JSON.stringify(changes)};\n`);
   writeFileSync(join(opts.outDir, "about.ts"), `${header}import type { PublishedAbout } from "../lib/types";\nexport const about: PublishedAbout = ${JSON.stringify(about)};\n`);
-  writeFileSync(join(opts.outDir, "tonight.ts"), `${header}import type { PublishedTonight } from "../lib/types";\nexport const tonight: PublishedTonight = ${JSON.stringify(dayCounts(events, meta.buildToday, TONIGHT_DAYS))};\n`);
+  writeFileSync(join(opts.outDir, "tonight.ts"), `${header}import type { PublishedTonight } from "../lib/types";\nexport const tonight: PublishedTonight = ${JSON.stringify(dayStarts(events, meta.buildToday, TONIGHT_DAYS))};\n`);
   const dontMiss = events.filter((e) => e.dontMiss);
   writeFileSync(join(opts.outDir, "dont-miss.ts"), `${header}import type { PublishedEvent } from "../lib/types";\nexport const dontMiss: PublishedEvent[] = ${JSON.stringify(dontMiss)};\n`);
   if (dontMiss.length > MAX_PICKS) {

@@ -199,7 +199,7 @@ The page explaining how the site is made and where to report a wrong listing.
 The notice shown on every page when the last successful run is more than nine days old. The site cannot see a failed run (a failed run commits nothing), so age is the proxy: a weekly cadence plus two days of slack.
 
 **Tonight line**:
-The header's count of what is on today, on every page: "Tonight: N events", or "Nothing listed tonight", linking to the explorer's Today; from 10 pm the reader's time, tomorrow's count and the explorer's Tomorrow. It is the explorer's Today rule, counted per day at build and read for the reader's day.
+The header's count, on every page, of today's own events still to start by the reader's clock: "Tonight: N events", "Nothing more listed tonight" once all have begun, or "Nothing listed tonight", linking to the explorer's Today; from 10 pm the reader's time, all of tomorrow's and the explorer's Tomorrow. A day's own events are the explorer's Today less the runs begun before it (those are on now, not tonight); an untimed one counts all day. Each day's start times are taken at build, for two weeks, and read for the reader's day.
 
 **Explorer**:
 The page that lets a reader slice every active event by date, kind, region, don't-miss, recurrence, and search, with the filters in the URL so a view can be shared.

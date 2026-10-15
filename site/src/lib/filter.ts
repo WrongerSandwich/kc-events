@@ -1,7 +1,8 @@
-import { addDays, comingSunday } from "./dates";
+import { addDays, comingSunday, isDateOnly, minuteOfDay } from "./dates";
 import { firstDay, isDated, isPast, lastDay, playsOn } from "./events";
 import { fold } from "./fold";
 import { DEFAULT_FILTERS, type Filters, type When } from "./query";
+import { ALL_DAY } from "./tonight";
 import type { PublishedEvent, PublishedTonight } from "./types";
 
 /** The inclusive local-date range a When means from today; undefined is everything. */
@@ -41,14 +42,19 @@ function inRange(e: PublishedEvent, range: { from: string; to: string }): boolea
 }
 
 /**
- * How many events the explorer's Today shows on each of `days` days from `from`, in order: the header's "Tonight" line
- * (#134), counted at build so no page but the explorer carries the events.
+ * Each of `days` days from `from`, in order, as the minutes its own events start (1440 for one on all day), for the
+ * header's "Tonight" line (#134); at build, so no page but the explorer carries the events. A day's own events are
+ * the explorer's Today on it less the runs begun before it, which are on now, not tonight.
  */
-export function dayCounts(events: readonly PublishedEvent[], from: string, days: number): PublishedTonight {
+export function dayStarts(events: readonly PublishedEvent[], from: string, days: number): PublishedTonight {
   const today: Filters = { ...DEFAULT_FILTERS, when: { preset: "today" } };
-  const counts: number[] = [];
-  for (let i = 0, d = from; i < days; i++, d = addDays(d, 1)) counts.push(events.filter((e) => matches(e, today, d, new Set())).length);
-  return { from, counts };
+  const starts: number[][] = [];
+  for (let i = 0, d = from; i < days; i++, d = addDays(d, 1)) {
+    const own = events.filter((e) => matches(e, today, d, new Set()) && !(e.recurrence === "limited-run" && firstDay(e) !== d));
+    // An untimed start, and every day after an event's first, is all day.
+    starts.push(own.map((e) => (firstDay(e) === d && !isDateOnly(e.start!) ? minuteOfDay(e.start!) : ALL_DAY)).sort((a, b) => a - b));
+  }
+  return { from, starts };
 }
 
 /** Everything a search looks in, folded as the terms are, so "cafe" finds "Café" and "johnson county" a region. */

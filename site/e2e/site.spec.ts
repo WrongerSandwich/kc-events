@@ -685,14 +685,23 @@ for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/about"]) {
   });
 }
 
-test("the header's Tonight count is the explorer's Today, and from 10 pm tomorrow's", async ({ page }) => {
-  for (const [when, label] of [[BUILD_DAY, "Tonight"], [new Date("2026-10-06T03:30:00Z"), "Tomorrow"]] as const) { // noon; 10:30 pm Monday
-    await on(page, when, "/");
-    const line = page.locator("header.site-header").getByRole("link", { name: new RegExp(`^${label}: `) });
-    const count = /: (\d+ events?)$/.exec((await line.textContent())!)![1]!;
-    await line.click();
-    await expect(page.locator(".explorer .slice .count")).toHaveText(count);
-  }
+test("the header counts tonight's own events still to start, and from 10 pm tomorrow's", async ({ page }) => {
+  const line = page.locator("header.site-header .tonight");
+  // Monday noon: the exhibition is on now, not tonight, and nothing else is on.
+  await on(page, BUILD_DAY, "/");
+  await expect(line).toHaveText("Nothing listed tonight");
+  // Tuesday: the 7 pm show, until it begins.
+  await on(page, new Date("2026-10-06T17:00:00Z"), "/");
+  await expect(line).toHaveText("Tonight: 1 event");
+  await on(page, new Date("2026-10-07T00:05:00Z"), "/"); // 7:05 pm
+  await expect(line).toHaveText("Nothing more listed tonight");
+  // Monday 10:30 pm: Tuesday's show, and the explorer's Tomorrow lists it under Tuesday's heading.
+  await on(page, new Date("2026-10-06T03:30:00Z"), "/");
+  await expect(line).toHaveText("Tomorrow: 1 event");
+  await line.click();
+  await expect(page).toHaveURL(/\/explore\?when=tomorrow$/);
+  await expect(page.locator(".results h2", { hasText: "Tue Oct 6" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 3, name: "Fabio Frizzi plays Fulci" })).toBeVisible();
 });
 
 test("the dataset is published as the projection, and llms.txt and the sitemap point at the pages", async ({ request }) => {
