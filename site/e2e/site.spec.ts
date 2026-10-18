@@ -695,7 +695,7 @@ test("a venue page gives the venue's address, map, and site, then its events by 
   await expect(page).toHaveURL(/\/v\/recordbar$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("recordBar");
   await expect(page.getByText("1520 Grand Blvd, Kansas City, MO 64108")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Map" })).toHaveAttribute("href", "https://www.google.com/maps/search/?api=1&query=39.0929,-94.5812");
+  await expect(page.getByRole("link", { name: "Map" })).toHaveAttribute("href", "https://www.google.com/maps/search/?api=1&query=recordBar%2C%201520%20Grand%20Blvd%2C%20Kansas%20City%2C%20MO%2064108");
   await expect(page.getByRole("link", { name: "therecordbar.com" })).toHaveAttribute("href", "https://www.therecordbar.com/");
   await expect(page.getByRole("heading", { level: 2 })).toHaveText(["Tue Oct 6"]);
   await expect(page.getByRole("heading", { level: 3 })).toHaveText(["Fabio Frizzi plays Fulci"]);

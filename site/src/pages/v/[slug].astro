@@ -19,15 +19,16 @@ const hood = venue.neighborhood === undefined ? undefined : neighborhoodLine(ven
 const where = venue.address !== undefined ? addressLine(venue.address) : venue.neighborhood;
 const description = `${here.length === 0 ? "Events at" : "Upcoming events at"} ${venue.name}${where === undefined ? "" : `, ${where}`}.`;
 const jsonLd = venueJsonLd(venue, new URL(`/v/${venue.slug}`, origin).toString());
+const map = mapUrl(venue);
 ---
 <Base title={venue.name} description={description} jsonLd={jsonLd} wide>
   <header class="venue-head">
     <h1>{venue.name}</h1>
     {venue.address !== undefined && <p>{addressLine(venue.address)}</p>}
     {hood !== undefined && <p class="venue-hood">{hood}</p>}
-    {(venue.geo !== undefined || venue.url !== undefined) && (
+    {(map !== undefined || venue.url !== undefined) && (
       <p class="venue-links">
-        {venue.geo !== undefined && <a href={mapUrl(venue.geo)}><UiIcon name="map-pin" />Map</a>}
+        {map !== undefined && <a href={map}><UiIcon name="map-pin" />Map</a>}
         {venue.url !== undefined && <a href={venue.url}><UiIcon name="link" />{hostOf(venue.url)}</a>}
       </p>
     )}

@@ -43,9 +43,14 @@ export function addressLine(a: VenueAddress): string {
   return `${a.street}, ${a.locality}, ${a.region} ${a.postalCode}`;
 }
 
-/** A map search for the venue's position; a link, never an embedded map or a third-party script. */
-export function mapUrl(geo: Geo): string {
-  return `https://www.google.com/maps/search/?api=1&query=${geo.lat},${geo.lng}`;
+/**
+ * A map search for the venue; a link, never an embedded map or a third-party script. By name and address, so the map
+ * opens the venue's own listing rather than a bare pin; a row with no address (a district) goes by its position.
+ * Undefined for a venue with neither.
+ */
+export function mapUrl(v: PublishedVenue): string | undefined {
+  const query = v.address !== undefined ? encodeURIComponent(`${v.name}, ${addressLine(v.address)}`) : v.geo !== undefined ? `${v.geo.lat},${v.geo.lng}` : undefined;
+  return query === undefined ? undefined : `https://www.google.com/maps/search/?api=1&query=${query}`;
 }
 
 /** schema.org PostalAddress for a table row's address. */

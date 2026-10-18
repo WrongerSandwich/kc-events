@@ -195,9 +195,19 @@ describe("venueDirectory", () => {
 });
 
 describe("venue helpers", () => {
-  it("writes the address on one line and the map link by position", () => {
+  it("writes the address on one line", () => {
     expect(addressLine(kauffman.address!)).toBe("1601 Broadway Blvd, Kansas City, MO 64108");
-    expect(mapUrl(kauffman.geo!)).toBe("https://www.google.com/maps/search/?api=1&query=39.0937,-94.5857");
+  });
+
+  it("searches the map by name and address, so it opens the venue's listing, not a bare pin", () => {
+    expect(mapUrl({ slug: "k", ...kauffman })).toBe(
+      "https://www.google.com/maps/search/?api=1&query=Kauffman%20Center%20for%20the%20Performing%20Arts%2C%201601%20Broadway%20Blvd%2C%20Kansas%20City%2C%20MO%2064108",
+    );
+  });
+
+  it("searches the map by position for a row with no address, and has no map for a venue with neither", () => {
+    expect(mapUrl({ slug: "crossroads", name: "Crossroads Arts District", geo: { lat: 39.0901, lng: -94.5837 } })).toBe("https://www.google.com/maps/search/?api=1&query=39.0901,-94.5837");
+    expect(mapUrl({ slug: "recordbar", name: "recordBar" })).toBeUndefined();
   });
 
   it("describes a venue with a row as a Place with its address, position, and site", () => {
