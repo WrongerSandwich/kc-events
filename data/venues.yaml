@@ -1,7 +1,8 @@
 # The venue table (#137, ADR 0013): one row per venue, keyed on its display name as the site shows it. Read by the
 # site's build only. A row: name, address as "<street>, <city>, <MO|KS> <ZIP>", then optionally lat and lng (both or
-# neither, looked up, never from memory) and url, the venue's own site. Check a row by opening the map link on its
-# page, /v/<slug>. A venue with no row still has a page, with its events alone.
+# neither, looked up, never from memory) and url, the venue's own site; a district with no one street address gives
+# lat and lng alone. Check a row by opening the map link on its page, /v/<slug>. A venue with no row still has a
+# page, with its events alone.
 #
 # Drafted 2026-10-14 from each venue's own site (or, where it states none, a listing that agrees with OpenStreetMap),
 # with coordinates from OpenStreetMap Nominatim.
@@ -191,3 +192,18 @@
   lat: 39.090294
   lng: -94.560402
   url: https://www.zhoubartcenterkc.com/
+- name: American Jazz Museum
+  address: 1616 E 18th St, Kansas City, MO 64108
+  lat: 39.091449
+  lng: -94.562864
+  url: https://americanjazzmuseum.org/
+- name: Union Station Kansas City
+  address: 30 W Pershing Rd, Kansas City, MO 64108
+  lat: 39.085304
+  lng: -94.585770
+  url: https://www.unionstation.org/
+# A district, so a position and no address: the Crossroads streetcar stop, Main at 19th, in its core.
+- name: Crossroads Arts District
+  lat: 39.090101
+  lng: -94.583744
+  url: https://kccrossroads.org/

@@ -65,6 +65,16 @@ describe("readVenueTable", () => {
     ]);
   });
 
+  it("takes a district's row with a position and no address", () => {
+    expect(readVenueTable(table("- name: Crossroads Arts District\n  lat: 39.0901\n  lng: -94.5837\n"))).toEqual([
+      { name: "Crossroads Arts District", geo: { lat: 39.0901, lng: -94.5837 } },
+    ]);
+  });
+
+  it("refuses a row with neither an address nor a position", () => {
+    expect(() => readVenueTable(table("- name: recordBar\n  url: https://www.therecordbar.com/\n"))).toThrow(/row "recordBar": row has neither an address nor a position/);
+  });
+
   it("has no rows when given no table", () => {
     expect(readVenueTable(undefined)).toEqual([]);
   });
@@ -186,7 +196,7 @@ describe("venueDirectory", () => {
 
 describe("venue helpers", () => {
   it("writes the address on one line and the map link by position", () => {
-    expect(addressLine(kauffman.address)).toBe("1601 Broadway Blvd, Kansas City, MO 64108");
+    expect(addressLine(kauffman.address!)).toBe("1601 Broadway Blvd, Kansas City, MO 64108");
     expect(mapUrl(kauffman.geo!)).toBe("https://www.google.com/maps/search/?api=1&query=39.0937,-94.5857");
   });
 

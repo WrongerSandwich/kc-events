@@ -215,7 +215,7 @@ The page for one venue, at `/v/<slug>` (#137): its address, a map link and its o
 _Avoid_: location page, place page
 
 **Venue table**:
-`data/venues.yaml`, hand-kept: one row per venue, keyed on its display name, with its street address and, when looked up, its position and its own site (ADR 0013). Read only by the site's build, which fails on a row keyed on an alias or on no venue it knows.
+`data/venues.yaml`, hand-kept: one row per venue, keyed on its display name, with its street address and, when looked up, its position and its own site; a district with no one address has its position alone (ADR 0013). Read only by the site's build, which fails on a row keyed on an alias or on no venue it knows.
 _Avoid_: venue list, venue database
 
 **Changes page**:

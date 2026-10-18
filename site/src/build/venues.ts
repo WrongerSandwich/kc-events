@@ -19,15 +19,17 @@ const METRO = { lat: [38.5, 39.7], lng: [-95.6, -93.9] } as const;
 const ROW = z
   .object({
     name: z.string().trim().min(1),
-    address: z.string().trim().regex(ADDRESS, "is not one line of street, city, MO or KS, and ZIP (\"1601 Broadway Blvd, Kansas City, MO 64108\")"),
+    address: z.string().trim().regex(ADDRESS, "is not one line of street, city, MO or KS, and ZIP (\"1601 Broadway Blvd, Kansas City, MO 64108\")").optional(),
     lat: z.number().min(METRO.lat[0]).max(METRO.lat[1]).optional(),
     lng: z.number().min(METRO.lng[0]).max(METRO.lng[1]).optional(),
     url: z.string().regex(/^https?:\/\/[^\s]+$/, "is not an http or https URL").optional(),
   })
   .strict()
-  .refine((r) => (r.lat === undefined) === (r.lng === undefined), "has lat without lng, or lng without lat");
+  .refine((r) => (r.lat === undefined) === (r.lng === undefined), "has lat without lng, or lng without lat")
+  // A district (the Crossroads) has no one street address; it has a position.
+  .refine((r) => r.address !== undefined || r.lat !== undefined, "has neither an address nor a position");
 
-export type VenueRow = { name: string; address: VenueAddress; geo?: Geo; url?: string };
+export type VenueRow = { name: string; address?: VenueAddress; geo?: Geo; url?: string };
 
 function splitAddress(line: string): VenueAddress {
   const [, street, locality, region, postalCode] = ADDRESS.exec(line)!;
@@ -53,7 +55,7 @@ export function readVenueTable(path: string | undefined): VenueRow[] {
     const r = parsed.data;
     return {
       name: r.name,
-      address: splitAddress(r.address),
+      ...(r.address !== undefined && { address: splitAddress(r.address) }),
       ...(r.lat !== undefined && { geo: { lat: r.lat, lng: r.lng! } }),
       ...(r.url !== undefined && { url: r.url }),
     };
