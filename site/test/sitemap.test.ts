@@ -15,7 +15,8 @@ describe("sitemapXml", () => {
     expect(xml).toContain("<url><loc>https://www.kcthisweek.com/changes</loc><lastmod>2026-10-05T06:40:00-05:00</lastmod></url>");
   });
 
-  it("lists every venue page, dated by the last successful run (#137)", () => {
+  it("lists the venue directory and every venue page, dated by the last successful run (#137)", () => {
+    expect(xml).toContain("<url><loc>https://www.kcthisweek.com/venues</loc><lastmod>2026-10-05T06:40:00-05:00</lastmod></url>");
     expect(xml).toContain("<url><loc>https://www.kcthisweek.com/v/recordbar</loc><lastmod>2026-10-05T06:40:00-05:00</lastmod></url>");
   });
 

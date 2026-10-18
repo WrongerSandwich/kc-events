@@ -7,13 +7,14 @@
 
   // A venue page's events (#137): the explorer's groups and rows, recurring events included and "On now" open, since
   // one venue's list is short. Rendered at build only, as of the build's day, like the changes page's lists
-  // (ChangeRows.svelte), so the page ships no script and the row's Save is left to the event's own page.
+  // (ChangeRows.svelte), so the page ships no script and the row's Save is left to the event's own page. Styled by
+  // styles/venues.css, not a style block of its own (that file says why).
   let { events }: { events: PublishedEvent[] } = $props();
   let groups = $derived(groupResults(events, { ...DEFAULT_FILTERS, recurring: true }, meta.buildToday, new Set()));
 </script>
 
 {#if groups.length === 0}
-  <p class="none">Nothing listed at the moment.</p>
+  <p class="venue-none">Nothing listed at the moment.</p>
 {:else}
   {#each groups as g (g.key)}
     <h2 class="section-heading group">{g.heading}</h2>
@@ -22,7 +23,3 @@
     {/each}
   {/each}
 {/if}
-
-<style>
-  .none { color: var(--fg-muted); }
-</style>

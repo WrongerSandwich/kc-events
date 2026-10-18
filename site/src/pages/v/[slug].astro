@@ -8,6 +8,7 @@ import { venues } from "../../generated/venues";
 import { hostOf, neighborhoodLine } from "../../lib/events";
 import type { PublishedEvent, PublishedVenue } from "../../lib/types";
 import { addressLine, mapUrl, venueJsonLd, venueSlug } from "../../lib/venues";
+import "../../styles/venues.css";
 
 export function getStaticPaths() {
   return venues.map((venue) => ({ params: { slug: venue.slug }, props: { venue, events: events.filter((e) => venueSlug(e.venue) === venue.slug) } }));
@@ -20,12 +21,12 @@ const description = `${here.length === 0 ? "Events at" : "Upcoming events at"} $
 const jsonLd = venueJsonLd(venue, new URL(`/v/${venue.slug}`, origin).toString());
 ---
 <Base title={venue.name} description={description} jsonLd={jsonLd} wide>
-  <header class="head">
+  <header class="venue-head">
     <h1>{venue.name}</h1>
-    {venue.address !== undefined && <p class="address">{addressLine(venue.address)}</p>}
-    {hood !== undefined && <p class="hood">{hood}</p>}
+    {venue.address !== undefined && <p>{addressLine(venue.address)}</p>}
+    {hood !== undefined && <p class="venue-hood">{hood}</p>}
     {(venue.geo !== undefined || venue.url !== undefined) && (
-      <p class="links">
+      <p class="venue-links">
         {venue.geo !== undefined && <a href={mapUrl(venue.geo)}><UiIcon name="map-pin" />Map</a>}
         {venue.url !== undefined && <a href={venue.url}><UiIcon name="link" />{hostOf(venue.url)}</a>}
       </p>
@@ -34,13 +35,6 @@ const jsonLd = venueJsonLd(venue, new URL(`/v/${venue.slug}`, origin).toString()
   <section aria-label={`Events at ${venue.name}`}>
     <VenueEvents events={here} />
   </section>
+  {/* The way to the directory: a footer link would weigh on every page, the front page's and the explorer's budgets. */}
+  <p class="venue-all"><a href="/venues">All venues</a></p>
 </Base>
-
-<style>
-  .head { margin: var(--space-8) 0 var(--space-4); }
-  h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: 0 0 var(--space-2); }
-  .address { margin: 0; }
-  .hood { margin: 0; color: var(--fg-muted); }
-  .links { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: var(--space-3) 0 0; }
-  .links a { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--tap); }
-</style>

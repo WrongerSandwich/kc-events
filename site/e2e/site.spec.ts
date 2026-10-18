@@ -709,6 +709,20 @@ test("a venue with a row and nothing coming up still has its page (#137)", async
   await expect(page.getByText("Nothing listed at the moment.")).toBeVisible();
 });
 
+test("the venue directory lists every venue by region, a row's venue with nothing coming up last, from a venue page (#137)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/v/kauffman-center-for-the-performing-arts");
+  await page.getByRole("link", { name: "All venues" }).click();
+  await expect(page).toHaveURL(/\/venues$/);
+  const headings = await page.getByRole("heading", { level: 2 }).allTextContents();
+  expect(headings.at(-1)).toBe("Nothing listed at the moment");
+  expect(headings.slice(0, -1).length).toBeGreaterThan(1);
+  const recordBar = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: "recordBar", exact: true }) });
+  await expect(recordBar).toContainText("1 event · Crossroads");
+  await expect(recordBar).toContainText("1520 Grand Blvd, Kansas City, MO 64108");
+  await recordBar.getByRole("link", { name: "recordBar", exact: true }).click();
+  await expect(page).toHaveURL(/\/v\/recordbar$/);
+});
+
 test("an explorer row's venue goes to the venue's page (#137)", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore");
   await page.locator("a.venue", { hasText: "recordBar" }).click();
@@ -741,7 +755,7 @@ for (const path of ["/", "/explore?kind=music", "/e/evt_e2e000000001"]) {
   });
 }
 
-for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/v/recordbar", "/v/kauffman-center-for-the-performing-arts", "/changes", "/about", "/404"]) {
+for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/v/recordbar", "/v/kauffman-center-for-the-performing-arts", "/venues", "/changes", "/about", "/404"]) {
   test(`${path} makes no third-party requests and does not scroll sideways at 320px`, async ({ page }) => {
     const foreign: string[] = [];
     page.on("request", (r) => { if (!r.url().startsWith("http://localhost:4321")) foreign.push(r.url()); });

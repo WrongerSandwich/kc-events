@@ -1,5 +1,5 @@
 import { slugify } from "./slugs";
-import type { Geo, PublishedVenue, VenueAddress } from "./types";
+import type { Geo, PublishedEvent, PublishedVenue, VenueAddress } from "./types";
 
 /**
  * A venue page's slug, from the venue's display name (#137): apostrophes dropped, a leading "The" too, so "The Truman"
@@ -18,6 +18,24 @@ export function venuePath(name: string): string {
 export function venueNamed(venues: readonly PublishedVenue[], name: string): PublishedVenue | undefined {
   const slug = venueSlug(name);
   return venues.find((v) => v.slug === slug);
+}
+
+/** The heading of the venue directory's last group: the venues with a table row and nothing coming up. */
+export const NOTHING_LISTED = "Nothing listed at the moment";
+
+export type DirectoryGroup = { heading: string; venues: { venue: PublishedVenue; events: number }[] };
+
+/**
+ * The venue directory, /venues: every venue page, under its region in the config's order, by slug within it (so "The
+ * Truman" sorts as Truman), each with how many published events it has; then the venues with none.
+ */
+export function venueDirectory(venues: readonly PublishedVenue[], events: readonly PublishedEvent[], regions: readonly string[]): DirectoryGroup[] {
+  const counts = new Map<string, number>();
+  for (const e of events) counts.set(venueSlug(e.venue), (counts.get(venueSlug(e.venue)) ?? 0) + 1);
+  const entries = [...venues].sort((a, b) => a.slug.localeCompare(b.slug)).map((venue) => ({ venue, events: counts.get(venue.slug) ?? 0 }));
+  const groups = regions.map((heading) => ({ heading, venues: entries.filter((x) => x.events > 0 && x.venue.region === heading) }));
+  groups.push({ heading: NOTHING_LISTED, venues: entries.filter((x) => x.events === 0) });
+  return groups.filter((g) => g.venues.length > 0);
 }
 
 /** The address on one line, as the table writes it. */

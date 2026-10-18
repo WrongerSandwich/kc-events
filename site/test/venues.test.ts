@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildVenues, readVenueTable, type VenueRow } from "../src/build/venues";
 import { loadPublished } from "../src/build/load-dataset";
-import { addressLine, mapUrl, venueJsonLd, venuePath, venueSlug } from "../src/lib/venues";
+import { addressLine, mapUrl, NOTHING_LISTED, venueDirectory, venueJsonLd, venuePath, venueSlug } from "../src/lib/venues";
 import { activeEvent, configYaml, dataset, write } from "./fixtures/dataset";
 import { event } from "./fixtures/event";
 import { tempDir } from "./fixtures/temp-dir";
@@ -157,6 +157,30 @@ describe("buildVenues", () => {
 
   it("refuses a venue name with nothing to make a slug from", () => {
     expect(() => build({ events: [event({ venue: "★" })] })).toThrow(/no letter or digit/);
+  });
+});
+
+describe("venueDirectory", () => {
+  const venue = (slug: string, name: string, region?: string) => ({ slug, name, ...(region !== undefined && { neighborhood: region, region }) });
+
+  it("lists venues under their region in the config's order, by slug within it, with their event counts", () => {
+    const groups = venueDirectory(
+      [venue("truman", "The Truman", "Central KC"), venue("granada", "The Granada", "Lawrence"), venue("recordbar", "recordBar", "Central KC")],
+      [event({ id: "evt_a", venue: "recordBar" }), event({ id: "evt_b", venue: "The Truman" }), event({ id: "evt_c", venue: "recordBar" }), event({ id: "evt_d", venue: "The Granada" })],
+      ["Central KC", "Johnson County", "Lawrence"],
+    );
+    expect(groups.map((g) => [g.heading, g.venues.map((v) => `${v.venue.name} ${v.events}`)])).toEqual([
+      ["Central KC", ["recordBar 2", "The Truman 1"]],
+      ["Lawrence", ["The Granada 1"]],
+    ]);
+  });
+
+  it("lists a venue with a row and nothing coming up last, under its own heading", () => {
+    const groups = venueDirectory([venue("kauffman", "Kauffman Center"), venue("recordbar", "recordBar", "Central KC")], [event()], ["Central KC"]);
+    expect(groups.map((g) => [g.heading, g.venues.map((v) => v.venue.name)])).toEqual([
+      ["Central KC", ["recordBar"]],
+      [NOTHING_LISTED, ["Kauffman Center"]],
+    ]);
   });
 });
 

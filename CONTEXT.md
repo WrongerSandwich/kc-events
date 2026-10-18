@@ -211,7 +211,7 @@ The page for one active event, at `/e/<id>`: its date, venue, why-line when flag
 _Avoid_: detail page, listing page
 
 **Venue page**:
-The page for one venue, at `/v/<slug>` (#137): its address, a map link and its own site when the venue table has them, then its events in the explorer's rows grouped by day, each with the room it is in. Every venue a published event is at has one, and so does every venue table row, with "Nothing listed at the moment" when nothing is coming up. The slug comes from the venue's display name, so two spellings of one name are one page.
+The page for one venue, at `/v/<slug>` (#137): its address, a map link and its own site when the venue table has them, then its events in the explorer's rows grouped by day, each with the room it is in. Every venue a published event is at has one, and so does every venue table row, with "Nothing listed at the moment" when nothing is coming up. The slug comes from the venue's display name, so two spellings of one name are one page. Every venue page is listed at `/venues`, the **venue directory**, by region with its count of events, those with nothing coming up last; each venue page links it.
 _Avoid_: location page, place page
 
 **Venue table**:
