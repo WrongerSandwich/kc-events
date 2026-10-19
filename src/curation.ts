@@ -138,8 +138,8 @@ function withJudgment(event: Event, { dontMiss, whyLine, lastJudged }: { dontMis
   return { ...rest, dontMiss, ...(dontMiss && whyLine !== undefined ? { whyLine } : {}), lastJudged };
 }
 
-/** A sentence end followed, after a space, by another: the second is the stray. */
-const DOUBLED_END = /([.!?])\s+[.!?]+$/;
+/** A sentence end followed, after a space, by another: the second is the stray. A spaced ellipsis (". . .") is no sentence end. */
+const DOUBLED_END = /(\S[.!?])\s+[.!?]+$/;
 
 /** Brackets that pair as an opening and a closing character, keyed by the closing one. */
 const OPENING: Record<string, string> = { "}": "{", "]": "[" };
@@ -185,7 +185,7 @@ function stripStrayEnd(line: string): string {
  * bracket pair wrapping the whole line; balanced brackets and quotes inside the sentence, and its own
  * punctuation, stay. Quotes are partnered by count, so which end an odd one is taken from assumes the
  * stray is at the end, where the JSON leaves it. A sentence end repeated after a space (". ." or
- * "!  .", #157) keeps only the first, and a run of spaces inside the line is one space. A line that
+ * "!  .", #157) keeps only the first, and a run of whitespace inside the line is one space. A line that
  * cleans to empty is no why-line.
  */
 export function cleanWhyLine(raw: string): string {

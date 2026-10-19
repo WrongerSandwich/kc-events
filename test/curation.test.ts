@@ -169,7 +169,7 @@ describe("cleaning a why-line", () => {
     expect(cleanWhyLine(raw)).toBe(clean);
   });
 
-  it.each(["And then some...", "Two dates. One night."])("leaves the sentence's own end of %j alone", (line) => {
+  it.each(["And then some...", "Two dates. One night.", "And then . . ."])("leaves the sentence's own end of %j alone", (line) => {
     expect(cleanWhyLine(line)).toBe(line);
   });
 

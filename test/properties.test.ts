@@ -85,7 +85,7 @@ describe("identity", () => {
 });
 
 describe("curation", () => {
-  const why = fc.oneof(anyText, fc.array(fc.constantFrom("A rare club date", "{", "}", "[", "]", '"', "'", ",", " ", "(", ")", "."), { maxLength: 8 }).map((p) => p.join("")));
+  const why = fc.oneof(anyText, fc.array(fc.constantFrom("A rare club date", "{", "}", "[", "]", '"', "'", ",", " ", "(", ")", ".", "!", "?", "  "), { maxLength: 8 }).map((p) => p.join("")));
 
   it("cleanWhyLine is idempotent and never lengthens a line", () => {
     fc.assert(
