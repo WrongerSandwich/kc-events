@@ -159,6 +159,20 @@ describe("cleaning a why-line", () => {
     expect(cleanWhyLine(line)).toBe(line);
   });
 
+  it.each([
+    ["Likely to bring John Cameron Mitchell to Kansas City in person.  .", "Likely to bring John Cameron Mitchell to Kansas City in person."],
+    ["A rare visit. .", "A rare visit."],
+    ["Worth the drive! .", "Worth the drive!"],
+    ['A rare visit.  ."}', "A rare visit."],
+    ["A rare  visit,   once.", "A rare visit, once."],
+  ])("takes a doubled sentence end and doubled spaces out of %j", (raw, clean) => {
+    expect(cleanWhyLine(raw)).toBe(clean);
+  });
+
+  it.each(["And then some...", "Two dates. One night."])("leaves the sentence's own end of %j alone", (line) => {
+    expect(cleanWhyLine(line)).toBe(line);
+  });
+
   it("cleans a line of nothing but punctuation to empty", () => {
     expect(cleanWhyLine(' }", ')).toBe("");
   });

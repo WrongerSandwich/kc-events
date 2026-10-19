@@ -138,6 +138,9 @@ function withJudgment(event: Event, { dontMiss, whyLine, lastJudged }: { dontMis
   return { ...rest, dontMiss, ...(dontMiss && whyLine !== undefined ? { whyLine } : {}), lastJudged };
 }
 
+/** A sentence end followed, after a space, by another: the second is the stray. */
+const DOUBLED_END = /([.!?])\s+[.!?]+$/;
+
 /** Brackets that pair as an opening and a closing character, keyed by the closing one. */
 const OPENING: Record<string, string> = { "}": "{", "]": "[" };
 const CLOSING: Record<string, string> = { "{": "}", "[": "]" };
@@ -181,12 +184,14 @@ function stripStrayEnd(line: string): string {
  * comma or quote from the JSON around it. Unpartnered ones at either end go, as does a brace or
  * bracket pair wrapping the whole line; balanced brackets and quotes inside the sentence, and its own
  * punctuation, stay. Quotes are partnered by count, so which end an odd one is taken from assumes the
- * stray is at the end, where the JSON leaves it. A line that cleans to empty is no why-line.
+ * stray is at the end, where the JSON leaves it. A sentence end repeated after a space (". ." or
+ * "!  .", #157) keeps only the first, and a run of spaces inside the line is one space. A line that
+ * cleans to empty is no why-line.
  */
 export function cleanWhyLine(raw: string): string {
-  let line = raw.trim();
+  let line = raw.trim().replace(/\s{2,}/g, " ");
   for (;;) {
-    const next = stripStrayEnd(line).trim();
+    const next = stripStrayEnd(line).replace(DOUBLED_END, "$1").trim();
     if (next === line) return line;
     line = next;
   }
