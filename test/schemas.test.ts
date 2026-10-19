@@ -64,6 +64,12 @@ describe("registry", () => {
     expect(() => parseRegistry({ sources: [{ ...active, fetch: "headless" }] })).toThrow();
     expect(() => parseRegistry({ sources: [{ ...active, waitFor: ".show" }] })).toThrow(/waitFor/);
   });
+
+  it("takes a selector for a source's own pages only alongside a browser fetch (#153)", () => {
+    const registry = parseRegistry({ sources: [{ ...active, fetch: "browser", eventPageWaitFor: ".showtime" }] });
+    expect(registry.sources[0]).toMatchObject({ eventPageWaitFor: ".showtime" });
+    expect(() => parseRegistry({ sources: [{ ...active, eventPageWaitFor: ".showtime" }] })).toThrow(/eventPageWaitFor is for a source with fetch: browser/);
+  });
 });
 
 describe("dataset", () => {

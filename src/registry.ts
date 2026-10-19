@@ -11,6 +11,8 @@ const sourceFields = {
   fetch: z.enum(["plain", "browser"]).optional(),
   /** A CSS selector the browser waits for instead of the network going quiet; browser fetch only. */
   waitFor: z.string().min(1).optional(),
+  /** A CSS selector the browser waits for on an event's own page, which never renders the list's `waitFor` (#153); browser fetch only. */
+  eventPageWaitFor: z.string().min(1).optional(),
   /** Read each listed event's own page for the time the list does not give (#123, ADR 0009 amended); only the time is taken. */
   readEventPages: z.boolean().optional(),
 };
@@ -25,6 +27,9 @@ export const registrySchema = z
   .strictObject({ sources: z.array(sourceSchema).default([]) })
   .refine((r) => r.sources.every((s) => s.waitFor === undefined || s.fetch === "browser"), {
     message: "waitFor is for a source with fetch: browser",
+  })
+  .refine((r) => r.sources.every((s) => s.eventPageWaitFor === undefined || s.fetch === "browser"), {
+    message: "eventPageWaitFor is for a source with fetch: browser",
   })
   .refine((r) => new Set(r.sources.map((s) => s.name)).size === r.sources.length, {
     message: "source names must be unique",

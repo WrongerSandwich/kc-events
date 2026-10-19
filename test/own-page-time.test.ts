@@ -182,6 +182,19 @@ describe("an event's own page read for its time (#123)", () => {
     expect(dataset.events[0]!.start).toBe("2026-10-12T19:00:00-05:00");
   });
 
+  it("a browser source's own pages never wait for the list's selector, only for their own one (#153)", async () => {
+    const listOnly = { ...lied, fetch: "browser" as const, waitFor: ".list-item" };
+    const quiet = await runAt(WEEK_1, { sources: [listOnly], completions: [listed(listOnly), timed()] });
+    expect(quiet.calls).toContain(`browser:${LIST_URL} waiting for .list-item`);
+    expect(quiet.calls).toContain(`browser:${OWN_URL}`);
+
+    const both = { ...listOnly, eventPageWaitFor: ".showtime" };
+    const waiting = await runAt(WEEK_1, { sources: [both], completions: [listed(both), timed()] });
+    expect(waiting.calls).toContain(`browser:${LIST_URL} waiting for .list-item`);
+    expect(waiting.calls).toContain(`browser:${OWN_URL} waiting for .showtime`);
+    expect(waiting.dataset.events[0]!.start).toBe("2026-10-12T19:00:00-05:00");
+  });
+
   it("the own-page call is in the report's call list and counts toward the spend", async () => {
     const { report } = await runAt(WEEK_1);
     expect(report.spend.modelCalls.filter((c) => c.model === "test/extraction").map((c) => c.costUsd)).toEqual([0.01, 0.002]);

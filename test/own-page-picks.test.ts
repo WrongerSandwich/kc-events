@@ -256,6 +256,18 @@ describe("a pick's own page read for its time, price, and ages (#133)", () => {
     expect(calls).toContain(`browser:${OWN_URL}`);
   });
 
+  it("a browser source's pick never waits for the list's selector, only for its own pages' one (#153)", async () => {
+    const listOnly = { ...granada, fetch: "browser" as const, waitFor: ".list-item" };
+    const quiet = await runAt(WEEK_1, { sources: [listOnly], completions: [listed({}, listOnly), ownPage()] });
+    expect(quiet.calls).toContain(`browser:${LIST_URL} waiting for .list-item`);
+    expect(quiet.calls).toContain(`browser:${OWN_URL}`);
+
+    const both = { ...listOnly, eventPageWaitFor: ".showtime" };
+    const waiting = await runAt(WEEK_1, { sources: [both], completions: [listed({}, both), ownPage()] });
+    expect(waiting.calls).toContain(`browser:${LIST_URL} waiting for .list-item`);
+    expect(waiting.calls).toContain(`browser:${OWN_URL} waiting for .showtime`);
+  });
+
   it("a pick a flagged source's own-page read already read this run is not read twice", async () => {
     const lied = { ...granada, readEventPages: true };
     const { calls, dataset, report } = await runAt(WEEK_1, { sources: [lied], completions: [listed({}, lied), ownPage()] });

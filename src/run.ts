@@ -1347,7 +1347,7 @@ async function readOwnPages(
       out.push(event);
       continue;
     }
-    const outcome = await readOwnPage(event, fetcherFor(flaggedSource.source, ports), ports, context, rules, flaggedSource.line);
+    const outcome = await readOwnPage(event, ownPageFetcherFor(flaggedSource.source, ports), ports, context, rules, flaggedSource.line);
     if (outcome === "not-read") notRead++;
     else read.add(event.id);
     out.push(outcome === "not-read" ? event : outcome);
@@ -1397,7 +1397,7 @@ async function readPicks(
     }
     const { lead } = event;
     const source = lead.lane === "registry" ? registry.sources.find((s): s is Source => s.name === lead.source && s.status === "active") : undefined;
-    const outcome = await readOwnPage(event, source ? fetcherFor(source, ports) : plainly(ports), ports, context, rules, line);
+    const outcome = await readOwnPage(event, source ? ownPageFetcherFor(source, ports) : plainly(ports), ports, context, rules, line);
     if (outcome === "not-read") notRead++;
     out.push(outcome === "not-read" ? event : outcome);
   }
@@ -1580,7 +1580,17 @@ function fetcherFor(source: Source, ports: Ports): FetchRoute {
   return [ports.browserFetcher, source.waitFor ? { waitFor: source.waitFor } : undefined];
 }
 
-type FetchRoute = [fetcher: FetchPort, options?: FetchOptions];
+/**
+ * The fetcher an event's own page goes through: its source's, but a browser waits for the source's
+ * `eventPageWaitFor`, else for the network to go quiet, never for the list's `waitFor`, which an own
+ * page does not render (#153).
+ */
+function ownPageFetcherFor(source: Source, ports: Ports): FetchRoute {
+  if (source.fetch !== "browser") return plainly(ports);
+  return [ports.browserFetcher, source.eventPageWaitFor ? { waitFor: source.eventPageWaitFor } : undefined];
+}
+
+type FetchRoute =[fetcher: FetchPort, options?: FetchOptions];
 
 const plainly = (ports: Ports): FetchRoute => [ports.fetcher];
 
