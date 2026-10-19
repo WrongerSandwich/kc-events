@@ -149,9 +149,10 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   // A flagged source's events its list dates but does not time have their own page read for the time (#123).
   const ownPages = await readOwnPages(aged, sighted, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   // A mapped venue places every event at it, read this run or not (#150); a reading places the rest from its page,
-  // and one no page placed this run is placed from what is stored.
-  const byVenue = placeMappedVenues(ownPages.events, neighborhoods, config);
-  const placed = placeOffList(byVenue.events, neighborhoods, config, registry);
+  // and one no page placed this run is placed from what is stored. The map goes first: its neighborhoods are on the
+  // list (the config checks), so the off-list placement leaves them be and reports only what the map did not place.
+  const mappedVenues = placeMappedVenues(ownPages.events, neighborhoods, config);
+  const placed = placeOffList(mappedVenues.events, neighborhoods, config, registry);
   // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
   const madeUncitable = new Set([...merged.uncitable, ...reverified.uncitable]);
   const uncitable = placed.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
@@ -219,7 +220,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     ownPages: [...ownPages.report, ...picks.report],
     failingSources: registryLane.failingSources,
     offListNeighborhoods: placed.report,
-    venueNeighborhoods: byVenue.report,
+    venueNeighborhoods: mappedVenues.report,
     unmappableNeighborhoods: unmappableNeighborhoods(dataset.events, live),
     promotionSuggestions: promotion.promotionSuggestions,
     heldForPromotion: held.heldByHost,
