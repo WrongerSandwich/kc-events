@@ -7,6 +7,7 @@ import { parseArchive, parseDataset, type Event } from "../src/dataset.js";
 import { isIndexPage } from "../src/discovery.js";
 import { isPast } from "../src/expiry.js";
 import { onHost } from "../src/hosts.js";
+import { sameVenue } from "../src/identity.js";
 import { parseRunReport } from "../src/report.js";
 import { parseRegistry } from "../src/registry.js";
 import { neighborhoodList, regionOf } from "../src/taxonomy.js";
@@ -47,6 +48,15 @@ describe("committed config and registry", () => {
   it("names each source's pages once and only on one source", () => {
     const urls = registry.sources.flatMap((s) => s.urls);
     expect(urls.filter((url, i) => urls.indexOf(url) !== i)).toEqual([]);
+  });
+
+  it("names a museum's galleries and a complex's hall as the venue other sources give (#155)", () => {
+    const one = (a: string, b: string) => sameVenue(a, b, config.venueAliases);
+    expect(one("Irma Starr Gallery, Second Floor", "Nerman Museum of Contemporary Art")).toBe(true);
+    expect(one("McCaffree Gallery, Second Floor", "Nerman Museum of Contemporary Art")).toBe(true);
+    expect(one("Tony and Marti Oppenheimer Gallery; Dean E. Thompson Gallery, First Floor", "Nerman Museum")).toBe(true);
+    expect(one("Kansas City Music Hall", "Kansas City Convention Center")).toBe(true);
+    expect(one("Kansas City Music Hall", "Bartle Hall")).toBe(true);
   });
 
   it("keeps registry sources off the aggregator and ignored host lists", () => {

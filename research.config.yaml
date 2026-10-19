@@ -193,7 +193,10 @@ venueAliases:
   Lied Center of Kansas: [Main Auditorium, Pavilion]
   Museum of Kansas City: [JE Dunn Construction Theater, Corinthian Hall]
   Kansas City Repertory Theatre: [Copaken Stage]
-  Kansas City Convention Center: [Bartle Hall, Bartle Exhibit Hall]
+  # #155: the Music Hall is part of the Convention Center complex, at its address; its calendar lists the hall's shows.
+  Kansas City Convention Center: [Bartle Hall, Bartle Exhibit Hall, Kansas City Music Hall]
+  # #155: the museum's own page names each show's gallery; the Arts Council names the museum.
+  Nerman Museum of Contemporary Art: [Nerman Museum, Irma Starr Gallery, McCaffree Gallery, Oppenheimer New Media Gallery, Tony and Marti Oppenheimer Gallery, Dean E. Thompson Gallery, Kansas Focus Gallery]
   Midwest Trust Center: [Yardley Hall, Polsky Theatre, Midwest Trust Center at Johnson County Community College]
   Kansas City Power & Light District: [Kansas City Power & Light, PBR Big Sky]
   # #137: Crown Center is one venue page, the Shops and the Square in it.

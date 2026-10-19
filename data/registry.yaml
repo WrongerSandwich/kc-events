@@ -351,7 +351,7 @@ sources:
     urls: [https://charlottestreet.org/2026-event-calendar/]
     kind: art/exhibitions
     neighborhood: Midtown
-    checkHints: Arts nonprofit; events are at its own spaces and partner venues, so read the venue from each listing.
+    checkHints: Arts nonprofit; events are at its own spaces and partner venues, so read the venue from each listing. A series the calendar lists once per date under one title (Artists in Dialogue, "Wednesdays, November 4, 11, and 18") is one event, never one event per date.
     status: active
     notes: The calendar page's address carries the year; update it each January.
 
@@ -366,14 +366,14 @@ sources:
     urls: [https://www.artgardenkc.org/events]
     kind: art/exhibitions
     neighborhood: Northland
-    checkHints: Arts nonprofit in Riverside; events are at its own space and around the Northland.
+    checkHints: Arts nonprofit in Riverside; events are at its own space and around the Northland. A listing with a first and a last date ("Apr 5 to Oct 25") is one run from the first to the last; its last date is not an event of its own.
     status: active
 
   - name: Arts Council of Johnson County
     urls: [https://artsjoco.org/acjc/calendar-of-events/]
     kind: art/exhibitions
     neighborhood: Overland Park
-    checkHints: A community calendar for Johnson County arts; many listings are classes or ongoing, which are not events. Read the venue from each listing.
+    checkHints: A community calendar for Johnson County arts; many listings are classes or ongoing, which are not events. Read the venue from each listing. Skip exhibitions at the Nerman Museum of Contemporary Art; the Nerman source carries them, and the first date this calendar gives an exhibition is when it was listed, not when it opened.
     status: active
 
   # --- Talks and readings ------------------------------------------------------------------------
@@ -389,7 +389,7 @@ sources:
     urls: [https://www.rainydaybooks.com/events]
     kind: talks/readings
     neighborhood: Fairway
-    checkHints: Bookstore at 2706 W 53rd St, Fairway; author events are often at other venues (Unity Temple on the Plaza and others), so read the venue from each listing.
+    checkHints: Bookstore at 2706 W 53rd St, Fairway; author events are often at other venues (Unity Temple on the Plaza and others), so read the venue from each listing. Skip a listing marked "SUPPORTING:" ("Rainy Day Books is supporting this Kansas City Public Library event with book sales") when the event is the Kansas City Public Library's or the Johnson County Library's; the library's own source carries it under its own title.
     status: active
 
   - name: Johnson County Library
@@ -477,7 +477,7 @@ sources:
     urls: [https://kcconvention.com/events/]
     kind: other
     neighborhood: Downtown
-    checkHints: Public shows and conventions; trade-only events are not for the public.
+    checkHints: Public shows and conventions; trade-only events are not for the public. Skip the touring Broadway shows at the Music Hall; the American Theatre Guild source carries each with its full run.
     status: active
     notes: ICS feed at https://kcconvention.com/events/?ical=1
 

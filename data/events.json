@@ -6349,7 +6349,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-06T22:25:10-05:00",
       "lastJudged": "2026-10-06T22:25:10-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -6359,7 +6359,9 @@
       "evidence": {
         "date": "Date:\nMon, 10/19/2026\nTime:\n6:00pm - 7:00pm",
         "venue": "Kansas City Public Library: Plaza Library"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_91adbcfa67ab"
     },
     {
       "id": "evt_9302eef7c629",
@@ -24874,7 +24876,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-07T20:43:52-05:00",
       "lastJudged": "2026-10-07T20:43:52-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -24884,7 +24886,9 @@
       "evidence": {
         "date": "December 2 @ 7:30 pm - December 8 @ 9:00 pm",
         "venue": "Kansas City Convention Center"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_fc9d7f322563"
     },
     {
       "id": "evt_e41eb1ec4d36",
@@ -38090,7 +38094,7 @@
       "lastVerified": "2026-10-13T22:13:36-05:00",
       "lastChanged": "2026-10-13T22:13:36-05:00",
       "lastJudged": "2026-10-13T22:13:36-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 1,
       "consecutiveOutages": 0,
       "lead": {
@@ -38100,7 +38104,9 @@
       "evidence": {
         "date": "Nov. 11, 7-8:30 PM @ Emily & Todd Voth Artspace",
         "venue": "Nov. 11, 7-8:30 PM @ Emily & Todd Voth Artspace"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_181266add50a"
     },
     {
       "id": "evt_f86575458dc7",
@@ -38116,7 +38122,7 @@
       "lastVerified": "2026-10-13T22:13:36-05:00",
       "lastChanged": "2026-10-13T22:13:36-05:00",
       "lastJudged": "2026-10-13T22:13:36-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 1,
       "consecutiveOutages": 0,
       "lead": {
@@ -38126,7 +38132,9 @@
       "evidence": {
         "date": "Nov. 18, 7-8:30 PM @ Emily & Todd Voth Artspace",
         "venue": "Nov. 18, 7-8:30 PM @ Emily & Todd Voth Artspace"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_181266add50a"
     },
     {
       "id": "evt_d6173493b837",
@@ -40234,7 +40242,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-19T06:17:06-05:00",
       "lastJudged": "2026-10-19T06:17:06-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -40244,7 +40252,9 @@
       "evidence": {
         "date": "Sun, Oct 25, 2026",
         "venue": "City Market"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_4cccca32bae7"
     },
     {
       "id": "evt_dbef825ed328",
@@ -40263,7 +40273,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-19T06:17:06-05:00",
       "lastJudged": "2026-10-19T06:17:06-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -40273,7 +40283,9 @@
       "evidence": {
         "date": "09-28-2026\n02-28-2027",
         "venue": "Nerman Museum of Contemporary Art at Nerman Museum of Contemporary Art, Overland Park"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_b4650f1dbf53"
     },
     {
       "id": "evt_bca44ec34093",
@@ -40293,7 +40305,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-19T06:17:06-05:00",
       "lastJudged": "2026-10-19T06:17:06-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -40303,7 +40315,9 @@
       "evidence": {
         "date": "09-28-2026\n12-13-2026",
         "venue": "Nerman Museum of Contemporary Art at Nerman Museum of Contemporary Art, Overland Park"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_1d4117819395"
     },
     {
       "id": "evt_aad494b2a0c4",
