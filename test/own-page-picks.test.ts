@@ -226,9 +226,22 @@ describe("a pick's own page read for its time, price, and ages (#133)", () => {
     ["a pick that ended before today", { startDate: "2026-09-20", endDate: "2026-10-01", dateEvidence: "Sep 20 – Oct 1" }],
     ["a single-day pick dated before today", { startDate: "2026-10-01", dateEvidence: "Thursday, October 1" }],
   ])("%s is not read (#151)", async (_, dates) => {
-    const { calls, dataset } = await runAt(WEEK_1, { completions: [listed(dates)] });
+    const earlier = await runAt(new Date("2026-09-25T12:00:00-05:00"), { pages: { [OWN_URL]: "gone" }, completions: [listed(dates)] });
+    expect(earlier.dataset.events[0]).toMatchObject({ status: "active", dontMiss: true });
+    const { calls, dataset } = await runAt(WEEK_1, { dataset: earlier.dataset, completions: [listed(dates)] });
     expect(calls.filter((c) => c.includes(OWN_URL))).toEqual([]);
-    for (const event of dataset.events) expect(event).not.toHaveProperty("ownPageRead");
+    expect(dataset.events).toHaveLength(1);
+    expect(dataset.events[0]).toMatchObject({ status: "expired", dontMiss: true });
+    expect(dataset.events[0]).not.toHaveProperty("ownPageRead");
+  });
+
+  it("a running pick's read is kept on a later run while the list keeps its dates and own page (#151)", async () => {
+    const running = { startDate: "2026-09-28", endDate: "2026-10-31", dateEvidence: "Sep 28 – Oct 31" };
+    const first = await runAt(WEEK_1, { completions: [listed(running), ownPage({ date: "2026-09-28", time: null, timeEvidence: null })] });
+    const { calls, dataset, report } = await runAt(WEEK_2, { dataset: first.dataset, completions: [listed(running)] });
+    expect(calls.filter((c) => c.includes(OWN_URL))).toEqual([]);
+    expect(dataset.events[0]).toMatchObject({ price: "$25 – $45", ownPageRead: { page: OWN_URL, on: "2026-10-02" } });
+    expect(report.ownPages).toEqual([expect.objectContaining({ source: "Picks", read: 0, kept: 1 })]);
   });
 
   it("once the spend cap is reached no pick is read, and the shortfall counts it", async () => {

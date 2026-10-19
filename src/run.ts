@@ -1373,13 +1373,13 @@ async function readPicks(
   const { config, today } = context;
   const lastDay = horizonEnd(today, config.horizonWeeks);
   const line = ownPagesLine("Picks");
-  const inRange = (e: Event) => {
+  const coversHorizon = (e: Event) => {
     const date = calendarDate(e.start);
     if (date === undefined || date > lastDay) return false;
     const end = calendarDate(e.end);
     return date >= today || (end !== undefined && end >= today);
   };
-  const isPick = (e: Event) => e.status === "active" && e.dontMiss && e.eventUrl !== undefined && !alreadyRead.has(e.id) && inRange(e);
+  const isPick = (e: Event) => e.status === "active" && e.dontMiss && e.eventUrl !== undefined && !alreadyRead.has(e.id) && coversHorizon(e);
 
   let notRead = 0;
   let picks = 0;
