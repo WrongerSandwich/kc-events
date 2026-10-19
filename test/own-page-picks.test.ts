@@ -214,6 +214,23 @@ describe("a pick's own page read for its time, price, and ages (#133)", () => {
     expect(calls.filter((c) => c.includes(OWN_URL))).toEqual([]);
   });
 
+  it("a pick already running on the run's date is read, and the read recorded (#151)", async () => {
+    const running = { startDate: "2026-09-28", endDate: "2026-10-31", dateEvidence: "Sep 28 – Oct 31" };
+    const { calls, dataset, report } = await runAt(WEEK_1, { completions: [listed(running), ownPage({ date: "2026-09-28", time: null, timeEvidence: null })] });
+    expect(calls).toContain(`fetch:${OWN_URL}`);
+    expect(dataset.events[0]).toMatchObject({ start: "2026-09-28", price: "$25 – $45", ownPageRead: { page: OWN_URL, on: "2026-10-02" } });
+    expect(report.ownPages[0]).toMatchObject({ source: "Picks", read: 1, dateDisagreements: 0 });
+  });
+
+  it.each([
+    ["a pick that ended before today", { startDate: "2026-09-20", endDate: "2026-10-01", dateEvidence: "Sep 20 – Oct 1" }],
+    ["a single-day pick dated before today", { startDate: "2026-10-01", dateEvidence: "Thursday, October 1" }],
+  ])("%s is not read (#151)", async (_, dates) => {
+    const { calls, dataset } = await runAt(WEEK_1, { completions: [listed(dates)] });
+    expect(calls.filter((c) => c.includes(OWN_URL))).toEqual([]);
+    for (const event of dataset.events) expect(event).not.toHaveProperty("ownPageRead");
+  });
+
   it("once the spend cap is reached no pick is read, and the shortfall counts it", async () => {
     const { calls, report } = await runAt(WEEK_1, { config: testConfig({ spendCapUsd: 0.025 }), completions: [listed()] });
     expect(calls.filter((c) => c.includes(OWN_URL))).toEqual([]);

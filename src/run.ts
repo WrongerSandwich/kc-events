@@ -1356,8 +1356,9 @@ async function readOwnPages(
 }
 
 /**
- * The second reading for picks (#133). After curation, every active pick with an own page and a date
- * from today through the horizon has that page read (readOwnPage), the way its source's pages are
+ * The second reading for picks (#133). After curation, every active pick with an own page whose span
+ * covers a day from today through the horizon (it starts in that range, or started before today and
+ * has not ended, #151) has that page read (readOwnPage), the way its source's pages are
  * fetched, unless the own-page time already read it this run, or a run read it before on the date and
  * own page the list still gives (refresh keeps that read), which the report counts as kept.
  */
@@ -1372,10 +1373,13 @@ async function readPicks(
   const { config, today } = context;
   const lastDay = horizonEnd(today, config.horizonWeeks);
   const line = ownPagesLine("Picks");
-  const isPick = (e: Event) => {
+  const inRange = (e: Event) => {
     const date = calendarDate(e.start);
-    return e.status === "active" && e.dontMiss && e.eventUrl !== undefined && !alreadyRead.has(e.id) && date !== undefined && date >= today && date <= lastDay;
+    if (date === undefined || date > lastDay) return false;
+    const end = calendarDate(e.end);
+    return date >= today || (end !== undefined && end >= today);
   };
+  const isPick = (e: Event) => e.status === "active" && e.dontMiss && e.eventUrl !== undefined && !alreadyRead.has(e.id) && inRange(e);
 
   let notRead = 0;
   let picks = 0;
