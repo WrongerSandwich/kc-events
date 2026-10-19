@@ -1590,7 +1590,7 @@ function ownPageFetcherFor(source: Source, ports: Ports): FetchRoute {
   return [ports.browserFetcher, source.eventPageWaitFor ? { waitFor: source.eventPageWaitFor } : undefined];
 }
 
-type FetchRoute =[fetcher: FetchPort, options?: FetchOptions];
+type FetchRoute = [fetcher: FetchPort, options?: FetchOptions];
 
 const plainly = (ports: Ports): FetchRoute => [ports.fetcher];
 
