@@ -8584,7 +8584,6 @@
       "neighborhood": "Kingsville",
       "primaryUrl": "https://powellgardens.org/",
       "eventUrl": "https://powellgardens.org/event/dark-forest/",
-      "ages": "21+",
       "ownPageRead": {
         "page": "https://powellgardens.org/event/dark-forest/",
         "on": "2026-10-19"
@@ -8610,10 +8609,6 @@
         "time": {
           "page": "https://powellgardens.org/event/dark-forest/",
           "quote": "with the Dark Forest trail experience opening at 7 p.m."
-        },
-        "ages": {
-          "page": "https://powellgardens.org/event/dark-forest/",
-          "quote": "October 16-17, 22 (21+), 23-24, and 30-31"
         }
       }
     },
