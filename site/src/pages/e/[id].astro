@@ -9,11 +9,13 @@ import EventPageIsland from "../../components/EventPageIsland.svelte";
 import { origin, shareImage } from "../../build/origin";
 import { events } from "../../generated/events";
 import { descriptions } from "../../generated/descriptions";
+import { venues } from "../../generated/venues";
+import { venueNamed, venuePath } from "../../lib/venues";
 import { meta } from "../../generated/meta";
 import { formatDay, formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd } from "../../lib/event-meta";
 import { longDateLine } from "../../lib/date-line";
-import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, venueLine } from "../../lib/events";
+import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, neighborhoodLine, venueLine } from "../../lib/events";
 import { reportUrl } from "../../lib/report";
 import { siteConfig } from "../../site.config";
 import type { PublishedEvent } from "../../lib/types";
@@ -34,7 +36,8 @@ const moreLikeThis = events
   .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
   .slice(0, 5);
 const admission = admissionLine(event);
-const jsonLd = eventJsonLd(event, { description, image: shareImage.url });
+const venue = venueNamed(venues, event.venue);
+const jsonLd = eventJsonLd(event, { description, image: shareImage.url, ...(venue !== undefined && { venue }) });
 ---
 <Base title={event.title} description={metaDescription} jsonLd={jsonLd}>
   <article class={`event kind-${slugify(event.kind)}`}>
@@ -45,8 +48,7 @@ const jsonLd = eventJsonLd(event, { description, image: shareImage.url });
         <p class="kind"><KindChip kind={event.kind} />{event.dontMiss && <span class="dont-miss">Don't miss</span>}</p>
         <h1 style={`view-transition-name: title-${event.id}`}>{event.title}</h1>
         <p class="date">{line}</p>
-        {/* A neighborhood that is its own region (Lawrence, Elsewhere in the metro) is named once. */}
-        <p class="where">{venueLine(event)} · {event.neighborhood}{event.region !== event.neighborhood && ` · ${event.region}`}</p>
+        <p class="where"><a href={venuePath(event.venue)}>{venueLine(event)}</a> · {neighborhoodLine(event.neighborhood, event.region)}</p>
         {admission && <p class="admission">{admission}</p>}
       </div>
     </header>
@@ -80,6 +82,8 @@ const jsonLd = eventJsonLd(event, { description, image: shareImage.url });
   h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: var(--space-2) 0; }
   .date { font-size: var(--text-lg); margin: 0; }
   .where, .admission { color: var(--fg-muted); margin: 0; }
+  /* The venue's page; underlined, since the neighborhood follows it on the line (axe link-in-text-block). */
+  .where a { color: inherit; text-decoration: underline; }
   .why { margin: 0 0 var(--space-4); font-size: var(--text-lg); color: var(--fg-muted); max-width: 38rem; }
   .about { margin: 0 0 var(--space-4); max-width: 38rem; }
   .primary { font-size: var(--text-lg); margin: 0 0 var(--space-4); }

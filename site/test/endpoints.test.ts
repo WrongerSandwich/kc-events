@@ -95,7 +95,8 @@ describe("committed data", () => {
     it("names Lawrence once in a Lawrence event's location line", () => {
       const lawrence = events.find((e) => e.region === "Lawrence" && e.neighborhood === "Lawrence");
       expect(lawrence, "the committed dataset has an event whose neighborhood is Lawrence").toBeDefined();
-      const where = /<p class="where"[^>]*>([^<]*)<\/p>/.exec(read(`e/${lawrence!.id}.html`))![1]!;
+      // The venue is a link to its page (#137); the line's text is what is read.
+      const where = /<p class="where"[^>]*>(.*?)<\/p>/.exec(read(`e/${lawrence!.id}.html`))![1]!.replace(/<[^>]*>/g, "");
       expect(where).toBe(`${lawrence!.venue} · Lawrence`);
     });
 

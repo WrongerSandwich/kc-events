@@ -78,6 +78,26 @@ describe("eventJsonLd's fields for Google's Event result", () => {
     });
   });
 
+  it("gives the street address and position when the venue's table row has them (#137)", () => {
+    const venue = {
+      slug: "recordbar", name: "recordBar",
+      address: { street: "1544 Grand Blvd", locality: "Kansas City", region: "MO" as const, postalCode: "64108" },
+      geo: { lat: 39.0921, lng: -94.5813 },
+    };
+    expect((eventJsonLd(event(), { ...opts, venue }) as { location: object }).location).toEqual({
+      "@type": "Place",
+      name: "recordBar, Crossroads",
+      address: { "@type": "PostalAddress", streetAddress: "1544 Grand Blvd", addressLocality: "Kansas City", addressRegion: "MO", postalCode: "64108", addressCountry: "US" },
+      geo: { "@type": "GeoCoordinates", latitude: 39.0921, longitude: -94.5813 },
+    });
+  });
+
+  it("addresses the place to the city when the venue's page has no row", () => {
+    expect(eventJsonLd(event(), { ...opts, venue: { slug: "recordbar", name: "recordBar" } })).toMatchObject({
+      location: { address: { addressLocality: "Kansas City", addressRegion: "MO" } },
+    });
+  });
+
   it("names the venue, not the room the page named (#91)", () => {
     const e = event({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall", neighborhood: "Downtown" });
     expect(eventJsonLd(e, opts)).toMatchObject({ location: { name: "Kauffman Center for the Performing Arts, Downtown" } });

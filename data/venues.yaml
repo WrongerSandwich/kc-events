@@ -1,0 +1,209 @@
+# The venue table (#137, ADR 0013): one row per venue, keyed on its display name as the site shows it. Read by the
+# site's build only. A row: name, address as "<street>, <city>, <MO|KS> <ZIP>", then optionally lat and lng (both or
+# neither, looked up, never from memory) and url, the venue's own site; a district with no one street address gives
+# lat and lng alone. Check a row by opening the map link on its page, /v/<slug>. A venue with no row still has a
+# page, with its events alone.
+#
+# Drafted 2026-10-14 from each venue's own site (or, where it states none, a listing that agrees with OpenStreetMap),
+# with coordinates from OpenStreetMap Nominatim.
+
+- name: Screenland Armour
+  address: 408 Armour Rd, North Kansas City, MO 64116
+  lat: 39.142541
+  lng: -94.575702
+  url: https://www.screenland.com/
+- name: recordBar
+  address: 1520 Grand Blvd, Kansas City, MO 64108
+  lat: 39.095017
+  lng: -94.581544
+  url: https://www.therecordbar.com/
+- name: Kauffman Center for the Performing Arts
+  address: 1601 Broadway Blvd, Kansas City, MO 64108
+  lat: 39.094159
+  lng: -94.587694
+  url: https://www.kauffmancenter.org/
+- name: The Truman
+  address: 601 E Truman Rd, Kansas City, MO 64106
+  lat: 39.095213
+  lng: -94.576142
+  url: https://www.thetrumankc.com/
+- name: Replay Lounge
+  address: 946 Massachusetts St, Lawrence, KS 66044
+  lat: 38.965835
+  lng: -95.235673
+  url: https://www.replaylounge.com/
+- name: The Midland
+  address: 1228 Main St, Kansas City, MO 64105
+  lat: 39.098867
+  lng: -94.583720
+  url: https://www.midlandkc.com/
+- name: Lawrence Arts Center
+  address: 940 New Hampshire St, Lawrence, KS 66044
+  lat: 38.966429
+  lng: -95.234372
+  url: https://lawrenceartscenter.org/
+- name: Knuckleheads
+  address: 2715 Rochester Ave, Kansas City, MO 64120
+  lat: 39.120497
+  lng: -94.548651
+  url: https://knuckleheadskc.com/
+- name: Lied Center of Kansas
+  address: 1600 Stewart Dr, Lawrence, KS 66045
+  lat: 38.955019
+  lng: -95.262700
+  url: https://lied.ku.edu/
+- name: Nelson-Atkins Museum of Art
+  address: 4525 Oak St, Kansas City, MO 64111
+  lat: 39.044966
+  lng: -94.580958
+  url: https://www.nelson-atkins.org/
+- name: Kemper Museum of Contemporary Art
+  address: 4420 Warwick Blvd, Kansas City, MO 64111
+  lat: 39.046324
+  lng: -94.585064
+  url: https://www.kemperart.org/
+- name: Crown Center
+  address: 2450 Grand Blvd, Kansas City, MO 64108
+  lat: 39.082555
+  lng: -94.582439
+  url: https://www.crowncenter.com/
+- name: T-Mobile Center
+  address: 1407 Grand Blvd, Kansas City, MO 64106
+  lat: 39.097295
+  lng: -94.579950
+  url: https://www.t-mobilecenter.com/
+- name: Museum of Kansas City
+  address: 3218 Gladstone Blvd, Kansas City, MO 64123
+  lat: 39.115797
+  lng: -94.542393
+  url: https://museumofkansascity.org/
+- name: Liberty Hall
+  address: 644 Massachusetts St, Lawrence, KS 66044
+  lat: 38.971473
+  lng: -95.235732
+  url: https://www.liberty-hall.com/
+- name: Folly Theater
+  address: 300 W 12th St, Kansas City, MO 64105
+  lat: 39.100310
+  lng: -94.587292
+  url: https://follytheater.org/
+- name: The Bottleneck
+  address: 737 New Hampshire St, Lawrence, KS 66044
+  lat: 38.969842
+  lng: -95.235068
+  url: https://thebottlenecklive.com/
+- name: The Granada
+  address: 1020 Massachusetts St, Lawrence, KS 66044
+  lat: 38.964768
+  lng: -95.235675
+  url: https://thegranada.com/
+- name: The Comedy Club of Kansas City
+  address: 1130 W 103rd St, Kansas City, MO 64114
+  lat: 38.942316
+  lng: -94.606075
+  url: https://www.thecomedyclubkc.com/
+- name: National WWI Museum and Memorial
+  address: 2 Memorial Dr, Kansas City, MO 64108
+  lat: 39.080675
+  lng: -94.586076
+  url: https://www.theworldwar.org/
+- name: Kansas City Convention Center
+  address: 301 W 13th St, Kansas City, MO 64105
+  lat: 39.097424
+  lng: -94.587114
+  url: https://kcconvention.com/
+- name: Nerman Museum of Contemporary Art
+  address: 12345 College Blvd, Overland Park, KS 66210
+  lat: 38.924956
+  lng: -94.726820
+  url: https://www.nermanmuseum.org/
+- name: Stray Cat Film Center
+  address: 1662 Broadway Blvd, Kansas City, MO 64108
+  lat: 39.093171
+  lng: -94.588902
+  url: https://www.straycatfilmcenter.com/
+- name: Kansas City Zoo & Aquarium
+  address: 6800 Zoo Dr, Kansas City, MO 64132
+  lat: 39.003530
+  lng: -94.524260
+  url: https://kansascityzoo.org/
+- name: Plaza Branch (Kansas City Public Library)
+  address: 4801 Main St, Kansas City, MO 64112
+  lat: 39.039440
+  lng: -94.586515
+  url: https://kclibrary.org/locations/plaza
+- name: Central Resource Library (Johnson County Library)
+  address: 9875 W 87th St, Overland Park, KS 66212
+  lat: 38.969660
+  lng: -94.699589
+  url: https://www.jocolibrary.org/locations/CENTRAL/
+- name: The Bird Comedy Theater
+  address: 103 W 19th St, Kansas City, MO 64108
+  lat: 39.090814
+  lng: -94.585333
+  url: https://thebirdkc.com/
+- name: Central Library (Kansas City Public Library)
+  address: 14 W 10th St, Kansas City, MO 64105
+  lat: 39.102581
+  lng: -94.583883
+  url: https://kclibrary.org/locations/central
+- name: Charlotte Street
+  address: 3333 Wyoming St, Kansas City, MO 64111
+  lat: 39.066801
+  lng: -94.603799
+  url: https://charlottestreet.org/
+- name: Emily & Todd Voth Artspace
+  address: 16 E 43rd St, Kansas City, MO 64111
+  lat: 39.049470
+  lng: -94.585718
+  url: https://kcai.edu/artspace/
+- name: Arrowhead Stadium
+  address: 1 Arrowhead Dr, Kansas City, MO 64129
+  lat: 39.048936
+  lng: -94.483999
+  url: https://www.arrowheadstadiumkc.com/
+- name: KC Live!
+  address: 1330 Grand Blvd, Kansas City, MO 64105
+  lat: 39.097826
+  lng: -94.581636
+  url: https://powerandlightdistrict.com/en/Eat-and-Drink/KC-Live
+- name: City Market
+  address: 20 E 5th St, Kansas City, MO 64106
+  lat: 39.109510
+  lng: -94.581991
+  url: https://thecitymarketkc.org/
+- name: Unity Temple on the Plaza
+  address: 707 W 47th St, Kansas City, MO 64112
+  lat: 39.042127
+  lng: -94.595256
+  url: https://unitytemple.com/
+- name: Bruce R. Watkins Cultural Heritage Center
+  address: 3700 Dr Martin Luther King Jr Blvd, Kansas City, MO 64130
+  lat: 39.036777
+  lng: -94.542573
+  url: https://kcparks.org/places/brw-center/
+- name: Blue Valley Library (Johnson County Library)
+  address: 9000 W 151st St, Overland Park, KS 66221
+  lat: 38.855662
+  lng: -94.690735
+  url: https://www.jocolibrary.org/locations/BLUEVALLEY/
+- name: Zhou B Art Center KC
+  address: 1801 E 18th St, Kansas City, MO 64108
+  lat: 39.090294
+  lng: -94.560402
+  url: https://www.zhoubartcenterkc.com/
+- name: American Jazz Museum
+  address: 1616 E 18th St, Kansas City, MO 64108
+  lat: 39.091449
+  lng: -94.562864
+  url: https://americanjazzmuseum.org/
+- name: Union Station Kansas City
+  address: 30 W Pershing Rd, Kansas City, MO 64108
+  lat: 39.085304
+  lng: -94.585770
+  url: https://www.unionstation.org/
+# A district, so a position and no address: the Crossroads streetcar stop, Main at 19th, in its core.
+- name: Crossroads Arts District
+  lat: 39.090101
+  lng: -94.583744
+  url: https://kccrossroads.org/

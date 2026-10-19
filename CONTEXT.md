@@ -210,6 +210,14 @@ _Avoid_: list, collection, playlist
 The page for one active event, at `/e/<id>`: its date, venue, why-line when flagged, description when there is one, primary link, calendar file, last-verified stamp, and corrections link.
 _Avoid_: detail page, listing page
 
+**Venue page**:
+The page for one venue, at `/v/<slug>` (#137): its address, a map link and its own site when the venue table has them, then its events in the explorer's rows grouped by day, each with the room it is in. Every venue a published event is at has one, and so does every venue table row, with "Nothing listed at the moment" when nothing is coming up. The slug comes from the venue's display name, so two spellings of one name are one page. Every venue page is listed at `/venues`, the **venue directory**, by region with its count of events, those with nothing coming up last; each venue page links it.
+_Avoid_: location page, place page
+
+**Venue table**:
+`data/venues.yaml`, hand-kept: one row per venue, keyed on its display name, with its street address and, when looked up, its position and its own site; a district with no one address has its position alone (ADR 0013). Read only by the site's build, which fails on a row keyed on an alias or on no venue it knows.
+_Avoid_: venue list, venue database
+
 **Changes page**:
 The page at `/changes` listing what the last run changed against the run before it: new picks (active and flagged, not flagged before), moved events (active before and now, the start on another day or time, from a start not yet passed), events gone (active before, expired as cancelled or two-strike), and events new this week (first seen in the seven days through the run).
 _Avoid_: changelog, what's new, digest

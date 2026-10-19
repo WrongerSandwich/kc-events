@@ -1,9 +1,11 @@
 import type { APIRoute } from "astro";
 import { events } from "../../generated/events";
 import { meta } from "../../generated/meta";
+import { venues } from "../../generated/venues";
 import { isDated } from "../../lib/events";
 import { toIcs } from "../../lib/ics";
 import type { PublishedEvent } from "../../lib/types";
+import { addressLine, venueNamed } from "../../lib/venues";
 import { siteConfig } from "../../site.config";
 
 export function getStaticPaths() {
@@ -11,6 +13,10 @@ export function getStaticPaths() {
 }
 
 export const GET: APIRoute = ({ props }) => {
-  const body = toIcs([props.event as PublishedEvent], { siteName: siteConfig.name, stamp: meta.lastSuccessfulRun });
+  const event = props.event as PublishedEvent;
+  // The venue table's street address and position (#137), when the venue has a row.
+  const venue = venueNamed(venues, event.venue);
+  const located = { ...event, ...(venue?.address && { addressLine: addressLine(venue.address) }), ...(venue?.geo && { geo: venue.geo }) };
+  const body = toIcs([located], { siteName: siteConfig.name, stamp: meta.lastSuccessfulRun });
   return new Response(body, { headers: { "Content-Type": "text/calendar; charset=utf-8" } });
 };

@@ -1,0 +1,21 @@
+/*
+ * The venue pages and the venue directory (#137), one stylesheet for both: Astro writes a small stylesheet inline and
+ * puts its hash in every page's content security policy, so each page with styles of its own adds a hash to the front
+ * page's and the explorer's weight. Imported by those two pages only; the classes are prefixed to keep them theirs.
+ */
+.venue-head { margin: var(--space-8) 0 var(--space-4); }
+.venue-head h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: 0 0 var(--space-2); }
+.venue-head p { margin: 0; }
+.venue-head .venue-hood { color: var(--fg-muted); }
+.venue-links { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: var(--space-3) 0 0; }
+.venue-links a { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--tap); }
+.venue-none { color: var(--fg-muted); }
+.venue-all { margin-top: var(--space-8); font-size: var(--text-sm); }
+
+.directory h1 { margin-top: var(--space-8); }
+.directory .lede { color: var(--fg-muted); margin-top: var(--space-2); }
+.directory .section-heading { font-size: var(--text-xl); margin-top: var(--space-12); }
+.directory ul { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
+.directory li { display: grid; gap: 2px; padding-block: var(--space-2); border-bottom: 1px solid var(--rule); }
+.directory li a { font-weight: var(--weight-medium); color: var(--fg); }
+.directory .detail { font-size: var(--text-sm); color: var(--fg-muted); }
