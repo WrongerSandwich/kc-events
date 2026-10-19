@@ -144,15 +144,14 @@
     {
       "id": "evt_f2ab74ceb485",
       "title": "The Wizard of Oz",
-      "start": "2026-10-22",
+      "start": "2026-10-16",
       "end": "2026-10-25",
-      "venue": "Kpac Ga School",
-      "neighborhood": "Elsewhere in the metro",
-      "unplaced": {},
-      "primaryUrl": "https://www.kauffmancenter.org/events/",
-      "eventUrl": "https://tickets.kauffmancenter.org/overview/25237",
+      "venue": "Kauffman Center for the Performing Arts",
+      "neighborhood": "Crossroads",
+      "primaryUrl": "https://kcballet.org/events/the-wizard-of-oz/",
+      "eventUrl": "https://kcballet.org/events/the-wizard-of-oz/",
       "kind": "theater/dance",
-      "recurrence": "one-off",
+      "recurrence": "limited-run",
       "dontMiss": false,
       "firstSeen": "2026-10-03T16:05:31-05:00",
       "lastVerified": "2026-10-19T06:17:06-05:00",
@@ -166,8 +165,8 @@
         "source": "Kauffman Center for the Performing Arts"
       },
       "evidence": {
-        "date": "October 22-25\nVarious Times",
-        "venue": "Kpac Ga School"
+        "date": "October 16-25, 2026",
+        "venue": "Muriel Kauffman Theatre at the Kauffman Center for the Performing Arts"
       }
     },
     {
