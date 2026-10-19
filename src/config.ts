@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeName } from "./identity.js";
+import { normalizeName, venueAndRoom } from "./identity.js";
 
 const DEFAULT_MODELS = { extraction: "openai/gpt-6-luna", curation: "anthropic/claude-sonnet-5.5" };
 
@@ -151,6 +151,22 @@ export const configSchema = z.strictObject({
    * or a program that runs there. Event identity treats them all as one venue. Hand-kept.
    */
   venueAliases: z.record(z.string().min(1), z.array(z.string().min(1))).default({}),
+  /**
+   * Venue neighborhoods (#150): a venue's display name (a venueAliases key, or the name as pages give it)
+   * to the neighborhood every event at it not expired is placed in, whatever its page says. Hand-kept.
+   */
+  venueNeighborhoods: z.record(z.string().min(1), z.string().min(1)).default({}),
+}).superRefine((config, ctx) => {
+  const listed = new Set(Object.values(config.neighborhoods).flat().map(normalizeName));
+  for (const [venue, neighborhood] of Object.entries(config.venueNeighborhoods)) {
+    const key = venueAndRoom(venue, config.venueAliases).venue;
+    if (key !== venue) ctx.addIssue({ code: "custom", message: `venueNeighborhoods "${venue}" is a name venueAliases files under "${key}"; key the entry on "${key}"` });
+    if (normalizeName(neighborhood) === normalizeName(ELSEWHERE_IN_THE_METRO)) {
+      ctx.addIssue({ code: "custom", message: `venueNeighborhoods "${venue}" names the catch-all; map a venue only to a neighborhood a region lists` });
+    } else if (!listed.has(normalizeName(neighborhood))) {
+      ctx.addIssue({ code: "custom", message: `venueNeighborhoods "${venue}" names "${neighborhood}", which no region lists` });
+    }
+  }
 });
 
 export type RunConfig = z.infer<typeof configSchema>;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseConfig } from "../src/config.js";
+import { parseConfig, type RunConfig } from "../src/config.js";
 import { emptyDataset, type Dataset, type Event } from "../src/dataset.js";
 import type { CompletionResult } from "../src/ports.js";
 import { renderReportMarkdown } from "../src/report.js";
@@ -179,5 +179,113 @@ describe("stored neighborhoods off the list", () => {
 
     expect(markdown).toContain("| Stored neighborhoods off the list, placed again | 1 |");
     expect(markdown).toContain('- "Central KC": 1 event placed in East Bottoms');
+  });
+});
+
+describe("venue neighborhoods (#150)", () => {
+  const calendar = knuckleheads.urls[0]!;
+  const other = source("Other", { neighborhood: "Crossroads" });
+  const show = () => candidateAt(knuckleheads, { startDate: "2026-12-12", dateEvidence: "Sat, Dec 12 · Show 8:00 PM" });
+  const mapped = (venueNeighborhoods: Record<string, string>, venueAliases: Record<string, string[]> = {}) =>
+    testConfig({ venueNeighborhoods, venueAliases });
+  const runAt = (now: Date, dataset: Dataset, knuckleheadsPage: CannedPage, completions: CompletionResult[], config: RunConfig) =>
+    runWith(now, dataset, { sources: [knuckleheads, other], pages: { [calendar]: knuckleheadsPage, [other.urls[0]!]: PAGE }, completions, config });
+  /** A dataset holding the Big Show, read verified from Knuckleheads (East Bottoms) in week one, with these overrides. */
+  const storedAs = async (overrides: Partial<Event>) => {
+    const first = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show()), reply()], testConfig());
+    return { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, ...overrides })) };
+  };
+  const FORBIDDEN: CannedPage = { status: 403, body: "Forbidden" };
+
+  it("an event at a mapped venue read this run takes the mapped neighborhood, whatever extraction proposed", async () => {
+    const result = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show()), reply()], mapped({ Knuckleheads: "Westport" }));
+
+    expect(result.dataset.events[0]).toMatchObject({ venue: "Knuckleheads", neighborhood: "Westport" });
+    expect(result.report.venueNeighborhoods).toEqual([{ venue: "Knuckleheads", placed: "Westport", events: 1 }]);
+  });
+
+  it("an event stored under another neighborhood and read by no page this run is moved", async () => {
+    const second = await runAt(WEEK_2, await storedAs({ neighborhood: "Crossroads" }), FORBIDDEN, [reply()], mapped({ Knuckleheads: "Westport" }));
+
+    expect(second.dataset.events[0]).toMatchObject({ neighborhood: "Westport", consecutiveOutages: 1 });
+    expect(second.report.venueNeighborhoods).toEqual([{ venue: "Knuckleheads", placed: "Westport", events: 1 }]);
+  });
+
+  it("an event whose venue name goes by an alias of a mapped venue is moved", async () => {
+    const config = mapped({ "Knuckleheads Saloon": "Westport" }, { "Knuckleheads Saloon": ["Knuckleheads"] });
+
+    const second = await runAt(WEEK_2, await storedAs({ neighborhood: "Crossroads" }), FORBIDDEN, [reply()], config);
+
+    expect(second.dataset.events[0]!.neighborhood).toBe("Westport");
+    expect(second.report.venueNeighborhoods).toEqual([{ venue: "Knuckleheads Saloon", placed: "Westport", events: 1 }]);
+  });
+
+  it("an event in the catch-all at a mapped venue is moved and loses its unplaced mark", async () => {
+    const stored = await storedAs({ neighborhood: "Elsewhere in the metro", unplaced: { proposed: "Swope" } });
+
+    const second = await runAt(WEEK_2, stored, FORBIDDEN, [reply()], mapped({ Knuckleheads: "Westport" }));
+
+    expect(second.dataset.events[0]!.neighborhood).toBe("Westport");
+    expect(second.dataset.events[0]!.unplaced).toBeUndefined();
+    expect(second.report.unmappableNeighborhoods).toEqual([]);
+  });
+
+  it("a stored neighborhood off the list at a mapped venue goes to the mapped one, not to the catch-all", async () => {
+    const second = await runAt(WEEK_2, await storedAs({ neighborhood: "Topeka" }), FORBIDDEN, [reply()], mapped({ Knuckleheads: "Westport" }));
+
+    expect(second.dataset.events[0]!.neighborhood).toBe("Westport");
+    expect(second.report.offListNeighborhoods).toEqual([]);
+  });
+
+  it("an expired event at a mapped venue is left as it is", async () => {
+    const stored = await storedAs({ neighborhood: "Crossroads", status: "expired", expiryReason: "two-strike" });
+
+    const second = await runAt(WEEK_2, stored, FORBIDDEN, [reply()], mapped({ Knuckleheads: "Westport" }));
+
+    expect(second.dataset.events[0]!.neighborhood).toBe("Crossroads");
+    expect(second.report.venueNeighborhoods).toEqual([]);
+  });
+
+  it("an event already under its venue's neighborhood, or at a venue not mapped, is not reported", async () => {
+    const already = await runAt(WEEK_2, await storedAs({ neighborhood: "Westport" }), FORBIDDEN, [reply()], mapped({ Knuckleheads: "Westport" }));
+    const unmapped = await runAt(WEEK_2, await storedAs({ neighborhood: "Crossroads" }), FORBIDDEN, [reply()], mapped({ recordBar: "Westport" }));
+
+    expect(already.dataset.events[0]!.neighborhood).toBe("Westport");
+    expect(unmapped.dataset.events[0]!.neighborhood).toBe("Crossroads");
+    expect([...already.report.venueNeighborhoods, ...unmapped.report.venueNeighborhoods]).toEqual([]);
+  });
+
+  it("the run report names each venue, how many events it moved, and where", async () => {
+    const second = await runAt(WEEK_2, await storedAs({ neighborhood: "Crossroads" }), FORBIDDEN, [reply()], mapped({ Knuckleheads: "Westport" }));
+
+    expect(renderReportMarkdown(second.report)).toContain("- Knuckleheads: 1 event placed in Westport by venueNeighborhoods");
+  });
+});
+
+describe("the venueNeighborhoods config", () => {
+  const neighborhoods = { "Central KC": ["Westport", "Crossroads"], Lawrence: ["Lawrence"] };
+
+  it("defaults to no venues", () => {
+    expect(parseConfig({}).venueNeighborhoods).toEqual({});
+  });
+
+  it("accepts a venue mapped to a listed neighborhood", () => {
+    expect(parseConfig({ neighborhoods, venueNeighborhoods: { recordBar: "Crossroads" } }).venueNeighborhoods).toEqual({ recordBar: "Crossroads" });
+  });
+
+  it("refuses a neighborhood no region lists, naming the entry", () => {
+    expect(() => parseConfig({ neighborhoods, venueNeighborhoods: { recordBar: "Topeka" } })).toThrow(/recordBar.*Topeka.*no region lists/);
+  });
+
+  it("refuses the catch-all as a neighborhood, naming the entry", () => {
+    expect(() => parseConfig({ neighborhoods, venueNeighborhoods: { recordBar: "Elsewhere in the metro" } })).toThrow(/recordBar.*catch-all/);
+  });
+
+  it("refuses a key that venueAliases files under another venue, naming the key to use", () => {
+    const venueAliases = { "Kauffman Center for the Performing Arts": ["Kauffman Center", "Helzberg Hall"] };
+
+    expect(() => parseConfig({ neighborhoods, venueAliases, venueNeighborhoods: { "Helzberg Hall": "Crossroads" } })).toThrow(
+      /Helzberg Hall.*key the entry on .*Kauffman Center for the Performing Arts/,
+    );
   });
 });

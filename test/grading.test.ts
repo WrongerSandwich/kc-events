@@ -19,6 +19,7 @@ function report(overrides: Partial<RunReport> = {}): RunReport {
     ownPages: [],
     failingSources: [],
     offListNeighborhoods: [],
+    venueNeighborhoods: [],
     unmappableNeighborhoods: [],
     promotionSuggestions: [],
     heldForPromotion: [],

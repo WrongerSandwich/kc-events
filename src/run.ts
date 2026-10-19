@@ -50,6 +50,7 @@ import {
   sameText,
   scheduleSaysWhen,
   variantTitles,
+  venueAndRoom,
   type MatchRule,
   type VenueAliases,
 } from "./identity.js";
@@ -147,8 +148,10 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const aged = reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: couldHaveSighted(e, laneOutcome.attempts, registry, config) }));
   // A flagged source's events its list dates but does not time have their own page read for the time (#123).
   const ownPages = await readOwnPages(aged, sighted, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
-  // A reading places an event from its page; one no page placed this run is placed from what is stored.
-  const placed = placeOffList(ownPages.events, neighborhoods, config, registry);
+  // A mapped venue places every event at it, read this run or not (#150); a reading places the rest from its page,
+  // and one no page placed this run is placed from what is stored.
+  const byVenue = placeMappedVenues(ownPages.events, neighborhoods, config);
+  const placed = placeOffList(byVenue.events, neighborhoods, config, registry);
   // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
   const madeUncitable = new Set([...merged.uncitable, ...reverified.uncitable]);
   const uncitable = placed.events.filter((e) => madeUncitable.has(e.id) && e.status === "unverified");
@@ -216,6 +219,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     ownPages: [...ownPages.report, ...picks.report],
     failingSources: registryLane.failingSources,
     offListNeighborhoods: placed.report,
+    venueNeighborhoods: byVenue.report,
     unmappableNeighborhoods: unmappableNeighborhoods(dataset.events, live),
     promotionSuggestions: promotion.promotionSuggestions,
     heldForPromotion: held.heldByHost,
@@ -1779,6 +1783,28 @@ function originFor(event: Event, url: string, registry: Registry): PageOrigin {
     lane: "registry",
     source: registered ?? { name: lead.source, urls: [url], kind: event.kind, neighborhood: event.neighborhood, status: "active" },
   };
+}
+
+/**
+ * Every event not expired at a venue the config's venueNeighborhoods maps (#150), by its display name (see
+ * venueAndRoom), placed in the venue's neighborhood, whatever its page said or was stored; never the catch-all, so
+ * it carries no unplaced mark. For the report, each venue that moved an event, and how many. An expired event is
+ * left as it is: a reading that revives it is placed again then.
+ */
+function placeMappedVenues(events: Event[], list: string[], config: RunConfig) {
+  const mapped = new Map(Object.entries(config.venueNeighborhoods).map(([venue, n]) => [normalizeName(venue), { venue, neighborhood: placeStored(n, list, config) }]));
+  const report: RunReport["venueNeighborhoods"] = [];
+  const placed = events.map((event) => {
+    if (event.status === "expired" || event.venue === undefined) return event;
+    const entry = mapped.get(normalizeName(venueAndRoom(event.venue, config.venueAliases).venue));
+    if (entry === undefined || entry.neighborhood === event.neighborhood) return event;
+    const line = report.find((r) => r.venue === entry.venue);
+    if (line) line.events++;
+    else report.push({ venue: entry.venue, placed: entry.neighborhood, events: 1 });
+    const { unplaced: _, ...rest } = event;
+    return { ...rest, neighborhood: entry.neighborhood };
+  });
+  return { events: placed, report };
 }
 
 /**

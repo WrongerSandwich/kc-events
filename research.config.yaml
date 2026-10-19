@@ -212,3 +212,17 @@ venueAliases:
   De Soto Library (Johnson County Library): [De Soto Library]
   Lenexa City Center Library (Johnson County Library): [Lenexa City Center Library]
   Leawood Pioneer Library (Johnson County Library): [Leawood Pioneer Library]
+
+# Venue neighborhoods (#150): a venue's display name, then the neighborhood every event at it is placed
+# in, whatever its page says. For a venue whose neighborhood is a fact about the venue that pages keep
+# getting wrong: extraction places each event from its own page, so one venue's events can split across
+# neighborhoods. Keyed on the display name, the venueAliases entry when the venue has one ("Kauffman
+# Center" and "Helzberg Hall" go by the Kauffman Center's), else the name as pages give it; the
+# neighborhood must be on the list above, never the catch-all. Each run places every event not expired
+# at a mapped venue, read or not, and the run report names each venue that moved one. Hand-kept.
+venueNeighborhoods:
+  # The closest listed neighborhood, in the South KC region with the Zoo.
+  Bruce R. Watkins Cultural Heritage Center: Swope Park
+  Kauffman Center for the Performing Arts: Crossroads
+  The Bird Comedy Theater: Crossroads
+  Emily & Todd Voth Artspace: Midtown

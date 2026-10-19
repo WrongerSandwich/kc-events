@@ -72,6 +72,7 @@ const full: RunReport = {
   ],
   failingSources: ["Pipe | Hall"],
   offListNeighborhoods: [{ stored: "Downtown East", placed: "Crossroads", events: 2 }],
+  venueNeighborhoods: [{ venue: "Bruce R. Watkins Cultural Heritage Center", placed: "Swope Park", events: 2 }],
   unmappableNeighborhoods: [
     { eventId: "evt_1", eventTitle: "Barn Dance", venue: "Red Barn", proposed: "Kearney", listedBefore: false },
     { eventId: "evt_2", eventTitle: "Pop-up", listedBefore: false },
@@ -182,6 +183,10 @@ describe("the run report", () => {
 
       - "Downtown East": 2 events placed in Crossroads
 
+      ## Venue neighborhoods
+
+      - Bruce R. Watkins Cultural Heritage Center: 2 events placed in Swope Park by venueNeighborhoods
+
       ## Unverified by outage limit
 
       - Quiet Show: https://down.test/calendar
@@ -219,13 +224,13 @@ describe("the run report", () => {
   });
 
   it("fills the fields a report from before them does not carry", () => {
-    const { reverification, offListNeighborhoods, heldForPromotion, releasedForPromotion, outageLimited, uncitableReadings, keptOnStoredCitation, cancellationsFromElsewhere, identityChurn, ...older } = full;
+    const { reverification, offListNeighborhoods, venueNeighborhoods, heldForPromotion, releasedForPromotion, outageLimited, uncitableReadings, keptOnStoredCitation, cancellationsFromElsewhere, identityChurn, ...older } = full;
     const { archived, heldThroughOutage, quoteNotOnPage, keptOnStoredCitation: keptCount, expired, ...counts } = full.counts;
     const { stale, ...expiredBefore } = expired;
     const parsed = parseRunReport({ ...older, counts: { ...counts, expired: expiredBefore }, spend: { ...full.spend, modelCalls: undefined } });
 
     expect(parsed.counts).toMatchObject({ archived: 0, heldThroughOutage: 0, quoteNotOnPage: 0, keptOnStoredCitation: 0, expired: { ...expiredBefore, stale: 0 } });
-    expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], identityChurn: [], keptOnStoredCitation: [], spend: { modelCalls: [] } });
+    expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], venueNeighborhoods: [], identityChurn: [], keptOnStoredCitation: [], spend: { modelCalls: [] } });
   });
 
   it("refuses a key it does not name", () => {
