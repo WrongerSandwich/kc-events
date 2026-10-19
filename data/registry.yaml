@@ -309,7 +309,7 @@ sources:
     urls: [https://www.screenland.com/coming-soon]
     kind: film
     neighborhood: North Kansas City
-    checkHints: Cinema at 408 Armour Rd, North Kansas City. Each title on this list carries the date of its first showing. List only special screenings, each a one-off on its date (a repertory or anniversary showing, a 35mm, 70mm or 4K print, a live commentary or live score, a sneak preview, a series night such as Friday Night Frights, Backyard Movies or SHOCKtober), and leave out a first-run release, which opens here for an ordinary run. A title naming another place, such as "(Elmwood Cemetery Screening)", is held there, not at the cinema.
+    checkHints: Cinema at 408 Armour Rd, North Kansas City. Each title on this list carries the date of its first showing. List only special screenings, each a one-off on its date (a repertory or anniversary showing, a 35mm, 70mm or 4K print, a live commentary or live score, a sneak preview, a series night such as Friday Night Frights, Backyard Movies or SHOCKtober), and leave out a first-run release, which opens here for an ordinary run. A title naming another place, such as "(Elmwood Cemetery Screening)", is held there, not at the cinema. A double feature is one screening. A film the list also shows on its own on the same date as a double feature that includes it (Frankenstein (1931) beside the Universal Monsters double feature of Invisible Man and Frankenstein, Halloween (1978) and Halloween 2 (1981) beside "Halloween 1 & 2") is part of that feature, so list only the double feature.
     fetch: browser
     waitFor: .list-complete-item .absolute-top-right
     status: active

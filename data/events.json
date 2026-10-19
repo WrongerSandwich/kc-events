@@ -37176,7 +37176,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-13T22:13:36-05:00",
       "lastJudged": "2026-10-13T22:13:36-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -37186,7 +37186,9 @@
       "evidence": {
         "date": "Oct 24",
         "venue": "Screenland Armour"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_78c742b55e43"
     },
     {
       "id": "evt_03cfe6375aa6",
@@ -37474,7 +37476,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-13T22:13:36-05:00",
       "lastJudged": "2026-10-13T22:13:36-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -37484,7 +37486,9 @@
       "evidence": {
         "date": "Oct 31",
         "venue": "Screenland Armour"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_39176d1da5c7"
     },
     {
       "id": "evt_0e7170964be8",
@@ -37501,7 +37505,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-13T22:13:36-05:00",
       "lastJudged": "2026-10-13T22:13:36-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -37511,7 +37515,9 @@
       "evidence": {
         "date": "Oct 31",
         "venue": "Screenland Armour"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_39176d1da5c7"
     },
     {
       "id": "evt_8f7cc135f484",
