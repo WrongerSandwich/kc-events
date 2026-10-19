@@ -7363,7 +7363,7 @@
       "firstSeen": "2026-10-03T16:05:31-05:00",
       "lastVerified": "2026-10-11T09:50:49-05:00",
       "lastChanged": "2026-10-12T18:58:48-05:00",
-      "status": "unverified",
+      "status": "expired",
       "verificationFailures": 1,
       "consecutiveOutages": 1,
       "lead": {
@@ -7373,7 +7373,8 @@
       "evidence": {
         "date": "October 18 , 2026 | 3:25 PM\nLos Angeles Chargers vs. Kansas City Chiefs\nParking Suites\nBUY TICKETS\nNovember 8 , 2026 | 12:00 PM\nNew York Jets vs. Kansas City Chiefs\nParking Suites\nBUY TICKETS\nNovember 22 , 2026 | 12:00 PM\nArizona Cardinals vs. Kansas City Chiefs",
         "venue": "Arrowhead Stadium\nAddress:\n1 Arrowhead Drive\nKansas City, Missouri 64129"
-      }
+      },
+      "expiryReason": "duplicate"
     },
     {
       "id": "evt_cee585021559",
@@ -10434,7 +10435,7 @@
       "firstSeen": "2026-10-03T16:36:34-05:00",
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-19T06:17:06-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -10444,7 +10445,8 @@
       "evidence": {
         "date": "2026-27 Regular Season",
         "venue": "Cable Dahmer Arena"
-      }
+      },
+      "expiryReason": "duplicate"
     },
     {
       "id": "evt_006c79cc5f91",
@@ -27103,7 +27105,7 @@
       "firstSeen": "2026-10-09T20:23:42-05:00",
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-19T06:17:06-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -27113,7 +27115,8 @@
       "evidence": {
         "date": "2026",
         "venue": "Sporting Park"
-      }
+      },
+      "expiryReason": "duplicate"
     },
     {
       "id": "evt_106e289d05aa",
@@ -38536,7 +38539,7 @@
       "firstSeen": "2026-10-13T22:13:36-05:00",
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-13T22:13:36-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -38546,7 +38549,8 @@
       "evidence": {
         "date": "2026 season",
         "venue": "CPKC Stadium Kansas City, MO"
-      }
+      },
+      "expiryReason": "duplicate"
     },
     {
       "id": "evt_b9fba82abd11",

@@ -428,14 +428,14 @@ sources:
     urls: [https://www.arrowheadstadiumkc.com/events]
     kind: sports
     neighborhood: Truman Sports Complex
-    checkHints: Chiefs home games (one recurring season event, not one per game) plus concerts and other stadium events, which are one-offs.
+    checkHints: Chiefs home games, each its own one-off ("<Opponent> vs. Kansas City Chiefs"), plus concerts and other stadium events, which are one-offs too.
     status: active
 
   - name: Kansas City Mavericks
     urls: [https://kcmavericks.com/]
     kind: sports
     neighborhood: Independence
-    checkHints: The homepage carries the schedule (/schedule is the same page). Home games at Cable Dahmer Arena. The season is one recurring event; theme nights are not separate events.
+    checkHints: The homepage carries the schedule (/schedule is the same page). Home games, written "<Opponent> @ Kansas City Mavericks", are at Cable Dahmer Arena, each its own one-off; a theme night belongs in its game's description, not an event of its own. Away games, "Kansas City Mavericks @ <opponent>", are outside the geography.
     status: active
     notes: ICS feed at https://kcmavericks.com/schedule-home.ics
 
@@ -443,7 +443,7 @@ sources:
     urls: [https://www.sportingkc.com/schedule/]
     kind: sports
     neighborhood: Kansas City, Kansas
-    checkHints: The season of home matches is one recurring event titled "Sporting Kansas City", with a schedule naming the competition and its months. Home matches are at Sporting Park (Children's Mercy Park), 1 Sporting Way, Kansas City, Kansas; the schedule lists away matches at other clubs' stadiums too, which are outside the geography. Past matches show a final score.
+    checkHints: Each home match is its own one-off, titled with both clubs. Home matches are at Sporting Park (Children's Mercy Park), 1 Sporting Way, Kansas City, Kansas; the schedule lists away matches at other clubs' stadiums too, which are outside the geography. Past matches show a final score.
     fetch: browser
     waitFor: .mls-c-match-list__match
     status: active
@@ -452,7 +452,7 @@ sources:
     urls: [https://www.kansascitycurrent.com/schedule]
     kind: sports
     neighborhood: Berkley Riverfront
-    checkHints: NWSL club. Home matches are at CPKC Stadium on the Berkley Riverfront; the schedule lists away matches at other clubs' stadiums too, which are outside the geography, and watch parties for them, which are not events. Past matches show a result; playoff rounds dated as a range with "TBD" have no confirmed date or venue yet.
+    checkHints: NWSL club. Each home match is its own one-off, titled with both clubs ("Kansas City Current vs. Washington Spirit"), and a theme day (Fan Appreciation Day) belongs in its description. Home matches are at CPKC Stadium on the Berkley Riverfront; the schedule lists away matches at other clubs' stadiums too, which are outside the geography, and watch parties for them, which are not events. Past matches show a result; playoff rounds dated as a range with "TBD" have no confirmed date or venue yet.
     status: active
     notes: Until 2026-10-08 the registry pointed at kccurrent.com, which is another publication's site; the 403 there was its user-agent rule, not the club's.
 
@@ -557,7 +557,7 @@ sources:
     kind: sports
     neighborhood: Truman Sports Complex
     status: excluded
-    reason: Off-season. Rendered in a browser, the schedule shows games, but there are none until spring training (checked 2026-10-08 on the September page). Activate it in late February with a browser fetch.
+    reason: Off-season. Rendered in a browser, the schedule shows games, but there are none until spring training (checked 2026-10-08 on the September page). Activate it in late February with a browser fetch; each home game is its own one-off (#159).
     notes: The page redirects to the current month's grid, so in season a run reads only the rest of that month. Wait for games with a selector; the page never goes network-quiet, so without one the browser fetch times out.
 
   - name: Funny Bone Comedy Club

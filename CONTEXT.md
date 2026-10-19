@@ -53,7 +53,7 @@ A team's game in another city, which its own schedule lists as "<Team> at <place
 _Avoid_: special, deal
 
 **Schedule phrase**:
-How a recurring event repeats, in a few words from its page ("Every Tuesday, 7pm"). A recurring event carries it instead of a start and end date. A sports team's season is one recurring event with a schedule phrase, not a one-off per game.
+How a recurring event repeats, in a few words from its page ("Every Tuesday, 7pm"). A recurring event carries it instead of a start and end date. A sports team's home game is a one-off, one per game; a season as a whole is not an event (#159).
 
 **Don't-miss flag**:
 The editorial call that a one-off or limited run is worth going out of your way for. Never applied to recurring events. The curation prompt names a density, on the order of 30 to 50 flags across an eight-week horizon of about 500 events: a calibration for the threshold, never a quota for a batch.
