@@ -47,7 +47,7 @@ export const candidateSchema = z.object({
   schedule: z
     .string()
     .nullable()
-    .describe('For something that repeats with no end date (weekly trivia, a monthly market, a team\'s season): how it repeats, as a short phrase from the page, e.g. "Every Tuesday, 7pm". Null otherwise.'),
+    .describe('For something that repeats with no end date (weekly trivia, a monthly market): how it repeats, as a short phrase from the page, e.g. "Every Tuesday, 7pm". Null otherwise.'),
   venue: z.string().nullable().describe("The venue name as the page gives it. Null when the page does not name one."),
   neighborhood: z
     .string()

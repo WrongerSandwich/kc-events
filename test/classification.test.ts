@@ -56,6 +56,7 @@ describe("recurrence, kind, geography, and neighborhood", () => {
         venue: "Cable Dahmer Arena",
         dateEvidence: "Fri, Oct 9 · 7:05 PM Tickets Sat, Oct 10",
         venueEvidence: "Cable Dahmer Arena",
+        description: "Two games: Friday, October 9 at 7:05 p.m. and Saturday, October 10 at 7:05 p.m.",
       }),
     ]);
 
