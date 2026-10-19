@@ -44,7 +44,7 @@ sources:
     urls: [https://www.kauffmancenter.org/events/]
     kind: music
     neighborhood: Crossroads
-    checkHints: Lists every performance in Helzberg Hall and Muriel Kauffman Theatre, including the Symphony, Lyric Opera, KC Ballet and touring Broadway; the Symphony and KC Ballet are also their own sources.
+    checkHints: Lists every performance in Helzberg Hall and Muriel Kauffman Theatre, including the Symphony, Lyric Opera, KC Ballet and touring Broadway; the Symphony and KC Ballet are also their own sources. Each listing's last line names its hall (Helzberg Hall, Muriel Kauffman Theatre, Brandmeyer Great Hall). A last line that is not one of the halls ("Kpac Ga School") is a box-office label, not a place, so do not give it as the venue; the performance is at the Kauffman Center, so give "Kauffman Center for the Performing Arts" as the page names it.
     status: active
 
   - name: Kansas City Symphony
@@ -359,7 +359,7 @@ sources:
     urls: [https://kccrossroads.org/]
     kind: art/exhibitions
     neighborhood: Crossroads
-    checkHints: The homepage carries the district calendar. First Fridays (the first Friday of every month) is recurring; gallery exhibitions and one-off district events are not.
+    checkHints: The homepage carries the district calendar. First Fridays (the first Friday of every month) is recurring; gallery exhibitions and one-off district events are not. The Bird's "The Secret Show" is listed as a span of months with no time ("Fri , October 2, 2026 – Fri , February 5, 2027"), but it is a series, not a nightly run; it plays the first Friday of each month at 9:30 pm, so it is recurring, with the schedule "First Friday of the month, 9:30pm" and the span quoted as its date evidence. It is not Free First Friday Comedy, The Bird's 7:00 pm show on the same nights.
     status: active
 
   - name: Art Garden KC
@@ -477,7 +477,7 @@ sources:
     urls: [https://kcconvention.com/events/]
     kind: other
     neighborhood: Downtown
-    checkHints: Public shows and conventions; trade-only events are not for the public. Skip the touring Broadway shows at the Music Hall; the American Theatre Guild source carries each with its full run.
+    checkHints: Public shows and conventions; most of the calendar is business the public cannot attend. Skip a company's conference for its clients (Jack Henry Connect), an industry's conference, trade show or expo (EDspaces, the PACEshow, the KOA Convention & Expo, the Grassroots Connect Show), a professional association's convention (the United Soccer Coaches Convention), and annual meetings, dinners, galas and graduations. Keep what sells to the public, such as consumer shows (boat, home and flower, bridal, hunting, pet), fan and game conventions, fairs, auctions, and sports. A booking that has published no time is given the calendar's day block, 8:00 am to 5:00 pm (UMKC Basketball vs Montana State, "Info TBD"); a listing that starts at 8:00 am and ends at 5:00 pm, on one day or across several, has no time, so give its dates alone. Skip the touring Broadway shows at the Music Hall; the American Theatre Guild source carries each with its full run.
     status: active
     notes: ICS feed at https://kcconvention.com/events/?ical=1
 
