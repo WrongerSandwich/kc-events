@@ -45,24 +45,23 @@ describe("recurrence, kind, geography, and neighborhood", () => {
     expect(dataset.events[0]).not.toHaveProperty("end");
   });
 
-  it("a team's home season is one recurring event carrying its schedule, not a one-off per game", async () => {
+  it("a team's home series on consecutive days is one one-off event spanning its games", async () => {
     const { dataset } = await runOver([
       candidate({
-        title: "Sporting KC home matches",
-        startDate: "2026-03-01",
-        endDate: "2026-10-18",
-        schedule: "Home matches, March through October",
-        sportsSeason: true,
+        title: "Kansas City Mavericks vs. Tulsa Oilers",
+        startDate: "2026-10-09",
+        startTime: "19:05",
+        endDate: "2026-10-10",
         kind: "sports",
-        venue: "Children's Mercy Park",
-        dateEvidence: "2026 home schedule: Mar 1 – Oct 18",
-        venueEvidence: "Children's Mercy Park",
+        venue: "Cable Dahmer Arena",
+        dateEvidence: "Fri, Oct 9 · 7:05 PM Tickets Sat, Oct 10",
+        venueEvidence: "Cable Dahmer Arena",
       }),
     ]);
 
     expect(dataset.events).toHaveLength(1);
-    expect(dataset.events[0]).toMatchObject({ recurrence: "recurring", schedule: "Home matches, March through October", status: "active" });
-    expect(dataset.events[0]).not.toHaveProperty("start");
+    expect(dataset.events[0]).toMatchObject({ recurrence: "one-off", start: "2026-10-09T19:05:00-05:00", end: "2026-10-10", status: "active" });
+    expect(dataset.events[0]).not.toHaveProperty("schedule");
   });
 
   it("a series a page titles month by month with only days and times is one recurring event, and a month-titled entry with dates keeps them", async () => {

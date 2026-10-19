@@ -48,7 +48,6 @@ export const candidateSchema = z.object({
     .string()
     .nullable()
     .describe('For something that repeats with no end date (weekly trivia, a monthly market, a team\'s season): how it repeats, as a short phrase from the page, e.g. "Every Tuesday, 7pm". Null otherwise.'),
-  sportsSeason: z.boolean().describe("True when this candidate is a sports team's season of games as a whole rather than one game."),
   venue: z.string().nullable().describe("The venue name as the page gives it. Null when the page does not name one."),
   neighborhood: z
     .string()
@@ -424,7 +423,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const end = endsFirst ? undefined : endAt.iso;
   const dateProblem = startAt.problem ?? endAt.problem ?? (endsFirst ? `an end (${endAt.iso!.slice(0, 10)}) before its start` : undefined);
   const schedule = nonEmpty(candidate.schedule);
-  const recurrence = deriveRecurrence({ start, end, schedule, sportsSeason: candidate.sportsSeason });
+  const recurrence = deriveRecurrence({ start, end, schedule });
   const when = recurrence === "recurring" ? { schedule } : { start, end };
   const dateEvidence = unmarked(candidate.dateEvidence);
   const venueEvidence = unmarked(candidate.venueEvidence);

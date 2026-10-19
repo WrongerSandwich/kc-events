@@ -1,8 +1,8 @@
 /**
  * Recurrence class, derived from what the page says by rules rather than by the model's opinion:
- * a sports season is recurring; a schedule with no fixed end is recurring; an end date more than a
- * few days after the start, or a closing date with no start (a run already underway), is a
- * limited run; anything else is a one-off.
+ * a schedule with no fixed end is recurring; an end date more than a few days after the start,
+ * or a closing date with no start (a run already underway), is a limited run; anything else is a
+ * one-off.
  */
 import type { RecurrenceClass } from "./dataset.js";
 
@@ -17,12 +17,9 @@ export interface RecurrenceEvidence {
   end?: string;
   /** How the page says the thing repeats, e.g. "Every Tuesday, 7pm". */
   schedule?: string;
-  /** The page lists a team's season as a whole rather than one game. */
-  sportsSeason: boolean;
 }
 
-export function deriveRecurrence({ start, end, schedule, sportsSeason }: RecurrenceEvidence): RecurrenceClass {
-  if (sportsSeason) return "recurring";
+export function deriveRecurrence({ start, end, schedule }: RecurrenceEvidence): RecurrenceClass {
   if (schedule !== undefined && end === undefined) return "recurring";
   if (end !== undefined && (start === undefined || spanDays(start, end) > ONE_OFF_MAX_SPAN_DAYS)) return "limited-run";
   return "one-off";

@@ -39,7 +39,6 @@ export function candidateAt(at: Source, overrides: Record<string, unknown> = {})
     endDate: null,
     endTime: null,
     schedule: null,
-    sportsSeason: false,
     venue: at.name,
     neighborhood: at.neighborhood,
     outsideGeography: false,
