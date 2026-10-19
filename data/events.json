@@ -7725,7 +7725,7 @@
       "lastVerified": "2026-10-13T22:13:36-05:00",
       "lastChanged": "2026-10-12T17:17:57-05:00",
       "lastJudged": "2026-10-12T17:17:57-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 1,
       "consecutiveOutages": 0,
       "lead": {
@@ -7735,7 +7735,8 @@
       "evidence": {
         "date": "October 23, 2026\n8:00 PM",
         "venue": "Palm Tree KC"
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_7770dcc9844e",
@@ -16954,7 +16955,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-12T17:17:57-05:00",
       "lastJudged": "2026-10-12T17:17:57-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -16964,7 +16965,8 @@
       "evidence": {
         "date": "Oct 01 - Oct 31",
         "venue": "Crown Center District Homeschool Event"
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_b64f5f546335",
@@ -23983,7 +23985,7 @@
       "lastVerified": "2026-10-13T22:13:36-05:00",
       "lastChanged": "2026-10-12T17:17:57-05:00",
       "lastJudged": "2026-10-12T17:17:57-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 1,
       "consecutiveOutages": 0,
       "lead": {
@@ -23993,7 +23995,8 @@
       "evidence": {
         "date": "October 29, 2026\n6:00 pm-10:00 pm",
         "venue": "The Museum of Kansas City\n3218 Gladstone Blvd."
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_0d578b4a05dc",
@@ -27205,7 +27208,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-09T20:23:42-05:00",
       "lastJudged": "2026-10-09T20:23:42-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -27215,7 +27218,8 @@
       "evidence": {
         "date": "October 22, 2026\n7:30 PM",
         "venue": "Pizza Bar"
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_b1e8fff4ffdf",
@@ -30056,7 +30060,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-19T06:17:06-05:00",
       "lastJudged": "2026-10-19T06:17:06-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -30066,7 +30070,8 @@
       "evidence": {
         "date": "Tuesday, October 20 on October 20, 2026 , 9:00am – 4:00pm",
         "venue": "Central Resource Library Event location: Central Resource Library"
-      }
+      },
+      "expiryReason": "not-public"
     },
     {
       "id": "evt_7dc84ae91596",
@@ -30169,7 +30174,7 @@
       "lastVerified": "2026-10-19T06:17:06-05:00",
       "lastChanged": "2026-10-19T06:17:06-05:00",
       "lastJudged": "2026-10-19T06:17:06-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -30179,7 +30184,8 @@
       "evidence": {
         "date": "Tuesday, October 20 on October 20, 2026 , 9:00am – 12:00pm",
         "venue": "Central Resource Library Event location: Central Resource Library"
-      }
+      },
+      "expiryReason": "not-public"
     },
     {
       "id": "evt_4a66f86ea792",

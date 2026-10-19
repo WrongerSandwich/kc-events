@@ -396,7 +396,7 @@ sources:
     urls: [https://jocolibrary.bibliocommons.com/v2/events]
     kind: talks/readings
     neighborhood: Overland Park
-    checkHints: Branches across Johnson County, so read the venue (the branch) from each listing. Skip online events. Author talks, lectures and workshops are the events; a weekly storytime is recurring.
+    checkHints: Branches across Johnson County, so read the venue (the branch) from each listing. Skip online events. Author talks, lectures and workshops are the events; a weekly storytime is recurring. Appointments and equipment sessions are services, not events, such as One-on-One Basic Genealogy Help (arranged by email) and Memory Lab Sessions (digitizing your own photos and tapes).
     status: active
     notes: jocolibrary.org/events redirects here. The page is long; the first weeks of listings are what fit.
 
@@ -462,14 +462,14 @@ sources:
     urls: [https://www.powerandlightdistrict.com/events-and-entertainment/events]
     kind: other
     neighborhood: Downtown
-    checkHints: Entertainment district; KC Live! block concerts and festivals. Watch parties and its bars' and restaurants' standing nights are promotions, not events.
+    checkHints: Entertainment district; KC Live! block concerts and festivals. Watch parties and its bars' and restaurants' standing nights are promotions, not events, even when a listing is dated, such as Jokes by the Slice at Pizza Bar (open-mic sets with a happy hour) and Palm Tree KC's dining-and-DJ nights (me n ü). A party sold on its own tickets at KC Live!, such as End of Days on Halloween, is an event.
     status: active
 
   - name: Crown Center
     urls: [https://www.crowncenter.com/events]
     kind: other
     neighborhood: Crown Center
-    checkHints: The district's calendar, 2450 Grand Blvd; exhibits in the shops, events on the square, and shows by its theaters. Read the kind from each listing; a Musical Theater Heritage run listed here is theater/dance. Skip The Coterie's productions, which this page lists at the shops whatever their venue and dates, without naming The Coterie; The Coterie source carries them. In the 2026–27 season they are Electric Poe, The Pigeon Gets a Big Time Holiday Extravaganza!, JACKED! A Beanstalk Remix, The Gingerbread Kid, Madagascar – A Musical Adventure, Baby Rave, Kidtropolis and Electric Renaissance.
+    checkHints: The district's calendar, 2450 Grand Blvd; exhibits in the shops, events on the square, and shows by its theaters. Read the kind from each listing; a Musical Theater Heritage run listed here is theater/dance. Skip The Coterie's productions, which this page lists at the shops whatever their venue and dates, without naming The Coterie; The Coterie source carries them. In the 2026–27 season they are Electric Poe, The Pigeon Gets a Big Time Holiday Extravaganza!, JACKED! A Beanstalk Remix, The Gingerbread Kid, Madagascar – A Musical Adventure, Baby Rave, Kidtropolis and Electric Renaissance. A month of offers from the district's businesses, such as the Homeschool Event (activity packets and discounts), is not an event.
     status: active
     notes: Discovery read eleven events from this page before it was a source (2026-10-10).
 
@@ -571,7 +571,7 @@ sources:
     urls: [https://museumofkansascity.org/events/]
     kind: art/exhibitions
     neighborhood: Northeast
-    checkHints: Museum in Corinthian Hall, 3218 Gladstone Blvd. Exhibitions are limited runs; a film series, Día de los Muertos and other one-offs are listed too.
+    checkHints: Museum in Corinthian Hall, 3218 Gladstone Blvd. Exhibitions are limited runs; a film series, Día de los Muertos and other one-offs are listed too. soft clubbing at Elixir, a DJ night in the museum's soda fountain café, is a standing night and a promotion, so skip it.
     status: active
     notes: kansascitymuseum.org sits behind a Cloudflare challenge (HTTP 403 to every non-interactive client; checked 2026-10-08), but museumofkansascity.org is the museum's own site and fetches plainly; discovery read six events from it before it was a source (2026-10-10).
 
