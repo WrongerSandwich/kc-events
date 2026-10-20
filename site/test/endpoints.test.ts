@@ -69,6 +69,18 @@ describe("committed data", () => {
       expect(html).toContain("explore?q={search_term_string}");
     });
 
+    it("titles the front page for the search it answers, and names the site in its JSON-LD (#168)", () => {
+      const html = read("index.html");
+      expect(html).toContain("<title>Kansas City events this week · KC This Week</title>");
+      expect(html).toContain('<meta property="og:title" content="Kansas City events this week · KC This Week">');
+      expect(html).toContain('"@type":"WebSite","name":"KC This Week"');
+    });
+
+    it("names the dataset's license on the about page and in llms.txt (#167)", () => {
+      expect(read("about.html")).toMatch(/<a href="https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/"[^>]*>CC BY 4\.0<\/a>/);
+      expect(read("llms.txt")).toContain("CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)");
+    });
+
     it("leaves a schedule that only repeats its title out of an Always there row", () => {
       const html = read("index.html");
       const detail = (id: string) => html.match(new RegExp(`href="/e/${id}"[^>]*>.*?</a><span class="detail"[^>]*>(.*?)</span>`))?.[1]?.replaceAll("&#39;", "'").replaceAll("&quot;", "\"").replaceAll("&amp;", "&");

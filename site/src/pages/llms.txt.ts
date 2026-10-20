@@ -23,7 +23,7 @@ Last run: ${meta.lastSuccessfulRun}. ${events.length} active events.
 
 ## Data
 
-- ${origin}/events.json : every active event as JSON, with the fields the site shows, free to reuse with a link back
+- ${origin}/events.json : every active event as JSON, with the fields the site shows, free to reuse under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/) with a link back
 - ${origin}/sitemap.xml : every page
 - ${siteConfig.repoUrl} : the code and the research rules
 `,

@@ -1,0 +1,22 @@
+The KC This Week dataset
+
+Copyright (c) 2026 Evan Trout
+
+The files in this directory (events.json, the run reports in runs/, the yearly
+archives in archive/, registry.yaml, and venues.yaml) and the dataset the site
+publishes at https://www.kcthisweek.com/events.json are licensed under the
+Creative Commons Attribution 4.0 International License (CC BY 4.0).
+
+You may share and adapt them for any purpose, including commercially, as long
+as you give credit with a link to https://www.kcthisweek.com and say whether
+you made changes.
+
+The full license: https://creativecommons.org/licenses/by/4.0/legalcode
+A summary: https://creativecommons.org/licenses/by/4.0/
+
+Text quoted from venue and organizer pages (the evidence quotes and
+descriptions) remains the property of its publishers and is not licensed
+here; the license covers the compilation and everything the job wrote itself.
+
+The code that builds the dataset and the site is under the MIT License, in
+LICENSE at the repository root.
