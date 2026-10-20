@@ -68,6 +68,10 @@ export type PublishedAbout = {
   userAgent: string;
   /** research.config.yaml's `geography`, the footer's one sentence about where the list covers. */
   geography: string;
+  /** research.config.yaml's `horizonWeeks`: how far ahead a run reads, which the kind and region pages list through (#138). */
+  horizonWeeks: number;
+  /** Each config region's neighborhoods, in the config's order, for the region pages; the catch-all lists none. */
+  neighborhoods: Record<string, string[]>;
 };
 
 /** An event that went this run: listed as text with its page, since it has no page of its own any more. */

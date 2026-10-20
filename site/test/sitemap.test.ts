@@ -6,6 +6,8 @@ describe("sitemapXml", () => {
   const xml = sitemapXml([event({ id: "evt_a", lastVerified: "2026-10-03T21:47:36-05:00" })], [{ slug: "recordbar", name: "recordBar" }], {
     origin: "https://www.kcthisweek.com",
     lastSuccessfulRun: "2026-10-05T06:40:00-05:00",
+    kinds: ["music", "theater/dance"],
+    regions: ["Johnson County"],
   });
 
   it("dates the site's pages by the last successful run", () => {
@@ -18,6 +20,12 @@ describe("sitemapXml", () => {
   it("lists the venue directory and every venue page, dated by the last successful run (#137)", () => {
     expect(xml).toContain("<url><loc>https://www.kcthisweek.com/venues</loc><lastmod>2026-10-05T06:40:00-05:00</lastmod></url>");
     expect(xml).toContain("<url><loc>https://www.kcthisweek.com/v/recordbar</loc><lastmod>2026-10-05T06:40:00-05:00</lastmod></url>");
+  });
+
+  it("lists every kind and region page, dated by the last successful run (#138)", () => {
+    for (const path of ["/k/music", "/k/theater-dance", "/r/johnson-county"]) {
+      expect(xml).toContain(`<url><loc>https://www.kcthisweek.com${path}</loc><lastmod>2026-10-05T06:40:00-05:00</lastmod></url>`);
+    }
   });
 
   it("dates an event's page by when it was last verified", () => {

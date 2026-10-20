@@ -1,0 +1,35 @@
+---
+import Base from "../layouts/Base.astro";
+import LandingEvents from "./LandingEvents.svelte";
+import UiIcon from "./UiIcon.svelte";
+import { meta } from "../generated/meta";
+import { kindName, kindPath, regionPath, type Landing } from "../lib/landing";
+import "../styles/venues.css";
+
+// A kind or region page (#138), with no script: the heading, the dates it covers, its events by day, a way into the
+// explorer with the same filter, and the other kind and region pages, so each is a link from all the others.
+/** jsonLd: landingJsonLd of the page, made by the page, since only a page may read the build-only origin. */
+interface Props { page: Landing; jsonLd: object; subline?: string }
+const { page, jsonLd, subline } = Astro.props;
+const others = (names: readonly string[], path: (n: string) => string, label: (n: string) => string) =>
+  names.map((n) => ({ href: path(n), label: label(n) })).filter((l) => l.href !== page.path);
+const kinds = others(meta.kinds, kindPath, kindName);
+const regions = others(meta.regions, regionPath, (r) => r);
+---
+<Base title={page.heading} description={page.description} jsonLd={jsonLd} wide>
+  <header class="venue-head">
+    <h1>{page.heading}</h1>
+    <p>{page.description}</p>
+    {subline !== undefined && <p class="venue-hood">{subline}</p>}
+    {/* The icon gives this page the venue page's components, so Astro writes the same inline stylesheet for both:
+        a stylesheet of its own would add its hash to the explorer's CSP, over that page's budget. */}
+    <p class="venue-links"><a href={page.explorePath}><UiIcon name="chevron-right" />Filter further in the explorer</a></p>
+  </header>
+  <section aria-label="Events">
+    <LandingEvents groups={page.groups} />
+  </section>
+  <nav class="landing-more" aria-label="More lists">
+    <p>By kind: {kinds.map((l, i) => <>{i > 0 && " · "}<a href={l.href}>{l.label}</a></>)}</p>
+    <p>By region: {regions.map((l, i) => <>{i > 0 && " · "}<a href={l.href}>{l.label}</a></>)}</p>
+  </nav>
+</Base>

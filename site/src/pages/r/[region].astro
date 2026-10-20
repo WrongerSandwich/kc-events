@@ -1,0 +1,20 @@
+---
+import Landing from "../../components/Landing.astro";
+import { origin } from "../../build/origin";
+import { about } from "../../generated/about";
+import { events } from "../../generated/events";
+import { meta } from "../../generated/meta";
+import { landingJsonLd, landingRange, regionLanding } from "../../lib/landing";
+import { slugify } from "../../lib/slugs";
+
+// One page per region (#138), the catch-all among them, which lists no neighborhoods.
+export function getStaticPaths() {
+  const range = landingRange(meta.buildToday, about.horizonWeeks);
+  return meta.regions.map((region) => ({
+    params: { region: slugify(region) },
+    props: { page: regionLanding(region, events, meta.buildToday, range, about.neighborhoods[region] ?? []) },
+  }));
+}
+const { page } = Astro.props;
+---
+<Landing page={page} jsonLd={landingJsonLd(page, origin)} subline={page.neighborhoods.length > 0 ? page.neighborhoods.join(", ") : undefined} />

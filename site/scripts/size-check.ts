@@ -86,14 +86,15 @@ function main(): void {
     check(build === "fixture" ? `${page} (fixture data)` : page, budget, bytes, assets);
   }
   // Event pages share their scripts and differ only in markup, so the largest one is the one that could go over; venue
-  // pages (#137) likewise, their markup growing with the venue's events.
-  for (const [dir, kind] of [["e", "event"], ["v", "venue"]] as const) {
+  // pages (#137) likewise, their markup growing with the venue's events. A kind or region page (#138) lists a whole
+  // slice through the horizon with no script, so its ceiling is for the data: Central KC was 59 KB on the 10-19 run.
+  for (const [dir, kind, budget] of [["e", "event", 40_000], ["v", "venue", 40_000], ["k", "kind", 100_000], ["r", "region", 100_000]] as const) {
     const pagesDir = join(dist, dir);
     const pages = existsSync(pagesDir) ? readdirSync(pagesDir).filter((f) => f.endsWith(".html")) : [];
     const largest = pages
       .map((f) => ({ page: `${dir}/${f}`, ...measure(dist, `${dir}/${f}`) }))
       .reduce<{ page: string; bytes: number; assets: string[] } | undefined>((max, m) => (max === undefined || m.bytes > max.bytes ? m : max), undefined);
-    if (largest) check(`${largest.page} (largest ${kind} page)`, 40_000, largest.bytes, largest.assets);
+    if (largest) check(`${largest.page} (largest ${kind} page)`, budget, largest.bytes, largest.assets);
   }
   if (failed) process.exit(1);
 }
