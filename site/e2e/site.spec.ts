@@ -69,6 +69,15 @@ test("the tab's icon is the fountain mark: an ICO for Safari, then the SVG for t
   expect((await ico.body()).subarray(0, 4)).toEqual(Buffer.from([0, 0, 1, 0]));
 });
 
+test("the about page's coffee badge links to the support page and is served from the site", async ({ page }) => {
+  await page.goto("/about");
+  const badge = page.getByRole("link", { name: "Buy me a coffee" });
+  await expect(badge).toHaveAttribute("href", "https://buymeacoffee.com/EvanTrout");
+  const img = badge.locator("img");
+  await expect(img).toHaveAttribute("src", "/buy-me-a-coffee.png");
+  expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+});
+
 test.describe("a section's kind filter", () => {
   test.describe("without JavaScript", () => {
     test.use({ javaScriptEnabled: false });
