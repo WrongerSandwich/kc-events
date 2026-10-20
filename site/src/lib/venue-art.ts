@@ -34,18 +34,15 @@ export type ArtColours = Record<ArtRole, string>;
  * The kind each stroke group takes: the venue's top kind the outline, the second the detail, the third the accent,
  * with the top kind filling any group left over, so a single-kind venue is all one colour. The top kind always
  * counts; a kind after it is left out under ART_CUTOFF of the records or ART_MIN_RECORDS. A tie goes by `order`, the
- * config's list of kinds, a kind it does not list after them, so the ranking is the same on every build. A venue with
- * no record at all is "other", the grey.
+ * config's list of kinds, so the ranking is the same on every build. A kind not in that list (an expired record's,
+ * from before the list changed; only active records are checked against it) has no colour token and is ignored. A
+ * venue with no record of a listed kind is "other", the grey.
  */
 export function illustrationColours(counts: Record<string, number>, order: readonly string[]): ArtColours {
-  const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
-  const rank = (kind: string) => {
-    const i = order.indexOf(kind);
-    return i === -1 ? order.length : i;
-  };
-  const ranked = Object.entries(counts)
-    .filter(([, n]) => n > 0)
-    .sort((a, b) => b[1] - a[1] || rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0]))
+  const listed = Object.entries(counts).filter(([kind, n]) => n > 0 && order.includes(kind));
+  const total = listed.reduce((sum, [, n]) => sum + n, 0);
+  const ranked = listed
+    .sort((a, b) => b[1] - a[1] || order.indexOf(a[0]) - order.indexOf(b[0]))
     .filter(([, n], i) => i === 0 || (n >= ART_MIN_RECORDS && n >= total * ART_CUTOFF))
     .map(([kind]) => kind);
   const top = ranked[0] ?? "other";

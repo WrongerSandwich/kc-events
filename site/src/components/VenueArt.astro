@@ -9,9 +9,9 @@ import { ART_ROLES, illustrationColours, venueArt } from "../lib/venue-art";
 interface Props { venue: PublishedVenue }
 const { venue } = Astro.props;
 const art = venueArt[venue.slug];
-const colours = art === undefined ? undefined : illustrationColours(venue.kindCounts ?? {}, meta.kinds);
+const colours = illustrationColours(venue.kindCounts ?? {}, meta.kinds);
 ---
-{art !== undefined && colours !== undefined && (
+{art !== undefined && (
   <svg class="venue-art" viewBox={art.viewBox} aria-hidden="true" focusable="false">
     {ART_ROLES.map((role) => <g class={`${role} kind-${slugify(colours[role])}`} set:html={art[role]} />)}
   </svg>

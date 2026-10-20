@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { venues } from "../src/generated/venues";
 import { ART_CUTOFF, ART_MIN_RECORDS, illustrationColours, venueArt } from "../src/lib/venue-art";
 
 const order = ["music", "theater/dance", "comedy", "art/exhibitions", "festivals/markets", "food/drink", "sports", "film", "talks/readings", "outdoors/community", "other"];
@@ -30,19 +31,26 @@ describe("illustrationColours", () => {
     expect(illustrationColours({ film: 1 }, order)).toEqual({ outline: "film", detail: "film", accent: "film" });
   });
 
-  it("breaks a tie by the config's order of kinds, a kind it does not list last", () => {
+  it("breaks a tie by the config's order of kinds", () => {
     expect(illustrationColours({ film: 3, music: 3, comedy: 3 }, order)).toEqual({ outline: "music", detail: "comedy", accent: "film" });
-    expect(illustrationColours({ zines: 2, film: 2 }, order)).toEqual({ outline: "film", detail: "zines", accent: "film" });
   });
 
-  it("is all grey for a venue with no record at all", () => {
+  it("ignores a kind the config does not list, which has no colour token, and its records in the total", () => {
+    expect(illustrationColours({ zines: 9, film: 2 }, order)).toEqual({ outline: "film", detail: "film", accent: "film" });
+    expect(illustrationColours({ film: 18, music: 2, zines: 20 }, order)).toEqual({ outline: "film", detail: "music", accent: "film" });
+  });
+
+  it("is all grey for a venue with no record at all, or none of a listed kind", () => {
     expect(illustrationColours({}, order)).toEqual({ outline: "other", detail: "other", accent: "other" });
+    expect(illustrationColours({ zines: 1 }, order)).toEqual({ outline: "other", detail: "other", accent: "other" });
   });
 });
 
 describe("venueArt", () => {
   it("has a drawing for the three pilot venues, each with the three role groups and no colour of its own", () => {
     expect(Object.keys(venueArt).sort()).toEqual(["bird-comedy-theater", "kauffman-center-for-the-performing-arts", "nelson-atkins-museum-of-art"]);
+    // Each keyed on a page the committed dataset and venue table make, so a drawing cannot go unshown by a slug.
+    for (const slug of Object.keys(venueArt)) expect(venues.map((v) => v.slug), slug).toContain(slug);
     for (const art of Object.values(venueArt)) {
       expect(art.viewBox).toMatch(/^0 0 \d+ \d+$/);
       for (const role of ["outline", "detail", "accent"] as const) {

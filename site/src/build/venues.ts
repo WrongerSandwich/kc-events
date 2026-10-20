@@ -78,14 +78,14 @@ function mostCommon(values: readonly string[]): string | undefined {
  */
 export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; records: readonly { venue: string; kind: string }[]; aliases: VenueAliases }): PublishedVenue[] {
   // The display names exactly as the site shows them, so a row also keeps a venue's spelling: "the truman" is no name.
-  const recordVenues = opts.records.map((r) => venueAndRoom(r.venue, opts.aliases).venue);
-  const known = new Set([...recordVenues, ...Object.keys(opts.aliases)]);
+  const records = opts.records.map((r) => ({ venue: venueAndRoom(r.venue, opts.aliases).venue, kind: r.kind }));
+  const known = new Set([...records.map((r) => r.venue), ...Object.keys(opts.aliases)]);
   // Every record at the venue by kind, whatever its status: what it generally hosts, which colours its line art (#149).
   const kindCounts = new Map<string, Record<string, number>>();
-  for (const [i, r] of opts.records.entries()) {
-    const counts = kindCounts.get(venueSlug(recordVenues[i]!)) ?? {};
+  for (const r of records) {
+    const counts = kindCounts.get(venueSlug(r.venue)) ?? {};
     counts[r.kind] = (counts[r.kind] ?? 0) + 1;
-    kindCounts.set(venueSlug(recordVenues[i]!), counts);
+    kindCounts.set(venueSlug(r.venue), counts);
   }
   const rows = new Map<string, VenueRow>();
   for (const row of opts.rows) {
