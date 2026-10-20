@@ -79,16 +79,16 @@ function landing(path: string, heading: string, noun: string, where: string, f: 
   };
 }
 
-/** /k/<kind>: "Music in Kansas City this week". */
+/** /k/<kind>: "Music in Kansas City". */
 export function kindLanding(kind: string, events: PublishedEvent[], today: string, range: { from: string; to: string }): Landing {
   const noun = kind === "other" ? "other event" : `${kindWords(kind)} event`;
-  return landing(kindPath(kind), `${kindName(kind)} in Kansas City this week`, noun, "in Kansas City", { kinds: [kind] }, events, today, range);
+  return landing(kindPath(kind), `${kindName(kind)} in Kansas City`, noun, "in Kansas City", { kinds: [kind] }, events, today, range);
 }
 
-/** /r/<region>: "Things to do in Johnson County this week", with the region's neighborhoods from the config. */
+/** /r/<region>: "Things to do in Johnson County", with the region's neighborhoods from the config. */
 export function regionLanding(region: string, events: PublishedEvent[], today: string, range: { from: string; to: string }, neighborhoods: readonly string[]): Landing & { neighborhoods: readonly string[] } {
   const where = inRegion(region);
-  return { ...landing(regionPath(region), `Things to do ${where} this week`, "event", where, { regions: [region] }, events, today, range), neighborhoods };
+  return { ...landing(regionPath(region), `Things to do ${where}`, "event", where, { regions: [region] }, events, today, range), neighborhoods };
 }
 
 /**

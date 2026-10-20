@@ -740,7 +740,7 @@ test("an explorer row's venue goes to the venue's page (#137)", async ({ page })
 
 test("a kind's page lists its events by day and leads into the explorer with the same filter (#138)", async ({ page }) => {
   await on(page, BUILD_DAY, "/k/music");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Music in Kansas City this week");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Music in Kansas City");
   await expect(page.getByRole("region", { name: "Events" }).getByRole("heading", { level: 2 })).toHaveText(["Tue Oct 6", "Fri Oct 9"]);
   const ld = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
   expect(ld).toMatchObject({ "@type": "ItemList", numberOfItems: 2 });
@@ -750,7 +750,7 @@ test("a kind's page lists its events by day and leads into the explorer with the
 
 test("a region with nothing listed still has its page, which says so (#138)", async ({ page }) => {
   await on(page, BUILD_DAY, "/r/northland");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Things to do in Northland this week");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Things to do in Northland");
   await expect(page.getByText("Nothing listed this week.")).toBeVisible();
 });
 

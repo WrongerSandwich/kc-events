@@ -33,7 +33,7 @@ describe("kindLanding", () => {
   });
 
   it("titles and describes the page from the kind and the count", () => {
-    expect(page.heading).toBe("Music in Kansas City this week");
+    expect(page.heading).toBe("Music in Kansas City");
     expect(page.description).toBe("3 music events in Kansas City, Oct 13–Nov 3.");
     expect(page.path).toBe("/k/music");
     expect(page.explorePath).toBe("/explore?kind=music");
@@ -41,7 +41,7 @@ describe("kindLanding", () => {
 
   it("names a two-word kind in words and its slug as the explorer's", () => {
     const p = kindLanding("theater/dance", all, today, range);
-    expect(p.heading).toBe("Theater and dance in Kansas City this week");
+    expect(p.heading).toBe("Theater and dance in Kansas City");
     expect(p.description).toBe("1 theater and dance event in Kansas City, Oct 13–Nov 3.");
     expect(p.path).toBe("/k/theater-dance");
     expect(p.explorePath).toBe("/explore?kind=theater-dance");
@@ -54,7 +54,7 @@ describe("kindLanding", () => {
   it("says so when the kind has nothing listed", () => {
     const p = kindLanding("other", all, today, range);
     expect(p.groups).toEqual([]);
-    expect(p.heading).toBe("Other events in Kansas City this week");
+    expect(p.heading).toBe("Other events in Kansas City");
     expect(p.description).toBe("No other events listed in Kansas City, Oct 13–Nov 3.");
   });
 });
@@ -63,7 +63,7 @@ describe("regionLanding", () => {
   it("lists the region's events and names its neighborhoods", () => {
     const p = regionLanding("Johnson County", all, today, range, ["Overland Park", "Olathe", "Lenexa"]);
     expect(p.groups.map((g) => g.events.map((e) => e.id))).toEqual([["evt_play"], ["evt_jazz"]]);
-    expect(p.heading).toBe("Things to do in Johnson County this week");
+    expect(p.heading).toBe("Things to do in Johnson County");
     expect(p.description).toBe("2 events in Johnson County, Oct 13–Nov 3.");
     expect(p.path).toBe("/r/johnson-county");
     expect(p.explorePath).toBe("/explore?region=johnson-county");
@@ -72,7 +72,7 @@ describe("regionLanding", () => {
 
   it("reads the catch-all region as a phrase", () => {
     const p = regionLanding("Elsewhere in the metro", [], today, range, []);
-    expect(p.heading).toBe("Things to do elsewhere in the metro this week");
+    expect(p.heading).toBe("Things to do elsewhere in the metro");
     expect(p.description).toBe("No events listed elsewhere in the metro, Oct 13–Nov 3.");
   });
 });
@@ -85,7 +85,7 @@ describe("landingJsonLd", () => {
     expect(landingJsonLd(p, origin)).toEqual({
       "@context": "https://schema.org",
       "@type": "ItemList",
-      name: "Music in Kansas City this week",
+      name: "Music in Kansas City",
       url: "https://www.kcthisweek.com/k/music",
       numberOfItems: 3,
       itemListElement: [
