@@ -7,6 +7,8 @@ export const siteConfig = {
   name: "KC This Week",
   tagline: "A weekly researched, ad-free list of what's worth doing in Kansas City.",
   repoUrl: "https://github.com/WrongerSandwich/kc-events",
+  /** The about page's Buy Me a Coffee badge links here; the badge image is a copy in public/, so nothing loads from their servers. */
+  supportUrl: "https://buymeacoffee.com/EvanTrout",
   /** Days after the last successful run before every page shows the staleness banner. */
   staleAfterDays: 9,
   /**
