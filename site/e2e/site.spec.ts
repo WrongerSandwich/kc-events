@@ -751,7 +751,7 @@ test("a kind's page lists its events by day and leads into the explorer with the
 test("a region with nothing listed still has its page, which says so (#138)", async ({ page }) => {
   await on(page, BUILD_DAY, "/r/northland");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Things to do in Northland");
-  await expect(page.getByText("Nothing listed this week.")).toBeVisible();
+  await expect(page.getByText("Nothing listed right now.")).toBeVisible();
 });
 
 test("an event page's kind goes to the kind's page, its breadcrumb's middle step (#138)", async ({ page }) => {
