@@ -6,6 +6,6 @@ import { venues } from "../generated/venues";
 import { sitemapXml } from "../lib/sitemap";
 
 export const GET: APIRoute = () =>
-  new Response(sitemapXml(events, venues, { origin, lastSuccessfulRun: meta.lastSuccessfulRun }), {
+  new Response(sitemapXml(events, venues, { origin, lastSuccessfulRun: meta.lastSuccessfulRun, kinds: meta.kinds, regions: meta.regions }), {
     headers: { "Content-Type": "application/xml; charset=utf-8" },
   });

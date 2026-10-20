@@ -210,6 +210,6 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; v
     lastSuccessfulRun: dataset.lastSuccessfulRun,
     buildToday: today,
     timeZone: config.timezone,
-    about: { crawler: PRODUCT, userAgent: USER_AGENT, geography: config.geography },
+    about: { crawler: PRODUCT, userAgent: USER_AGENT, geography: config.geography, horizonWeeks: config.horizonWeeks, neighborhoods: config.neighborhoods },
   };
 }

@@ -14,8 +14,10 @@ import Analytics from "@vercel/analytics/astro";
 import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
 
 /** noindex: a page no search engine should list (the 404), which then names no canonical URL either. */
-interface Props { title: string; description: string; canonical?: string; jsonLd?: object; wide?: boolean; noindex?: boolean }
+/** jsonLd: one object, or several, each in a script of its own (an event page's Event and its BreadcrumbList). */
+interface Props { title: string; description: string; canonical?: string; jsonLd?: object | object[]; wide?: boolean; noindex?: boolean }
 const { title, description, canonical, jsonLd, wide = false, noindex = false } = Astro.props;
+const ldBlocks = jsonLd === undefined ? [] : Array.isArray(jsonLd) ? jsonLd : [jsonLd];
 const fullTitle = title === siteConfig.name ? title : `${title} · ${siteConfig.name}`;
 // build.format "file" yields /e/<id>.html and /index.html; the public URLs are extensionless.
 const publicPath = Astro.url.pathname.replace(/\.html$/, "").replace(/\/index$/, "/") || "/";
@@ -46,7 +48,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image:alt" content={shareImage.alt} />
     <link rel="sitemap" href="/sitemap.xml" />
-    {jsonLd && <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, "\\u003c")} />}
+    {ldBlocks.map((ld) => <script type="application/ld+json" set:html={JSON.stringify(ld).replace(/</g, "\\u003c")} />)}
   </head>
   <body>
     <IconSprite />

@@ -473,7 +473,7 @@ test("the price and age limit an own page gave show on the card and the event pa
   await expect(page.locator("#pick-evt_e2e000000001 .admission")).toHaveText("$20–$25 · 21+");
   await on(page, BUILD_DAY, "/e/evt_e2e000000001");
   await expect(page.locator(".admission")).toHaveText("$20–$25 · 21+");
-  const ld = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
+  const ld = JSON.parse((await page.locator('script[type="application/ld+json"]').first().textContent())!);
   expect(ld.offers).toMatchObject({ "@type": "AggregateOffer", lowPrice: 20, highPrice: 25, priceCurrency: "USD" });
   await on(page, BUILD_DAY, "/e/evt_e2e000000002");
   await expect(page.locator("article.event")).toBeVisible();
@@ -660,7 +660,7 @@ test("an event page exists, downloads a calendar, and knows when it has passed",
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Fabio Frizzi plays Fulci");
   await expect(page.getByText("Tuesday, October 6, 7:00 pm")).toBeVisible();
   // Playwright's text assertions skip <script> contents, so read the JSON-LD as text.
-  expect(await page.locator('script[type="application/ld+json"]').textContent()).toContain('"@type":"Event"');
+  expect(await page.locator('script[type="application/ld+json"]').first().textContent()).toContain('"@type":"Event"');
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Add to calendar" }).click();
   const file = await download;
@@ -738,9 +738,33 @@ test("an explorer row's venue goes to the venue's page (#137)", async ({ page })
   await expect(page).toHaveURL(/\/v\/recordbar$/);
 });
 
+test("a kind's page lists its events by day and leads into the explorer with the same filter (#138)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/k/music");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Music in Kansas City this week");
+  await expect(page.getByRole("region", { name: "Events" }).getByRole("heading", { level: 2 })).toHaveText(["Tue Oct 6", "Fri Oct 9"]);
+  const ld = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
+  expect(ld).toMatchObject({ "@type": "ItemList", numberOfItems: 2 });
+  await page.getByRole("link", { name: "Filter further in the explorer" }).click();
+  await expect(page).toHaveURL(/\/explore\?kind=music$/);
+});
+
+test("a region with nothing listed still has its page, which says so (#138)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/r/northland");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Things to do in Northland this week");
+  await expect(page.getByText("Nothing listed this week.")).toBeVisible();
+});
+
+test("an event page's kind goes to the kind's page, its breadcrumb's middle step (#138)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/e/evt_e2e000000001");
+  const crumbs = JSON.parse((await page.locator('script[type="application/ld+json"]').nth(1).textContent())!);
+  expect(crumbs.itemListElement.map((i: { name: string }) => i.name)).toEqual(["Home", "Music", "Fabio Frizzi plays Fulci"]);
+  await page.locator("article .kind a.chip").click();
+  await expect(page).toHaveURL(/\/k\/music$/);
+});
+
 test("an event at a venue with a row is addressed to its street in its JSON-LD and its calendar file (#137)", async ({ page, request }) => {
   await on(page, BUILD_DAY, "/e/evt_e2e000000001");
-  const event = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
+  const event = JSON.parse((await page.locator('script[type="application/ld+json"]').first().textContent())!);
   expect(event.location).toMatchObject({ address: { streetAddress: "1520 Grand Blvd", addressLocality: "Kansas City", addressRegion: "MO", postalCode: "64108" } });
   const ics = (await (await request.get("/e/evt_e2e000000001.ics")).text()).replace(/\r\n[ \t]/g, "");
   expect(ics).toContain("LOCATION:recordBar\\, 1520 Grand Blvd\\, Kansas City\\, MO 64108\r\n");

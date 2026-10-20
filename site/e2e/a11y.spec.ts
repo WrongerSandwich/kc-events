@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 for (const scheme of ["light", "dark"] as const) {
-  for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/v/recordbar", "/v/kauffman-center-for-the-performing-arts", "/venues", "/changes", "/about", "/404"]) {
+  for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/v/recordbar", "/k/music", "/r/johnson-county", "/v/kauffman-center-for-the-performing-arts", "/venues", "/changes", "/about", "/404"]) {
     test(`${path} passes axe in ${scheme}`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.clock.setFixedTime(new Date("2026-10-05T17:00:00Z"));

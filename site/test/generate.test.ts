@@ -41,8 +41,15 @@ describe("writeGenerated", () => {
     expect(exported(join(outDir, "events.ts")).map((e: { id: string }) => e.id)).toEqual(["evt_000000000001", "evt_000000000002"]);
     expect(exported(join(outDir, "dont-miss.ts")).map((e: { id: string }) => e.id)).toEqual(["evt_000000000001"]);
     expect(exported(join(outDir, "descriptions.ts"))).toEqual({ evt_000000000002: "A three-piece playing their first record." });
-    // The about page's user agent and the footer's geography come from the job, so they cannot drift from it (#93).
-    expect(exported(join(outDir, "about.ts"))).toEqual({ crawler: PRODUCT, userAgent: USER_AGENT, geography: "Kansas City metro on both sides of the state line, plus Lawrence" });
+    // The about page's user agent, the footer's geography, and the landing pages' horizon and neighborhoods come from
+    // the job, so they cannot drift from it (#93, #138).
+    expect(exported(join(outDir, "about.ts"))).toEqual({
+      crawler: PRODUCT,
+      userAgent: USER_AGENT,
+      geography: "Kansas City metro on both sides of the state line, plus Lawrence",
+      horizonWeeks: 8,
+      neighborhoods: { "Central KC": ["Crossroads", "Downtown"], "Johnson County": ["Olathe"], Lawrence: ["Lawrence"] },
+    });
     expect(meta).not.toHaveProperty("about");
     const published = JSON.parse(readFileSync(join(publicDir, "events.json"), "utf8"));
     expect(Object.keys(published)).toEqual(["schemaVersion", "generatedAt", "lastSuccessfulRun", "events"]);
