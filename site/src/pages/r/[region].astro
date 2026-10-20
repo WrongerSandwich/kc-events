@@ -17,4 +17,4 @@ export function getStaticPaths() {
 }
 const { page } = Astro.props;
 ---
-<Landing page={page} jsonLd={landingJsonLd(page, origin)} lede={page.neighborhoods.length > 0 ? page.neighborhoods.join(", ") : undefined} />
+<Landing page={page} jsonLd={landingJsonLd(page, origin)} subline={page.neighborhoods.length > 0 ? page.neighborhoods.join(", ") : undefined} />

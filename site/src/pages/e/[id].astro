@@ -14,7 +14,7 @@ import { venueNamed, venuePath } from "../../lib/venues";
 import { meta } from "../../generated/meta";
 import { formatDay, formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd } from "../../lib/event-meta";
-import { breadcrumbJsonLd } from "../../lib/landing";
+import { breadcrumbJsonLd, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
 import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, neighborhoodLine, venueLine } from "../../lib/events";
 import { reportUrl } from "../../lib/report";
@@ -47,7 +47,7 @@ const jsonLd = [...(eventLd === undefined ? [] : [eventLd]), breadcrumbJsonLd(ev
       {/* The same tile as the front page's card, by the same view-transition name, so one glides into the other. */}
       {isDated(event) && <DateTile tile={dateTile(event, meta.buildToday)} id={event.id} large />}
       <div>
-        <p class="kind"><KindChip kind={event.kind} href={`/k/${slugify(event.kind)}`} />{event.dontMiss && <span class="dont-miss">Don't miss</span>}</p>
+        <p class="kind"><KindChip kind={event.kind} href={kindPath(event.kind)} />{event.dontMiss && <span class="dont-miss">Don't miss</span>}</p>
         <h1 style={`view-transition-name: title-${event.id}`}>{event.title}</h1>
         <p class="date">{line}</p>
         <p class="where"><a href={venuePath(event.venue)}>{venueLine(event)}</a> · {neighborhoodLine(event.neighborhood, event.region)}</p>

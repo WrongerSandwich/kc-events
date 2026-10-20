@@ -26,6 +26,16 @@ export function landingRange(today: string, horizonWeeks: number): { from: strin
   return { from: today, to: addDays(today, horizonWeeks * 7) };
 }
 
+/** A kind's page, as the explorer slugs it: "theater/dance" at /k/theater-dance. */
+export function kindPath(kind: string): string {
+  return `/k/${slugify(kind)}`;
+}
+
+/** A region's page: "Johnson County" at /r/johnson-county. */
+export function regionPath(region: string): string {
+  return `/r/${slugify(region)}`;
+}
+
 /** A kind in words: "theater/dance" is "theater and dance". */
 function kindWords(kind: string): string {
   return kind.replace(/\//g, " and ");
@@ -72,13 +82,13 @@ function landing(path: string, heading: string, noun: string, where: string, f: 
 /** /k/<kind>: "Music in Kansas City this week". */
 export function kindLanding(kind: string, events: PublishedEvent[], today: string, range: { from: string; to: string }): Landing {
   const noun = kind === "other" ? "other event" : `${kindWords(kind)} event`;
-  return landing(`/k/${slugify(kind)}`, `${kindName(kind)} in Kansas City this week`, noun, "in Kansas City", { kinds: [kind] }, events, today, range);
+  return landing(kindPath(kind), `${kindName(kind)} in Kansas City this week`, noun, "in Kansas City", { kinds: [kind] }, events, today, range);
 }
 
 /** /r/<region>: "Things to do in Johnson County this week", with the region's neighborhoods from the config. */
 export function regionLanding(region: string, events: PublishedEvent[], today: string, range: { from: string; to: string }, neighborhoods: readonly string[]): Landing & { neighborhoods: readonly string[] } {
   const where = inRegion(region);
-  return { ...landing(`/r/${slugify(region)}`, `Things to do ${where} this week`, "event", where, { regions: [region] }, events, today, range), neighborhoods };
+  return { ...landing(regionPath(region), `Things to do ${where} this week`, "event", where, { regions: [region] }, events, today, range), neighborhoods };
 }
 
 /**
@@ -106,7 +116,7 @@ export function breadcrumbJsonLd(e: PublishedEvent, origin: string): object {
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: at("/") },
-      { "@type": "ListItem", position: 2, name: kindName(e.kind), item: at(`/k/${slugify(e.kind)}`) },
+      { "@type": "ListItem", position: 2, name: kindName(e.kind), item: at(kindPath(e.kind)) },
       { "@type": "ListItem", position: 3, name: e.title, item: at(`/e/${e.id}`) },
     ],
   };
@@ -114,5 +124,5 @@ export function breadcrumbJsonLd(e: PublishedEvent, origin: string): object {
 
 /** Every landing page's path, for the sitemap. */
 export function landingPaths(kinds: readonly string[], regions: readonly string[]): string[] {
-  return [...kinds.map((k) => `/k/${slugify(k)}`), ...regions.map((r) => `/r/${slugify(r)}`)];
+  return [...kinds.map(kindPath), ...regions.map(regionPath)];
 }
