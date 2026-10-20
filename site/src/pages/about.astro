@@ -39,7 +39,7 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
 
     <h2>Support it</h2>
     <p>The site is free and has no ads. Each weekly run costs a few dollars in model and search fees; if the list is useful to you, a coffee helps cover them.</p>
-    <p><a class="support" href={siteConfig.supportUrl}><img src="/buy-me-a-coffee.png" alt="Buy me a coffee" width="171" height="48"></a></p>
+    <p class="support-row"><a class="support" href={siteConfig.supportUrl}><img src="/buy-me-a-coffee.png" alt="Buy me a coffee" width="171" height="48"></a></p>
   </article>
 </Base>
 
@@ -47,6 +47,7 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
   h1 { margin: var(--space-8) 0 var(--space-4); }
   h2 { font-size: var(--text-lg); margin: var(--space-8) 0 var(--space-2); }
   p + p { margin-top: var(--space-3); }
+  .support-row { text-align: center; }
   .support { display: inline-block; border-radius: 10px; }
   .support img { display: block; }
 </style>
