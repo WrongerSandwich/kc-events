@@ -76,9 +76,17 @@ function mostCommon(values: readonly string[]): string | undefined {
  * keyed on anything but a display name (an alias, or a name no record in the dataset and no venueAliases entry has),
  * on two rows for one page, and on a venue name with no letter or digit to make a slug from.
  */
-export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; recordVenues: readonly string[]; aliases: VenueAliases }): PublishedVenue[] {
+export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; records: readonly { venue: string; kind: string }[]; aliases: VenueAliases }): PublishedVenue[] {
   // The display names exactly as the site shows them, so a row also keeps a venue's spelling: "the truman" is no name.
-  const known = new Set([...opts.recordVenues.map((n) => venueAndRoom(n, opts.aliases).venue), ...Object.keys(opts.aliases)]);
+  const recordVenues = opts.records.map((r) => venueAndRoom(r.venue, opts.aliases).venue);
+  const known = new Set([...recordVenues, ...Object.keys(opts.aliases)]);
+  // Every record at the venue by kind, whatever its status: what it generally hosts, which colours its line art (#149).
+  const kindCounts = new Map<string, Record<string, number>>();
+  for (const [i, r] of opts.records.entries()) {
+    const counts = kindCounts.get(venueSlug(recordVenues[i]!)) ?? {};
+    counts[r.kind] = (counts[r.kind] ?? 0) + 1;
+    kindCounts.set(venueSlug(recordVenues[i]!), counts);
+  }
   const rows = new Map<string, VenueRow>();
   for (const row of opts.rows) {
     const { venue } = venueAndRoom(row.name, opts.aliases);
@@ -109,6 +117,7 @@ export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; 
       ...(row?.geo !== undefined && { geo: row.geo }),
       ...(row?.url !== undefined && { url: row.url }),
       ...(neighborhood !== undefined && { neighborhood, region: events.find((e) => e.neighborhood === neighborhood)!.region }),
+      ...(kindCounts.has(slug) && { kindCounts: kindCounts.get(slug) }),
     };
   });
   return venues.sort((a, b) => a.name.localeCompare(b.name));

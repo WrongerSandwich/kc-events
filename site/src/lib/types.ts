@@ -118,6 +118,11 @@ export type PublishedVenue = {
   /** The neighborhood most of its published events give; absent when it has none. */
   neighborhood?: string;
   region?: string;
+  /**
+   * How many records in the dataset are at the venue, by kind, every status counted (#149): what the venue generally
+   * hosts, which colours its line art. Absent when no record names it (a venueAliases entry alone makes its page).
+   */
+  kindCounts?: Record<string, number>;
 };
 
 /**

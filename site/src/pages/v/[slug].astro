@@ -1,6 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
 import UiIcon from "../../components/UiIcon.svelte";
+import VenueArt from "../../components/VenueArt.astro";
 import VenueEvents from "../../components/VenueEvents.svelte";
 import { origin } from "../../build/origin";
 import { events } from "../../generated/events";
@@ -23,6 +24,7 @@ const map = mapUrl(venue);
 ---
 <Base title={venue.name} description={description} jsonLd={jsonLd} wide>
   <header class="venue-head">
+    <VenueArt venue={venue} />
     <h1>{venue.name}</h1>
     {venue.address !== undefined && <p>{addressLine(venue.address)}</p>}
     {hood !== undefined && <p class="venue-hood">{hood}</p>}

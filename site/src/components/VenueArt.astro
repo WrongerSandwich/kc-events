@@ -1,0 +1,18 @@
+---
+import { meta } from "../generated/meta";
+import { slugify } from "../lib/slugs";
+import type { PublishedVenue } from "../lib/types";
+import { ART_ROLES, illustrationColours, venueArt } from "../lib/venue-art";
+// A venue's line art (#149), in its page's header: each role group classed with its kind, so the kind's .kind-<slug>
+// class gives it the kind's stroke in either scheme, and no style sits on the markup. Decorative: the heading names
+// the venue. A venue with no drawing renders nothing.
+interface Props { venue: PublishedVenue }
+const { venue } = Astro.props;
+const art = venueArt[venue.slug];
+const colours = art === undefined ? undefined : illustrationColours(venue.kindCounts ?? {}, meta.kinds);
+---
+{art !== undefined && colours !== undefined && (
+  <svg class="venue-art" viewBox={art.viewBox} aria-hidden="true" focusable="false">
+    {ART_ROLES.map((role) => <g class={`${role} kind-${slugify(colours[role])}`} set:html={art[role]} />)}
+  </svg>
+)}

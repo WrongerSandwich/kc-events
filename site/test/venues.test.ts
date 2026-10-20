@@ -102,7 +102,7 @@ describe("readVenueTable", () => {
 
 describe("buildVenues", () => {
   const build = (over: Partial<Parameters<typeof buildVenues>[0]> = {}) =>
-    buildVenues({ rows: [], events: [], recordVenues: [], aliases, ...over });
+    buildVenues({ rows: [], events: [], records: [], aliases, ...over });
 
   it("makes a page for every venue a published event is at, by name, from its events alone", () => {
     const venues = build({
@@ -135,8 +135,26 @@ describe("buildVenues", () => {
   });
 
   it("makes a page for a row whose venue has nothing coming up", () => {
-    const venues = build({ rows: [{ name: "recordBar", address: kauffman.address }], recordVenues: ["recordBar"] });
-    expect(venues).toEqual([{ slug: "recordbar", name: "recordBar", address: kauffman.address }]);
+    const venues = build({ rows: [{ name: "recordBar", address: kauffman.address }], records: [{ venue: "recordBar", kind: "music" }] });
+    expect(venues).toEqual([{ slug: "recordbar", name: "recordBar", address: kauffman.address, kindCounts: { music: 1 } }]);
+  });
+
+  it("counts every record at a venue by kind, under its display name, whatever the record's status (#149)", () => {
+    const venues = build({
+      rows: [kauffman],
+      records: [
+        { venue: "Kauffman Center", kind: "music" },
+        { venue: "Helzberg Hall", kind: "music" },
+        { venue: "KAUFFMAN CENTER FOR THE PERFORMING ARTS", kind: "theater/dance" },
+        { venue: "recordBar", kind: "music" },
+      ],
+    });
+    // recordBar has a record and no page: no published event, no row.
+    expect(venues.map((v) => [v.slug, v.kindCounts])).toEqual([["kauffman-center-for-the-performing-arts", { music: 2, "theater/dance": 1 }]]);
+  });
+
+  it("gives a venue known by an alias entry alone no kind counts", () => {
+    expect(build({ rows: [kauffman] })[0]!.kindCounts).toBeUndefined();
   });
 
   it("takes a row for a venueAliases entry no event is at", () => {
@@ -144,7 +162,7 @@ describe("buildVenues", () => {
   });
 
   it("knows a venue by any record in the dataset, as the site names it", () => {
-    expect(build({ rows: [{ ...kauffman }], recordVenues: ["Helzberg Hall"], aliases: { [kauffman.name]: ["Helzberg Hall"] } })).toHaveLength(1);
+    expect(build({ rows: [{ ...kauffman }], records: [{ venue: "Helzberg Hall", kind: "music" }], aliases: { [kauffman.name]: ["Helzberg Hall"] } })).toHaveLength(1);
   });
 
   it("refuses a row keyed on an alias, naming the venue to key it on", () => {
@@ -153,16 +171,16 @@ describe("buildVenues", () => {
   });
 
   it("refuses a row for a venue nothing in the dataset or the aliases names", () => {
-    expect(() => build({ rows: [{ ...kauffman, name: "Knuckleheads" }], recordVenues: ["recordBar"] })).toThrow('venue table row "Knuckleheads" names no venue: no event in the dataset is at it, as spelled, and venueAliases has no entry for it');
+    expect(() => build({ rows: [{ ...kauffman, name: "Knuckleheads" }], records: [{ venue: "recordBar", kind: "music" }] })).toThrow('venue table row "Knuckleheads" names no venue: no event in the dataset is at it, as spelled, and venueAliases has no entry for it');
   });
 
   it("refuses a row spelled other than the site spells the venue", () => {
-    expect(() => build({ rows: [{ ...kauffman, name: "the truman" }], recordVenues: ["The Truman"] })).toThrow(/"the truman" names no venue/);
+    expect(() => build({ rows: [{ ...kauffman, name: "the truman" }], records: [{ venue: "The Truman", kind: "music" }] })).toThrow(/"the truman" names no venue/);
   });
 
   it("refuses two rows for one page", () => {
     const rows = [{ ...kauffman, name: "The Truman" }, { ...kauffman, name: "Truman" }];
-    expect(() => build({ rows, recordVenues: ["The Truman", "Truman"] })).toThrow('venue table rows "The Truman" and "Truman" are one venue page, /v/truman; keep one');
+    expect(() => build({ rows, records: [{ venue: "The Truman", kind: "music" }, { venue: "Truman", kind: "music" }] })).toThrow('venue table rows "The Truman" and "Truman" are one venue page, /v/truman; keep one');
   });
 
   it("refuses a venue name with nothing to make a slug from", () => {

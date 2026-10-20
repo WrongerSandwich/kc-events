@@ -4,6 +4,9 @@
  * page's and the explorer's weight. Imported by those two pages only; the classes are prefixed to keep them theirs.
  */
 .venue-head { margin: var(--space-8) 0 var(--space-4); }
+/* The venue's line art (#149), beside the heading: strokes in each group's kind, from the kind-<slug> class on it. */
+.venue-art { float: right; height: 4rem; width: auto; margin: 0 0 var(--space-2) var(--space-4); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.venue-art g { stroke: var(--hue); }
 .venue-head h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: 0 0 var(--space-2); }
 .venue-head p { margin: 0; }
 .venue-head .venue-hood { color: var(--fg-muted); }

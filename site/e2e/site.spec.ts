@@ -709,6 +709,15 @@ test("a venue with a row and nothing coming up still has its page (#137)", async
   await expect(page.getByText("Nothing listed at the moment.")).toBeVisible();
 });
 
+test("a pilot venue's page draws its line art in the header, decorative and grey with no record behind it; another venue's page has none (#149)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/v/kauffman-center-for-the-performing-arts");
+  const art = page.locator(".venue-head svg.venue-art");
+  await expect(art).toHaveAttribute("aria-hidden", "true");
+  await expect(art.locator("g")).toHaveClass(["outline kind-other", "detail kind-other", "accent kind-other"]);
+  await on(page, BUILD_DAY, "/v/recordbar");
+  await expect(page.locator(".venue-head svg.venue-art")).toHaveCount(0);
+});
+
 test("the venue directory lists every venue by region, a row's venue with nothing coming up last, from a venue page (#137)", async ({ page }) => {
   await on(page, BUILD_DAY, "/v/kauffman-center-for-the-performing-arts");
   await page.getByRole("link", { name: "All venues" }).click();
