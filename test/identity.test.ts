@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { pageKey, samePage } from "../src/hosts.js";
+import type { EventIdentity } from "../src/identity.js";
 import { aliasedVenue, findMatch, genericVenueName, matchSighting, nearDates, normalizeName, sameEvent, sameVenue, venueAndRoom } from "../src/identity.js";
 
 const CALENDAR = "https://venue.test/calendar";
@@ -232,7 +233,36 @@ describe("one title listed twice on one page (#77)", () => {
     expect(findMatch({ ...early, start: "2026-11-08" }, [late, early], {})).toBe(early);
     expect(findMatch({ ...early, start: "2026-12-20" }, [early, late], {})).toBe(late);
     expect(findMatch({ ...early, start: "2026-11-15" }, [late, early], {})).toBe(early);
-    expect(findMatch({ ...early, start: undefined }, [late, early], {})).toBe(late);
+    expect(findMatch({ ...early, start: undefined }, [late, early], {})).toBe(early);
+  });
+
+  describe("two records equally near the sighting (#177)", () => {
+    const both = (sighting: EventIdentity, a: EventIdentity, b: EventIdentity) => [findMatch(sighting, [a, b], {}), findMatch(sighting, [b, a], {})];
+
+    it("prefers the one whose venue is the sighting's, in either order", () => {
+      const calendar = "https://a.test/calendar/";
+      const theHall = { primaryUrl: calendar, title: "the  THE  Hall", venue: "!:théâtre", start: "2026-10-02" };
+      const hall = { primaryUrl: calendar, title: "Hall", venue: ", jazz", start: "2026-10-06" };
+      const sighting = { primaryUrl: calendar, title: "the  THE  Hall!", venue: "!:théâtre", start: "2026-10-04" };
+      expect(both(sighting, theHall, hall)).toEqual([theHall, theHall]);
+      expect(both(sighting, { ...hall, venue: "!:théâtre" }, { ...theHall, venue: ", jazz" })).toEqual([
+        { ...hall, venue: "!:théâtre" },
+        { ...hall, venue: "!:théâtre" },
+      ]);
+    });
+
+    it("prefers the earlier start when neither venue is the sighting's, in either order", () => {
+      const midway = { ...early, venue: "Somewhere Else", start: "2026-11-17" };
+      expect(both(midway, early, late)).toEqual([early, early]);
+    });
+
+    it("picks the same record for an undated sighting, in either order", () => {
+      const undated = { ...early, start: undefined };
+      expect(both(undated, early, late)).toEqual([early, early]);
+      const noDate = { ...late, start: undefined };
+      expect(both(undated, late, noDate)).toEqual([late, late]);
+      expect(both(undated, { ...early, id: "b" }, { ...early, id: "a" })).toEqual([{ ...early, id: "a" }, { ...early, id: "a" }]);
+    });
   });
 
   it("is two records when their dates are outside the fuzzy window, one when inside", () => {
