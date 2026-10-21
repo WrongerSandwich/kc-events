@@ -8,7 +8,7 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 |---|---|---|
 | A | Technical frontend: accessibility beyond axe, responsive, theming, performance, anti-patterns | to resume |
 | B | UX critique: heuristics, personas, journeys | to resume |
-| C | Security and the trust boundary: `/api/report`, CSP, injection surfaces, dependencies, privacy claims | running |
+| C | Security and the trust boundary: `/api/report`, CSP, injection surfaces, dependencies, privacy claims | done, below |
 | D | SEO, sharing, structured data, calendar feeds | done, below |
 | E | Code quality, tests, build pipeline, runtime robustness | to resume |
 | F | Copy and content, voice, reader-visible data | not started |
@@ -19,6 +19,7 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 
 - The crawl, share and calendar surfaces are sound: unique canonicals on all 559 pages, all 975 JSON-LD blocks parse, all 558 sitemap URLs answer 200, every link-preview crawler gets static tags and a 1200x630 card, and all 439 calendar files parse clean in two parsers with stable UIDs across builds.
 - The P1s found so far are data, not markup: the catch-all region labels venues outside the city as "Kansas City" in JSON-LD (Powell Gardens is in Kingsville), and three of the fourteen current picks are at venues with no `data/venues.yaml` row, so the flagship don't-miss feed carries no mappable address for them.
+- The one security P1: `/api/report` files whatever title and links a client sends in three hidden fields, for an event id it never checks against the dataset, so a script can create public issues on the repository with any title and any link at the firewall's per-IP rate (F1). The static site itself is clean: hash-only CSP on every page, http(s)-only links enforced twice, no HTML sink takes dataset text, first-party requests only, no cookies.
 - Operations are in order: apex and `.html` 308 to the canonical, true 404s, no runtime errors in seven days, Node 24 pinned everywhere, the report function's rate limit is live (a second request from one address inside a few minutes got 429).
 
 ## Lane H: operations and launch (orchestrating session)
@@ -173,3 +174,162 @@ Audited against `site/dist` (559 pages, 439 `.ics` files, built from the 2026-10
 - Google's Rich Results Test and the Schema Markup Validator: no API; the checks above are the lane's own counts plus schema.org shape rules. A hand run of one event page (e.g. `/e/evt_87ced2675ef5`) through https://search.google.com/test/rich-results before launch would confirm D2's impact.
 - Real calendar clients: how Apple Calendar, Google Calendar and Outlook render these feeds was not tested on a device; the ical.js and node-ical parses, plus the RFC checks, are the evidence. D8's Android `webcal:` behaviour is from platform knowledge, not a device.
 - A second local build with a different `SITE_TODAY` was skipped (it would have rewritten `src/generated/*` and `dist/` under the other lanes); comparing Vercel's build with the local one gave the same evidence.
+
+## Lane C: security and the trust boundary
+
+Audited at `cb366f2` (the live site's `last-modified` matches that commit's deploy), read-only. Harnesses: `report-harness.ts` and `changes-check.ts` (scratch, not kept). Numbered F1 to F10 as the lane's harness output names them.
+
+### Summary
+
+1. The static site is clean: a hash-only meta CSP in `<head>` on every page, http(s)-only links enforced at the dataset and again at projection, no HTML sink takes dataset text, ICS, JSON-LD and sitemap escaping hold under hostile input, and the live site makes only first-party requests with no cookies and no storage until a reader saves something.
+2. The one function, `/api/report`, handles the reader's text, the token, errors, cross-site posts and the back link correctly, but it trusts three hidden fields (title, primary page, event page) and never checks the event id against the dataset: a scripted client can file public issues on the owner's repository with any title and any link, at the firewall's per-IP rate.
+3. Before launch: derive the event's context server-side from its id (F1, small change). Next pass: a global cap or dedupe inside the function so flood protection does not rest on the firewall alone (F2), the vite 8.3.3 bump (F3), and the one changes-page href that bypasses the projection's scheme guard (F4).
+
+### Findings
+
+#### F1. [P1 fix before launch] [confirmed] The report function files whatever title and links a client sends, for an event id it never checks
+
+- Location: `site/src/server/report.ts`, `parseReport` (the event-context branch) and `issueFor`; `site/src/components/ReportForm.astro`, the hidden inputs `title`, `event`, `primary-page`, `event-page`.
+- Impact: anyone with curl (no `Origin` header, which the function accepts by design so that older browsers and the no-JavaScript path work) can create issues on `github.com/WrongerSandwich/kc-events` titled `Wrong listing: <any text up to 500 characters>` whose body carries an arbitrary http(s) URL under "Primary page" and "Event page", autolinked by GitHub, labelled `bug` and `needs-triage`. The repository is public and indexed, so its issue list becomes a link-spam and phishing surface under the owner's name, and spam filed through the owner's token is spam from the owner's account in GitHub's eyes. The firewall rule bounds this per IP only (the wizard specifies 5 per 10 minutes), so one address gets up to 720 issues a day and more addresses scale linearly.
+- Evidence (local harness against the handler with GitHub faked):
+
+  ```
+  POST what=Totally legit report
+       &title=Free crypto giveaway, click the primary page
+       &event=https://www.kcthisweek.com/e/evt_doesnotexist
+       &primary-page=https://evil.example/phish?utm=kc
+       &event-page=https://evil.example/@WrongerSandwich/[x](y)
+  -> 200, filed 1
+     TITLE: "Wrong listing: Free crypto giveaway, click the primary page"
+     BODY:  ### Event on kcthisweek.com
+            https://www.kcthisweek.com/e/evt_doesnotexist
+            ### Primary page
+            https://evil.example/phish?utm=kc
+            ### Event page
+            https://evil.example/@WrongerSandwich/[x](y)
+  ```
+
+  A 300-character title containing `@WrongerSandwich **bold** [x](https://evil.example) #1` also filed (378-character issue title). The `what` text itself is correctly fenced and cannot inject.
+- Fix: take only the event id from the client and look the rest up in the build's own data. `src/server/report.ts` already imports with `.js` extensions that Vercel resolves to `.ts`, so the generated events module works the same way:
+
+  ```ts
+  import { events } from "../generated/events.js";
+  // in parseReport, after the site-origin and /e/<id> path checks on `event`:
+  const published = events.find((e) => e.id === site.pathname.slice("/e/".length));
+  if (published === undefined) return { status: 400 };
+  return {
+    what,
+    context: { title: published.title, event: eventUrl, primaryUrl: published.primaryUrl, ...(published.eventUrl && { eventUrl: published.eventUrl }) },
+  };
+  ```
+
+  Then drop `title`, `primary-page` and `event-page` from `FIELDS` and from the form's hidden inputs (the GitHub fallback link in `lib/report.ts` is built at render time and is unaffected). If the generated module's ~200 KB inside the function is unwelcome, fetch `/events.json` from the canonical origin at request time instead; the import is simpler and has no runtime dependency. Either way an unknown id is refused, and the only reader-controlled text in the issue stays inside the fence.
+
+#### F2. [P2 next pass] [confirmed] Flood protection rests entirely on a firewall rule outside the repository
+
+- Location: `site/src/server/report.ts`, `handleReport`; `scripts/report-form-setup.sh` stage 3. `vercel.json` has no rate limit and the function keeps no state.
+- Impact: what the repository alone guarantees is a field whitelist, refusal of repeated fields, a 16 KB body cap, a 2,000-character `what`, a honeypot (meaningless to a script, which leaves it empty), and refusal of browser posts from other origins. It guarantees nothing about volume: without the firewall rule a script could file at GitHub's content-creation limit (hundreds per hour) into `needs-triage`, and there is no dedupe, so one event can be reported a thousand times. The rule is live and applies per IP only; its numbers live in the dashboard, not in the repo.
+- Evidence: harness `cross-site: no Origin, no Sec-Fetch-Site (curl) -> 200, filed 1`; live `OPTIONS /api/report -> HTTP/2 429` with `x-vercel-mitigated: deny` on this host's third request to the path.
+- Fix (cheap, stateless, one extra GitHub call per report; Search needs only the Issues read the token has): before filing, ask GitHub how many issues the token's user opened in the last hour and refuse past a ceiling, and reuse an open issue for the same event:
+
+  ```
+  GET /search/issues?q=repo:WrongerSandwich/kc-events+is:issue+author:@me+created:>=<ISO one hour ago>
+      -> total_count >= 20 ? answer 429, file nothing
+  GET /search/issues?q=repo:WrongerSandwich/kc-events+is:issue+is:open+label:needs-triage+"<event URL>"+in:body
+      -> found ? POST a comment on it instead of a new issue
+  ```
+
+  The ceiling turns a flood into at most 20 issues an hour across all IPs; the dedupe keeps repeated reports as one thread. Also record the firewall rule's numbers in AGENTS.md so a reader knows what the edge guarantees.
+
+#### F3. [P2 next pass] [confirmed] vite 8.3.2 carries six advisories (1 high, 4 moderate, 1 low); dev server only
+
+- Location: `site>@astrojs/svelte>vite@8.3.2`; `pnpm audit --prod` and `pnpm audit` in both packages list the same six.
+- Impact: all six are in Vite's dev server and its `launch-editor` helper: GHSA-587h-7wmj-h5pm (high, `fs.existsSync` bypass on Windows), GHSA-r825-w8mm-5pxw and GHSA-698v-4r3x-3vcv (launch-editor command injection, Windows), GHSA-rq7h-c2jc-7f22 and GHSA-vfpm-58rq-9qcg (files outside `server.fs.allow`), GHSA-9jrq-w75r-8gcw (cross-origin script via custom middleware). None is reachable from the static build on Vercel: `astro build` never starts the dev server and `dist/` contains no Vite code. They matter only while `astro dev` runs on a developer machine (Linux here, so the Windows ones do not apply) and a hostile page in the same browser targets localhost.
+- Evidence: `pnpm audit --json` metadata `{low: 1, moderate: 4, high: 1}`, every path `site>@astrojs/svelte>vite`, version 8.3.2, patched `>=8.3.3`.
+- Fix: `pnpm update vite` once 8.3.3 is seven days old (`minimumReleaseAge: 10080` refuses it before then; Dependabot's weekly grouped PR will carry it under the same cooldown). No change to the deployed site.
+
+#### F4. [P3 next pass] [confirmed] The changes page links gone events' pages without the projection's scheme guard
+
+- Location: `site/src/pages/changes.astro:53` (`<a href={g.primaryUrl}>`), fed by `site/src/build/changes.ts` (`publishedChanges`, the `gone` map) from `src/report.ts` where `eventRef.primaryUrl` is `z.string()`.
+- Impact: every other href on the site passes `href()` in `site/src/build/load-dataset.ts` (throws on anything but a control-free http(s) URL) after the dataset's own `httpUrl` refine; this path reads `data/runs/<day>.json` instead, parsed as a plain string. The job writes that file from already-validated events (`src/changes.ts`, `changeRef`), and the three committed reports hold only https URLs (checked), so no hostile value reaches it today. A hand edit, a tampered report file, or a future job change that writes the report before validating would reach an `href` unchecked.
+- Evidence: a report with `changes.gone[0].primaryUrl = "javascript:alert(document.domain)"` passes `parseRunReport`, and `publishedChanges` returns it untouched for the page's href.
+- Fix: reuse the dataset's `httpUrl` schema for `eventRef.primaryUrl` in `src/report.ts`, or in `site/src/build/changes.ts` prefer the expired record's own validated `primaryUrl` when `records.get(id)` exists and pass the report's value through the same `href()` check otherwise (export it from `load-dataset.ts`).
+
+#### F5. [P3 polish] [confirmed] A long report in a three-byte script is refused with no reason
+
+- Location: `site/src/server/report.ts`, `MAX_BODY = 16_000` against `MAX_WHAT = 2000` and the textarea's `maxlength="2000"`, which counts UTF-16 code units.
+- Impact: a reader who writes 2,000 characters of Chinese, Japanese or Korean (each 9 characters URL-encoded) is answered 413 with `{"ok":false}` and no reason, so the page says only "Could not send." Not a security problem; a trust problem for that reader.
+- Evidence: harness `2000 CJK chars (18005 encoded chars): 413 {"ok":false}`; 1,000 emoji (2,000 code units, 12,005 encoded) files fine.
+- Fix: `MAX_BODY = 32_000` (every field at its limit in the worst encoding is about 23 KB), or give the 413 a reason the way the 400 has one.
+
+#### F6. [P3 polish] [plausible] A title over GitHub's 256-character limit becomes a 502 for the reader
+
+- Location: `site/src/server/report.ts`, `MAX_TITLE = 500` and `issueFor`.
+- Impact: GitHub's issue API rejects titles over 256 characters with 422, which the function reports as "Could not send." The longest published title today is 92 characters, so only a scripted client reaches this; listed because F1's fix removes the client's title and closes it too.
+- Evidence: harness `max title length reaching GitHub: 515`. The 256 limit is GitHub's documented validation; not exercised against the real API.
+- Fix: covered by F1; otherwise `MAX_TITLE = 200` and truncate rather than refuse.
+
+#### F7. [P3 polish] [confirmed] HSTS has no includeSubDomains or preload, and the domain is not preloaded
+
+Same as lane H's first finding. Fix: `{ "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }` in the `/(.*)` block of `vercel.json` (confirm it replaces Vercel's default on both hosts), then submit at hstspreload.org. Only if every subdomain will stay https-only; previews live on vercel.app and are unaffected.
+
+#### F8. [P3 polish] [confirmed] Every static response carries `Access-Control-Allow-Origin: *`, not only `/events.json`; no COOP or CORP
+
+- Location: `vercel.json` declares the header for `/events.json` only; live `/`, `/explore`, `/og.png` and the analytics script all answer with it; the function's 405 does not.
+- Impact: any site can read the HTML of any page cross-origin. For a public, cookieless site with no per-visitor state this exposes nothing (the pages are the same for everyone), so this is informational. It is most likely Vercel's default for static output rather than anything in the repository; worth knowing so the `/events.json` block is not mistaken for the only place it is on. `Cross-Origin-Opener-Policy` and `Cross-Origin-Resource-Policy` are absent; with no auth and no sensitive resources there is nothing for them to protect today.
+- Fix: none required. If wanted, `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Resource-Policy: same-origin` in the `/(.*)` block, with `/events.json` kept at `cross-origin` (a same-origin CORP there would break the intended cross-origin fetch of the dataset).
+
+#### F9. [P3 polish] [plausible] The ignored-build script passes a Vercel-set SHA to git positionally
+
+- Location: `site/scripts/ignore-build.sh`, `git diff --quiet "$prev" HEAD -- ...` with `prev` from `VERCEL_GIT_PREVIOUS_SHA`.
+- Impact: only Vercel sets that variable, from its own deployment record; no commit message, branch name or PR title reaches the script (it reads nothing else). A value beginning with `-` would be read by git as an option, and nothing produces one today. On a first deploy, a redeploy of the same commit, or a previous SHA git no longer has, the script correctly builds (exit 1).
+- Fix: `[[ "$prev" =~ ^[0-9a-f]{40}$ ]] || exit 1` before the diff, or `git diff --quiet --end-of-options "$prev" HEAD -- ...`.
+
+#### F10. [P3 note, adjacent lane] [confirmed] Analytics counts pages under their `.html` build names
+
+- Location: `site/src/layouts/Base.astro`, `<Analytics />`, with `build.format: "file"` in `astro.config.mjs`; the component writes `data-pathname="/index.html"`, `/explore.html`, `/about.html`, `/e/<id>.html`, `/venues.html`.
+- Impact: not security. The beacon reports `dp: "/index.html"` for `/`, so the dashboard groups views under paths no reader visits; "counts visits" stays true, only the labels are off.
+- Evidence: masked beacon run: `POST https://www.kcthisweek.com/f36fd001060e3d83/view` with body `{"o":"https://www.kcthisweek.com/index.html","sdkn":"@vercel/analytics/astro","sdkv":"2.0.1","dp":"/index.html","r":""}`.
+- Fix: pass the public path Base.astro already computes as `publicPath` if `@vercel/analytics/astro` accepts a path prop; otherwise leave it.
+
+### Sound, keep as is
+
+CSP and headers (live, every page type fetched: `/`, `/explore`, `/about`, `/404`, `/e/<id>`, `/venues`, `/changes`):
+
+- The meta CSP is in `<head>` on every page: `default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; script-src 'self' 'sha256-...'...; style-src 'self' 'sha256-...'...; style-src-attr 'unsafe-inline'`. `script-src` is hash-only with no `'unsafe-inline'`, and every inline script's SHA-256 on every page matched a listed hash (the explore slice script, the analytics snippet, each island bootstrap). JSON-LD blocks are unhashed, which is right: `type="application/ld+json"` is data, not script. The preview toolbar branch (`vercel.live`, pusher, `'unsafe-inline'` styles) is gated on `VERCEL_ENV === "preview"` and none of it appears in production.
+- `style-src-attr 'unsafe-inline'` covers the 1 to 20 `style=` attributes per page (view-transition names, CSS variables). An attacker needs HTML injection first, which the templating denies; the right trade.
+- The missing `connect-src` is fine: it falls back to `default-src 'self'`, and the analytics beacon is same-origin (observed with an empty console: no CSP report). `frame-src`, `worker-src` and `manifest-src` fall back to `'self'`; nothing uses them.
+- `vercel.json`'s `/(.*)` block lands on every page and on the function: `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), geolocation=(), microphone=()`, `X-Frame-Options: DENY`, and the header CSP `frame-ancestors 'none'` (correctly a header, since a meta policy ignores that directive). `.ics` is `text/calendar; charset=utf-8`; `/events.json` is `public, max-age=3600` with `Access-Control-Allow-Origin: *` as intended; HTML is `public, max-age=0, must-revalidate`.
+
+The function, `/api/report`:
+
+- Only `POST` is exported; Vercel answers 405 to GET and HEAD before the handler runs. `/api/Report` is 404, `/api/report/` and `/api/report.ts` 308 to `/api/report`, `/api/report.js` is 404. The firewall rule is live on the path.
+- The reader's text is wrapped in a backtick fence one longer than any run of backticks in it: `@WrongerSandwich`, `#129`, `### What is wrong`, `<img onerror>`, `![img](...)`, `<!-- -->`, RTL and zero-width characters, and a line of four backticks all stayed literal. The issue goes to GitHub as JSON, so CRLF in the text cannot touch any header.
+- URLs are parsed with `new URL`, limited to http(s), refused with credentials, and re-serialized (`"`, `<`, `>`, a newline and U+2028 come out percent-encoded or dropped). The site-page URL must be on a known origin with path `/e/[\w-]+` and no query or fragment: `?x=1`, `#y`, `/e/../about`, `/E/`, the apex, a trailing dot and a trailing slash were all refused; `:443` normalizes.
+- Cross-site refusal: `Sec-Fetch-Site: cross-site`, or an `Origin` outside the deployment's own and canonical origins, is 403. A third-party page's top-level form POST carries both `Origin: https://evil.example` and `Sec-Fetch-Site: cross-site` in every current browser, so it is refused; `Origin: null` (sandboxed frame, `data:` page), the apex, a sibling subdomain and a stray `*.vercel.app` origin are refused too. A missing Origin (curl, a typed URL) is accepted, which is the design and why F1 and F2 matter. The content type is not checked and need not be: the body is read as form encoding whatever the header says, and the Origin check is what stops cross-site posts.
+- No open redirect: the plain page's back link is a validated `/e/<id>` path from the context or from a same-origin Referer, else `/about`; there is no `Location` header anywhere. A `javascript:` or foreign Referer falls to `/about`.
+- Errors: GitHub 401, 422 and 500 and a network failure all become `502 {"ok":false}` (or the plain page) with no upstream text; a missing token is 503; the token never appears in a response (checked) and is never logged (logs carry GitHub's status and 300 characters of its body, or a fetch error message). A malformed body (JSON, binary, bad percent-escapes, empty, unknown or repeated keys, `__proto__`, a case variant of a field name) is 400 and files nothing.
+- The handler's own headers: `Cache-Control: no-store`, `X-Robots-Tag: noindex`, `Content-Security-Policy: default-src 'none'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'`. The plain page escapes `& < > " '` in the GitHub link and the back link.
+- Body cap 16 KB, `what` 2,000 characters, title 500, a field whitelist, a honeypot, and the token read from `process.env` at request time only. The e2e build sets a sentinel token and asserts no built file contains it; a grep of `dist/` found no token names and no source maps.
+
+Dataset text on the site:
+
+- `src/dataset.ts` refuses anything but `^https?:[^\u0000-\u001f\u007f]*$` before `z.url()` (`javascript:`, `data:`, `mailto:`, a newline and a BEL byte each produce "must be an http or https URL with no control characters"), and `href()` in `site/src/build/load-dataset.ts` throws again at projection on the same inputs. The 2026-10-10 gap is closed at both layers.
+- The only `set:html` uses are JSON-LD (`<` escaped, so `</script`, `</SCRIPT` and `<!--` cannot close the block; verified), the mark and the icon sprite (constants), and the explore page's own hashed inline script and style. No `{@html}`, `innerHTML`, `insertAdjacentHTML`, `document.write`, `eval`, `new Function` or `location =` in `site/src`; the only `href =` is the Blob URL in `download.ts`.
+- ICS (`site/src/lib/ics.ts`): backslash, semicolon, comma and CR/LF are escaped in SUMMARY, LOCATION, DESCRIPTION and X-WR-CALNAME. A title containing `\r\nATTENDEE;CN=Evil:mailto:...` stayed inside SUMMARY as `\n`; no output line contained a bare CR or LF; folding is at 75 octets by code point, so multi-byte characters are never split. `URL:` takes the href-validated URL raw, which is correct for a URI value, and no control character can reach it.
+- Sitemap: `loc` is built from ids validated as `evt_[0-9a-f]{12}`, slugs from `slugify` (`[a-z0-9-]` only; `a&b` became `a-b`) and `lastmod` from zod-validated ISO datetimes, so no `&` or `<` can reach the XML. `llms.txt` carries counts and config only. `/events.json` is `JSON.stringify` of the projection.
+- `parseQuery`: `%E0%A4%A` decodes to a replacement character without throwing; `__proto__`, `constructor` and `toString` in `kind`, `region`, `when`, `sort` and `ids` fall to defaults (Map lookups, never object keys), and `Object.prototype` is untouched; a 100,000-character `q` and 50,000 repeated ids are accepted and deduplicated. `hashId` feeds `getElementById` only. `createSaves` survives non-JSON, `{}`, `null`, `42`, mixed arrays and a throwing storage; ids are only compared, never rendered. `mapUrl` percent-encodes the name and address into a fixed Google Maps search URL.
+- Share uses `navigator.share` where present, else the clipboard, else shows the link as text; the event page's share click produced zero requests. Save writes `kc-events.saved.v2` to localStorage and nothing else. The webcal links are plain hrefs.
+
+Privacy claims versus reality: on `/`, `/explore`, `/e/<id>`, `/about`, `/changes` and `/venues` every request went to `https://www.kcthisweek.com` (the analytics script at `/f36fd001060e3d83/script.js` and its beacon included); `document.cookie` was empty and no cookie was set; localStorage and sessionStorage were empty until a save. The analytics script touches localStorage only for an `__va_attribution` key written by identify calls the site never makes. The footer's "No ads, no accounts, no cookies." is true; the About page's description of the analytics is true; the Buy Me a Coffee badge is a local PNG and its link a plain anchor.
+
+Supply chain and CI: pnpm 10.33 with no `onlyBuiltDependencies`, so no dependency's install script runs; `minimumReleaseAge: 10080`; Dependabot weekly, grouped, with a 7-day cooldown for npm and for GitHub Actions; the four actions are pinned to commit SHAs; the workflow has `permissions: contents: read`, a concurrency group and `--frozen-lockfile`, and runs on `pull_request` rather than `pull_request_target`, so a fork's PR gets a read-only token; `engines.node` is `24.x` in the site and `.nvmrc` is 24. `ignore-build.sh` reads nothing an outsider controls.
+
+### Could not check, and why
+
+- The function's actual response headers on production (its `Cache-Control: no-store`, `X-Robots-Tag` and `default-src 'none'` CSP against `vercel.json`'s `frame-ancestors 'none'` CSP on the same path): both set `Content-Security-Policy`, and which one Vercel sends, or whether both go out, could not be observed without a POST to production. Either outcome is safe: the plain page has no scripts or styles, and both policies deny framing.
+- The firewall rule's configured numbers, whether it counts GET and HEAD, and whether it covers preview deployments: the dashboard was out of bounds. It was seen to fire (429, `x-vercel-mitigated: deny`), possibly with the other lanes' requests from this host counting toward it.
+- Whether `request.url` inside the function carries the public origin on preview deployments, so a preview's own form passes the Origin check. If not, previews fail closed with 403; production passes through `SITE_ORIGIN` or `VERCEL_PROJECT_PRODUCTION_URL` either way.
+- Whether preview deployments sit behind Vercel Authentication and whether `GITHUB_REPORT_TOKEN` is marked Sensitive; both are dashboard settings.
+- GitHub's response to a 300-plus-character issue title (F6) was not exercised against the real API.
+- The analytics beacon was observed once, with automation masked, to confirm its destination; nothing else was sent to production.
