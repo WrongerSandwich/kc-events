@@ -218,6 +218,10 @@ _Avoid_: location page, place page
 `data/venues.yaml`, hand-kept: one row per venue, keyed on its display name, with its street address and, when looked up, its position and its own site; a district with no one address has its position alone (ADR 0013). Read only by the site's build, which fails on a row keyed on an alias or on no venue it knows.
 _Avoid_: venue list, venue database
 
+**Calendar feed**:
+A calendar file the build rewrites for a reader's calendar app to subscribe to (#136): `/calendar/dont-miss.ics`, the picks from today through the horizon; `/calendar.ics`, every dated event; and `/calendar/<kind>.ics` by the explorer's slug. Each asks to be refreshed daily and links every event's event page; an event keeps its UID, so a moved date moves in the calendar and an expired one drops out. Offered by webcal from the front page and the methods page. Not the explorer's Export, a one-time file of a view.
+_Avoid_: feed alone (the published dataset is not one), subscription (the reader's, not the file)
+
 **Changes page**:
 The page at `/changes` listing what the last run changed against the run before it: new picks (active and flagged, not flagged before), moved events (active before and now, the start on another day or time, from a start not yet passed), events gone (active before, expired as cancelled or two-strike), and events new this week (first seen in the seven days through the run).
 _Avoid_: changelog, what's new, digest

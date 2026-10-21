@@ -4,7 +4,7 @@ import Subscribe from "../components/Subscribe.astro";
 import { about } from "../generated/about";
 import { meta } from "../generated/meta";
 import Base from "../layouts/Base.astro";
-import { kindFeedPath, webcalUrl, WHOLE_FEED } from "../lib/feeds";
+import { kindFeedPath, webcalUrl, ALL_EVENTS_FEED } from "../lib/feeds";
 import { kindName } from "../lib/landing";
 import { reportUrl } from "../lib/report";
 import { siteConfig } from "../site.config";
@@ -32,7 +32,7 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
 
     <h2 id="subscribe">In your calendar</h2>
     <Subscribe origin={origin} />
-    <p>Or subscribe to <a href={webcalUrl(origin, WHOLE_FEED)}>everything listed</a>, or to one kind: {meta.kinds.map((kind, i) => <>{i > 0 && ", "}<a href={webcalUrl(origin, kindFeedPath(kind))}>{kindName(kind).toLowerCase()}</a></>)}.</p>
+    <p>Or subscribe to <a href={webcalUrl(origin, ALL_EVENTS_FEED)}>everything listed</a>, or to one kind: {meta.kinds.map((kind, i) => <>{i > 0 && ", "}<a href={webcalUrl(origin, kindFeedPath(kind))}>{kindName(kind).toLowerCase()}</a></>)}.</p>
 
     <h2>Keyboard shortcuts</h2>
     <p>In the <a href="/explore">explorer</a>, press <kbd>/</kbd> to jump to search, and <kbd>Esc</kbd> to clear it, then again to leave it.</p>

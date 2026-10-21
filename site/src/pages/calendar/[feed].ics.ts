@@ -1,13 +1,10 @@
 import type { APIRoute } from "astro";
 import { feedResponse, feeds } from "../../build/feeds";
-import type { Feed } from "../../lib/feeds";
+import type { CalendarFeed } from "../../lib/feeds";
 
-// The picks' feed and each kind's (#136); the whole calendar is /calendar.ics.
+// The picks' feed and each kind's (#136); every event's is /calendar.ics.
 export function getStaticPaths() {
-  return feeds.flatMap((feed) => {
-    const name = /^\/calendar\/(.+)\.ics$/.exec(feed.path)?.[1];
-    return name === undefined ? [] : [{ params: { feed: name }, props: { feed } }];
-  });
+  return feeds.bySlug.map((feed) => ({ params: { feed: feed.slug }, props: { feed } }));
 }
 
-export const GET: APIRoute = ({ props }) => feedResponse(props.feed as Feed);
+export const GET: APIRoute = ({ props }) => feedResponse(props.feed as CalendarFeed);

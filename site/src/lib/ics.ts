@@ -1,7 +1,8 @@
 import { addDays, formatDay, formatShort, isDateOnly, localDate } from "./dates";
 import { firstDay, isDated, lastDay, detailsUrl } from "./events";
 import { nextPlayingDay } from "./filter";
-import type { Geo, PublishedEvent } from "./types";
+import type { Geo, PublishedEvent, PublishedVenue } from "./types";
+import { addressLine, venueNamed } from "./venues";
 
 /**
  * An event as its calendar file has it: the build adds its venue's street address and position from the venue table
@@ -10,6 +11,12 @@ import type { Geo, PublishedEvent } from "./types";
  * notes still give.
  */
 export type IcsEvent = PublishedEvent & { addressLine?: string; geo?: Geo; pageUrl?: string };
+
+/** An event with its venue's street address and position, when the venue has a row; build-time callers only. */
+export function locatedForCalendar(venues: readonly PublishedVenue[], e: PublishedEvent): IcsEvent {
+  const venue = venueNamed(venues, e.venue);
+  return { ...e, ...(venue?.address && { addressLine: addressLine(venue.address) }), ...(venue?.geo && { geo: venue.geo }) };
+}
 
 /** RFC 5545 TEXT escaping: backslash first, then semicolon, comma, and newline. */
 function escapeText(s: string): string {

@@ -8,7 +8,10 @@ import { event } from "./fixtures/event";
 
 const TODAY = "2026-10-05";
 const kinds = ["music", "theater/dance", "other"];
-const feeds = (events: Parameters<typeof calendarFeeds>[0]) => calendarFeeds(events, { kinds, today: TODAY, horizonWeeks: 3, siteName: "KC This Week" });
+const feeds = (events: Parameters<typeof calendarFeeds>[0]) => {
+  const { allEvents, bySlug } = calendarFeeds(events, { kinds, today: TODAY, horizonWeeks: 3, siteName: "KC This Week" });
+  return [allEvents, ...bySlug];
+};
 const feed = (events: Parameters<typeof calendarFeeds>[0], path: string) => feeds(events).find((f) => f.path === path)!;
 const feedOpts = { siteName: "KC This Week", stamp: "2026-10-05T11:30:00Z", origin: "https://www.kcthisweek.com", venues: [] };
 const ids = (events: Parameters<typeof calendarFeeds>[0], path: string) => feed(events, path).events.map((e) => e.id);
@@ -16,8 +19,8 @@ const ids = (events: Parameters<typeof calendarFeeds>[0], path: string) => feed(
 describe("calendarFeeds (#136)", () => {
   it("makes the picks' feed, the whole calendar, and one feed per kind by the explorer's slug", () => {
     expect(feeds([]).map((f) => [f.path, f.calendarName])).toEqual([
-      ["/calendar/dont-miss.ics", "KC This Week · Don't miss"],
       ["/calendar.ics", "KC This Week"],
+      ["/calendar/dont-miss.ics", "KC This Week · Don't miss"],
       ["/calendar/music.ics", "KC This Week · Music"],
       ["/calendar/theater-dance.ics", "KC This Week · Theater and dance"],
       ["/calendar/other.ics", "KC This Week · Other events"],

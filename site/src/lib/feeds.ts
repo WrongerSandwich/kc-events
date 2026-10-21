@@ -1,39 +1,52 @@
 import { firstDay, isDated, isPast } from "./events";
-import { toIcs } from "./ics";
+import { locatedForCalendar, toIcs } from "./ics";
 import { kindName, landingRange } from "./landing";
 import { slugify } from "./slugs";
 import type { PublishedEvent, PublishedVenue } from "./types";
-import { locatedForCalendar } from "./venues";
 
 /**
- * The calendar feeds a reader subscribes to (#136): static files every build rewrites, so a calendar app that
- * refreshes one gets the latest run's dates. The events keep their UIDs, so a moved date updates in place and an
- * expired event drops out.
+ * A calendar feed a reader subscribes to (#136): a static file every build rewrites, so a calendar app that refreshes
+ * it gets the latest run's dates. The events keep their UIDs, so a moved date updates in place and an expired event
+ * drops out.
  */
-export type Feed = { path: string; calendarName: string; events: PublishedEvent[] };
+export type CalendarFeed = { path: string; calendarName: string; events: PublishedEvent[] };
+/** A feed under /calendar/, by its slug: the picks' and each kind's. */
+export type SlugFeed = CalendarFeed & { slug: string };
 
-export const DONT_MISS_FEED = "/calendar/dont-miss.ics";
-export const WHOLE_FEED = "/calendar.ics";
+export const ALL_EVENTS_FEED = "/calendar.ics";
+
+export function slugFeedPath(slug: string): string {
+  return `/calendar/${slug}.ics`;
+}
+
+const DONT_MISS_SLUG = "dont-miss";
+export const DONT_MISS_FEED = slugFeedPath(DONT_MISS_SLUG);
 
 /** A kind's feed, by the explorer's slug: "theater/dance" at /calendar/theater-dance.ics. */
 export function kindFeedPath(kind: string): string {
-  return `/calendar/${slugify(kind)}.ics`;
+  return slugFeedPath(slugify(kind));
 }
 
 /**
- * The picks from today through the horizon, then every dated event, then each kind's. A kind with nothing listed
- * still has its (empty) feed, so a subscription to it never starts failing.
+ * Every dated event's feed, and by slug the picks' from today through the horizon, then each kind's. A kind with
+ * nothing listed still has its (empty) feed, so a subscription to it never starts failing.
  */
-export function calendarFeeds(events: PublishedEvent[], opts: { kinds: readonly string[]; today: string; horizonWeeks: number; siteName: string }): Feed[] {
+export function calendarFeeds(
+  events: PublishedEvent[],
+  opts: { kinds: readonly string[]; today: string; horizonWeeks: number; siteName: string },
+): { allEvents: CalendarFeed; bySlug: SlugFeed[] } {
   const { to } = landingRange(opts.today, opts.horizonWeeks);
   const dated = events.filter(isDated);
   // A run already open is in from today, as the front page has it.
   const picks = dated.filter((e) => e.dontMiss && !isPast(e, opts.today) && (firstDay(e) ?? opts.today) <= to);
-  return [
-    { path: DONT_MISS_FEED, calendarName: `${opts.siteName} · Don't miss`, events: picks },
-    { path: WHOLE_FEED, calendarName: opts.siteName, events: dated },
-    ...opts.kinds.map((kind) => ({ path: kindFeedPath(kind), calendarName: `${opts.siteName} · ${kindName(kind)}`, events: dated.filter((e) => e.kind === kind) })),
-  ];
+  const slugFeed = (slug: string, name: string, list: PublishedEvent[]): SlugFeed => ({ slug, path: slugFeedPath(slug), calendarName: `${opts.siteName} · ${name}`, events: list });
+  return {
+    allEvents: { path: ALL_EVENTS_FEED, calendarName: opts.siteName, events: dated },
+    bySlug: [
+      slugFeed(DONT_MISS_SLUG, "Don't miss", picks),
+      ...opts.kinds.map((kind) => slugFeed(slugify(kind), kindName(kind), dated.filter((e) => e.kind === kind))),
+    ],
+  };
 }
 
 /**
@@ -41,7 +54,7 @@ export function calendarFeeds(events: PublishedEvent[], opts: { kinds: readonly 
  * X-PUBLISHED-TTL, which Outlook reads), each event at its venue's address and linking its page on `origin`, which
  * follows the event from run to run. Here, not in toIcs, so the explorer's export does not carry it.
  */
-export function feedIcs(feed: Feed, opts: { siteName: string; stamp: string; origin: string; venues: readonly PublishedVenue[] }): string {
+export function feedIcs(feed: CalendarFeed, opts: { siteName: string; stamp: string; origin: string; venues: readonly PublishedVenue[] }): string {
   const events = feed.events.map((e) => ({ ...locatedForCalendar(opts.venues, e), pageUrl: new URL(`/e/${e.id}`, opts.origin).toString() }));
   return toIcs(events, {
     siteName: opts.siteName,
