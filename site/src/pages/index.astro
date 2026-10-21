@@ -20,7 +20,7 @@ const count = events.length;
 const buckets = bucketDontMiss(dontMiss, meta.buildToday);
 const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin);
 ---
-<Base title={siteConfig.name} description={siteConfig.tagline} jsonLd={jsonLd}>
+<Base title="Kansas City events this week" description={siteConfig.tagline} jsonLd={jsonLd}>
   <h1>What's on in Kansas City</h1>
   <p class="lede">
     The picks worth going out of your way for, each with a line on why. Every date is read from the event's own
