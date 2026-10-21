@@ -110,6 +110,25 @@ describe("the report function", () => {
     expect(api.calls).toHaveLength(0);
   });
 
+  it("refuses a post from another site's page, so no page elsewhere can file through its visitors", async () => {
+    const api = github();
+    const deps = { token: "t", origins: [SITE], fetch: api.fetch };
+    const body = new URLSearchParams({ what: "spam" });
+    const foreign = new Request(`${SITE}/api/report`, { method: "POST", headers: { Origin: "https://evil.example" }, body });
+    expect((await handleReport(foreign, deps)).status).toBe(403);
+    const crossSite = new Request(`${SITE}/api/report`, { method: "POST", headers: { "Sec-Fetch-Site": "cross-site" }, body });
+    expect((await handleReport(crossSite, deps)).status).toBe(403);
+    expect(api.calls).toHaveLength(0);
+    const own = new Request(`${SITE}/api/report`, { method: "POST", headers: { Origin: SITE, "Sec-Fetch-Site": "same-origin" }, body });
+    expect((await handleReport(own, deps)).status).toBe(200);
+  });
+
+  it("sends a refused post from an event's page back to that page", async () => {
+    const api = github();
+    const request = new Request(`${SITE}/api/report`, { method: "POST", headers: { Referer: `${SITE}/e/evt_1` }, body: new URLSearchParams({ what: "" }) });
+    expect(await (await handleReport(request, { token: "t", origins: [SITE], fetch: api.fetch })).text()).toContain('href="/e/evt_1"');
+  });
+
   it("answers anything but a POST with 405", async () => {
     const api = github();
     const response = await handleReport(new Request(`${SITE}/api/report`), { token: "t", origins: [SITE], fetch: api.fetch });

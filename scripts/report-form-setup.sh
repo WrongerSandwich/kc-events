@@ -217,7 +217,8 @@ elif command -v curl >/dev/null 2>&1; then
   STATUS=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://api.github.com/repos/$REPO/issues?per_page=1" \
     -H "Authorization: Bearer $REPORT_TOKEN" -H "Accept: application/vnd.github+json" 2>/dev/null || echo "000")
   if [[ "$STATUS" == "200" ]]; then
-    printf '  %s✓ the token reads %s'"'"'s issues%s\n' "$GREEN" "$REPO" "$RESET"
+    printf '  %s✓ GitHub accepts the token%s\n' "$GREEN" "$RESET"
+    note "(The repository is public, so this cannot show the token may write issues; stage 4's test report does.)"
   else
     warn "GitHub answered $STATUS to the token; check its repository and the Issues permission"
     SKIPPED+=("a token that GitHub accepts for $REPO's issues (it answered $STATUS)")

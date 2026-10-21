@@ -28,7 +28,7 @@ const github = reportUrl(siteConfig.repoUrl, context);
     )}
     <p class="send"><button type="submit">Send report</button> <span>Posted publicly on GitHub. No name or contact needed.</span></p>
   </form>
-  <p class="status" role="status"></p>
+  <p class="status" role="status" tabindex="-1"></p>
   <p class="github">Or <a href={github}>report it on GitHub</a>.</p>
 </details>
 
@@ -54,6 +54,8 @@ const github = reportUrl(siteConfig.repoUrl, context);
         form.hidden = true;
       }
       status.textContent = sent ? "Sent. Thanks." : `Could not send.${reason ? ` ${reason}` : ""} Try again, or report it on GitHub.`;
+      // The button hides with the form once sent, so focus moves to the answer rather than falling to the page's top.
+      if (sent) status.focus();
     });
   }
 </script>

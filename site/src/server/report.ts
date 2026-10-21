@@ -8,7 +8,7 @@ import { siteConfig } from "../site.config.js";
 /** The longest "What is wrong" accepted, in characters. */
 export const MAX_WHAT = 2000;
 /** The longest event title accepted from the form's hidden field. */
-const MAX_TITLE = 200;
+const MAX_TITLE = 500;
 /** The longest request body read: the form's fields at their limits, URL-encoded, with room to spare. */
 const MAX_BODY = 16_000;
 /** The form's fields; any other name in a body refuses it. `website` is the honeypot, which a person never fills. */
@@ -98,7 +98,10 @@ export function issueFor(report: Report): { title: string; body: string } {
 }
 
 async function file(report: Report, deps: ReportDeps): Promise<Outcome> {
-  if (!deps.token) return { ok: false, status: 503 };
+  if (!deps.token) {
+    console.error("report: no GITHUB_REPORT_TOKEN in the environment");
+    return { ok: false, status: 503 };
+  }
   const [owner, repo] = new URL(siteConfig.repoUrl).pathname.split("/").filter(Boolean);
   try {
     const response = await deps.fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
@@ -113,10 +116,15 @@ async function file(report: Report, deps: ReportDeps): Promise<Outcome> {
       body: JSON.stringify({ ...issueFor(report), labels: LABELS }),
       signal: AbortSignal.timeout(10_000),
     });
-    if (!response.ok) return { ok: false, status: 502 };
+    if (!response.ok) {
+      // An expired token or a lost permission shows here, in the function's logs; the token itself is never logged.
+      console.error(`report: GitHub answered ${response.status}: ${(await response.text()).slice(0, 300)}`);
+      return { ok: false, status: 502 };
+    }
     const issue = (await response.json()) as { html_url?: string };
     return { ok: true, issueUrl: issue.html_url ?? "" };
-  } catch {
+  } catch (error) {
+    console.error(`report: GitHub could not be reached: ${error instanceof Error ? error.message : String(error)}`);
     return { ok: false, status: 502 };
   }
 }
@@ -142,6 +150,17 @@ ${message}
 `;
 }
 
+/** The event page a refused post came from, for the plain page's back link; else the about page. */
+function refererPath(request: Request, origins: string[]): string {
+  try {
+    const referer = new URL(request.headers.get("Referer") ?? "");
+    if (origins.includes(referer.origin) && /^\/e\/[\w-]+$/.test(referer.pathname)) return referer.pathname;
+  } catch {
+    // no Referer, or not a URL
+  }
+  return "/about";
+}
+
 const HEADERS = {
   "Cache-Control": "no-store",
   "X-Robots-Tag": "noindex",
@@ -154,6 +173,12 @@ const HEADERS = {
  */
 export async function handleReport(request: Request, deps: ReportDeps): Promise<Response> {
   if (request.method !== "POST") return new Response("Method not allowed\n", { status: 405, headers: { ...HEADERS, Allow: "POST" } });
+  // A browser says where a post came from: one from another site's page is refused, so no page elsewhere can make its
+  // visitors file reports (each from their own address, past the firewall's per-IP limit).
+  const from = request.headers.get("Origin");
+  if (request.headers.get("Sec-Fetch-Site") === "cross-site" || (from !== null && !deps.origins.includes(from))) {
+    return new Response("Forbidden\n", { status: 403, headers: HEADERS });
+  }
   const body = await request.text();
   const parsed = parseReport(body, deps.origins);
   const report = "what" in parsed ? parsed : undefined;
@@ -163,7 +188,7 @@ export async function handleReport(request: Request, deps: ReportDeps): Promise<
     const json = outcome.ok ? { ok: true } : { ok: false, ...(outcome.reason && { reason: outcome.reason }) };
     return Response.json(json, { status, headers: HEADERS });
   }
-  const back = report?.context ? new URL(report.context.event).pathname : "/about";
+  const back = report?.context ? new URL(report.context.event).pathname : refererPath(request, deps.origins);
   const github = reportUrl(siteConfig.repoUrl, report?.context);
   return new Response(page(outcome, back, github), { status, headers: { ...HEADERS, "Content-Type": "text/html; charset=utf-8" } });
 }
