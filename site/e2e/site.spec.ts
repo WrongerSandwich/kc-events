@@ -771,6 +771,34 @@ test("an event at a venue with a row is addressed to its street in its JSON-LD a
   expect(ics).toContain("GEO:39.0929;-94.5812\r\n");
 });
 
+test("the calendar feeds build from the fixture, each event with a UID, a start, a summary, and its page (#136)", async ({ request }) => {
+  const feeds = { "/calendar/dont-miss.ics": "KC This Week · Don't miss", "/calendar.ics": "KC This Week", "/calendar/music.ics": "KC This Week · Music" };
+  const counts: Record<string, number> = {};
+  for (const [path, name] of Object.entries(feeds)) {
+    const ics = (await (await request.get(path)).text()).replace(/\r\n[ \t]/g, "");
+    expect(ics, path).toContain(`\r\nX-WR-CALNAME:${name}\r\n`);
+    const vevents = ics.split("BEGIN:VEVENT").slice(1);
+    for (const v of vevents) {
+      const id = /\r\nUID:(evt_\w+)@kc-events\r\n/.exec(v)?.[1];
+      expect(id, path).toBeDefined();
+      expect(v).toMatch(/\r\nDTSTART[;:]/);
+      expect(v).toMatch(/\r\nSUMMARY:./);
+      expect(v).toMatch(new RegExp(`\r\nURL:https?://[^/]+/e/${id}\r\n`));
+    }
+    counts[path] = vevents.length;
+  }
+  // The picks are a slice of everything, and so is one kind.
+  expect(counts["/calendar/dont-miss.ics"]).toBeGreaterThan(0);
+  expect(counts["/calendar/music.ics"]).toBeGreaterThan(0);
+  expect(counts["/calendar.ics"]).toBeGreaterThan(Math.max(counts["/calendar/dont-miss.ics"]!, counts["/calendar/music.ics"]!));
+});
+
+test("the front page offers the picks as a calendar subscription, with the address to copy (#136)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/");
+  await expect(page.getByRole("link", { name: "Subscribe to the picks" })).toHaveAttribute("href", /^webcal:\/\/[^/]+\/calendar\/dont-miss\.ics$/);
+  await expect(page.locator(".subscribe code")).toHaveText(/^https?:\/\/[^/]+\/calendar\/dont-miss\.ics$/);
+});
+
 // The explorer link carries a query so its inline script takes the slice-pending branch.
 for (const path of ["/", "/explore?kind=music", "/e/evt_e2e000000001"]) {
   test(`${path} hydrates under its content security policy without a violation`, async ({ page }) => {

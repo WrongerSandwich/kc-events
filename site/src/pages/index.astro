@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro";
 import DontMissList from "../components/DontMissList.svelte";
 import KindIcon from "../components/KindIcon.svelte";
+import Subscribe from "../components/Subscribe.astro";
 import { events } from "../generated/events";
 import { dontMiss } from "../generated/dont-miss";
 import { meta } from "../generated/meta";
@@ -28,6 +29,7 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin);
   </p>
 
   <DontMissList client:load />
+  <div class="subscribe"><Subscribe origin={origin} /></div>
 
   {alwaysThere.length > 0 && <section aria-labelledby="always">
     <h2 id="always" class="section-heading">Always there</h2>
@@ -54,6 +56,7 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin);
   }
   .lede { color: var(--fg-muted); margin-top: var(--space-2); max-width: 36rem; }
   .note { color: var(--fg-muted); margin-top: var(--space-1); }
+  .subscribe { margin-top: var(--space-6); font-size: var(--text-sm); color: var(--fg-muted); }
   .always { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
   /* Two lines a row: the name, then when and where. Schedules run long ("Saturdays & Sundays, April–November; …"),
      so they get the full width rather than a narrow right-hand column. */

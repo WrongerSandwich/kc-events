@@ -1,6 +1,11 @@
 ---
+import { origin } from "../build/origin";
+import Subscribe from "../components/Subscribe.astro";
 import { about } from "../generated/about";
+import { meta } from "../generated/meta";
 import Base from "../layouts/Base.astro";
+import { kindFeedPath, webcalUrl, WHOLE_FEED } from "../lib/feeds";
+import { kindName } from "../lib/landing";
 import { reportUrl } from "../lib/report";
 import { siteConfig } from "../site.config";
 
@@ -24,6 +29,10 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
 
     <h2>What don't-miss means</h2>
     <p>A don't-miss event is a one-off or a limited run that is worth going out of your way for. It is an editorial call, made by a model under <a href={curationRules}>written rules</a> kept in the repository, and each one comes with a one-line reason. Recurring events are never flagged; they are listed under Always there instead.</p>
+
+    <h2 id="subscribe">In your calendar</h2>
+    <Subscribe origin={origin} />
+    <p>Or subscribe to <a href={webcalUrl(origin, WHOLE_FEED)}>everything listed</a>, or to one kind: {meta.kinds.map((kind, i) => <>{i > 0 && ", "}<a href={webcalUrl(origin, kindFeedPath(kind))}>{kindName(kind).toLowerCase()}</a></>)}.</p>
 
     <h2>Keyboard shortcuts</h2>
     <p>In the <a href="/explore">explorer</a>, press <kbd>/</kbd> to jump to search, and <kbd>Esc</kbd> to clear it, then again to leave it.</p>

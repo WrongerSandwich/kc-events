@@ -5,8 +5,9 @@ import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
 import { alwaysTherePicks } from "../src/always-there";
 import { pickAlwaysThere } from "../src/lib/always-there";
-import { venueLine } from "../src/lib/events";
+import { isDated, venueLine } from "../src/lib/events";
 import { faviconSvg } from "../src/lib/mark";
+import { slugify } from "../src/lib/slugs";
 
 const dist = new URL("../dist/", import.meta.url);
 const has = (p: string) => existsSync(new URL(p, dist));
@@ -29,6 +30,20 @@ describe("committed data", () => {
       expect(has(`e/${sample.id}.ics`)).toBe(true);
       const recurring = events.find((e) => e.recurrence === "recurring");
       if (recurring) expect(has(`e/${recurring.id}.ics`)).toBe(false);
+    });
+
+    it("writes the calendar feeds: the picks, every dated event, and each kind's (#136)", () => {
+      const unfolded = (p: string) => read(p).replace(/\r\n[ \t]/g, "");
+      const vevents = (p: string) => unfolded(p).split("BEGIN:VEVENT").length - 1;
+      expect(unfolded("calendar/dont-miss.ics")).toContain("X-WR-CALNAME:KC This Week · Don't miss\r\nREFRESH-INTERVAL;VALUE=DURATION:P1D\r\nX-PUBLISHED-TTL:P1D\r\n");
+      expect(unfolded("calendar.ics")).toContain("X-WR-CALNAME:KC This Week\r\n");
+      expect(vevents("calendar.ics")).toBe(events.filter(isDated).length);
+      for (const kind of meta.kinds) expect(vevents(`calendar/${slugify(kind)}.ics`), kind).toBe(events.filter((e) => isDated(e) && e.kind === kind).length);
+      expect(unfolded("calendar.ics")).toMatch(new RegExp(`\r\nURL:[^\r]*/e/${events.find(isDated)!.id}\r\n`));
+    });
+
+    it("links the picks' feed by webcal from the front page and the about page (#136)", () => {
+      for (const page of ["index.html", "about.html"]) expect(read(page), page).toMatch(/href="webcal:\/\/[^"]+\/calendar\/dont-miss\.ics"/);
     });
 
     it("publishes the projection, not the job's file", () => {

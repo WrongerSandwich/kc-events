@@ -1,3 +1,4 @@
+import type { IcsEvent } from "./ics";
 import { slugify } from "./slugs";
 import type { Geo, PublishedEvent, PublishedVenue, VenueAddress } from "./types";
 
@@ -18,6 +19,12 @@ export function venuePath(name: string): string {
 export function venueNamed(venues: readonly PublishedVenue[], name: string): PublishedVenue | undefined {
   const slug = venueSlug(name);
   return venues.find((v) => v.slug === slug);
+}
+
+/** An event with its venue's street address and position (#137), for its calendar entry, when the venue has a row. */
+export function locatedForCalendar(venues: readonly PublishedVenue[], e: PublishedEvent): IcsEvent {
+  const venue = venueNamed(venues, e.venue);
+  return { ...e, ...(venue?.address && { addressLine: addressLine(venue.address) }), ...(venue?.geo && { geo: venue.geo }) };
 }
 
 /** The heading of the venue directory's last group: the venues with a table row and nothing coming up. */

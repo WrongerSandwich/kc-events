@@ -59,8 +59,9 @@ export const FIXTURE_PICKS = 4;
 export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" }[] = [
   // The front page's code budget: what is left of its real-data budget once a week at the pick ceiling is paid for.
   { page: "index.html", budget: FRONT_PAGE_BYTES - (MAX_PICKS - FIXTURE_PICKS) * PICK_BYTES, build: "fixture" },
-  // 50 KB, plus 200 bytes for a run's days (#143) and 250 for each row's link to its venue's page (#137)
-  { page: "explore.html", budget: 50_450, build: "fixture" },
+  // 50 KB, plus 200 bytes for a run's days (#143), 250 for each row's link to its venue's page (#137), and 100 for the calendar
+  // writer's page link and extra properties, which the feeds use (#136)
+  { page: "explore.html", budget: 50_550, build: "fixture" },
 ];
 
 function main(): void {
