@@ -184,7 +184,8 @@ finish() {
 # STAGES: the human steps that move the weekly run to this machine (#22, ADR 0010).
 #
 # The weekly run (scripts/weekly-run.sh) needs a clone of its own, the two keys and a token for this
-# repository alone in that clone's gitignored .env, and a cron line that can find pnpm and the Node
+# repository alone in that clone's gitignored .env (with, optionally, a healthchecks.io ping URL for
+# the alert), and a cron line that can find pnpm and the Node
 # .nvmrc names. This wizard sets up each from the checkout it is run in. Re-running is safe: the
 # clone is reused, keys and token are offered back, and the cron line is replaced.
 #
@@ -193,7 +194,7 @@ finish() {
 # The GitHub workflow stays as the manual fallback; scripts/weekly-workflow-setup.sh sets its secrets.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=7
+TOTAL_STAGES=8
 DEFAULT_RUN_DIR="$HOME/kc-this-week-run"
 CRON_SCHEDULE="17 6 * * 1" # Mondays 6:17 a.m. local: early in the week, off the top of the hour
 
@@ -333,7 +334,32 @@ elif [[ -n "$GH_TOKEN" ]]; then
   SKIPPED+=("give the token Issues: Read and write on $REPO, then re-run this wizard")
 fi
 
-# ── Stage 6: the cron line ─────────────────────────────────────────────────
+# ── Stage 6: the alert ─────────────────────────────────────────────────────
+# The health issue is a record, but the token is the owner's own, so its comments notify no one (#64).
+stage "Alert: a healthchecks.io check"
+say "A failed run, or one that never starts, should reach you. The run pings a healthchecks.io check"
+say "(start, success, failure), and the check's integration (Slack, email) does the alerting."
+step "New check: name kc-this-week weekly run; Simple schedule, period 7 days, grace 3 hours"
+step "Integrations: turn on the one that should be alerted (Slack, say); successes stay silent there"
+step "Copy the check's ping URL (https://hc-ping.com/…)"
+if [[ -z "$(_existing HEALTHCHECKS_URL || true)" ]]; then open_url "https://healthchecks.io/"; fi
+ask_secret HEALTHCHECKS_URL "Ping URL (Enter to skip):"
+HEALTHCHECKS_URL=$(bare "${HEALTHCHECKS_URL:-}")
+if [[ -z "$HEALTHCHECKS_URL" ]]; then
+  warn "no ping URL; a failed run goes on the health issue and alerts no one"
+  SKIPPED+=("make a healthchecks.io check and put its ping URL in $ENV_FILE as HEALTHCHECKS_URL")
+else
+  write_env HEALTHCHECKS_URL "$HEALTHCHECKS_URL"
+  # A success ping takes the check out of "new", so its week starts now.
+  if curl -fsS -m 10 -o /dev/null --data-raw "setup: $(hostname)" "${HEALTHCHECKS_URL%/}"; then
+    say "Pinged the check; it should show as up."
+  else
+    warn "the ping URL did not answer; check it in $ENV_FILE"
+    SKIPPED+=("fix HEALTHCHECKS_URL in $ENV_FILE (the setup ping failed)")
+  fi
+fi
+
+# ── Stage 7: the cron line ─────────────────────────────────────────────────
 stage "Cron: Mondays at 6:17 a.m. local"
 CRON_LINE="$CRON_SCHEDULE PATH=$CRON_PATH $RUN_DIR/scripts/weekly-run.sh"
 # Every test and CI job runs the Node major in .nvmrc; a run on another would use an untested fetch.
@@ -359,7 +385,7 @@ else
   fi
 fi
 
-# ── Stage 7: a first run ───────────────────────────────────────────────────
+# ── Stage 8: a first run ───────────────────────────────────────────────────
 stage "First run"
 say "A run started now checks that everything works end to end: it spends real model money (up to"
 say "the 5 USD per-run cap) and commits its results to main. It takes a few minutes."

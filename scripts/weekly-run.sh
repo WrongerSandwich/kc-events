@@ -13,12 +13,18 @@
 #
 # Nobody watches a cron job's terminal, so every run reports to one open GitHub issue labelled
 # weekly-run-health (created the first time it is needed): a line on success, the log's tail on a
-# failure. Every abnormal ending, a busy lock included, exits 1.
+# failure. Every abnormal ending, a busy lock included, exits 1. The issue is the record, not a
+# notification (the token is the owner's own, and GitHub does not notify you of your own comments),
+# so a run also pings a healthchecks.io check when the .env names one (HEALTHCHECKS_URL, #64): a start,
+# then a success or a failure carrying the issue comment's link. The check's period is a week, so a
+# run that never starts at all (the machine down, cron broken) alerts too; healthchecks.io's
+# integration does the notifying, and a success is silent.
 #
 #   scripts/weekly-run.sh [--no-discovery]
 #
 # Secrets come from the clone's gitignored .env (OPENROUTER_API_KEY, TAVILY_API_KEY, and GH_TOKEN, a
-# fine-grained token for this repository alone that the push and the health issue use: #105).
+# fine-grained token for this repository alone that the push and the health issue use: #105), and
+# optionally HEALTHCHECKS_URL, the check's ping URL.
 
 # No errtrace (-E): the ERR trap would run inside every $(...) as well, and report one failure twice.
 set -euo pipefail
@@ -35,6 +41,12 @@ HEALTH_LABEL=weekly-run-health
 # The fine-grained token the push uses too (through scripts/git-credential-env.sh), read once here.
 GH_TOKEN_FROM_ENV=$(sed -n 's/^GH_TOKEN=//p' .env 2>/dev/null | tail -n1 | tr -d '\r' || true)
 if [[ "$GH_TOKEN_FROM_ENV" =~ ^\"(.*)\"$ || "$GH_TOKEN_FROM_ENV" =~ ^\'(.*)\'$ ]]; then GH_TOKEN_FROM_ENV="${BASH_REMATCH[1]}"; fi
+# Anyone with the ping URL can mark the check up or down, so it is never printed.
+HC_URL=$(sed -n 's/^HEALTHCHECKS_URL=//p' .env 2>/dev/null | tail -n1 | tr -d '\r' || true)
+if [[ "$HC_URL" =~ ^\"(.*)\"$ || "$HC_URL" =~ ^\'(.*)\'$ ]]; then HC_URL="${BASH_REMATCH[1]}"; fi
+HC_URL=${HC_URL%/}
+# The link to this run's comment on the health issue, once report() has posted it.
+REPORT_URL=
 # The CLI dates a run in the config's timezone; the check for an earlier run today uses the same day.
 TODAY=$(TZ=America/Chicago date +%F)
 
@@ -64,7 +76,16 @@ report() {
       || { echo "could not open the health issue; see the log"; return 0; }
     issue=${issue##*/}
   fi
-  gh issue comment "$issue" --body "$1" >/dev/null || echo "could not comment on the health issue; see the log"
+  # gh prints the comment's URL, which the failure ping carries.
+  REPORT_URL=$(gh issue comment "$issue" --body "$1") || { REPORT_URL=; echo "could not comment on the health issue; see the log"; }
+}
+
+# ping_check SUFFIX [BODY] tells the healthchecks.io check about this run: /start, "" for a success,
+# or /fail. Like report, a ping that cannot be sent is logged and otherwise ignored.
+ping_check() {
+  [[ -n "$HC_URL" ]] || return 0
+  curl -fsS -m 10 --retry 3 -o /dev/null --data-raw "${2:-}" "$HC_URL$1" 2>/dev/null ||
+    echo "could not ping the healthchecks.io check (${1:-success})"
 }
 
 # The issue is public: the home directory and anything shaped like an OpenRouter, Tavily, or GitHub
@@ -85,6 +106,9 @@ fail() {
   # shellcheck disable=SC2016 # the backticks are Markdown
   report "$(redact "$(printf '**%s: failed.** %s\n\nNothing was committed unless the push itself failed; the next run starts from origin/main either way. Last lines of `%s`:\n\n```\n%s\n```\n' \
     "$TODAY" "$why" "$LOG" "$(tail -n 40 "$LOG")")")"
+  # The alert's body is what healthchecks.io shows: what failed, and the comment holding the log's tail.
+  ping_check /fail "$(redact "$(printf 'KC This Week weekly run %s failed: %s\n%s\n' "$TODAY" "$why" \
+    "${REPORT_URL:-The health issue comment could not be posted; the log is $LOG}")")"
   exit 1
 }
 trap 'fail "line $LINENO exited $?"' ERR
@@ -98,6 +122,8 @@ if ! flock -n 9; then
 fi
 
 echo "weekly run starting $(date --iso-8601=seconds) in $ROOT"
+if [[ -z "$HC_URL" ]]; then echo "no HEALTHCHECKS_URL in .env; a failure goes on the health issue and alerts no one"; fi
+ping_check /start
 find "$LOG_DIR" -maxdepth 1 -name 'run-*.log' -mtime +90 -delete
 
 # This clone only ever holds data commits, so it starts each run exactly at origin/main: a rebase a
@@ -193,3 +219,5 @@ summary=$(node -e '
 ' "data/runs/$run_date.json") || summary="(could not read the run report)"
 echo "weekly run $run_date committed and pushed $(date --iso-8601=seconds): $summary"
 report "$(redact "$(printf '%s: ok, %s (%s)' "$run_date" "$summary" "$(git rev-parse --short HEAD)")")"
+# Silent: the success ping only marks the check up for another week.
+ping_check "" "$run_date: ok"
