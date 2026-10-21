@@ -100,8 +100,9 @@
        the one-line rule. */
     .row:not(.always) .when { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hood { flex: none; overflow: visible; }
-    /* base.css gives headings text-wrap: balance, which would reset an inherited nowrap, so the h3 sets its own. */
-    .title h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* base.css gives headings text-wrap: balance, which would reset an inherited nowrap, so the h3 sets its own. The
+       padding, taken back by the margin, keeps the link's focus ring (2 px, 2 px out, from a link 1 px taller than the line) inside what the overflow clips. */
+    .title h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 5px; margin: -5px; }
   }
 
   /* 1280 px and up: an unflagged row is a single line, 25 px tall (20 px title + 4 px padding + 1 px rule). The date is
