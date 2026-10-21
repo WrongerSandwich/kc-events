@@ -1,0 +1,82 @@
+---
+import { reportUrl, type ReportContext } from "../lib/report";
+import { siteConfig } from "../site.config";
+
+// The wrong-listing report form (#129): it posts to the function at /api/report, which files the issue the GitHub
+// issue form would. The event's pages go with it in hidden fields. Without JavaScript the post lands on the
+// function's plain page; with it, the script below sends it in place and says how it went. `website` is a honeypot.
+interface Props { context?: ReportContext; summary: string }
+const { context, summary } = Astro.props;
+const github = reportUrl(siteConfig.repoUrl, context);
+---
+<details class="report">
+  <summary>{summary}</summary>
+  <form method="post" action="/api/report">
+    <label for="report-what">What is wrong</label>
+    <textarea id="report-what" name="what" required maxlength="2000" rows="4" placeholder="What the listing says, and what is right if you know it"></textarea>
+    <div class="trap" aria-hidden="true">
+      <label for="report-website">Leave this empty</label>
+      <input id="report-website" name="website" tabindex="-1" autocomplete="off">
+    </div>
+    {context && (
+      <>
+        <input type="hidden" name="title" value={context.title}>
+        <input type="hidden" name="event" value={context.event}>
+        <input type="hidden" name="primary-page" value={context.primaryUrl}>
+        {context.eventUrl && <input type="hidden" name="event-page" value={context.eventUrl}>}
+      </>
+    )}
+    <p class="send"><button type="submit">Send report</button> <span>Posted publicly on GitHub. No name or contact needed.</span></p>
+  </form>
+  <p class="status" role="status"></p>
+  <p class="github">Or <a href={github}>report it on GitHub</a>.</p>
+</details>
+
+<script>
+  for (const form of document.querySelectorAll<HTMLFormElement>("details.report form")) {
+    const status = form.parentElement!.querySelector<HTMLElement>(".status")!;
+    form.addEventListener("submit", async (submit) => {
+      submit.preventDefault();
+      const button = form.querySelector("button")!;
+      button.disabled = true;
+      status.textContent = "Sending…";
+      let sent = false;
+      let reason: string | undefined;
+      try {
+        const response = await fetch(form.action, { method: "POST", body: new URLSearchParams(new FormData(form) as unknown as Record<string, string>), headers: { Accept: "application/json" } });
+        ({ ok: sent, reason } = (await response.json()) as { ok: boolean; reason?: string });
+      } catch {
+        sent = false;
+      }
+      button.disabled = false;
+      if (sent) {
+        form.reset();
+        form.hidden = true;
+      }
+      status.textContent = sent ? "Sent. Thanks." : `Could not send.${reason ? ` ${reason}` : ""} Try again, or report it on GitHub.`;
+    });
+  }
+</script>
+
+<style>
+  .report { margin-top: var(--space-2); font-size: var(--text-sm); }
+  summary { cursor: pointer; color: var(--fg-muted); width: fit-content; }
+  form { display: grid; gap: var(--space-2); margin-top: var(--space-3); max-width: 38rem; }
+  label { font-weight: var(--weight-medium); }
+  textarea {
+    font: inherit; color: var(--fg); background: var(--bg-raised); padding: var(--space-2);
+    border: 1px solid var(--control-border); border-radius: var(--radius); resize: vertical;
+  }
+  .trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+  .send { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; }
+  .send span { color: var(--fg-faint); font-size: var(--text-xs); }
+  button {
+    min-height: var(--tap); padding-inline: var(--space-3); font: inherit; font-weight: var(--weight-medium); cursor: pointer;
+    color: var(--fg); background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: var(--radius);
+  }
+  button:hover { border-color: var(--fg-faint); }
+  .status:empty { display: none; }
+  .status, .github { margin: var(--space-2) 0 0; }
+  /* A link inside a sentence must not rely on colour alone (axe link-in-text-block). */
+  .github a { text-decoration: underline; }
+</style>

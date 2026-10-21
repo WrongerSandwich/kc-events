@@ -17,8 +17,7 @@ import { eventDescription, eventJsonLd } from "../../lib/event-meta";
 import { breadcrumbJsonLd, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
 import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, neighborhoodLine, venueLine } from "../../lib/events";
-import { reportUrl } from "../../lib/report";
-import { siteConfig } from "../../site.config";
+import ReportForm from "../../components/ReportForm.astro";
 import type { PublishedEvent } from "../../lib/types";
 
 export function getStaticPaths() {
@@ -31,7 +30,7 @@ const metaDescription = eventDescription(event, meta.buildToday);
 const description = descriptions[event.id];
 // The reader lands on the event's own page when the job found one; the verified line still names the list it was read from.
 const details = detailsUrl(event);
-const reportHref = reportUrl(siteConfig.repoUrl, { title: event.title, event: `${origin}/e/${event.id}`, primaryUrl: event.primaryUrl, eventUrl: event.eventUrl });
+const report = { title: event.title, event: `${origin}/e/${event.id}`, primaryUrl: event.primaryUrl, ...(event.eventUrl && { eventUrl: event.eventUrl }) };
 const moreLikeThis = events
   .filter((e) => e.id !== event.id && e.kind === event.kind && hasStartDay(e) && firstDay(e)! >= meta.buildToday)
   .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
@@ -61,7 +60,8 @@ const jsonLd = [...(eventLd === undefined ? [] : [eventLd]), breadcrumbJsonLd(ev
       <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} shareText={`${line} · ${venueLine(event)}`} />
       {isDated(event) && <a class="ics" href={`/e/${event.id}.ics`} download><UiIcon name="calendar-plus" />Add to calendar</a>}
     </div>
-    <p class="verified">Date and venue verified {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}. <a href={reportHref}>Wrong? Report it</a>.</p>
+    <p class="verified">Date and venue verified {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.</p>
+    <ReportForm context={report} summary="Wrong? Report it" />
   </article>
 
   {moreLikeThis.length > 0 && (

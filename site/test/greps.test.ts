@@ -24,6 +24,11 @@ describe("client-safe code", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("never imports the report function's server code", () => {
+    const offenders = clientSafe().filter((f) => /["'](?:\.\.\/)+server\//.test(readFileSync(f, "utf8")));
+    expect(offenders).toEqual([]);
+  });
+
   it("never reads the environment in code that reaches the browser", () => {
     const offenders = [...clientSafe(), join(root, "site.config.ts")].filter((f) => /process\.env/.test(readFileSync(f, "utf8")));
     expect(offenders).toEqual([]);

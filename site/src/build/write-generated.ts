@@ -18,7 +18,7 @@ import { loadPublished } from "./load-dataset.ts";
 export const PUBLISHED_SCHEMA_VERSION = 2;
 
 /** What the front page may weigh on real data: HTML, CSS, and JS, gzipped. */
-export const FRONT_PAGE_BYTES = 50_500; // 50 KB, plus 200 bytes for a run's days (#143) and 300 for the calendar subscription line (#136)
+export const FRONT_PAGE_BYTES = 50_800; // 50 KB, plus 200 bytes for a run's days (#143), 300 for the calendar subscription line (#136), and 300 for the report form's two CSP hashes (#129) and the dependency bump of #152
 /**
  * The most don't-miss picks the front page was sized for: its code budget, measured on the fixture build, leaves room
  * in FRONT_PAGE_BYTES for this many (scripts/size-check.ts). A week over it is a warning, not a failed deploy.

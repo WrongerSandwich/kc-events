@@ -24,7 +24,7 @@ More: the site's [About page](https://www.kcthisweek.com/about), the design in [
 
 ## Wrong listing?
 
-Use the "Wrong? Report it" link on the event's page, or [open a wrong-listing report](https://github.com/WrongerSandwich/kc-events/issues/new?template=wrong-listing.yml). Include the event, the page it links to, and what is wrong.
+Use "Wrong? Report it" on the event's page: a short form there sends the report with no account, and it is posted publicly as an issue here. Or [open a wrong-listing report](https://github.com/WrongerSandwich/kc-events/issues/new?template=wrong-listing.yml) on GitHub, with the event, the page it links to, and what is wrong.
 
 ## For venues
 
