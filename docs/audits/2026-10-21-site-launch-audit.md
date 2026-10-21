@@ -12,7 +12,7 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 | D | SEO, sharing, structured data, calendar feeds | done, below |
 | E | Code quality, tests, build pipeline, runtime robustness | to resume |
 | F | Copy and content, voice, reader-visible data | not started |
-| G | Data accuracy: a live sample checked against source pages | to resume |
+| G | Data accuracy: a live sample checked against source pages | done, below |
 | H | Operations and launch: Vercel, DNS, HTTP behaviour, repo face | done, below (by the orchestrating session) |
 
 ## Headline so far
@@ -20,6 +20,7 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 - The crawl, share and calendar surfaces are sound: unique canonicals on all 559 pages, all 975 JSON-LD blocks parse, all 558 sitemap URLs answer 200, every link-preview crawler gets static tags and a 1200x630 card, and all 439 calendar files parse clean in two parsers with stable UIDs across builds.
 - The P1s found so far are data, not markup: the catch-all region labels venues outside the city as "Kansas City" in JSON-LD (Powell Gardens is in Kingsville), and three of the fourteen current picks are at venues with no `data/venues.yaml` row, so the flagship don't-miss feed carries no mappable address for them.
 - The one security P1: `/api/report` files whatever title and links a client sends in three hidden fields, for an event id it never checks against the dataset, so a script can create public issues on the repository with any title and any link at the firewall's per-IP rate (F1). The static site itself is clean: hash-only CSP on every page, http(s)-only links enforced twice, no HTML sink takes dataset text, first-party requests only, no cookies.
+- The data holds where it matters most: every sampled date, time and venue on all 14 current picks matches its source page, no sampled event is cancelled or postponed, and 65 of 66 evidence quotes are still on their pages. What is wrong is editorial: four of the 14 why-lines claim things the page does not say (Dark Forest "three nights only" is seven nights; Graveyard 5K's "open once a year"; the Invincible Czars as "a Kansas City band"; Hedwig's "likely" in person), and the City Market is listed as a one-off through a Monday it does not run.
 - Operations are in order: apex and `.html` 308 to the canonical, true 404s, no runtime errors in seven days, Node 24 pinned everywhere, the report function's rate limit is live (a second request from one address inside a few minutes got 429).
 
 ## Lane H: operations and launch (orchestrating session)
@@ -333,3 +334,194 @@ Supply chain and CI: pnpm 10.33 with no `onlyBuiltDependencies`, so no dependenc
 - Whether preview deployments sit behind Vercel Authentication and whether `GITHUB_REPORT_TOKEN` is marked Sensitive; both are dashboard settings.
 - GitHub's response to a 300-plus-character issue title (F6) was not exercised against the real API.
 - The analytics beacon was observed once, with automation masked, to confirm its destination; nothing else was sent to production.
+
+## Lane G: data accuracy as a reader sees it
+
+Checked 2026-10-21 against the source pages, with the audit's own user agent, one fetch per page, robots.txt honoured. The live `/events.json` and `site/dist/events.json` carry the same 437 events; every sampled event was last verified 2026-10-19.
+
+### Summary
+
+- **Sample and fields:** 24 events against their source pages: all 14 don't-miss picks plus 10 others; 155 field checks and 66 evidence quotes; 20 of 22 own-page links loaded and landed on the right event.
+- **Accuracy:** 6 fields do not match the page and 4 of the 14 why-lines are false or unsupported. Every sampled date, time and venue on a pick matches its page, and nothing sampled is cancelled or postponed. 65 of 66 quotes are still on the page; the 66th, Dark Forest's date quote, is gone from the page and the reading still holds.
+- **Unverifiable:** 1 field (Morton Amphitheater's town) and 2 own pages: Ticketmaster returns 401, and the Kauffman tickets page sends a crawler to a queue-it waiting room.
+- **No P0.** Four P1s: three wrong why-lines on front-page picks, and a market shown on a day it does not run.
+
+### The sample
+
+"ok" means it matches the page, "X" means the page says otherwise, "?" means unverifiable, "n/a" means the record has no value for that field.
+
+| id | title | host | title | dates | time | venue | nbhd | price/ages/days | recurrence | note |
+|---|---|---|---|---|---|---|---|---|---|---|
+| evt_c660f45da200 | SUNN O))) | liberty-hall.com (browser) | ok | ok Oct 21 | ok 8:00 PM (show; doors 7) | ok | ok | n/a | ok | no own page; why-line ok |
+| evt_41a40a81ea8a | Dark Forest | powellgardens.org | ok | ok Oct 22-24 | ok 7 p.m. (own page) | ok | X catch-all | ages n/a (Oct 22 is 21+) | ok | date quote no longer on the homepage; **why-line X** |
+| evt_55d3a5832023 | Graveyard 5K | kcparks.org | ok | ok Oct 24 | ok 8:00 am | ok | X "East Bottoms" | n/a | ok | **why-line X** |
+| evt_09e5187df336 | Hedwig ... Live Commentary | screenland.com (browser) | ok | ok Oct 24 | ok 2:00 PM | ok | ok | n/a | ok | separate ticket ("4 Tickets Left") |
+| evt_bcadd9b8374c | Hedwig ... 25th Movie Tour | screenland.com (browser) | ok | ok Oct 24 | ok 6:00 PM | ok | ok | n/a | ok | why-line hedges ("likely") |
+| evt_2663c3467045 | Electric Poe | thecoterie.org + ci.ovationtix.com | ok | ok Oct 14-Nov 1 | n/a | ok Union Cemetery | ok | ages ok words; days ok by the rule | ok | OvationTix now also lists Thu Oct 22 |
+| evt_87ced2675ef5 | An Evening with David Sedaris | lied.ku.edu | ok | ok Oct 26 | ok 7:30 pm | ok | ok | price ok "$35–$50 Adult" | ok | |
+| evt_6b42e0fa86c2 | Nosferatu with Live Score ... | screenland.com (browser) | ok | ok Oct 28 | ok 7:00 PM | ok | ok | n/a | ok | **why-line X** |
+| evt_f454c1b1fa92 | Geese | midlandkc.com | ok | ok Oct 30 | ok 8:00 PM | ok | ok | ages ok All Ages | ok | description shows raw `*asterisks*` |
+| evt_452b5e4bf318 | Anna Lapwood | kauffmancenter.org | ok | ok Nov 6 | ok 7 p.m. | ok (Helzberg Hall) | ok | n/a | ok | own page ? (queue-it) |
+| evt_df988246190b | Stewart Copeland | thegranada.com | ok | ok Nov 7 | ok 7:30 (show; doors 7) | ok | ok | price ok "$39.50" (lowest tier, per rule); ages ok | ok | |
+| evt_d7f7ec1a6483 | Beyond the Black Crack | charlottestreet.org | ok | ok Nov 19 | n/a (page gives none) | ok | ok | n/a | ok | venue quote does not name a place |
+| evt_34307d022112 | Legacy Tour 2026 | midlandkc.com | X | ok Nov 22 | ok 6:45 PM | ok | ok | ages ok | ok | title should be the act |
+| evt_4d2ffdabccf5 | Kansas vs Missouri Men's Basketball | t-mobilecenter.com | ok | ok Dec 6 | ok 4:00 PM | ok | ok | n/a | ok | |
+| evt_1705f8a300f4 | Minsoo Sohn, piano | lied.ku.edu | ok | ok Nov 22 | ok 2:00 pm | ok | ok | price ok "$25–$40 Adult" | ok | |
+| evt_b8b48a9a6d5d | KU Wind Orchestra | lied.ku.edu | ok | ok Nov 17 | ok 7:30 pm | ok | ok | price ok "$11 Adult" | ok | padded description |
+| evt_5bbb0adee360 | An Evening with Goose | midlandkc.com | ok | ok Nov 3 | ok 7:00 PM | ok | ok | ages ok | ok | |
+| evt_b63e1390c996 | Main Gallery Tours | theworldwar.org | ok | ok schedule (verbatim) | n/a | ok | ok | n/a | ok | link is the October page |
+| evt_4609c422bd56 | Thomas Rhett | livenation.com to ticketmaster.com | ok | ok Oct 23 | ok 7:30 PM | ok | ? Riverside | n/a | ok | own page ? (401) |
+| evt_92f563355cc1 | Betsabeé Romero: A Field with Roots | nermanmuseum.org | ok | ok Apr 30-Dec 6 | n/a | X (a lobby) | ok | n/a | ok | |
+| evt_fc1f485afa34 | Rachel Feinstein | thecomedyclubkc.com | ok | ok Oct 23-24 | ok 7:00 PM | ok | ok | n/a | ok | end "21:30" is the last show's start |
+| evt_b5f92592c45e | Kansas City vs Dallas | sportingkc.com (browser) | ok, but ambiguous | ok Oct 31 | ok 2:00PM | ok | ok | n/a | ok | |
+| evt_0e7d8323c9c2 | Farmers Market | thecitymarketkc.org | ok | **X end Mon Nov 2** | ok 9:00 | ok | ok | n/a | **X** | |
+| evt_9302eef7c629 | Thomas Frank, The Creativity Con | rainydaybooks.com | ok | ok Oct 22 | ok 7:00pm | ok | ok | n/a | ok | |
+
+The sample was built to require two non-picks with ages and two limited runs with days. That was not possible: only one non-pick has ages (Goose), and only one event in the whole set has days (Electric Poe, a pick). The other ages records (Geese, Legacy Tour, Copeland, Electric Poe) are covered through the picks.
+
+### Findings, by severity
+
+**[P1] [confirmed: not on the page; plausible: false] evt_6b42e0fa86c2, Nosferatu with Live Score by Invincible Czars (front page, "Next two weeks").**
+- Site: "...a live score from the Invincible Czars, a Kansas City band that scores silent films."
+- Page: the own page says only "Vampire Count Orlok expresses interest in a new residence ..." and names the band in the title. Nothing says where the band is from. The Invincible Czars are, to the auditor's knowledge, from Austin, Texas.
+- Fix: hand edit `whyLine` in `data/events.json`. Also tighten `prompts/curation-prompt.md`: a claim about an act's origin needs the description to state it.
+
+**[P1] [confirmed] evt_41a40a81ea8a, Dark Forest (front page, "This week").**
+- Site: "Three nights only of Quixotic staging ... a one-time seasonal collaboration."
+- Page: the own page says "October 16-17, 22 (21+), 23-24, and 30-31", and the homepage says "Dark Forest is coming October 16-17, 22-24, and 30-31." That is seven nights, two of them after this span. Nothing on the page says "one-time".
+- Cause: the record stores only the next span (Oct 22-24), as the rules say. Curation read that span as the whole run.
+- Fix: hand edit `whyLine`. Add a curation-prompt rule: do not claim "only N nights" from a record's start and end, because a run on separate dates is stored one span at a time.
+
+**[P1] [confirmed: not on the page] evt_55d3a5832023, Graveyard 5K (front page).**
+- Site: "An annual run through Elmwood Cemetery, open to the public once a year ..."
+- Page: "Join KC Crew at historic Elmwood Cemetery for the 9th Annual Graveyard 5K! ... supports vital preservation and maintenance efforts." Nothing about the cemetery opening once a year; it is a public historic cemetery.
+- Fix: hand edit `whyLine`.
+
+**[P1] [confirmed] evt_0e7d8323c9c2, Farmers Market (City Market).**
+- Site: "Sunday, November 1, 9:00 am through Monday, November 2", as a one-off.
+- Page: "Nov. 1 – Nov. 22: Sat & Sun, 9:00 a.m. – 3:00 p.m.", "the region's largest and most historic year-round Farmers Market", "SATURDAYS & SUNDAYS, APRIL – OCTOBER". Monday Nov 2 is on no page. The market is also on this weekend, but the site's first date for it is Nov 1.
+- Fix: hand edit to recurring ("Saturdays & Sundays, 9 a.m.-3 p.m."). Add a rule to `prompts/extraction-rules.md`: a year-round market with seasonal hours is recurring, and the next-span rule must not invent a weekday the page does not name.
+
+**[P2] [confirmed: page text bad] evt_7abd228a0dae, Merry Market.**
+- Site: "Sunday, November 29, 10:00 am through Monday, November 30".
+- Page: the Merry Market block says "SATURDAYS & SUNDAYS, NOV. 29 – 30, DEC. 6-7, 13 – 14, 20 – 21". Those are last year's Saturday-Sunday pairs. The same page's hours table says "Nov. 28- Dec. 20: MERRY MARKET".
+- Cause: the rule "If the page gives a weekday that disagrees with the date, trust the date" turned stale page text into a Monday.
+- Fix: change that rule in `prompts/extraction-rules.md` so a weekday that disagrees with its date leaves the date null (held), plus a hand edit.
+
+**[P2] [confirmed] Limited runs the page says happen on certain weekdays are shown as open every day.** `days` is only read from own pages, so only picks get it.
+- evt_bcf735efeaff Tower After Hours: quote "Wednesdays, Oct. 7-28, 2026 | 5:30-8 p.m."; site says "Through Wednesday, October 28".
+- evt_08898d8a3092 Liberty's Beacon: "(Weekends) | 7:30 p.m.".
+- evt_4cccca32bae7 Art On Walnut: Sundays.
+- evt_8b49fc67954f Ride the Drive: "Select Thursdays & Sundays".
+- Fix: code and prompt. Let extraction fill `days` from the list's own date quote (`src/dataset.ts` only allows days from an own page today; `prompts/extraction-rules.md`).
+
+**[P2] [confirmed] "All day" for one-offs with a date and no time.**
+- 72 one-offs have no time, among them 35 Screenland films and concerts such as Three Days Grace. The site prints "All day" for them in grouped rows: 59 times in `explore.html`, and on venue pages (for example "Double Indemnity ... All day"). No page says "all day"; the time simply was not read.
+- Fix: site code, `site/src/lib/group.ts:36`. Show no time instead.
+
+**[P2] [confirmed] Venues that are rooms, addresses or placeholders, each with its own venue page.**
+- evt_77d82b07e57d FrankenWines at "Offsite Location", in the catch-all. The page body says "sit a spell in the dark of night at the historic Union Cemetery." It is also 21+.
+- "1801 East 18th Street" (2 events): Zhou B's page says "Location: Zhou B Art Center KC, 1801 E. 18th St." This shows on the front page under Always there.
+- "2450 Grand Blvd., Suite 301" (evt_950369941c0e, A Ruby Room Christmas).
+- Nerman: "The Richard I. and Jeanne S. Galamba Lobby, First Floor" (evt_92f563355cc1), and the same lobby "...and The Harrison Jedel Mezzanine, Second Floor" (evt_43be9880950d). The page header and footer name the Nerman Museum.
+- Slugs: `offsite-location`, `1801-east-18th-street`, `2450-grand-blvd-suite-301`, `richard-i-and-jeanne-s-galamba-lobby-first-floor`, `richard-i-and-jeanne-s-galamba-lobby-first-floor-and-the-harrison-jedel-mezzanine-second-floor`, and arguably `125-southwest-boulevard`.
+- Fix: add `venueAliases` in `research.config.yaml` (Zhou B; Nerman lobby and mezzanine) and hand edit FrankenWines. Add an extraction rule: a placeholder ("Offsite Location", "TBA") is no venue; take the place the body names.
+
+**[P2] [confirmed] Wrong or inconsistent neighbourhoods.**
+- Dark Forest at Powell Gardens is in "Elsewhere in the metro" on the front page. The config lists "Kingsville # Powell Gardens", but no `venueNeighborhoods` entry places it there.
+- Elmwood Cemetery (4900 E Truman Rd, 64127) is "East Bottoms" for Graveyard 5K and the catch-all for Double Indemnity. Its venue page shows both labels.
+- Fix: add `venueNeighborhoods` entries: Powell Gardens: Kingsville; Elmwood Cemetery: Northeast (plausible, the auditor's reading of the address).
+
+**[P2] [confirmed] evt_bcadd9b8374c, Hedwig 6:00 pm.**
+- Why-line: "likely to bring John Cameron Mitchell to Kansas City in person".
+- Page: "a live Q&A, moderated discussion, and a special mini-acoustic performance by Mitchell". The hedge is wrong.
+- Fix: hand edit `whyLine`.
+
+**[P2] [confirmed] evt_376dc64c38e0, Kenneth Spencer Lecture: Tao Leigh Goffe (Liberty Hall).**
+- Site: 6:00 pm. The page's event data says "Doors: 6:00pm Start: 7:00pm". The visible "6:00 PM - 9:00 PM" is the doors time.
+- Fix: hand edit, plus an extraction-rule note that a Doors/Start pair in the schema.org description counts.
+
+**[P2] [confirmed] evt_34307d022112, title "Legacy Tour 2026".**
+- Page: "Legacy Tour 2026 with Udit Narayan & Aditya Narayan". The title rule says to use the act, and the front page's "Later" row tells a reader nothing.
+- Fix: hand edit the title. Identity holds by own page and date (ADR 0007, #66).
+
+**[P2] [confirmed] Dark Forest's first night shown is 21+.**
+- The card reads "Thu Oct 22 ... through Sat Oct 24" with no note; the page says "22 (21+)". The 21+ was hand-dropped on purpose (commit 512b7fd), but a family could go Thursday.
+- Fix: a description line, or a per-date ages note.
+
+**[P2] [plausible] evt_0c408e78633f, Second Fridays Open Studios (front page, Always there).**
+- Zhou B's calendar lists no Second Friday after Sep 11.
+- The link (`/events/secondfridaymay-bwsys`) opens a page dated "Friday, September 11, 2026".
+- Its venue shows as an address.
+
+**[P3] [confirmed] Electric Poe.**
+- Ages shows as "AGES 10+" in caps, and the page means it as advice: "Ideal for families with ages 10+".
+- Days "Fri–Sun", while OvationTix lists "Thursday 22 October 2026 6:30 pm". That fits the one-extra-performance rule, but there is a show tomorrow.
+
+**[P3] [confirmed] Hedwig twice in "This week".** These are two tickets, not one: 2:00 PM live commentary and mini-acoustic set, and 6:00 PM screening with Q&A, each with its own page and ticket count. They still take two of the six "This week" slots. The 2 pm why-line says "One night".
+
+**[P3] [confirmed] Titles.**
+- ALL CAPS: 10, for example evt_b1c55be28619 "BLACK SPHINX" (the extraction rules' own example of a title to fix), evt_316b05f00fbc "SCHOOL OF ROCK", evt_f2851cf4fca7 "PALACE".
+- ® kept: "Keebler® Spookie Stripes Safari", "LEGOLAND® Discovery Center: Brick or Treat".
+- Presenter-only title: evt_a78d16008034 "EMAS Presents"; the own page says "EMAS Presents Lilah Powlas".
+- Sponsor or ticket copy: "Yoga at the Kauffman Center Presented by Premier Partner Saint Luke's", "2026 Opening Day at the Ice Terrace - FREE Skate".
+- Venue in title: "The Berlin Wall. A World Divided. Exhibition at Union Station".
+- Ambiguous: "Kansas City vs Dallas".
+
+**[P3] [confirmed] Descriptions.**
+- 13 pad the listing line, which the rules say should be null: "A performance by the KU Wind Orchestra.", "A performance by WHIPPED CREAM.", "A musical comedy." (Mrs. Doubtfire), "A show described as a secret.", "A Mecum auction event."
+- 1 truncated: evt_b1e8fff4ffdf "...comes to Municipal…".
+- 1 raw Markdown: Geese "*Getting Killed*" shows on the pick's page.
+- 1 price talk: "on $3 Beer Night".
+- 1 near-copy of the page: Nosferatu.
+- 1 double punctuation: "KC Live!.".
+
+**[P3] [confirmed] Recurrence class.**
+- evt_f2ab74ceb485 The Wizard of Oz is a one-off spanning Oct 16-25; it should be a limited run. It expires before the next run.
+- evt_3315efd211a4 The Secret Show is recurring, yet its page gives "Fri, October 2, 2026 – Fri, February 5, 2027". Its kind is "other" though it is at The Bird.
+
+**[P3] [plausible] Possible promotions or not-public items in the explorer, not on the front page.** "End of Days Halloween Party" (KC Live!), "Dungeons & Dragons Community Gathering!!!" (Replay Lounge), "Cub Scout Night at the Zoo", "Crossroads Artboards 2027-28 Info Session".
+
+**[P3] [confirmed] Missing events (coverage, not wrong data).**
+- Liberty Hall's "Nov 4 Wed Basement 7:00 PM".
+- Sporting KC's home match "10/24 ... SKC Kansas City 7:30PM ATX Austin", held unverified on a stitched quote.
+- The Lied lists "Mathis Picard, solo piano" on Nov 16 and Nov 17; the site has only Nov 16.
+
+### Whole set (437 published events)
+
+- **Duplicates:** none with the same title and date. One shared own page: Fountain City String Quartet and Mandolin Orchestra share `event_id=101928`, but that is the "City Center Live" series page listing both, so it is fine. The two Hedwig records are separate shows.
+- **Titles:** 0 with a stray space before punctuation; 10 ALL CAPS; 9 with ticket or presenter copy; 16 containing a venue word (most are fine, for example "Boo at the Zoo").
+- **Venues:** 3 addresses, 1 placeholder, 2 Nerman lobby strings. Odd spellings: "worlds of fun" (lowercase), "Rainy Day Books- Fairway", "ZHOU B ART CENTER KC" beside "Zhou B Art Center KC".
+- **Neighbourhood catch-all:** 4 (Dark Forest, Double Indemnity, FrankenWines, Floating Pumpkin Patch with "Westside" proposed). 1 venue is split across two neighbourhoods (Elmwood Cemetery). No state-line errors found.
+- **Kind "other":** 23. Misfiled examples: The Secret Show (comedy), "Razor Blades, Rituals & Rumors: A Most Unusual Hour of Magic" (a magic show), and one Floating Pumpkin Patch filed as other while its twin is festivals/markets.
+- **Descriptions:** 180 present, 257 absent; 38 under 60 characters, 13 of them padding; 1 truncated; 3 using "invite(s)".
+- **Why-lines:** 14 picks. 4 are unsupported or false (Dark Forest, Graveyard 5K, Nosferatu, Hedwig 6 pm). None restates the title.
+- **Prices, ages, days:** 6 prices, all following the adult-standard rule. 5 ages, one in caps ("AGES 10+"). 1 days record.
+- **Times:** none at 00:00 and none before 6 am. The Princess Bride at 6:37 pm is what the Nelson's quote says. 26 of 34 recordBar shows at 7:00 pm match the page, which gives a single time ("Oct 28 7:00 pm"). Knuckleheads' three 8:00 PM shows on Oct 23 match the page (several stages). One time is a doors time (Tao Leigh Goffe). 72 date-only one-offs show "All day".
+- **Started before today and not a limited run:** 1 (Wizard of Oz).
+- **Spans:** Amy Kligman runs 625 days, and the page says "March 28, 2025 - December 13, 2026". TubaChristmas shows "December 4-14 12 p.m.", exactly as the Kauffman list says.
+- **Past the 8-week horizon (Dec 14):** 4 (SIDEQUEST, NYE LIVE!, VolunTEEN Open House, Royal Roundup on 2027-02-25).
+- **Last verified:** 430 on Oct 19; 7 on Oct 7-13 (Arts Council, P&L, American Royal, Zoo items beyond their list's window).
+- **No own page:** 23, including all 9 Liberty Hall events.
+
+### What the extraction gets right
+
+- Every sampled date, time and venue on the 14 picks matches the source page.
+- A script over all 437 events found no evidence quote whose weekday disagrees with its date, so no wrong-weekday listings.
+- Times after the Nov 1 clock change carry -06:00.
+- Doors-versus-show is handled on own pages: Copeland 7:30 not 7, Geese 8:00, SUNN O))) 8:00 not 7.
+- Adult prices are used, not student prices ("$35–$50 Adult" from "$35–$50 Adult • $19–$26 Student/Youth").
+- Titles are cleaned well: "MRS. DOUBTFIRE" becomes "Mrs. Doubtfire", and "Foxy By Proxy presents:" and "Kauffman Center Presents" are dropped.
+- Helzberg Hall shows as a room of the Kauffman Center.
+- 20 of the 22 own pages that could be loaded land on the right event, including Powell Gardens via a redirect.
+- No cancelled or postponed event is carried. FrankenWines was correctly moved to its rescheduled date.
+- The Midland, Lied, Rainy Day Books, Comedy Club and Screenland own-page quotes are all verbatim.
+
+### Not verified, and why
+
+- **Thomas Rhett:** the Ticketmaster own page returns HTTP 401 to a crawler. Whether Morton Amphitheater is in Riverside could not be established; the page says "Kansas City MO 64150".
+- **Anna Lapwood:** `tickets.kauffmancenter.org/overview/25577` redirects to `kauffmancenter.queue-it.net`, a waiting room. Its robots.txt does not disallow `/overview/`, so the run report's "robots.txt disallows" probably comes from the queue-it hop.
+- **OvationTix:** its robots.txt returned a Cloudflare "Just a moment..." page to curl; the browser render worked.
+- **kclibrary.org:** robots.txt returned 403, but the event page itself loaded (200).
+- **Rendered in Chromium** (one load each, audit user agent): Liberty Hall, Screenland (the list and 3 own pages), Sporting KC, OvationTix, Knuckleheads.
+- **Not fetched:** the Nelson-Atkins Tivoli page (the 6:37 pm Princess Bride), and the American Royal and Convention Center lists (UMKC vs Montana State on Oct 24, shown with no time).
