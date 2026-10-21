@@ -10,8 +10,8 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 | B | UX critique: heuristics, personas, journeys | to resume |
 | C | Security and the trust boundary: `/api/report`, CSP, injection surfaces, dependencies, privacy claims | done, below |
 | D | SEO, sharing, structured data, calendar feeds | done, below |
-| E | Code quality, tests, build pipeline, runtime robustness | to resume |
-| F | Copy and content, voice, reader-visible data | not started |
+| E | Code quality, tests, build pipeline, runtime robustness | done, below |
+| F | Copy and content, voice, reader-visible data | running |
 | G | Data accuracy: a live sample checked against source pages | done, below |
 | H | Operations and launch: Vercel, DNS, HTTP behaviour, repo face | done, below (by the orchestrating session) |
 
@@ -21,6 +21,7 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 - The P1s found so far are data, not markup: the catch-all region labels venues outside the city as "Kansas City" in JSON-LD (Powell Gardens is in Kingsville), and three of the fourteen current picks are at venues with no `data/venues.yaml` row, so the flagship don't-miss feed carries no mappable address for them.
 - The one security P1: `/api/report` files whatever title and links a client sends in three hidden fields, for an event id it never checks against the dataset, so a script can create public issues on the repository with any title and any link at the firewall's per-IP rate (F1). The static site itself is clean: hash-only CSP on every page, http(s)-only links enforced twice, no HTML sink takes dataset text, first-party requests only, no cookies.
 - The data holds where it matters most: every sampled date, time and venue on all 14 current picks matches its source page, no sampled event is cancelled or postponed, and 65 of 66 evidence quotes are still on their pages. What is wrong is editorial: four of the 14 why-lines claim things the page does not say (Dark Forest "three nights only" is seven nights; Graveyard 5K's "open once a year"; the Invincible Czars as "a Kansas City band"; Hedwig's "likely" in person), and the City Market is listed as a one-off through a Monday it does not run.
+- Two structural P1s from the code lane: the site is built once a week, so from Tuesday on the server HTML is Monday's and hydration swaps whole sections in place (CLS measured at 0.17 to 0.49 on `/` and `/explore` later in the week; the script-free kind, region and venue pages list past events until the next build), fixed by a daily deploy hook; and a `data/venues.yaml` row whose venue's last record is archived makes the build throw, so a future weekly data commit would be refused and the site would quietly stop refreshing (earliest around January 2027). Gates are green: typecheck clean, 415 site tests pass, coverage 93.6% lines, all six size budgets pass (two with under 100 bytes to spare).
 - Operations are in order: apex and `.html` 308 to the canonical, true 404s, no runtime errors in seven days, Node 24 pinned everywhere, the report function's rate limit is live (a second request from one address inside a few minutes got 429).
 
 ## Lane H: operations and launch (orchestrating session)
@@ -525,3 +526,174 @@ The sample was built to require two non-picks with ages and two limited runs wit
 - **kclibrary.org:** robots.txt returned 403, but the event page itself loaded (200).
 - **Rendered in Chromium** (one load each, audit user agent): Liberty Hall, Screenland (the list and 3 own pages), Sporting KC, OvationTix, Knuckleheads.
 - **Not fetched:** the Nelson-Atkins Tivoli page (the 6:37 pm Princess Bride), and the American Royal and Convention Center lists (UMKC vs Montana State on Oct 24, shown with no time).
+
+## Lane E: code quality, tests, build pipeline, runtime robustness
+
+Site package at `cb366f2`. The gates were run in the worktree; the e2e suite was read, not run (its web server wants the port the shared preview holds; CI was green on `main`).
+
+### Summary
+
+- **Typecheck:** passes. Root `tsc` (TS 7) has 0 errors. Site `astro check` covers 133 files with 0 errors, 0 warnings, 0 hints. `svelte-check` (run with npx) also finds 0, but `astro check` turns out not to type-check `.svelte` files at all (E4).
+- **Tests:** site vitest has 415 passed and 15 skipped, across 46 files. The skipped suite is the built-output one: here `site/dist` was built on 10-21 and the tests use the 10-19 last-run date. CI runs it. Coverage is 93.57% lines, 90.25% branches, 92.9% statements, 88.8% functions.
+- **Size:** all six budgets pass, but the fixture budgets are nearly full:
+
+  | Page | Measured / budget (bytes, gzipped) | Headroom |
+  |---|---|---|
+  | `index.html` (fixture) | 44,704 / 44,800 | 96 B |
+  | `explore.html` (fixture) | 50,783 / 50,850 | 67 B |
+  | largest event page | 37,985 / 40,000 | 2,015 B |
+  | largest venue page | 36,803 / 40,000 | 3,197 B |
+  | largest kind page | 48,310 / 100,000 | 51,690 B |
+  | largest region page | 58,937 / 100,000 | 41,063 B |
+
+  The real-data `explore.html` is unbudgeted: 117,072 B gzipped (E9).
+
+### Findings, by severity
+
+#### E1. [P1 fix before launch] [confirmed] The front page and explorer jump on load every day except build day; kind, region and venue pages list past events until the next build
+
+- Location: `site/src/components/clock.svelte.ts:30-43` (until an island mounts it sees `meta.buildToday`); `DontMissList.svelte:24-26,54` and `Explorer.svelte:23-24,97`; `VenueEvents.svelte:13`, `LandingEvents.svelte:17` and `pages/e/[id].astro:35-38` render only at build, with `meta.buildToday`. The cause is the build cadence: one build a week, on the Monday data commit.
+- Impact: the server HTML is always the build day's. On any later day, hydration swaps every date-dependent section in place: headings, buckets, which day groups exist, folded picks. Measured cumulative layout shift (CLS) on live, Chromium, Playwright clock moved, build of 10-21:
+
+  | Page | Width | Build day | Days after the build |
+  |---|---|---|---|
+  | `/` | 390 px | 0.006 | 0.166 (Fri), 0.469 (Sun) |
+  | `/` | 1280 px | 0.045 (day after) | 0.245 (Sun) |
+  | `/explore` | 390 px | 0.000 | 0.460 (Fri), 0.460 (Sun) |
+  | `/explore` | 1280 px | 0.000 | 0.182 (day after), 0.491 (Sun) |
+
+  "Poor" CLS starts at 0.25, and the worst days are Thursday to Sunday, when people plan weekends. Server heading `This week, Oct 21–25` becomes `This weekend, Oct 25`. The explorer's first day group goes from `Wed Oct 21` to `Sun Oct 25`. The script-free pages (`/k/*`, `/r/*`, `/v/*`) and an event page's "more like this" keep listing events that have already happened, under past day headings, for up to six days.
+- Evidence: `flash.mjs` and `flash-wide.mjs` (scratch). The e2e no-shift tests (`e2e/site.spec.ts:188-226`) only run on `BUILD_DAY`.
+- Fix: rebuild daily. Create a Vercel Deploy Hook and POST to it at about 00:05 America/Chicago, from the home cron host or a scheduled GitHub workflow. `ignore-build.sh:8` already builds a same-SHA redeploy, and the build already uses the real day; nothing else changes. Then add one e2e that loads `/` and `/explore` with the clock at `BUILD_DAY` plus 3 days, as a guard for the remaining tabs that stay open across midnight.
+
+#### E2. [P1 fix before launch] [confirmed] A venue table row fails the deploy build once the job archives its venue's last record
+
+- Location: `site/src/build/venues.ts:81,87` (`known` comes only from the live dataset's records plus the alias keys); `load-dataset.ts:199`; root `src/archive.ts:27-31` (expired records more than 8 weeks gone move to `data/archive/`).
+- Impact: when every record at a non-alias row's venue has expired and been archived, `buildVenues` throws `venue table row "X" names no venue`. Vercel then refuses that weekly data commit and every commit after it. The site stays on the old deploy, and the weekly refresh stops silently (E3). Low-traffic rows are close to this today: Emily & Todd Voth Artspace (1 non-expired record), American Jazz Museum (1), Zhou B Art Center KC (1), Crossroads Arts District (1, unverified), Bruce R. Watkins Cultural Heritage Center (2). If no new record appears, the earliest failures are around January 2027.
+- Evidence: a scratch script removed the 2 "American Jazz Museum" records, as the archive will, then ran `loadPublished`: `BUILD REFUSED: venue table row "American Jazz Museum" names no venue...`. The same run for alias-keyed "Blue Valley Library" builds fine.
+- Fix: when a row has no record, warn instead of throwing (`buildVenues` already makes a "Nothing listed" page for such a row). Keep throwing only for the typo case it was written for: a row whose `venueSlug` matches a known venue but whose spelling differs, plus the existing alias and slug-collision checks. The alternative is to feed `data/archive/*.json` venue names into `known`; then add `../data/archive` to `ignore-build.sh`.
+
+#### E3. [P2 next pass] [plausible] A failed Vercel build on a data commit notifies no one, and the CI comments describing this are stale
+
+- Location: `.github/workflows/site-ci.yml:1-3` and `site/scripts/size-check.ts:7-10` both say the weekly commit "runs no CI"; `scripts/weekly-run.sh` never checks the deploy.
+- Impact: the comments are only true of the manual fallback workflow. The home cron pushes with a fine-grained token, so CI does run on weekly commits: `c798759` (10-19 cron) has check `site: success`. That CI runs beside Vercel and gates nothing. If Vercel's build fails (E2, the 14-day window, a schema change), the site keeps last week's deploy. The only reader-visible signal is the header stamp plus the staleness banner, which appears 10 days after the previous run. Healthchecks.io reports the research run, not the deploy. Whether Vercel emails on failed deploys could not be checked.
+- Evidence: `gh api .../commits/c798759.../check-runs` returns `site: success`. Its commit status is `Vercel: Deployment has completed / success`, so the status exists and can be polled.
+- Fix: after `git push`, have `weekly-run.sh` poll `gh api repos/WrongerSandwich/kc-events/commits/$sha/status` for the `Vercel` context, for up to about 15 minutes. On `failure` or timeout, treat it as a failed run: health-issue comment plus the healthchecks fail ping. Correct both comments.
+
+#### E4. [P2 next pass] [confirmed] TypeScript inside `.svelte` files is never type-checked
+
+- Location: `site/package.json` `typecheck`: `SITE_TODAY=last-run pnpm generate && astro check`.
+- Impact: `astro check` checks `.astro` and `.ts` files only. Vite and vitest strip Svelte TypeScript without checking it. So the 13 islands' script blocks (Explorer, DontMissList, FilterRail, the clock consumers) can carry type errors through typecheck, build and tests. CI on 10-21 also printed "astro check will be deprecated in a future Astro release".
+- Evidence: in a scratch copy, `const planted: number = "not a number";` added to `Explorer.svelte`: `astro check` still reported `Result (133 files): 0 errors`; `npx svelte-check@4` reported `Explorer.svelte:21:9 Error: Type 'string' is not assignable to type 'number'`. On the real tree, `svelte-check` finds 0 errors and 0 warnings, so adopting it costs nothing today.
+- Fix: add `svelte-check` as a devDependency and append `&& svelte-check --tsconfig ./tsconfig.json --fail-on-warnings` to `typecheck`. `--fail-on-warnings` also turns Svelte's a11y and `state_referenced_locally` warnings into failures.
+
+#### E5. [P2 next pass] [confirmed] Search does not ignore accents in the middle of a word
+
+- Location: `site/src/lib/fold.ts:6`: `s.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, " ")`.
+- Impact: NFKD splits an accented letter into the letter plus a combining mark, and the regex then turns the mark into a space. "Rolón" folds to `rolo n`, so typing `rolon` finds nothing. It works only when the accent is the last letter ("Café" becomes `cafe`), which is the only case `test/filter.test.ts:92-99` covers. Real data affected: "Carlos Rolón: All We Have Is Right Now" and "...Un campo con raíces". Spanish names and "Día de los Muertos" listings are the likely misses.
+- Evidence: live `/explore?q=rolon` gives 0 events, while `?q=rolón` gives 1. Likewise `raices` gives 0 and `raíces` gives 1, and `carlos rolon` gives 0.
+- Fix: `s.toLowerCase().normalize("NFKD").replace(/\p{M}/gu, "").replace(/[^a-z0-9]+/g, " ").trim()`. Add a "Rolón" case to the filter test. The same normalization would also improve `slugify`/`venueSlug`, which turn "Café Corazón" into `caf-coraz-n`.
+
+#### E6. [P2 next pass] [confirmed] Tests that read the committed dataset turn `main` red after data commits
+
+- Location: `site/test/always-there.test.ts:60-69`; `site/test/endpoints.test.ts:69` (`events.find((e) => e.dontMiss)!` is a TypeError, with no message, in a week with no picks; lines 111-127 require a recurring event and a Lawrence event); `site/test/committed-dataset.test.ts:56` (a field allow-list).
+- Impact: two of the last three weekly data commits failed site CI after their data had already deployed: `4096b93` (10-13): `event evt_ba5d72d95087 publishes "price"`; `53b5851` (10-19 hand run): `always-there ... expected 3 to be greater than or equal to 4`. The same failure then repeated on `#147`'s merge (10-20) and blocks unrelated PRs until someone edits a test or the data.
+- Evidence: `gh run view 38508149654` and `39350109859 --log-failed`.
+- Fix: move the "committed data" describes into a separate vitest project (`pnpm test:data`); run it in `weekly-run.sh` before the commit, so a projection or allow-list failure stops the commit and reports through the health issue, and the always-there rot check becomes a warning line in the run report; PR CI stays on fixtures. At minimum, give every `find(...)!` an `expect(..., message).toBeDefined()`.
+
+#### E7. [P2 next pass] [plausible] The e2e suite runs Chromium only
+
+- Location: `site/playwright.config.ts:14`.
+- Impact: WebKit (all iOS browsers) is untested: `details`/sticky combinations, `dvh`, subgrid in `.always`, the share sheet path, `history.replaceState` rate limits.
+- Evidence: WebKit and Firefox could not be run here (the cached browsers do not match Playwright 1.64 and installing was out of scope). No WebKit bug is known.
+- Fix: add a `webkit` project limited to a smoke subset of `site.spec.ts` (front page, explorer URL round trip, event page, saves), and `playwright install --with-deps chromium webkit` in CI.
+
+#### E8. [P3 polish] [confirmed] `site` imports `yaml` and `zod` without declaring them
+
+- Location: `site/src/build/load-dataset.ts:6`, `site/src/build/venues.ts:7-8`, `site/package.json`.
+- Impact: they resolve only because Node walks up to the workspace root's `node_modules`. If the root drops or major-bumps either one, the site build breaks without its own manifest saying so.
+- Evidence: `knip` and `depcheck` both report the two as unlisted; `site/node_modules` has neither.
+- Fix: add both to the site's devDependencies at the root's versions (yaml 2.9.1, zod 4.6.6).
+
+#### E9. [P3 polish] [confirmed] The real explorer's weight is measured nowhere, and the fixture budgets have about 100 bytes left
+
+- Location: `site/scripts/size-check.ts:59-66`; `MAX_PAYLOAD_BYTES` in `load-dataset.ts:23`.
+- Impact: real `explore.html` totals 117,072 B gzipped, 2.3 times the fixture budget: HTML 569,802 B raw, 50,787 B gzipped; `Explorer.*.js` 193,315 B raw, 36,779 B gzipped (the only chunk that embeds the events, which is correct); shared runtime 16,746 B gzipped. The raw-payload guard is at 192,545 of 400,000 B (48%); at the guard, the page would be about 190 KB gzipped. Clearing a search back to all events takes 85 ms of re-render at normal speed and 391 ms at 4x CPU throttling. With 96 B and 67 B left, the next feature PR will need a budget bump, which is the intended ratchet.
+- Fix: have `size-check` print the real `explore.html` total, or give it a generous real-build ceiling (around 200 KB), so a dataset jump is noticed.
+
+#### E10. [P3 polish] [confirmed] The overnight rule counts elapsed milliseconds, which shifts at DST
+
+- Location: `site/src/lib/events.ts:28-33`.
+- Impact: a 24-hour wall-clock span over the spring change (2027-03-13 20:00 to 03-14 20:00, 23 h elapsed) is treated as one evening, so it is "past" on its second day. The same span over the fall change is two days. Very rare in this data.
+- Evidence: a scratch script; every other date path is DST-safe (`addDays`, `nowIn`/`todayIn` at both changes, the ICS 2-hour placeholder, which is elapsed time and correct).
+- Fix: `Date.parse(e.end.slice(0,16)+"Z") - Date.parse(e.start.slice(0,16)+"Z") < DAY_MS`; add 2027-03-14 cases (no test names that date today; only the random-date `addDays` property test reaches it).
+
+#### E11. [P3 polish] [plausible] Saves are lost without a word when site storage is blocked
+
+- Location: `site/src/lib/saves.ts:103-109,150-156`; `SaveButton.svelte`.
+- Impact: with "block all site data", the button reads "Saved" for the page's life and the save is gone on the next page. Nothing in the UI says so.
+- Fix: expose `persistent: boolean` from the store and either hide Save or add a visually hidden note.
+
+#### E12. [P3 polish] [confirmed] The ignored-build script does not watch `data/runs/`
+
+- Location: `site/scripts/ignore-build.sh:9`.
+- Impact: the build reads `data/runs/<day>.json` (`site/src/build/changes.ts:21-29`). A hand fix to a run report alone would skip the rebuild of `/changes`. Weekly commits always change `events.json` too, so they are unaffected. The rest of the case analysis is correct as written: builds on a first deploy, a same-SHA redeploy, a force-push or unknown previous SHA (git errors with 128, which also builds), data, venue table, `research.config.yaml` and `site/` commits, PR merges; root `src/` commits rightly build (the site imports `src/config.ts`, `dataset.ts`, `identity.ts`, `taxonomy.ts`, `time.ts`, `report.ts` and `adapters/identity.ts`); skips docs, `prompts/`, `registry.yaml`.
+- Fix: add `../data/runs`.
+
+#### E13. [P3 polish] [confirmed] Two warnings appear on every Astro build and mean nothing here
+
+- Location: `site/astro.config.mjs`.
+- Impact: the Shiki CSP warning (the site has no Markdown) and the `style-src-attr` warning (expected, since attributes use `'unsafe-inline'`). Always-present warnings train readers to skip the site's own useful `site:` warnings.
+- Fix: `markdown: { syntaxHighlight: false }`.
+
+#### E14. [P3 polish] [plausible] The build publishes an empty site when no event is active
+
+- Location: `site/src/build/load-dataset.ts:167`, tested as allowed at `load-dataset.test.ts:191-194`.
+- Impact: a job bug that leaves everything unverified or expired deploys an empty site.
+- Fix: refuse fewer than about 50 published events unless `SITE_ALLOW_SMALL=1`.
+
+#### E15. [P3 polish] [confirmed] Doc nit: root `pnpm test` runs only the job's suite
+
+- Location: root `vitest.config.ts` excludes `site/**`; `AGENTS.md:27` calls `pnpm test` "the full vitest suite".
+- Fix: reword it as "the job's suite; `pnpm -r test` runs both". Do not repoint root `test` at `pnpm -r test`: with `includeWorkspaceRoot` it would recurse.
+
+### Coverage: weakest logic files
+
+| File | Lines | Branches | Uncovered branch that matters |
+|---|---|---|---|
+| `lib/download.ts` | 58% | 100% | Real `URL.createObjectURL`/revoke path (only fakes in unit tests; e2e "Export saved" covers it) |
+| `build/png-source.ts` | 44% | 100% | `pngSource` reader; tooling, not shipped |
+| `components/FilterRail.svelte` | 100% | 71% | Custom range given in reverse order (from > to, swapped); region, don't-miss and sort handlers (e2e covers sort and range) |
+| `components/DontMissCard.svelte` | 100% | 69% | "Verified <date>" shown when older than the run; label variants |
+| `build/write-generated.ts` | 100% | 80% | Optional-arg spreads (trivial) |
+| `components/WeekStrip.svelte` | 100% | 85% | "+n" overflow badges |
+| `lib/group.ts` | 100% | 86% | Lines 62-63: an open run with days and no playing day in the range (returns `[]`); line 33: a timed limited run without days |
+| `lib/saves.ts` | 97% | 89% | Lines 152-154: `localStorage` access throwing (blocked storage), the E11 path |
+| `ChangeRows`, `LandingEvents` (.svelte), all `.astro` pages | 0% | n/a | Build-only; covered by built-output and e2e tests instead |
+
+The build assertions are near complete: `load-dataset.ts` 100% lines and 99% branches, `venues.ts` 100% and 96%, `changes.ts` and `origin.ts` 100%.
+
+### Positive findings (leave these alone)
+
+- **Dates:** all date arithmetic works on YYYY-MM-DD strings through `Date.UTC`. "Now" comes from `Intl` with the configured zone (`hourCycle: h23`). No local-time `Date` API appears anywhere in `site/src`. The DST Sunday 2026-11-01 is tested directly.
+- **Islands are clean in other zones:** the live site showed no console errors and no page errors across 11 pages, in both America/Chicago and Pacific/Auckland. Kansas City's "today" holds regardless of the visitor's zone.
+- **Shared clock:** one reference-counted `visibilitychange` listener. Every listener, timer and subscription is cleaned up on destroy. No effect writes state in a loop.
+- **Build assertions** are thorough and unit-tested: id shape, schema version, configured kinds, inverted spans, one-offs with no start; http(s)-only links, the 400 KB payload guard, the 14-day window; origin required on Vercel (live canonical is `https://www.kcthisweek.com/`); venue table schema with metro bounds, alias and slug collisions.
+- **`ignore-build.sh` fails safe:** any git error leads to a build.
+- **Hostile explorer links all degrade gracefully on live:** `?when=2026-13-45..x`, unknown kinds and regions, and a malformed `#pick-` hash fall back silently; 700 fake `ids` show the "shortlist gone" note; a 12 KB `q` stays responsive; Vercel refuses longer URLs (414, or a dropped connection at 100 KB) before the page sees them.
+- **Browser fallbacks:** share falls back to copying the link, then to showing it. The download revokes its object URL after 1 s. The report form disables its button, treats any non-JSON reply (firewall 429) as a failure, and moves focus to the status.
+- **Guard tests:** client code may not import job or build code; no clock reads in `lib`; no `process.env` in browser code.
+- **CI:** actions pinned to SHAs; e2e includes axe in both colour schemes, CSP-violation checks, no third-party requests, and no-shift checks on build day.
+- **Caching on live:** `/_astro/*` is `max-age=31536000, immutable` (fonts included), HTML is `max-age=0, must-revalidate`, `/events.json` is 1 h with CORS. `/api/report` needs no `vercel.json` header: the handler sets `no-store`, and Vercel's 405 is `max-age=0, must-revalidate`.
+- **Node pinning is consistent:** engines `24.x`, `.nvmrc` 24, Vercel 24.x, enforced by `test/node-version.test.ts`.
+- **No dead code:** knip and depcheck findings were all false positives (entry scripts, `.astro` imports). Seven exports are used only inside their own module and could drop `export`.
+- **`site/public/events.json`** was never committed; it is gitignored and regenerated by every `generate`.
+- **Strictness:** `strict` plus `noUncheckedIndexedAccess` is right. `exactOptionalPropertyTypes` would add 45 errors, mostly in tests and the job's code; not recommended.
+- **No ESLint needed:** `svelte-check` (E4) covers the useful part.
+
+### Not checked, and why
+
+- **WebKit and Firefox behaviour:** the cached browser builds do not match Playwright 1.64, and installing was out of scope.
+- **Vercel:** build logs, environment variables (whether `SITE_ORIGIN` is set; live output is correct either way), failed-deploy notification settings, and the pnpm version Vercel uses.
+- **The e2e suite:** not run, because port 4321 is shared. CI was green on `main` at `cb366f2`, and all four specs were read.
+- **Real-device performance:** only Chromium CPU throttling. Svelte hydration-mismatch warnings appear only in dev builds, so the clean production console does not prove there was no mismatch; the design renders the build date until mount, which avoids it.
