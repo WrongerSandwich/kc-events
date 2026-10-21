@@ -7,7 +7,7 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 | Lane | Scope | State |
 |---|---|---|
 | A | Technical frontend: accessibility beyond axe, responsive, theming, performance, anti-patterns | to resume |
-| B | UX critique: heuristics, personas, journeys | to resume |
+| B | UX critique: heuristics, personas, journeys | done, below |
 | C | Security and the trust boundary: `/api/report`, CSP, injection surfaces, dependencies, privacy claims | done, below |
 | D | SEO, sharing, structured data, calendar feeds | done, below |
 | E | Code quality, tests, build pipeline, runtime robustness | done, below |
@@ -22,6 +22,7 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 - The one security P1: `/api/report` files whatever title and links a client sends in three hidden fields, for an event id it never checks against the dataset, so a script can create public issues on the repository with any title and any link at the firewall's per-IP rate (F1). The static site itself is clean: hash-only CSP on every page, http(s)-only links enforced twice, no HTML sink takes dataset text, first-party requests only, no cookies.
 - The data holds where it matters most: every sampled date, time and venue on all 14 current picks matches its source page, no sampled event is cancelled or postponed, and 65 of 66 evidence quotes are still on their pages. What is wrong is editorial: four of the 14 why-lines claim things the page does not say (Dark Forest "three nights only" is seven nights; Graveyard 5K's "open once a year"; the Invincible Czars as "a Kansas City band"; Hedwig's "likely" in person), and the City Market is listed as a one-off through a Monday it does not run.
 - Two structural P1s from the code lane: the site is built once a week, so from Tuesday on the server HTML is Monday's and hydration swaps whole sections in place (CLS measured at 0.17 to 0.49 on `/` and `/explore` later in the week; the script-free kind, region and venue pages list past events until the next build), fixed by a daily deploy hook; and a `data/venues.yaml` row whose venue's last record is archived makes the build throw, so a future weekly data commit would be refused and the site would quietly stop refreshing (earliest around January 2027). Gates are green: typecheck clean, 415 site tests pass, coverage 93.6% lines, all six size budgets pass (two with under 100 bytes to spare).
+- The UX critique scores the site 28/40 (good, low end): the front page is now a good instrument (started picks fold, the week strip tells the truth about runs, trust is visible), and the rough edges are in the surfaces added since 10-10. Its P1s: the Saved view is worded as a failed filter ("No events match saved only") and hides a running save inside a closed "On now" fold; the pages frozen at the build day (the same finding as E1, with screenshots: on a Saturday `/v/liberty-hall` opens with Wednesday's show under a red "Don't miss"); and "find something for Saturday night" has no direct path (the week strip's Fri and Sat both jump to Dark Forest's Thursday card; "This weekend" opens with 44 "On now" rows; no day preset).
 - Operations are in order: apex and `.html` 308 to the canonical, true 404s, no runtime errors in seven days, Node 24 pinned everywhere, the report function's rate limit is live (a second request from one address inside a few minutes got 429).
 
 ## Lane H: operations and launch (orchestrating session)
@@ -697,3 +698,147 @@ The build assertions are near complete: `load-dataset.ts` 100% lines and 99% bra
 - **Vercel:** build logs, environment variables (whether `SITE_ORIGIN` is set; live output is correct either way), failed-deploy notification settings, and the pnpm version Vercel uses.
 - **The e2e suite:** not run, because port 4321 is shared. CI was green on `main` at `cb366f2`, and all four specs were read.
 - **Real-device performance:** only Chromium CPU throttling. Svelte hydration-mismatch warnings appear only in dev builds, so the clean production console does not prove there was no mismatch; the design renders the build date until mount, which avoids it.
+
+## Lane B: UX design critique
+
+Method: node Playwright scripts against the live site at 390x844 and 1280x800, light and dark. For the two journeys the clock was faked to Fri Oct 23 6:30 pm, Sat Oct 24 9 pm and Sat Oct 24 8 pm, and `/api/report` was stubbed so no report was filed. Screenshot names below refer to the lane's scratch directory (not kept).
+
+### Heuristics
+
+| # | Heuristic | Score | Key issue |
+|---|---|---|---|
+| 1 | Visibility of system status | 3 | Good: the run stamp, live counts, the Saved badge, the started fold, "Link copied". Bad: venue, kind and region pages, event-page tiles and "More like this" are frozen at the build day, so a Saturday visitor sees Wednesday's events listed as upcoming. The saved view hides a save behind "On now". |
+| 2 | Match with the real world | 3 | "This weekend" and "Through Sunday" sit side by side. The front page's "This week" is called "Through Sunday" in the explorer. Running events get an "Until 1 Nov" tile. "Always there" and "On now" are clear. |
+| 3 | User control and freedom | 3 | Removable pills, Clear filters, Esc clears search, Save toggles back. The phone filter sheet has no Done or "Show N"; you close it from the top or scroll past it. |
+| 4 | Consistency and standards | 2 | Save comes in four looks and is missing on landing rows. Calendar comes in three looks. The kind chip behaves three ways. Two words ("picks" and "Don't miss") name one concept. The header jumps between widths. |
+| 5 | Error prevention | 2 | "Export this view" puts 426 events into a calendar in one tap. The report form stays live after "Sent" and says "posted publicly" only after the button. The .ics-only calendar action fails for Android Google Calendar users. |
+| 6 | Recognition rather than recall | 3 | Labels are visible. The coloured bands on the week strip have no key. The desktop calendar button is icon-only. |
+| 7 | Flexibility and efficiency | 3 | Every slice has a URL, the `/` shortcut works, chips filter in place, feeds exist. There is no fast way to see one day, and the front page has 71 tab stops before the footer. |
+| 8 | Aesthetic and minimalist design | 3 | Calm, one sans face, hairlines. But 430 of 437 rows repeat "✓ Oct 19", kind and venue pages repeat their own kind or venue on every row, and eight cards share identical chrome. |
+| 9 | Recovering from errors | 3 | The no-match state names the filters and offers to clear them, and the 404 gives two ways on. The empty saved list is worded as a failed filter. |
+| 10 | Help and documentation | 3 | The About page is thorough and "here's how" is inline. Nothing in place explains the week strip's bands or that a model writes the picks and why lines. |
+| **Total** | | **28/40** | **Good (low end). The front page improved a lot; the newer surfaces brought new rough edges.** |
+
+Per page: front page about 32/40 (fast and legible, with a working started fold); event page about 29; explorer about 26 (defaults, phone length and the saved and shortlist views pull it down); venue, kind and region pages about 24 (static staleness, redundancy, no Save); changes and About about 30; 404 fine.
+
+### Anti-patterns verdict
+
+It mostly passes; a Linear or Fantastical user would sit down with it. There are no gradient text, glassmorphism, hero metrics, side-stripe borders, decorative illustrations or modals. The only display face (Josefin Sans) is confined to the wordmark. The logo's fountain animation is a small hover moment that honours reduced motion; acceptable.
+
+What does read as generated or off:
+- **Ten kind hues at the same lightness and chroma, spaced evenly round the wheel.** It is mechanical rather than designed. "Don't miss" red (hue 27) sits 7 degrees from talks/readings (hue 20), so the one state colour shares a family with a kind (`site/src/styles/tokens.css`).
+- **Eight identical cards in a row on the front page.** Each has a tile, a three-icon fact line, a muted why line, a chip, a host link and two 44 px outlined buttons. On a phone the page is 5,015 px (it was 4,911 on 10-10).
+- **Save is not one component.** Four looks and one absence: card (44 px outlined box, ink label, pressed is solid black with "✓ Saved"); explorer desktop row (a 20 px slim box); event page (same box as the card, but with muted grey text beside full-ink "Share" and "Add to calendar", so it reads as the disabled one); phone explorer row (a 44 px box on every one of 426 rows, so the right edge becomes a column of "Save"); kind, region, venue and changes rows (no Save at all, and on desktop an empty column where it would be).
+- **Calendar has three renderings:** an icon-only square on desktop cards, "Calendar" on phone cards, "Add to calendar" on the event page.
+- **The kind chip has three behaviours with one look:** a filter toggle above the front page's sections; an inert span on cards and rows; an underlined link inside the pill on the event page, the only underlined chip anywhere.
+- **The explorer toolbar mixes three button styles:** "Export this view" (outlined small), "Share saved" (outlined small, accent), "Clear filters" (underlined text).
+- **The header changes width between pages.** It sits at the 640 px measure on `/`, `/e/*`, `/about` and `/venues`, and is full-width on `/explore`, `/k/*`, `/r/*`, `/v/*` and `/changes`. The wordmark jumps from x=320 to x=16 as you move between the front page and the explorer.
+
+### Overall impression
+
+The front page is now a good instrument. On a phone, the first screen holds the heading, the week's kind mix, a week strip that tells the truth about runs, and a live pick with its reason. Started picks fold away, and colour mostly means something. Dark mode is clean. The rough edges are in the surfaces added since 10-10: the saved and shared lists, the static landing pages, and the explorer's filtered states.
+
+**Biggest opportunity:** make "a day" a first-class object. The core job is "find something for Saturday night", and today no single tap answers it: the week strip's "Sat" jumps to a Thursday card; the explorer's "This weekend" opens with 44 running exhibitions; there is no Saturday preset.
+
+### What's working
+
+1. **The started fold and the honest week strip.** On Saturday at 9 pm the section leads with what can still be gone to, and three started picks collapse to "3 already started today" with no tile or actions. The strip draws runs as bands and labels empty days "nothing new, 1 running".
+2. **Trust is visible where it counts.** The header stamp reads "Researched weekly, last on Mon Oct 19"; each event page names the host it links out to ("Details and tickets at lied.ku.edu") and says where the date was verified; cards only speak up when their check is older than the run.
+3. **Every view is a URL, and the explorer's state is legible.** A count, a removable pill per filter, a no-match line that names the filters ("No events match "zzzz". Clear them"), `/` to search, and a shortlist that round-trips by link.
+
+### Priority issues
+
+#### B1. [P1] The Saved view is worded as a failed filter, and it hides your own saves
+
+- What: with nothing saved, the header's "Saved" link lands on "0 events · [saved only ×]", disabled "Share saved" and "Export saved", "Clear filters", "Filters (1)", and "No events match **saved only**. Clear them to see everything." Nothing says what Save does or that saves live in this browser. With two saves (Hedwig, and Electric Poe, a Fri to Sun run), the badge says "Saved 2" and the count says "2 events", but only Hedwig is visible. Electric Poe is folded inside a closed "On now · 1 event" disclosure.
+- Why it matters: this is the "come back to them" half of journey 2. The first visit to Saved looks like an error, and the return visit looks like you lost something.
+- Fix: in `site/src/components/Explorer.svelte`, give `filters.saved` its own empty state, e.g. "Nothing saved yet. Tap Save on any event and it stays here, in this browser," with a link to `/`; do not present "saved only" as a removable filter when it is the whole view; label the view "Saved". In `groupResults` (`site/src/lib/group.ts`), never collapse "On now" when `saved` or `ids` is set: a list you made is short and should be shown whole. The shared-shortlist recipient view needs the same treatment: today the friend gets an "Explore" heading, the full filter rail, and "Shortlist (2) ×"; it should say it is a shared list, and could offer "Save all".
+
+#### B2. [P1] Venue, kind and region pages, event tiles and "More like this" freeze at the build day
+
+- What: these are rendered as of the build's day (`VenueEvents.svelte`, `LandingEvents.svelte`, `e/[id].astro` uses `meta.buildToday`), and nothing rebuilds the site daily. With the clock at Sat Oct 24: `/v/liberty-hall` still opens with "Wed Oct 21 · SUNN O))) [Don't miss]"; `/k/music` opens on "Wed Oct 21"; the Sedaris page's "More like this" lists Thu and Fri shows that have passed; the Wizard of Oz page's tile shows the build day ("Wed 21") beside "Friday, October 16 through Sunday, October 25".
+- Why it matters: these pages are the search-engine entry points, and the first thing a newcomer sees is a past event with a red "Don't miss" tag. That breaks "trust is visible" at the moment trust is formed. In a normal week (one deploy, Monday) it is up to six days stale by Sunday.
+- Fix: the cheapest fix is a daily rebuild (a Vercel deploy hook hit by the home cron at 00:05 Central; the same fix as E1). Alternatively, give these lists a tiny island (the staleness banner already ships one on every page) that hides rows and day headings before the visitor's today, and recomputes the event page's tile and "More like this" in `EventPageIsland.svelte`.
+
+#### B3. [P1] "Find something for Saturday night" has no direct path, and the obvious ones mislead
+
+- What: **week strip:** tapping "Fri 23" or "Sat 24" both jump to Dark Forest, whose tile says "Thu 22" (on Wednesday) or "Today 23" (on Friday); measured: Fri and Sat both point to `#pick-evt_41a40a81ea8a`. The strip also does not look tappable on a phone (no affordance beyond a hover border), and its coloured bands have no key. **Explorer:** "This weekend" on Friday evening opens "On now" expanded with 44 rows; the Fri heading is at y=3,843 px, Sat at y=6,358 px, and the page is 10,784 px. "On now" only collapses when no date filter is set. **No day preset:** "Saturday" means two date pickers behind "Custom dates…".
+- Why it matters: this is the product's most common question (PRODUCT.md: "planning what to do this weekend"), asked on a phone.
+- Fix: `WeekStrip.svelte`: target the first card that starts on that day (skip spans that opened earlier), or make a day a toggle that narrows the cards, as the kind chips already do. `group.ts`: keep "On now" collapsed above about 6 rows whatever the date filter, or place it after the dated days. `FilterRail.svelte`: from Thursday on, add day presets ("Fri", "Sat", "Sun").
+
+#### B4. [P2] The component vocabulary is inconsistent across Save, Calendar, chips and the header
+
+- What: the details are in the anti-patterns verdict. The most visible case is the event page, where Save is grey text and has no icon, while Share and Add to calendar are ink with icons. The gaps between the three buttons also differ (8 px, then about 16 px), because the empty "note" span inside `.share-wrap` adds a gap. After a copy, "Link copied" pushes Add to calendar onto a second line.
+- Why it matters: this is the "subtly-off component" pause the product bar warns about. Users learn Save once and should meet it identically everywhere.
+- Fix: `SaveButton.svelte`: `color: var(--fg)`, plus an icon (bookmark) to match Share and Calendar. `ShareButton.svelte`: render `.note` outside the flex row, or absolutely positioned. `ResultRow.svelte`: drop the save grid column when Save cannot mount (landing, venue and changes rows), or hydrate it there. `e/[id].astro`: style the chip link like the other chips (`text-decoration: none`, underline on hover). `Header.astro` and `Footer.astro`: one container width on every page.
+
+#### B5. [P2] Explorer rows on desktop truncate titles while repeating the same stamp 430 times
+
+- What: at 1280 px, 145 of 488 visible row titles are cut with an ellipsis (83 at 1440). Meanwhile every row carries a host column (6 to 8 rem) and "✓ Oct 19", which is the same date as the header stamp on 430 of 437 events. In the two-item shared shortlist, "An Evening with David Sedaris" is clipped to 126 px ("An Evening wi…") beside empty space. On kind and venue pages, every row repeats the page's own kind chip ("music" ×157) or venue ("The Midland · Downtown").
+- Why it matters: the title is the row's content. Calm density means the scarce width goes to what differs between rows.
+- Fix: in `ResultRow.svelte`, apply `DontMissCard`'s rule: show the verified stamp only when it is older than the run day. Fold the host into the event page (it is already out of the Tab order), and widen `--title-max`. Pass a prop to hide the chip on `/k/*` and the venue on `/v/*`.
+
+#### B6. [P2] Error prevention: export, the report form, and calendar on Android
+
+- What: "Export this view" is enabled on the default explorer and writes all 426 events to one .ics; iOS offers "Add All" in one tap. The report form says "Posted publicly on GitHub" in faint 12 px text after the Send button. After a successful send, the form stays visible and armed: `form { display: grid }` in `ReportForm.astro` overrides the `hidden` attribute ("Sent. Thanks." shows under a live, empty form), which invites duplicate reports. "Add to calendar" is a download only; Google Calendar on Android does not open .ics files, and the `webcal:` subscribe link has no handler in Android Chrome.
+- Fix: `Explorer.svelte`: put the count in the label ("Export 426 events") and confirm or disable above about 50. `ReportForm.astro`: add `form[hidden] { display: none; }` and move the public notice above the textarea. `e/[id].astro`: add a plain "Google Calendar" template link beside Add to calendar (no request is made until it is tapped). `Subscribe.astro`: put the https address first on phones.
+
+#### B7. [P2] The front page's trust copy contradicts the event page, and model authorship is invisible
+
+- What: the lede promises "Every date is read from the event's own page". The event page then says "Date and venue verified Oct 19 from **the list at** lied.ku.edu". Nowhere outside About section 4 does the site say a model picks the events and writes the why lines. Lines such as "A band at the center of the current indie-rock conversation" read as a critic's voice.
+- Why it matters: PRODUCT.md: "never imply more certainty, or more human authorship, than there is." Jordan, the skeptic, catches the contradiction on the first event page they open.
+- Fix: `index.astro`: say how the picks are made in the lede, e.g. "Picked weekly by a model from venue pages, each with a one-line reason; how it works." Make the lede and the verified line in `e/[id].astro` use the same claim ("read from the venue's page"). Optionally, add a quiet "Why (model-written)" label before the why line on the event page.
+
+#### B8. [P3] The front page is still long, and its link copy repeats
+
+- What: on a phone, "Next two weeks" still uses full cards (3 cards, about 1,000 px). "These picks in the explorer" appears twice and "Every pick in the explorer" once. On phones the h1 and the section h2 are the same size (both `--text-2xl`), so the top has no step. The 71 tab stops before the footer have no per-section skip.
+- Fix: in `DontMissList.svelte`, render "Next two weeks" as the compact one-line rows "Later" uses (date, icon, title, venue); keep cards only for this week; one explorer link per page. In `index.astro`, set the phone h1 one step above `.section-heading`, or demote it to a quiet label.
+
+### Persona red flags
+
+**Casey (phone, from /r/kansascity, Saturday with two friends):** the week strip's "Sat" lands on a Thursday or "Today 23" card; the explorer's "This weekend" opens with 44 "On now" rows before Friday; Share saved works ("Link copied"), but the friends land on a page titled "Explore" with a filter rail and "Shortlist (2) ×", and long titles squeezed to 4 lines by the Don't-miss tag and Save; on Android, "Add to calendar" downloads a file Google Calendar will not open.
+
+**Jordan (first-timer, desktop, skeptical):** the lede's "event's own page" vs the event page's "the list at …"; no visible statement that a model writes the picks; "Don't miss" (a red badge) and "picks" are two names for one idea; "This weekend" vs "Through Sunday" in the rail; about 30% of explorer titles are truncated at 1280; the header jumps sides between `/` and `/explore`.
+
+**Sam (screen reader and keyboard; judgement only):** the week-strip link "Sat 24: 4 picks, 1 running" moves focus to Dark Forest (Thu); 71 tab stops on `/` with no skip between sections; in the saved view, a save is inside a closed disclosure, so the "2 events" announcement does not match what is reachable; after a report is sent, focus moves to "Sent. Thanks." but the form stays in the tab order. Good: rows are two stops, Save is named "Save <title>" with `aria-pressed`, and the filter toggle has `aria-expanded`.
+
+**Morgan (a venue's marketing person):** `/venues` is not linked from the header or footer; their venue page has no "Is this your venue?" or "Something wrong?" link; About's "For venues" covers only how to block the crawler, not how to get listed or send a calendar page; the only correction channel posts publicly to GitHub, and there is no private contact; on Saturday their venue page still leads with Wednesday's show.
+
+### Cognitive-load failures (8-item checklist)
+
+| Page | Fails |
+|---|---|
+| Front page | **(1) one primary action:** each card offers title, host, Save and Calendar, ×8. **(4) consistency:** chips filter in the section header but are inert on cards. **(5) redundancy:** "Today 21" in the strip and on the tile, and the explorer link repeated. **(6) labels:** "picks" vs "Don't miss"; the strip's bands are unexplained. |
+| Explorer | **(2) choices:** When has 6 presets plus Custom, with two near-synonyms. **(5) redundancy:** "✓ Oct 19" ×430; multi-day one-offs repeat under every day (62 extra rows; Wizard of Oz ×5). **(6) labels:** "Include always-there", "Through Sunday". **(7) defaults:** "All", 426 events, 37,198 px on a phone, with export enabled. **(3) progressive disclosure:** On now opens with any date filter. |
+| Saved and shortlist views | **(3)** a save is folded away. **(6) and (8)** "No events match saved only"; the saved list is presented as a filter ("Filters (1)", "Clear filters"). **(1)** the explorer chrome dominates a two-item list. |
+| Event page | **(4)** Save is styled differently from its siblings, and the chip is underlined. **(8)** the report form stays armed after "Sent"; the tile is frozen at the build day. |
+| Venue, kind, region | **(5)** venue or kind repeated on every row. **(8)** past events lead after the build day. **(4)** no Save, with an empty column on desktop. |
+| Changes | **(5)** a red "Don't miss" on every row under a heading that already says "New picks". |
+
+### Minor observations
+
+- "Until 1 Nov" tiles still make the closing date the biggest number on a running pick.
+- The why line is muted on cards and the event page but full ink on explorer rows, so the differentiator gets opposite emphasis on different surfaces.
+- When a phone row's title wraps, the "Don't miss" tag jumps to the far right edge. Putting it on the date line would fix that.
+- Two treatments for spanning events: limited runs go into "On now", while multi-day one-offs repeat under every day.
+- The "Later" venue column at 1280 wraps "Kauffman Center / for the Performing / Arts · Helzberg Hall" right-aligned over three lines.
+- The subscribe line shows a raw monospace URL that wraps mid-path on a phone.
+- The 404 says "The event may have passed…" for any bad URL, and it has no search.
+- On the region page, the subline "Lawrence" repeats the heading.
+- Data shows through in the UI: "AGES 10+" in capitals; "Monday, Friday-Saturday, Select times"; venues named as street addresses ("125 Southwest Boulevard") lead `/venues`.
+- `/explore` (426) and "Browse all 437 events" (`recurring=1`) open different defaults.
+- The staleness banner (read in `StalenessBanner.svelte`) is plain and honest, but it uses the same raised grey as every other surface, with no icon, so it may not register as a warning.
+
+### Provocative questions
+
+1. If the promise is "this week", why does the explorer open on "All" (426 events, 37,000 px on a phone) rather than "Through Sunday"?
+2. Should a day be a place, with a strip day or `/explore?when=sat` that shows just Saturday, given that is the question people arrive with?
+3. Is "Don't miss" (a red badge) a different idea from "picks"? If not, which word survives, and does the badge need to be red at all, when it is a state and red is also a kind's hue?
+
+### Changes since the 2026-10-10 critique
+
+**Fixed:** started picks no longer lead; they fold into "N already started today" with no tile or actions. The week strip now draws runs as bands, with honest labels ("nothing new, 1 running"), and it follows the kind filter. "Saved" no longer wraps on a phone; actions sit in a row under the body, and Calendar is labelled on phones. A pressed kind chip now fills with the kind's colour; it was a 1.5 px ring. The lede names "picks". "First Friday · First Friday" is gone. The phone h1 is smaller, and a live pick sits on the first screen.
+
+**Still there:** "Until <date>" tiles; the card's inert kind chip looks like the filter chips (now with a third, link variant on the event page); the desktop calendar button is icon-only; "These picks in the explorer" twice; the why line is still the quietest text on cards; "Next two weeks" still uses full cards, and the page is longer (5,015 px vs 4,911); no per-section skip (71 tab stops now); "Monday, Friday-Saturday, Select times"; "Today" shown in both the strip and the tile.
+
+**New since:** the saved and shortlist views (P1), the static landing and venue pages freezing at the build day (P1), and the report form staying armed after it sends (P2).
