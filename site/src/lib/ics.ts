@@ -1,13 +1,22 @@
 import { addDays, formatDay, formatShort, isDateOnly, localDate } from "./dates";
 import { firstDay, isDated, lastDay, detailsUrl } from "./events";
 import { nextPlayingDay } from "./filter";
-import type { Geo, PublishedEvent } from "./types";
+import type { Geo, PublishedEvent, PublishedVenue } from "./types";
+import { addressLine, venueNamed } from "./venues";
 
 /**
  * An event as its calendar file has it: the build adds its venue's street address and position from the venue table
- * (#137), for LOCATION and GEO; the explorer's export has neither, and LOCATION is the venue and neighborhood.
+ * (#137), for LOCATION and GEO; the explorer's export has neither, and LOCATION is the venue and neighborhood. A
+ * feed's events (#136) carry `pageUrl`, their page on this site, as URL in place of the event's own page, which the
+ * notes still give.
  */
-export type IcsEvent = PublishedEvent & { addressLine?: string; geo?: Geo };
+export type IcsEvent = PublishedEvent & { addressLine?: string; geo?: Geo; pageUrl?: string };
+
+/** An event with its venue's street address and position, when the venue has a row; build-time callers only. */
+export function locatedForCalendar(venues: readonly PublishedVenue[], e: PublishedEvent): IcsEvent {
+  const venue = venueNamed(venues, e.venue);
+  return { ...e, ...(venue?.address && { addressLine: addressLine(venue.address) }), ...(venue?.geo && { geo: venue.geo }) };
+}
 
 /** RFC 5545 TEXT escaping: backslash first, then semicolon, comma, and newline. */
 function escapeText(s: string): string {
@@ -77,7 +86,7 @@ function vevent(e: IcsEvent, siteName: string, stamp: string): string[] {
     if (e.end !== undefined && timedEnd === undefined) notes.push(`Through ${formatDay(last)}.`);
   }
 
-  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.addressLine ?? e.neighborhood}`)}`, `URL:${detailsUrl(e)}`);
+  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.addressLine ?? e.neighborhood}`)}`, `URL:${e.pageUrl ?? detailsUrl(e)}`);
   if (e.geo) lines.push(`GEO:${e.geo.lat};${e.geo.lng}`);
   if (e.whyLine) notes.push(e.whyLine);
   notes.push(`Verified ${formatShort(localDate(e.lastVerified))} by ${siteName}; details at ${detailsUrl(e)}.`);
@@ -89,10 +98,12 @@ function vevent(e: IcsEvent, siteName: string, stamp: string): string[] {
  * An RFC 5545 calendar of the dated events; recurring events are skipped (a schedule phrase is not an RRULE).
  * Published; `calendarName` names it, so Outlook and Google import an export as a calendar of that name, not an
  * unnamed one. A single event's file goes without, so adding it does not offer to make a calendar for one event.
+ * `properties` are more of the calendar's own, after its name: a feed's refresh interval (#136).
  */
-export function toIcs(events: IcsEvent[], opts: { siteName: string; stamp: string; calendarName?: string }): string {
+export function toIcs(events: IcsEvent[], opts: { siteName: string; stamp: string; calendarName?: string; properties?: string[] }): string {
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", `PRODID:-//${opts.siteName}//EN`, "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
   if (opts.calendarName !== undefined) lines.push(`X-WR-CALNAME:${escapeText(opts.calendarName)}`);
+  lines.push(...(opts.properties ?? []));
   for (const e of events) if (isDated(e)) lines.push(...vevent(e, opts.siteName, opts.stamp));
   lines.push("END:VCALENDAR");
   return lines.map(fold).join("\r\n") + "\r\n";

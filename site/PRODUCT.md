@@ -14,7 +14,7 @@ Anyone in the Kansas City metro, on either side of the state line, planning what
 
 ## Product Purpose
 
-A weekly researched, ad-free list of what's worth doing in Kansas City. A research job reads venue and organizer pages directly each week; the site shows the result as an editorial front page (the don't-miss list, grouped by horizon, with always-there events below) and an explorer that slices every active event by date, kind, region, and search, with every slice shareable as a URL. Events can be saved in the browser and exported to a calendar.
+A weekly researched, ad-free list of what's worth doing in Kansas City. A research job reads venue and organizer pages directly each week; the site shows the result as an editorial front page (the don't-miss list, grouped by horizon, with always-there events below) and an explorer that slices every active event by date, kind, region, and search, with every slice shareable as a URL. Events can be saved in the browser and exported to a calendar, and the picks, everything, or one kind subscribed to as a calendar that updates itself.
 
 Success is a stranger from /r/kansascity coming back, and Evan proposing something to friends that he found here and would not have found otherwise.
 
