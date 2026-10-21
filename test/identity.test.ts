@@ -237,15 +237,16 @@ describe("one title listed twice on one page (#77)", () => {
   });
 
   describe("two records equally near the sighting (#177)", () => {
-    const both = (sighting: EventIdentity, a: EventIdentity, b: EventIdentity) => [findMatch(sighting, [a, b], {}), findMatch(sighting, [b, a], {})];
+    const inEitherOrder = (sighting: EventIdentity, a: EventIdentity, b: EventIdentity) => [findMatch(sighting, [a, b], {}), findMatch(sighting, [b, a], {})];
 
     it("prefers the one whose venue is the sighting's, in either order", () => {
+      // The property test's shrunk counterexample: both titles normalize to the sighting's "hall".
       const calendar = "https://a.test/calendar/";
       const theHall = { primaryUrl: calendar, title: "the  THE  Hall", venue: "!:théâtre", start: "2026-10-02" };
       const hall = { primaryUrl: calendar, title: "Hall", venue: ", jazz", start: "2026-10-06" };
       const sighting = { primaryUrl: calendar, title: "the  THE  Hall!", venue: "!:théâtre", start: "2026-10-04" };
-      expect(both(sighting, theHall, hall)).toEqual([theHall, theHall]);
-      expect(both(sighting, { ...hall, venue: "!:théâtre" }, { ...theHall, venue: ", jazz" })).toEqual([
+      expect(inEitherOrder(sighting, theHall, hall)).toEqual([theHall, theHall]);
+      expect(inEitherOrder(sighting, { ...hall, venue: "!:théâtre" }, { ...theHall, venue: ", jazz" })).toEqual([
         { ...hall, venue: "!:théâtre" },
         { ...hall, venue: "!:théâtre" },
       ]);
@@ -253,15 +254,15 @@ describe("one title listed twice on one page (#77)", () => {
 
     it("prefers the earlier start when neither venue is the sighting's, in either order", () => {
       const midway = { ...early, venue: "Somewhere Else", start: "2026-11-17" };
-      expect(both(midway, early, late)).toEqual([early, early]);
+      expect(inEitherOrder(midway, early, late)).toEqual([early, early]);
     });
 
     it("picks the same record for an undated sighting, in either order", () => {
       const undated = { ...early, start: undefined };
-      expect(both(undated, early, late)).toEqual([early, early]);
+      expect(inEitherOrder(undated, early, late)).toEqual([early, early]);
       const noDate = { ...late, start: undefined };
-      expect(both(undated, late, noDate)).toEqual([late, late]);
-      expect(both(undated, { ...early, id: "b" }, { ...early, id: "a" })).toEqual([{ ...early, id: "a" }, { ...early, id: "a" }]);
+      expect(inEitherOrder(undated, late, noDate)).toEqual([late, late]);
+      expect(inEitherOrder(undated, { ...early, id: "b" }, { ...early, id: "a" })).toEqual([{ ...early, id: "a" }, { ...early, id: "a" }]);
     });
   });
 

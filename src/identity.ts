@@ -85,19 +85,19 @@ const NONE = { kind: "none" } as const;
 
 /**
  * The known event a sighting is, if any, and by which rule: the match on primary page and title
- * first (among several such records, the one whose date is nearest, see nearerOnPage), then the match on own page
- * and calendar date (#66), then the fuzzy match on title, venue, and nearby date, then the match
- * on title, venue, and end date (#68), then for a recurring sighting the recurring event with its
- * title at its venue (#119), then for a sighting with no venue the known event with its title on
- * its date, then a recurring event the sighting is one month of. A record folded as a
- * duplicate stands for the record it was folded into, as far as that chain goes within `known`:
- * the match is that record, and its date is the one compared. The later pair rules take the first
- * match in `known` order.
+ * first (among several such records, the one whose date is nearest, see compareOnPage), then the
+ * match on own page and calendar date (#66), then the fuzzy match on title, venue, and nearby
+ * date, then the match on title, venue, and end date (#68), then for a recurring sighting the
+ * recurring event with its title at its venue (#119), then for a sighting with no venue the known
+ * event with its title on its date, then a recurring event the sighting is one month of. A record
+ * folded as a duplicate stands for the record it was folded into, as far as that chain goes within
+ * `known`: the match is that record, and its date is the one compared. The later pair rules take
+ * the first match in `known` order.
  */
 export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases): Match<T> {
   const standsFor = (k: T) => throughDuplicates(k, known);
   const onPage = known.filter((k) => samePageAndTitle(sighting, k)).flatMap((k) => standsFor(k) ?? []);
-  const direct = onPage.reduce<T | undefined>((nearest, k) => (nearest === undefined || nearerOnPage(sighting, k, nearest, aliases) < 0 ? k : nearest), undefined);
+  const direct = onPage.reduce<T | undefined>((nearest, k) => (nearest === undefined || compareOnPage(sighting, k, nearest, aliases) < 0 ? k : nearest), undefined);
   if (direct) return { kind: "matched", event: direct, rule: "page-and-title" };
   const pairRules: [MatchRule, (a: EventIdentity, b: EventIdentity) => boolean][] = [
     ["own-page", sameOwnPageOnDate],
@@ -124,7 +124,7 @@ export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, 
  * (an undated record after the dated), then the lesser id, page, and title. None of it depends on
  * the order of the known events, so neither does the match.
  */
-function nearerOnPage(sighting: EventIdentity, a: EventIdentity, b: EventIdentity, aliases: VenueAliases): number {
+function compareOnPage(sighting: EventIdentity, a: EventIdentity, b: EventIdentity, aliases: VenueAliases): number {
   const atVenue = (k: EventIdentity) => (sighting.venue !== undefined && k.venue !== undefined && sameVenue(sighting.venue, k.venue, aliases) ? 0 : 1);
   return (
     daysApart(sighting, a) - daysApart(sighting, b) ||
@@ -142,6 +142,7 @@ function compareStarts(a: string | undefined, b: string | undefined): number {
   return compare(calendarDate(a)!, calendarDate(b)!) || compare(a, b);
 }
 
+/** Two strings by code point, not localeCompare, so the order is the same on every machine. */
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 /** The known event a sighting is, if any; see matchSighting. */
