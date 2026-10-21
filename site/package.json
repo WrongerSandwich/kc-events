@@ -12,7 +12,7 @@
     "build": "pnpm generate && astro build",
     "size": "tsx scripts/size-check.ts",
     "generate-and-build": "pnpm generate && astro build",
-    "build:e2e": "SITE_TODAY=2026-10-05 SITE_DATASET=e2e/fixtures/events.json SITE_VENUES=e2e/fixtures/venues.yaml SITE_OUT_DIR=dist-e2e pnpm generate-and-build",
+    "build:e2e": "GITHUB_REPORT_TOKEN=e2e-report-token-sentinel SITE_TODAY=2026-10-05 SITE_DATASET=e2e/fixtures/events.json SITE_VENUES=e2e/fixtures/venues.yaml SITE_OUT_DIR=dist-e2e pnpm generate-and-build",
     "preview": "astro preview",
     "preview:e2e": "SITE_OUT_DIR=dist-e2e astro preview --port 4321 --ignore-lock",
     "typecheck": "SITE_TODAY=last-run pnpm generate && astro check",
@@ -34,12 +34,12 @@
     "@playwright/test": "^1.64.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/svelte": "^5.4.2",
-    "@types/node": "^26.6.5",
+    "@types/node": "^24.19.1",
     "@vitest/coverage-v8": "^5.0.4",
     "fast-check": "^4.10.2",
     "jsdom": "^30.1.2",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.3",
     "vitest": "^5.0.4"
   }
 }

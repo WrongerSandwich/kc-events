@@ -6,10 +6,9 @@ import { meta } from "../generated/meta";
 import Base from "../layouts/Base.astro";
 import { kindFeedPath, webcalUrl, ALL_EVENTS_FEED } from "../lib/feeds";
 import { kindName } from "../lib/landing";
-import { reportUrl } from "../lib/report";
+import ReportForm from "../components/ReportForm.astro";
 import { siteConfig } from "../site.config";
 
-const reportHref = reportUrl(siteConfig.repoUrl);
 const curationRules = `${siteConfig.repoUrl}/blob/main/prompts/curation-prompt.md`;
 const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rules.md`;
 ---
@@ -41,7 +40,8 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
     <p>Every active event is at <a href="/events.json">/events.json</a>, with the fields this site shows. It is free to reuse under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; a link back is all that is asked. For language models and other readers, <a href="/llms.txt">/llms.txt</a> describes the site, the dataset, and how to cite it.</p>
 
     <h2>Wrong listing?</h2>
-    <p>If a date, venue, or anything else is wrong, <a href={reportHref}>report a wrong listing on GitHub</a>. Include the event, the page it links to, and what is wrong.</p>
+    <p>If a date, venue, or anything else is wrong, say so here; the report is posted publicly on GitHub. On an event's own page, "Wrong? Report it" sends the event's pages with it.</p>
+    <ReportForm summary="Report a wrong listing" />
 
     <h2>The code</h2>
     <p>The research job and this site are open source, in <a href={siteConfig.repoUrl}>one repository on GitHub</a>.</p>
