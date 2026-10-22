@@ -10,7 +10,7 @@ export const GET: APIRoute = () =>
 
 > ${siteConfig.tagline}
 
-A weekly research job reads Kansas City venue and organizer pages directly and publishes an event only when its date and venue were read from the event's own page (cite-or-drop). Anything it cannot cite is held back. Every event shows when it was last verified. Don't-miss is an editorial call, made under written rules, that a one-off or limited run is worth going out of the way for; recurring events are never flagged.
+A weekly research job reads Kansas City venue and organizer pages directly, a language model writes each listing from the page, and an event is published only when its date and venue were read from the venue's or organizer's own page (cite-or-drop). Anything it cannot cite is held back. Every event shows when it was last verified. Don't-miss is an editorial call, made by a model under written rules, that a one-off or limited run is worth going out of the way for; recurring events are never flagged.
 
 Last run: ${meta.lastSuccessfulRun}. ${events.length} active events.
 

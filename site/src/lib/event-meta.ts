@@ -13,11 +13,12 @@ export function eventDescription(e: PublishedEvent, today: string): string {
 
 /**
  * The city and state an event is in: Kansas City, or a city of its own (Overland Park, Liberty), as `regionAddress`
- * in site.config.ts says of its neighborhood. The catch-all region, which spans both states, states none.
+ * in site.config.ts says of its neighborhood. The catch-all region spans both states and reaches well outside the
+ * city (Powell Gardens is in Kingsville), so it states neither: a wrong city is worse than none.
  */
-export function postalAddress(e: PublishedEvent): { addressLocality: string; addressRegion?: string } {
+export function postalAddress(e: PublishedEvent): { addressLocality?: string; addressRegion?: string } {
   const region = siteConfig.regionAddress[e.region];
-  if (region === undefined) return { addressLocality: "Kansas City" };
+  if (region === undefined) return {};
   const inKansasCity = region.kansasCity === "all" || region.kansasCity.includes(e.neighborhood);
   return { addressLocality: inKansasCity ? "Kansas City" : e.neighborhood, addressRegion: region.state };
 }

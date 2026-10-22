@@ -111,7 +111,7 @@ describe("Explorer", () => {
     const jazz = screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Friday jazz")!;
     expect(jazz).toHaveTextContent("Fri Oct 9 · 7:00 pm");
     const film = screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Saturday film")!;
-    expect(film).toHaveTextContent("Sat Oct 10 · all day");
+    expect(film).toHaveTextContent("Sat Oct 10 · no time listed");
   });
 
   it("puts a heading over each venue's rows under the venue sort", () => {
@@ -263,6 +263,17 @@ describe("Explorer", () => {
     render(Explorer);
     await fireEvent.click(screen.getByRole("checkbox", { name: "Saved only" }));
     expect(rows()).toEqual(["Later talk"]);
+  });
+
+  it("says nothing is saved yet, and how to save, when the saved view is opened with no saves (audit B1, F4)", async () => {
+    // The header's Saved link lands here on a first visit; "No events match saved only" read as a failed filter.
+    history.replaceState(null, "", "/explore?saved=1");
+    render(Explorer);
+    flushSync();
+    const empty = screen.getByText(/Nothing saved yet/);
+    expect(empty).toHaveTextContent("Nothing saved yet. Save any event and it appears here; saves stay in this browser, with no account.");
+    expect(screen.queryByText(/No events match/)).toBeNull();
+    expect(within(empty).getByRole("link", { name: "the picks" })).toHaveAttribute("href", "/");
   });
 
   it("shows a save that has passed as passed in the saved view, and keeps it out of the export (#93)", async () => {

@@ -19,6 +19,11 @@ describe("toIcs", () => {
     expect(unfolded).not.toContain("https://www.therecordbar.com/shows\r\n");
   });
 
+  it("locates an event in the catch-all region at its venue alone: the region's name is no place", () => {
+    const ics = toIcs([event({ venue: "Powell Gardens", neighborhood: "Elsewhere in the metro", region: "Elsewhere in the metro" })], opts).replace(/\r\n[ \t]/g, "");
+    expect(ics).toContain("LOCATION:Powell Gardens\r\n");
+  });
+
   it("locates an event at its venue, not the room the page named (#91)", () => {
     const ics = toIcs([event({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall", neighborhood: "Downtown" })], opts).replace(/\r\n[ \t]/g, "");
     expect(ics).toContain("LOCATION:Kauffman Center for the Performing Arts\\, Downtown\r\n");

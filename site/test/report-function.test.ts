@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { REPORT_TEMPLATE } from "../src/lib/report";
-import { handleReport, issueFor, LABELS, MAX_WHAT } from "../src/server/report";
+import { handleReport, issueFor, LABELS, MAX_WHAT, publishedEvents } from "../src/server/report";
 
 const SITE = "https://www.kcthisweek.com";
 const form = readFileSync(fileURLToPath(new URL(`../../.github/ISSUE_TEMPLATE/${REPORT_TEMPLATE}`, import.meta.url)), "utf8");
@@ -18,12 +18,10 @@ function github(status = 201) {
   return { calls, fetch };
 }
 
-const eventFields = {
-  title: "Dark Forest",
-  event: `${SITE}/e/evt_1`,
-  "primary-page": "https://powellgardens.org/events",
-  "event-page": "https://powellgardens.org/event/dark-forest/",
-};
+/** The form names only the event's page on the site; its title and pages come from the published data, never the form. */
+const eventFields = { event: `${SITE}/e/evt_1` };
+const published = async (id: string) =>
+  id === "evt_1" ? { title: "Dark Forest", primaryUrl: "https://powellgardens.org/events", eventUrl: "https://powellgardens.org/event/dark-forest/" } : undefined;
 
 function post(fields: Record<string, string>, json = false): Request {
   return new Request(`${SITE}/api/report`, {
@@ -35,12 +33,12 @@ function post(fields: Record<string, string>, json = false): Request {
 
 async function send(fields: Record<string, string>, { json = false, token = "secret-token", status = 201 } = {}) {
   const api = github(status);
-  const response = await handleReport(post(fields, json), { token, origins: [SITE], fetch: api.fetch });
+  const response = await handleReport(post(fields, json), { token, origins: [SITE], fetch: api.fetch, published });
   return { response, calls: api.calls };
 }
 
 describe("the report function", () => {
-  it("files an event's report as the issue form would: title, labels, headings, and the event's pages", async () => {
+  it("files an event's report as the issue form would: title, labels, headings, and the event's pages looked up by its id", async () => {
     const { response, calls } = await send({ what: "It is on the 23rd, not the 22nd.", website: "", ...eventFields });
     expect(response.status).toBe(200);
     expect(calls).toHaveLength(1);
@@ -83,12 +81,14 @@ describe("the report function", () => {
     ["a filled honeypot", { what: "Wrong date.", website: "https://spam.example", ...eventFields }],
     ["an empty what", { what: "", ...eventFields }],
     ["an overlong what", { what: "x".repeat(MAX_WHAT + 1), ...eventFields }],
-    ["an event page on another site", { what: "Wrong date.", ...eventFields, event: "https://evil.example/e/evt_1" }],
-    ["a site page that is not an event's", { what: "Wrong date.", ...eventFields, event: `${SITE}/about` }],
-    ["a primary page that is not http(s)", { what: "Wrong date.", ...eventFields, "primary-page": "javascript:alert(1)" }],
-    ["an own page that is not a URL", { what: "Wrong date.", ...eventFields, "event-page": "not a url" }],
-    ["event context without its title", { what: "Wrong date.", event: `${SITE}/e/evt_1`, "primary-page": "https://powellgardens.org/" }],
+    ["an event page on another site", { what: "Wrong date.", event: "https://evil.example/e/evt_1" }],
+    ["a site page that is not an event's", { what: "Wrong date.", event: `${SITE}/about` }],
+    ["an event the site does not publish", { what: "Wrong date.", event: `${SITE}/e/evt_gone` }],
     ["a field the form does not have", { what: "Wrong date.", email: "me@example.com" }],
+    // The form once carried the event's title and pages; a client that still sends them is refused, so no report can
+    // put its own title or links in an issue.
+    ["the event's title sent by the client", { what: "Wrong date.", ...eventFields, title: "Free crypto giveaway" }],
+    ["the event's pages sent by the client", { what: "Wrong date.", ...eventFields, "primary-page": "https://evil.example/phish", "event-page": "https://evil.example/x" }],
   ];
   for (const [name, fields] of refusals) {
     it(`files nothing for ${name}, and says it could not send`, async () => {
@@ -104,15 +104,15 @@ describe("the report function", () => {
   it("files nothing for a repeated field or an oversized body", async () => {
     const api = github();
     const repeated = new Request(`${SITE}/api/report`, { method: "POST", body: "what=a&what=b" });
-    expect((await handleReport(repeated, { token: "t", origins: [SITE], fetch: api.fetch })).status).toBe(400);
+    expect((await handleReport(repeated, { token: "t", origins: [SITE], fetch: api.fetch, published })).status).toBe(400);
     const huge = new Request(`${SITE}/api/report`, { method: "POST", body: `what=${"x".repeat(20_000)}` });
-    expect((await handleReport(huge, { token: "t", origins: [SITE], fetch: api.fetch })).status).toBe(413);
+    expect((await handleReport(huge, { token: "t", origins: [SITE], fetch: api.fetch, published })).status).toBe(413);
     expect(api.calls).toHaveLength(0);
   });
 
   it("refuses a post from another site's page, so no page elsewhere can file through its visitors", async () => {
     const api = github();
-    const deps = { token: "t", origins: [SITE], fetch: api.fetch };
+    const deps = { token: "t", origins: [SITE], fetch: api.fetch, published };
     const body = new URLSearchParams({ what: "spam" });
     const foreign = new Request(`${SITE}/api/report`, { method: "POST", headers: { Origin: "https://evil.example" }, body });
     expect((await handleReport(foreign, deps)).status).toBe(403);
@@ -126,12 +126,35 @@ describe("the report function", () => {
   it("sends a refused post from an event's page back to that page", async () => {
     const api = github();
     const request = new Request(`${SITE}/api/report`, { method: "POST", headers: { Referer: `${SITE}/e/evt_1` }, body: new URLSearchParams({ what: "" }) });
-    expect(await (await handleReport(request, { token: "t", origins: [SITE], fetch: api.fetch })).text()).toContain('href="/e/evt_1"');
+    expect(await (await handleReport(request, { token: "t", origins: [SITE], fetch: api.fetch, published })).text()).toContain('href="/e/evt_1"');
+  });
+
+  it("says it could not send when the published data cannot be read, rather than calling the event unlisted", async () => {
+    const api = github();
+    const failing = async () => { throw new Error("events.json: 503"); };
+    const response = await handleReport(post({ what: "Wrong date.", ...eventFields }, true), { token: "t", origins: [SITE], fetch: api.fetch, published: failing });
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({ ok: false });
+    expect(api.calls).toHaveLength(0);
+  });
+
+  it("looks an event up in the deployment's own /events.json, by id", async () => {
+    const requested: string[] = [];
+    const fetch = (async (url: string) => {
+      requested.push(url);
+      return Response.json({ schemaVersion: 2, events: [{ id: "evt_1", title: "Dark Forest", primaryUrl: "https://powellgardens.org/events", eventUrl: "https://powellgardens.org/event/dark-forest/", venue: "Powell Gardens" }] });
+    }) as typeof globalThis.fetch;
+    const lookup = publishedEvents(SITE, fetch);
+    expect(await lookup("evt_1")).toEqual({ title: "Dark Forest", primaryUrl: "https://powellgardens.org/events", eventUrl: "https://powellgardens.org/event/dark-forest/" });
+    expect(await lookup("evt_gone")).toBeUndefined();
+    expect(requested).toEqual([`${SITE}/events.json`, `${SITE}/events.json`]);
+    const down = publishedEvents(SITE, (async () => new Response("", { status: 503 })) as typeof globalThis.fetch);
+    await expect(down("evt_1")).rejects.toThrow(/503/);
   });
 
   it("answers anything but a POST with 405", async () => {
     const api = github();
-    const response = await handleReport(new Request(`${SITE}/api/report`), { token: "t", origins: [SITE], fetch: api.fetch });
+    const response = await handleReport(new Request(`${SITE}/api/report`), { token: "t", origins: [SITE], fetch: api.fetch, published });
     expect(response.status).toBe(405);
     expect(api.calls).toHaveLength(0);
   });

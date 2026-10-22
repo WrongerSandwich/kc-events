@@ -3,6 +3,7 @@ import { firstDay, isDated, lastDay, detailsUrl } from "./events";
 import { nextPlayingDay } from "./filter";
 import type { Geo, PublishedEvent, PublishedVenue } from "./types";
 import { addressLine, venueNamed } from "./venues";
+import { siteConfig } from "../site.config";
 
 /**
  * An event as its calendar file has it: the build adds its venue's street address and position from the venue table
@@ -86,7 +87,9 @@ function vevent(e: IcsEvent, siteName: string, stamp: string): string[] {
     if (e.end !== undefined && timedEnd === undefined) notes.push(`Through ${formatDay(last)}.`);
   }
 
-  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(`${e.venue}, ${e.addressLine ?? e.neighborhood}`)}`, `URL:${e.pageUrl ?? detailsUrl(e)}`);
+  // The catch-all region's name ("Elsewhere in the metro") is no place: with no street address, an event there is at its venue alone.
+  const place = e.addressLine ?? (siteConfig.regionAddress[e.region] === undefined ? undefined : e.neighborhood);
+  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(place === undefined ? e.venue : `${e.venue}, ${place}`)}`, `URL:${e.pageUrl ?? detailsUrl(e)}`);
   if (e.geo) lines.push(`GEO:${e.geo.lat};${e.geo.lng}`);
   if (e.whyLine) notes.push(e.whyLine);
   notes.push(`Verified ${formatShort(localDate(e.lastVerified))} by ${siteName}; details at ${detailsUrl(e)}.`);

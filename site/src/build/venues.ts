@@ -73,18 +73,25 @@ function mostCommon(values: readonly string[]): string | undefined {
 
 /**
  * The venue pages: one per slug among the published events' venues and the table's rows, by name. Throws on a row
- * keyed on anything but a display name (an alias, or a name no record in the dataset and no venueAliases entry has),
- * on two rows for one page, and on a venue name with no letter or digit to make a slug from.
+ * keyed on anything but a display name (an alias, or a known venue spelled another way), on two rows for one page, and
+ * on a venue name with no letter or digit to make a slug from. A row whose venue no record in the dataset is at only
+ * warns: the job archives expired records eight weeks on, so a quiet venue's row would otherwise refuse the weekly
+ * data commit's build, and the site would stop refreshing (audit 2026-10-21, E2).
  */
 export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; recordVenues: readonly string[]; aliases: VenueAliases }): PublishedVenue[] {
   // The display names exactly as the site shows them, so a row also keeps a venue's spelling: "the truman" is no name.
   const known = new Set([...opts.recordVenues.map((n) => venueAndRoom(n, opts.aliases).venue), ...Object.keys(opts.aliases)]);
+  const knownBySlug = new Map([...known].map((name) => [venueSlug(name), name]));
   const rows = new Map<string, VenueRow>();
   for (const row of opts.rows) {
     const { venue } = venueAndRoom(row.name, opts.aliases);
     if (venue !== row.name) throw new Error(`venue table row "${row.name}" is a name venueAliases files under "${venue}"; key the row on "${venue}"`);
     const slug = venueSlug(row.name);
-    if (!known.has(row.name)) throw new Error(`venue table row "${row.name}" names no venue: no event in the dataset is at it, as spelled, and venueAliases has no entry for it`);
+    if (!known.has(row.name)) {
+      const spelled = knownBySlug.get(slug);
+      if (spelled !== undefined) throw new Error(`venue table row "${row.name}" is spelled other than the site spells "${spelled}"; key the row on "${spelled}"`);
+      console.warn(`site: venue table row "${row.name}" names no venue a record in the dataset is at, and venueAliases has no entry for it: its page lists nothing until an event appears there; remove the row if the venue is gone`);
+    }
     const other = rows.get(slug);
     if (other !== undefined) throw new Error(`venue table rows "${other.name}" and "${row.name}" are one venue page, /v/${slug}; keep one`);
     rows.set(slug, row);

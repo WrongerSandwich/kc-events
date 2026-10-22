@@ -31,6 +31,13 @@
   let mounted = $state(false);
   // The bar's height, so the sticky group headings sit just under it however it wraps (search takes a line on phones).
   let barHeight = $state(0);
+  // The bar is sticky, and a sticky day heading (about 2.5rem) sits under it, so a row the browser scrolls to the
+  // viewport's top edge on focus or by anchor would land under both. The document's scroll padding keeps it clear
+  // (audit 2026-10-21, A1); base.css carries a one-line estimate for before this measures, and without JavaScript.
+  $effect(() => {
+    document.documentElement.style.scrollPaddingTop = barHeight > 0 ? `calc(${barHeight}px + 2.5rem)` : "";
+    return () => { document.documentElement.style.scrollPaddingTop = ""; };
+  });
   // A shortlist link none of whose events is still to come parses to no shortlist; say so until the next change, so
   // the full list it opens on is not taken for the shortlist.
   let shortlistGone = $state(false);
@@ -171,7 +178,10 @@
   <section class="results" id="results" bind:this={results} tabindex="-1" aria-label="Events">
     {#if shortlistGone}<p class="empty">None of this shortlist's events are still to come. Showing everything instead.</p>{/if}
     {#if count === 0}
-      {#if pills.length > 0}
+      {#if filters.saved && saved.size === 0}
+        <!-- The header's Saved link lands here on a first visit: an empty list of one's own, not a filter that failed. -->
+        <p class="empty">Nothing saved yet. Save any event and it appears here; saves stay in this browser, with no account. Start with <a href="/">the picks</a>.</p>
+      {:else if pills.length > 0}
         <p class="empty">No events match <strong>{pills.map((p) => p.label).join(" · ")}</strong>. <button type="button" class="link" onclick={() => change(DEFAULT_FILTERS)}>Clear them</button> to see everything.</p>
       {:else}
         <p class="empty">No events to show right now.</p>
@@ -206,7 +216,9 @@
     gap: 0 var(--space-6); align-items: start;
   }
   .rail { grid-area: rail; }
-  .results { grid-area: results; scroll-margin-top: var(--bar-height, var(--tap)); }
+  .results { grid-area: results; }
+  /* A short viewport (a phone on its side, 400% zoom) would keep a third of itself under the sticky bars: they scroll away. */
+  @media (max-height: 500px) { .bar, .collapsed[open] summary { position: static; } }
   /* The results take focus only from the skip link; the next Tab lands on the first row, which shows the ring. */
   .results:focus { outline: none; }
   /* Sticky beside the results, scrolling on its own when it is taller than the window (a 768 px laptop). */

@@ -7,14 +7,19 @@ import { siteConfig } from "../site.config.js";
 
 /** The longest "What is wrong" accepted, in characters. */
 export const MAX_WHAT = 2000;
-/** The longest event title accepted from the form's hidden field. */
-const MAX_TITLE = 500;
 /** The longest request body read: the form's fields at their limits, URL-encoded, with room to spare. */
 const MAX_BODY = 16_000;
-/** The form's fields; any other name in a body refuses it. `website` is the honeypot, which a person never fills. */
-const FIELDS = new Set(["what", "website", "title", "event", "primary-page", "event-page"]);
+/**
+ * The form's fields; any other name in a body refuses it. `website` is the honeypot, which a person never fills. `event`
+ * is the event's page on this site, and all the issue says about the event (its title and pages) is looked up from the
+ * published data by the page's id: a client cannot put a title or a link of its own in an issue.
+ */
+const FIELDS = new Set(["what", "website", "event"]);
 
 export const LABELS = ["bug", "needs-triage"];
+
+/** What the issue quotes about an event: its title and the pages it was read from. */
+export interface PublishedPages { title: string; primaryUrl: string; eventUrl?: string }
 
 export interface ReportDeps {
   /** The fine-grained token (this repository, Issues read and write); undefined when the environment has none. */
@@ -22,10 +27,18 @@ export interface ReportDeps {
   /** The origins an event's site page may be on: the request's own and the canonical one. */
   origins: string[];
   fetch: typeof fetch;
+  /** The published event with that id, or undefined when the site has none. */
+  published: (id: string) => Promise<PublishedPages | undefined>;
 }
 
 /** Why a report was not filed, for the reader; undefined for a refusal that says nothing (the honeypot, a forged body). */
 type Outcome = { ok: true; issueUrl: string } | { ok: false; status: number; reason?: string };
+
+/** The form's fields, read: what the reader wrote, and the event's page on this site when the form was on one. */
+interface Form {
+  what: string;
+  event?: string;
+}
 
 interface Report {
   what: string;
@@ -45,7 +58,7 @@ function httpUrl(value: string): string | undefined {
 const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
 
 /** The form's fields read and checked, or the refusal. A refusal files nothing. */
-export function parseReport(body: string, origins: string[]): Report | { status: number; reason?: string } {
+export function parseReport(body: string, origins: string[]): Form | { status: number; reason?: string } {
   if (body.length > MAX_BODY) return { status: 413 };
   const params = new URLSearchParams(body);
   const seen = new Set<string>();
@@ -58,20 +71,49 @@ export function parseReport(body: string, origins: string[]): Report | { status:
   if (what === "") return { status: 400, reason: "Say what is wrong." };
   if (what.length > MAX_WHAT) return { status: 400, reason: `Keep it under ${MAX_WHAT.toLocaleString("en-US")} characters.` };
 
-  const title = oneLine(params.get("title") ?? "");
   const event = params.get("event") ?? "";
-  const primary = params.get("primary-page") ?? "";
-  const own = params.get("event-page") ?? "";
-  if (!title && !event && !primary && !own) return { what };
-  // Event context comes whole from the event page's hidden fields, or not at all.
-  if (!title || title.length > MAX_TITLE || !event || !primary) return { status: 400 };
+  if (!event) return { what };
   const eventUrl = httpUrl(event);
-  const primaryUrl = httpUrl(primary);
-  const ownUrl = own ? httpUrl(own) : undefined;
-  if (!eventUrl || !primaryUrl || (own && !ownUrl)) return { status: 400 };
+  if (!eventUrl) return { status: 400 };
   const site = new URL(eventUrl);
   if (!origins.includes(site.origin) || !/^\/e\/[\w-]+$/.test(site.pathname) || site.search || site.hash) return { status: 400 };
-  return { what, context: { title, event: eventUrl, primaryUrl, ...(ownUrl && { eventUrl: ownUrl }) } };
+  return { what, event: eventUrl };
+}
+
+/** The id in an event's site page URL, as parseReport admits them. */
+const eventId = (event: string) => new URL(event).pathname.slice("/e/".length);
+
+/**
+ * The report with the event's title and pages looked up, or a refusal: 400 when the site publishes no such event (the
+ * reader's page is older than the last run), 502 when the published data could not be read at all.
+ */
+async function resolve(form: Form, deps: ReportDeps): Promise<Report | { status: number; reason?: string }> {
+  if (!form.event) return { what: form.what };
+  let found: PublishedPages | undefined;
+  try {
+    found = await deps.published(eventId(form.event));
+  } catch (error) {
+    console.error(`report: the published events could not be read: ${error instanceof Error ? error.message : String(error)}`);
+    return { status: 502 };
+  }
+  if (!found) return { status: 400, reason: "That event is no longer listed." };
+  const { title, primaryUrl, eventUrl } = found;
+  return { what: form.what, context: { title: oneLine(title), event: form.event, primaryUrl, ...(eventUrl && { eventUrl }) } };
+}
+
+/**
+ * The lookup the deployed function uses: the deployment's own /events.json, the projection the site publishes, which
+ * names every event's title and pages as its page shows them. Fetched per report; reports are rare and the file is
+ * cached at the edge. Throws when the file cannot be read, which the handler answers as "could not send".
+ */
+export function publishedEvents(origin: string, fetch: typeof globalThis.fetch): ReportDeps["published"] {
+  return async (id) => {
+    const response = await fetch(`${origin}/events.json`, { signal: AbortSignal.timeout(10_000) });
+    if (!response.ok) throw new Error(`${origin}/events.json answered ${response.status}`);
+    const { events } = (await response.json()) as { events: ({ id: string } & PublishedPages)[] };
+    const found = events.find((e) => e.id === id);
+    return found && { title: found.title, primaryUrl: found.primaryUrl, ...(found.eventUrl && { eventUrl: found.eventUrl }) };
+  };
 }
 
 /** A fence longer than any run of backticks in the text, so what the reader wrote stays plain text: no mentions, links or images. */
@@ -180,7 +222,8 @@ export async function handleReport(request: Request, deps: ReportDeps): Promise<
     return new Response("Forbidden\n", { status: 403, headers: HEADERS });
   }
   const body = await request.text();
-  const parsed = parseReport(body, deps.origins);
+  const form = parseReport(body, deps.origins);
+  const parsed = "what" in form ? await resolve(form, deps) : form;
   const report = "what" in parsed ? parsed : undefined;
   const outcome: Outcome = "what" in parsed ? await file(parsed, deps) : { ok: false, ...parsed };
   const status = outcome.ok ? 200 : outcome.status;

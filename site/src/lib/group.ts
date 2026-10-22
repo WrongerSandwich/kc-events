@@ -14,12 +14,12 @@ export const SHORTLIST_GROUP = "shortlist";
 export type ResultGroup = { key: string; heading: string; events: PublishedEvent[]; collapsed: boolean };
 
 /**
- * A row's date line under its group heading: a start time or "All day"; for a run on now, "Closes Tue Oct 20", under
+ * A row's date line under its group heading: a start time or "No time listed"; for a run on now, "Closes Tue Oct 20", under
  * "On now"; for a run not yet open, "Runs through Sat Nov 14" under its opening day; for a multi-day one-off, under
  * each of its days, "8:30 pm · through Sat Oct 10" or "Through Sun Oct 11" (throughLine); a recurring event's
  * schedule phrase. Kept short so the explorer's date column stays narrow; the front page's cards say more (closingLine).
  * With `withDay` (the venue sort, which has no day headings), the day comes first: "Fri Oct 9 · 7:00 pm",
- * "Fri Oct 9 · all day", "Tue Oct 20–Sat Nov 14", "Thu Oct 29, 6:00 pm–Sat Oct 31".
+ * "Fri Oct 9 · no time listed", "Tue Oct 20–Sat Nov 14", "Thu Oct 29, 6:00 pm–Sat Oct 31".
  */
 export function rowDateLine(e: PublishedEvent, today: string, withDay = false): string {
   if (!isDated(e)) return e.schedule ?? "";
@@ -32,9 +32,10 @@ export function rowDateLine(e: PublishedEvent, today: string, withDay = false): 
     if (e.daysLine !== undefined) return `${e.daysLine} through ${last}`;
     return time ? `${time}–${last}` : `Runs through ${last}`;
   }
+  // A date-only start means the page gave no time (a concert, a screening), not that the event runs all day.
   const start = e.start!;
-  if (!withDay) return isDateOnly(start) ? "All day" : formatTime(start);
-  return `${formatDay(firstDay(e)!)} · ${isDateOnly(start) ? "all day" : formatTime(start)}`;
+  if (!withDay) return isDateOnly(start) ? "No time listed" : formatTime(start);
+  return `${formatDay(firstDay(e)!)} · ${isDateOnly(start) ? "no time listed" : formatTime(start)}`;
 }
 
 /** The full start (date-only before timed on one day); a start-less run sorts by its last day, a recurring event first. */
@@ -123,8 +124,9 @@ export function groupResults(events: PublishedEvent[], f: Filters, today: string
 
   const groups: ResultGroup[] = [];
   const noWhenFilter = "preset" in f.when && f.when.preset === "all";
-  // Collapsed only when dated days follow it to lead instead; alone, a closed line would hide every result.
-  if (onNow.length > 0) groups.push({ key: "on-now", heading: "On now", events: onNow, collapsed: noWhenFilter && byDay.size > 0 });
+  // Collapsed only when dated days follow it to lead instead; alone, a closed line would hide every result. The saved
+  // view is a list the reader made, short and shown whole: a save folded away looks lost.
+  if (onNow.length > 0) groups.push({ key: "on-now", heading: "On now", events: onNow, collapsed: noWhenFilter && byDay.size > 0 && !f.saved });
   for (const day of [...byDay.keys()].sort()) groups.push({ key: day, heading: formatDay(day), events: byDay.get(day)!.sort(byTimeThenTitle), collapsed: false });
   if (always.length > 0) groups.push({ key: "always-there", heading: "Always there", events: always, collapsed: false });
   if (passed.length > 0) groups.push({ key: PASSED_GROUP, heading: "Already happened", events: passed, collapsed: false });

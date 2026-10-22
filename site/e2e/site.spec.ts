@@ -10,6 +10,8 @@ async function on(page: Page, when: Date, path: string) {
 test("the front page buckets the fixture's don't-miss events", async ({ page }) => {
   await on(page, BUILD_DAY, "/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("What's on in Kansas City");
+  // The lede says who makes the picks and where a date comes from (the venue's list, as the event page's verified line says).
+  await expect(page.locator(".lede")).toContainText("chosen and explained by a model under written rules. Every date is read from the venue's or organizer's own page");
   const sections = page.getByRole("region");
   await expect(sections.nth(0)).toHaveAccessibleName("This week, Oct 5–11");
   // The exhibition is on now, so it sorts as today, ahead of Tuesday's show.
@@ -455,7 +457,7 @@ test("the site's page for an event sends the reader to the event's own page and 
   await on(page, BUILD_DAY, "/e/evt_e2e000000001");
   await expect(page.getByRole("link", { name: "Details and tickets at tickets.example.com" })).toHaveAttribute("href", "https://tickets.example.com/frizzi");
   const verified = page.locator(".verified");
-  await expect(verified).toContainText("Date and venue verified Oct 3 from the list at example.com.");
+  await expect(verified).toContainText("Date and venue verified Oct 3 from the list at example.com. The reason and description are written by a model.");
   await expect(verified.getByRole("link", { name: "the list at example.com" })).toHaveAttribute("href", "https://example.com/recordbar/frizzi");
   await page.getByText("Wrong? Report it").click();
   await expect(page.getByRole("link", { name: "report it on GitHub" })).toHaveAttribute("href", /template=wrong-listing\.yml&.*event-page=https%3A%2F%2Ftickets\.example\.com%2Ffrizzi/);
@@ -844,4 +846,41 @@ test("the changes page lists the run's new picks, moves, new events by kind, and
   await expect(page.getByText("Compared with the run of Monday, September 28.")).toBeVisible();
   await expect(page.locator(".site-footer").getByRole("link", { name: "What changed" })).toHaveAttribute("href", "/changes");
   await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
+});
+
+// Two defects the 2026-10-21 pre-launch audit measured (its lane A): an event page with a long kind label beside its
+// Don't miss tag scrolled sideways at 320 px, and the explorer's sticky bar covered the row that Shift+Tab had just
+// focused, because nothing told the browser to scroll focus clear of the bar.
+test("an event page with a long kind label and a Don't miss tag does not scroll sideways at 320 px (WCAG 1.4.10)", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await on(page, BUILD_DAY, "/e/evt_e2e000000005"); // a festivals/markets pick
+  await expect(page.locator(".dont-miss")).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBe(0);
+});
+
+test("tabbing backwards through the explorer never leaves the focused row under the sticky bar (WCAG 2.4.11)", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.emulateMedia({ reducedMotion: "reduce" }); // instant scrolling, so each stop's position can be read at once
+  await on(page, BUILD_DAY, "/explore");
+  await page.getByRole("button", { name: /^Save / }).last().focus();
+  for (let stop = 0; stop < 24; stop++) {
+    await page.keyboard.press("Shift+Tab");
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+    // Covered: the point at the focused element's centre paints something else (the bar, a sticky heading), or the
+    // element sits outside the viewport.
+    const covered = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return "none";
+      const r = el.getBoundingClientRect();
+      if (r.height === 0) return "none";
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const where = `${el.tagName} "${el.textContent?.trim().slice(0, 30)}" at ${Math.round(cx)},${Math.round(cy)} in ${innerWidth}x${innerHeight}`;
+      if (cy < 0 || cy > innerHeight || cx < 0 || cx > innerWidth) return `${where}: outside the viewport`;
+      const top = document.elementFromPoint(cx, cy);
+      return el === top || (top !== null && el.contains(top)) ? "no" : `${where}: under ${top?.tagName}.${top?.className}`;
+    });
+    expect(covered, `stop ${stop}`).toMatch(/^(no|none)$/);
+  }
 });

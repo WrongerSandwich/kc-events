@@ -3,8 +3,11 @@ import { reportUrl, type ReportContext } from "../lib/report";
 import { siteConfig } from "../site.config";
 
 // The wrong-listing report form (#129): it posts to the function at /api/report, which files the issue the GitHub
-// issue form would. The event's pages go with it in hidden fields. Without JavaScript the post lands on the
-// function's plain page; with it, the script below sends it in place and says how it went. `website` is a honeypot.
+// issue form would. On an event's page the event's own page on this site goes with it in a hidden field, and the
+// function looks the event's title and pages up from the published data by that page's id, so nothing a client sends
+// names a title or a link in the issue (the GitHub link below carries them for the reader's own filing). Without
+// JavaScript the post lands on the function's plain page; with it, the script below sends it in place and says how it
+// went. `website` is a honeypot.
 interface Props { context?: ReportContext; summary: string }
 const { context, summary } = Astro.props;
 const github = reportUrl(siteConfig.repoUrl, context);
@@ -18,14 +21,7 @@ const github = reportUrl(siteConfig.repoUrl, context);
       <label for="report-website">Leave this empty</label>
       <input id="report-website" name="website" tabindex="-1" autocomplete="off">
     </div>
-    {context && (
-      <>
-        <input type="hidden" name="title" value={context.title}>
-        <input type="hidden" name="event" value={context.event}>
-        <input type="hidden" name="primary-page" value={context.primaryUrl}>
-        {context.eventUrl && <input type="hidden" name="event-page" value={context.eventUrl}>}
-      </>
-    )}
+    {context && <input type="hidden" name="event" value={context.event}>}
     <p class="send"><button type="submit">Send report</button> <span>Posted publicly on GitHub. No name or contact needed.</span></p>
   </form>
   <p class="status" role="status" tabindex="-1"></p>

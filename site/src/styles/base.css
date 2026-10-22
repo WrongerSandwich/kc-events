@@ -92,6 +92,10 @@ p a, .prose a { text-decoration: underline; }
   position: sticky; top: var(--bar-height, var(--tap));
   background: var(--bg); z-index: var(--z-sticky);
 }
+/* Focus and anchors scroll clear of the explorer's sticky bar and the heading under it: the one-line bar's height here,
+   the measured bar's once the explorer sets the document's scroll padding itself (audit 2026-10-21, A1). */
+html:has(.explorer) { scroll-padding-top: calc(var(--tap) + 2.5rem); }
+@media (max-height: 500px) { .section-heading.group { position: static; } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }

@@ -40,6 +40,11 @@ describe("groupResults", () => {
     expect(collapsed({ when: { from: "2026-10-05", to: "2026-10-31" } })[0]).toEqual(["on-now", false]);
   });
 
+  it("keeps On now open in the saved view: a list the reader made is short, and a folded save looks lost (audit B1)", () => {
+    const saved = new Set(["onNow", "tue"]);
+    expect(groupResults(all, f({ saved: true }), today, saved).map((g) => [g.key, g.collapsed])).toEqual([["on-now", false], ["2026-10-06", false]]);
+  });
+
   it("leaves On now open when no dated day follows it, so a filter never shows just a closed line", () => {
     expect(groupResults([onNow, onNowSooner, trivia], f({ recurring: true }), today, none).map((g) => [g.key, g.collapsed])).toEqual([
       ["on-now", false],
@@ -164,9 +169,9 @@ describe("rowDateLine", () => {
     expect(rowDateLine(comedy, "2026-10-10")).toBe("8:30 pm · through Sat Oct 10");
   });
 
-  it("writes the time, all day, a span, or a schedule", () => {
+  it("writes the time, no time listed for a date-only start, a span, or a schedule", () => {
     expect(rowDateLine(fri7, today)).toBe("7:00 pm");
-    expect(rowDateLine(friAll, today)).toBe("All day");
+    expect(rowDateLine(friAll, today)).toBe("No time listed");
     expect(rowDateLine(onNow, today)).toBe("Closes Tue Oct 20");
     expect(rowDateLine(onNowSooner, today)).toBe("Closes Sun Oct 11");
     expect(rowDateLine(festNow, today)).toBe("Through Wed Oct 7");
@@ -177,7 +182,7 @@ describe("rowDateLine", () => {
 
   it("puts the day first when there are no day headings (the venue sort)", () => {
     expect(rowDateLine(fri7, today, true)).toBe("Fri Oct 9 · 7:00 pm");
-    expect(rowDateLine(friAll, today, true)).toBe("Fri Oct 9 · all day");
+    expect(rowDateLine(friAll, today, true)).toBe("Fri Oct 9 · no time listed");
     expect(rowDateLine(onNow, today, true)).toBe("Closes Tue Oct 20");
     expect(rowDateLine(onNowSooner, today, true)).toBe("Closes Sun Oct 11");
     expect(rowDateLine(festNow, today, true)).toBe("Sat Oct 3–Wed Oct 7");
