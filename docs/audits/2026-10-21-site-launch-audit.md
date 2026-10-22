@@ -6,12 +6,12 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 
 | Lane | Scope | State |
 |---|---|---|
-| A | Technical frontend: accessibility beyond axe, responsive, theming, performance, anti-patterns | to resume |
+| A | Technical frontend: accessibility beyond axe, responsive, theming, performance, anti-patterns | running (third attempt) |
 | B | UX critique: heuristics, personas, journeys | done, below |
 | C | Security and the trust boundary: `/api/report`, CSP, injection surfaces, dependencies, privacy claims | done, below |
 | D | SEO, sharing, structured data, calendar feeds | done, below |
 | E | Code quality, tests, build pipeline, runtime robustness | done, below |
-| F | Copy and content, voice, reader-visible data | running |
+| F | Copy and content, voice, reader-visible data | done, below |
 | G | Data accuracy: a live sample checked against source pages | done, below |
 | H | Operations and launch: Vercel, DNS, HTTP behaviour, repo face | done, below (by the orchestrating session) |
 
@@ -23,6 +23,7 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 - The data holds where it matters most: every sampled date, time and venue on all 14 current picks matches its source page, no sampled event is cancelled or postponed, and 65 of 66 evidence quotes are still on their pages. What is wrong is editorial: four of the 14 why-lines claim things the page does not say (Dark Forest "three nights only" is seven nights; Graveyard 5K's "open once a year"; the Invincible Czars as "a Kansas City band"; Hedwig's "likely" in person), and the City Market is listed as a one-off through a Monday it does not run.
 - Two structural P1s from the code lane: the site is built once a week, so from Tuesday on the server HTML is Monday's and hydration swaps whole sections in place (CLS measured at 0.17 to 0.49 on `/` and `/explore` later in the week; the script-free kind, region and venue pages list past events until the next build), fixed by a daily deploy hook; and a `data/venues.yaml` row whose venue's last record is archived makes the build throw, so a future weekly data commit would be refused and the site would quietly stop refreshing (earliest around January 2027). Gates are green: typecheck clean, 415 site tests pass, coverage 93.6% lines, all six size budgets pass (two with under 100 bytes to spare).
 - The UX critique scores the site 28/40 (good, low end): the front page is now a good instrument (started picks fold, the week strip tells the truth about runs, trust is visible), and the rough edges are in the surfaces added since 10-10. Its P1s: the Saved view is worded as a failed filter ("No events match saved only") and hides a running save inside a closed "On now" fold; the pages frozen at the build day (the same finding as E1, with screenshots: on a Saturday `/v/liberty-hall` opens with Wednesday's show under a red "Don't miss"); and "find something for Saturday night" has no direct path (the week strip's Fri and Sat both jump to Dark Forest's Thursday card; "This weekend" opens with 44 "On now" rows; no day preset).
+- The copy follows the house style everywhere (no "we", no exclamation marks, no slogans, sentence case, en dashes), but two trust claims fail where readers land: "Every date is read from the event's own page" is false (dates are read from the venue's or organizer's list page, as the event page itself says: "verified Oct 19 from the list at ..."), and nothing on the front page or an event page says a model writes the picks, reasons and descriptions, which PRODUCT.md promises the site says. Also P1: 59 explorer rows say "All day" for events whose time was simply not listed.
 - Operations are in order: apex and `.html` 308 to the canonical, true 404s, no runtime errors in seven days, Node 24 pinned everywhere, the report function's rate limit is live (a second request from one address inside a few minutes got 429).
 
 ## Lane H: operations and launch (orchestrating session)
@@ -842,3 +843,225 @@ The front page is now a good instrument. On a phone, the first screen holds the 
 **Still there:** "Until <date>" tiles; the card's inert kind chip looks like the filter chips (now with a third, link variant on the event page); the desktop calendar button is icon-only; "These picks in the explorer" twice; the why line is still the quietest text on cards; "Next two weeks" still uses full cards, and the page is longer (5,015 px vs 4,911); no per-section skip (71 tab stops now); "Monday, Friday-Saturday, Select times"; "Today" shown in both the strip and the tile.
 
 **New since:** the saved and shortlist views (P1), the static landing and venue pages freezing at the build day (P1), and the report form staying armed after it sends (P2).
+
+## Lane F: copy, content and voice
+
+Every string the site itself says, checked for clarity, consistency, truthfulness against the code, and the voice rules in `site/PRODUCT.md`. Dataset text (titles, descriptions, why-lines) was lane G's.
+
+### Summary
+
+The site's own copy follows the house style everywhere: no "we", no exclamation marks, no em dashes and no slogans in site strings; headings, buttons and labels in sentence case; the Oxford comma throughout; en dashes in ranges. Every hit for those patterns was dataset text. Two trust claims are wrong or missing where readers land: the "own page" claim is false (the front page, About, README and llms.txt say every date is "read from the event's own page", while the event page says the date was read from "the list at <host>", which is true for 414 of 437 events); and model authorship is never stated on the front page or the event page (About credits a model only with the don't-miss call). The other P1s: 59 explorer rows say "All day" for events whose time is simply not listed; the Saved link in the nav, before anything is saved, lands on "No events match saved only"; the For venues section gives a venue no way to reach anyone.
+
+### Findings, by severity
+
+#### F1. [P1 fix before launch] [confirmed] "Every date is read from the event's own page" is false, and the site contradicts itself
+
+- Locations: `site/src/pages/index.astro:27-28` ("Every date is read from the event's own page; here's how."); `site/src/pages/about.astro:23` ("A date and a venue are published only when they were read from the event's own page"); `README.md:11`, the same sentence; `site/src/pages/llms.txt.ts:13` ("read from the event's own page (cite-or-drop)"); `site/PRODUCT.md` Positioning, the same phrase.
+- Why it fails: in the glossary and ADR 0009, the "own page" (`eventUrl`) is a link that is never used to verify. Dates and venues are read from the primary page: the venue's or organizer's list. The event page says so plainly (`e/[id].astro:63`): "Date and venue verified Oct 19 from the list at thecoterie.org." That is true for 414 of the 437 published events. A reader who checks the claim against any event page finds the site disagreeing with itself. About also uses "an event's own page" a second time (line 43) to mean the site's `/e/` page (F6).
+- Proposed: front page: "Every date is read from the venue's or organizer's own site; here's how." About and README: "A date and a venue are published only when they were read from the venue's or organizer's own page, never from a listings site or a search result; when the job cannot cite one, the event is held back rather than guessed at." llms.txt: "publishes an event only when its date and venue were read from a venue's or organizer's own page (cite-or-drop)." The same fix goes into PRODUCT.md. One published primary page is on livenation.com; if that matters, say "the venue's, organizer's, or ticket seller's own page".
+
+#### F2. [P1] [confirmed] The site never says, where readers land, that a model writes the picks, reasons and descriptions
+
+- Locations: `index.astro:26-29` (lede "The picks worth going out of your way for, each with a line on why."); `e/[id].astro:56-57` (the why-line and description shown with no attribution); `about.astro:23` ("How it is made" says "a research job reads venue and organizer pages" and never says a model reads them or writes the listing; only "What don't-miss means" (line 30) names a model).
+- Why it fails: PRODUCT.md: "the listings and the one-line reasons are researched and written by a model, and the site says so", and "Never imply more ... human authorship". Why-lines such as "a band at the center of the current indie-rock conversation" read like a critic's. A visitor arriving from Reddit or a shared event link sees no hint otherwise. README:14 claims "the site says so", which today is only half true.
+- Proposed: front page lede: "Picks worth going out of your way for, chosen and explained by a model under written rules. Every date is read from the venue's or organizer's own site; here's how." About, after the first sentence of "How it is made": "A language model reads each page and writes the listing: its title, date, venue, and a short description. Code then checks that the date and venue it quoted are on the page." Event page, a line after the verified line: "Description and reason written by a model."
+
+#### F3. [P1] [confirmed] "All day" claims a duration the data does not have
+
+- Location: `site/src/lib/group.ts:36-37`, which writes "All day" and "Fri Oct 9 · all day".
+- Where it shows: 59 rows on `/explore`, plus rows on `/changes`, the venue pages and the landing pages. Examples: "Three Days Grace" (T-Mobile Center), "Pet Sematary (1989)" (Screenland), "Beyond the Black Crack: 50th Anniversary Celebration" (a one-night show, listed under New picks on /changes).
+- Why it fails: 72 published one-offs have a date-only start, which means the page gave no time. "All day" tells a reader a film screening runs all day. This breaks the "never imply more certainty" rule. (Lane G found the same.)
+- Proposed: rows: "No time listed"; with the day: "Thu Nov 19 · no time listed"; check the date column's width. In `ics.ts`, add to such events' DESCRIPTION: "No time listed on the venue's page; check before you go."
+
+#### F4. [P1] [confirmed] The Saved empty state is the filter-mismatch message
+
+- Location: `site/src/components/Explorer.svelte:175`, with `query.ts:121` (pill "saved only").
+- What a reader sees: "Saved" is in the nav on every page. With nothing saved it opens `/explore?saved=1`, which says: "No events match **saved only**. Clear them to see everything."
+- Why it fails: it does not say how to save or where saves live, and it frames the visitor's empty list as a filter error. (Lane B's B1 is the same finding from the UX side.)
+- Proposed: when the saved filter is on and nothing is saved at all: "Nothing saved yet. Use Save on any event and it appears here. Saves stay in this browser; there is no account."
+
+#### F5. [P1] [plausible] For venues gives no way to reach anyone
+
+- Locations: `about.astro:27`; `README.md:31`.
+- Why it fails: the crawler's user agent points venues at this section. `src/adapters/identity.ts` says the link exists "so a source owner can reach the maintainer or opt out". A venue's marketing person reading it learns only how to block the crawler. They are not told how to fix a wrong listing, ask to be read, or contact anyone.
+- Proposed text to add: "To correct a listing, use Wrong listing below, or Wrong? Report it on the event's page; both are public. For anything else, such as asking for your calendar to be read, open an issue on GitHub [link]." Whether to also publish a private address is the owner's call.
+
+#### F6. [P2 next pass] [confirmed] "Pick" and "Don't miss" are one thing under two names, and nothing on the site connects them
+
+- The reader meets "picks" in the front page lede, "These picks in the explorer", "Every pick in the explorer", "Subscribe to the picks", the /changes heading "New picks", the week strip's "1 pick". The reader meets "Don't miss" in the row and event page tag, the filter "Don't-miss only" and the pill "don't-miss only", About's heading "What don't-miss means" and "A don't-miss event", the calendar the picks link subscribes to, named "KC This Week · Don't miss" (`lib/feeds.ts:46`), the front page JSON-LD name "Don't miss".
+- Why it fails: About never says a pick is a don't-miss event. The glossary even lists "picks" under _Avoid_ for the don't-miss list, while the site has adopted it as the reader's word.
+- Proposed: keep "pick" as the reader's word and keep the "Don't miss" tag as its marker. About h2: "What a pick is". Body: "A pick, tagged Don't miss, is a one-off or a limited run worth going out of your way for. ..." Filter "Picks only", pill "picks only", feed name "KC This Week · Picks". Record the translation in CONTEXT.md.
+
+#### F7. [P2] [confirmed] A limited run's end is worded three ways, and the tile still reads as the event's date (open since the 10-10 critique)
+
+- Tile top: "Until", so the tile reads "Until 1 Nov" (`lib/tile.ts:27`). Rows: "Closes Sat Oct 24". Screen-reader label: "On now, closes Sun Nov 1". Event page: "Through Saturday, October 24".
+- Proposed: tile top: "Closes", which pairs with the existing "Opens". Keep "through" for one-off spans only. Check that "Closes" fits the 4rem tile.
+
+#### F8. [P2] [confirmed] The days line reads as a contradiction
+
+- Location: `lib/date-line.ts:19`, and the meta description built from it. Current text: "Fri–Sun through Sunday, November 1".
+- Proposed: "Fri–Sun each week, through Sunday, November 1". Not yet open: "Fri–Sun each week, Friday, October 9 through Sunday, November 1". `tile.ts:29` "Fri–Sun through Sun Nov 1" becomes "Fri–Sun, through Sun Nov 1".
+
+#### F9. [P2] [confirmed] The week strip's accessible names use jargon, and today's does not contain its visible label
+
+- Location: `WeekStrip.svelte:18-21`. Current names: "Sun 25: nothing new, 1 running", "Sat 24: 4 picks, 1 running", and "Wed 21: 1 pick" on a day whose visible text is "Today 21". The last one fails label-in-name for speech users (WCAG 2.5.3).
+- Proposed: "Today 21: 1 pick"; "Sat 24: 4 picks, 1 run still on"; "Sun 25: no new picks, 1 run still on". Keep the visible abbreviations at the start so the label stays in the name.
+
+#### F10. [P2] [confirmed] "Export this view" does not say what it makes or how big it is
+
+- Location: `Explorer.svelte:158`; also "Export saved" at line 156.
+- Why it fails: on the default view it downloads a calendar file of 426 events, which a first-timer could import by accident. (Lane B's B6 agrees.)
+- Proposed: "Export 426 to calendar" (count from `exportable.length`), and "Export saved to calendar".
+
+#### F11. [P2] [confirmed] The 404 page's reasons use a term the glossary avoids, and assume the page was an event
+
+- Location: `404.astro:7-8`. Current text: "The event may have passed or been taken down after a failed check."
+- Why it fails: the glossary says to avoid "failed check" for an outage; an outage alone never removes an event; the page also serves missing venue and kind URLs; "Browse every event" goes to `/explore`, which hides recurring events by default.
+- Proposed: "If this was an event, it has passed, been cancelled, or could no longer be found on the page it was read from. Events come off the site at each weekly run." Then "Browse events or go to the front page."
+
+#### F12. [P2] [confirmed] The licence lines disagree with each other and with the extraction rules
+
+- About and llms.txt understate the terms: `about.astro:40` says "a link back is all that is asked", and `llms.txt.ts:28` says "with a link back"; `data/LICENSE` also requires saying whether you made changes, and carves out quoted text. The licence misdescribes descriptions: `data/LICENSE:17-19` calls "the evidence quotes and descriptions" text quoted from venue pages; `prompts/extraction-rules.md:104` says descriptions are written in the model's own words and that "no sentence of the page is copied". The text actually quoted in the published `/events.json` is `price` and `ages`.
+- Proposed: About: "It is free to reuse under CC BY 4.0: credit KC This Week with a link, and say if you changed it. Prices and age limits are quoted from venues' pages and stay theirs." data/LICENSE parenthetical: "(the evidence quotes, and the price and age lines quoted from event pages)".
+
+#### F13. [P2] [confirmed] The issue form's field names are internal jargon, and one is the opposite of its glossary meaning
+
+- Locations: `.github/ISSUE_TEMPLATE/wrong-listing.yml:21,26` and `site/src/server/report.ts:93-94`. Both use "Primary page" and "Event page". In the glossary, "Event page" is the site's own `/e/` page, while this field holds the event's own page (`eventUrl`). "Primary page" means nothing to a public reporter.
+- Proposed (keep the ids, change both files together): rename "Primary page" to "Page it was read from", with the description "The venue's or organizer's page the date and venue were read from." Rename "Event page" to "Event's own page", with the description "Where the listing's Details and tickets link goes, when it is not the page above."
+
+#### F14. [P2] [confirmed] The report form gives no privacy caution and no next step
+
+- Location: `ReportForm.astro:29,56`. Current text: "Posted publicly on GitHub. No name or contact needed." Success says only "Sent. Thanks."
+- Why it fails: a reporter may type an email address to get a reply into a public issue. On success they are not told where the report went.
+- Proposed: helper line: "Posted publicly on GitHub, so leave out anything private. No name or contact needed." Success: "Sent. It is now a public issue on GitHub." Optionally link the issue (the function already gets `html_url` but does not return it). Failure (line 56) repeats the GitHub link that sits right below it; change it to "Could not send. Try again, or use the GitHub link below."
+
+#### F15. [P2] [confirmed] "Always there" is framed in two ways, and the front page's hand-kept list has drifted
+
+- About's claim: `about.astro:30` says "Recurring events are never flagged; they are listed under Always there instead." The front page list (`site/src/always-there.ts`) is not what was hand-picked: the "First Friday" pick (host kccrossroads.org) now matches "Free First Friday Comedy" at The Bird Comedy Theater; the "Farmers Market" pick names `thecitymarket.org`, but the data's host is `thecitymarketkc.org`, and that event is now a one-off. So the section shows three items, one of them not the intended event. The explorer's version is broader: its "Include always-there" option adds all 11 recurring events.
+- Proposed: fix the two picks (the owner's call). About: "Recurring events are never flagged. A few are on the front page under Always there; the explorer lists them all." Checkbox: "Include recurring events".
+
+#### F16. [P2] [plausible] "First listed" suggests the venue's listing date
+
+- Location: `changes.astro:36`. Current text: "113 events first listed in the last seven days."
+- Why it fails: the glossary says these are events the job first saw. Many will have been on venue calendars for months.
+- Proposed: "113 events found for the first time in the seven days through this run."
+
+#### F17. [P2] [plausible] Calendar files invent an end time without saying so
+
+- Location: `lib/ics.ts:73-75`. A timed event with no end gets a two-hour block. A subscriber sees "7:00–9:00 pm" as if the venue had stated it. (Lane D's D11 agrees.)
+- Proposed: add "End time not listed; shown as two hours." to the DESCRIPTION.
+
+#### F18. [P3 polish] [confirmed] The staleness sentence is off by a day, and uses a numeral in prose
+
+- Location: `about.astro:24`. Current text: "If 9 days pass without a run, every page says so." The banner shows from run day + 10 (`StalenessBanner.svelte:11`). The glossary says "more than nine days old". Elsewhere the prose spells numbers out.
+- Proposed: "When the last run is more than nine days old, every page says so."
+
+#### F19. [P3] [confirmed] The /changes reason and meta description are imprecise
+
+- Gone reason (`lib/changes.ts:144`): "No longer listed by the venue". Many primary pages are organizers' (kcparks.org, kccrossroads.org), and a two-strike also covers a page that said "not found" or now blocks the job in robots.txt. Proposed: "No longer on the page it was listed on".
+- Meta description (`changes.astro:19`): "since the last weekly run" means after it. Proposed: "in the last weekly run".
+
+#### F20. [P3] [confirmed] The venues meta description over-counts
+
+- Location: `venues.astro:13`. Current text: "Every venue with events listed, 97 in all, by region." Three of the 97 have nothing listed.
+- Proposed: "97 venues in and around Kansas City, by region, each with what's coming up there."
+
+#### F21. [P3] [plausible] Screen-reader text uses slash kind names
+
+- Examples: visually hidden text "Second Fridays Open Studios, art/exhibitions" (`index.astro:40`, `DontMissList.svelte:136,176`); the announcement "Showing 2 outdoors/community picks" (`DontMissList.svelte:92`).
+- Proposed: in visually hidden text and announcements, use `kindName(kind).toLowerCase()`: ", art and exhibitions", "Showing 2 outdoors and community picks".
+
+#### F22. [P3] [confirmed] Duplicate link text and two minor headings
+
+- Duplicate link (`DontMissList.svelte:184`): "These picks in the explorer" appears twice with different targets (open from 10-10). Proposed: "This week's picks in the explorer" and "Next two weeks' picks in the explorer".
+- Two About headings break the "headings are nouns" rule: "Support it" (an imperative) and "Wrong listing?" (a question). Proposed: "Support" and "Corrections".
+- Badge alt text: "Buy me a coffee" becomes "Support KC This Week on Buy Me a Coffee".
+
+#### F23. [P3] [confirmed] Small wording fixes
+
+- About analytics (`about.astro:20`): "cookieless analytics, which sets no cookies" is redundant. Proposed: "It counts page views with Vercel Web Analytics, which sets no cookies, ...".
+- Search placeholder (`Explorer.svelte:140`): "Search title, venue, neighborhood, why". Proposed: "Search titles, venues, neighborhoods, reasons".
+- Explorer row "✓ Oct 19" on desktop has no word and no tooltip. Add `title="Date and venue verified Oct 19"`.
+- "More like this" (`e/[id].astro:69`) is just the same kind, soonest first. Proposed: "More music" (from `kindName`).
+- Recurring event pages say "Date and venue verified". Proposed: "Schedule and venue verified".
+- "Clear them" with a single search pill: proposed "Clear filters".
+
+#### F24. [P3] [confirmed] Repeated place names and drifting empty states
+
+- Repeated or useless places: "Crown Center · Crown Center" (row `title` and where line); "Powell Gardens, Elsewhere in the metro" (card, and the calendar LOCATION, where it is useless for maps). Proposed: drop the neighborhood when it equals the venue or is the catch-all.
+- Empty states drift: "Nothing listed at the moment." (venue), "Nothing listed right now." (landing), "No events to show right now." (explorer), "Nothing is picked right now." Pick one form, for example "Nothing listed right now."
+
+#### F25. [P3] [confirmed] Public-face completeness
+
+- README:31 says "with the user agent `kc-this-week`", but that is the robots.txt token. Proposed: "identifying itself as `kc-this-week` (user agent `Mozilla/5.0 (compatible; kc-this-week/0.1; +https://www.kcthisweek.com/about)`)".
+- README "The data" omits the calendar feeds and /changes.
+- llms.txt omits /changes, /venues, /v/, /k/, /r/ and the `.ics` feeds (lane D's D6). About and README promise that llms.txt says "how to cite it", but there is no cite line. Add: "Cite as: KC This Week, https://www.kcthisweek.com (data under CC BY 4.0)."
+- The explorer's meta description (`explore.astro:7`), "Every one of 437 active Kansas City events", uses the internal word "active". The default view shows 426. Proposed: "All 437 upcoming events in and around Kansas City, by date, kind, and region."
+- About "everything listed" (`about.astro:34`): subscribing to it adds 426 events. Show the count.
+
+### Consistency table
+
+| Term | Variants found (location) | Recommendation |
+|---|---|---|
+| Flagged event | "picks" (index lede, DontMissList, Subscribe, /changes "New picks", week strip); "Don't miss" (row tag `ResultRow.svelte:22`, event page `e/[id].astro:49`, feed name `feeds.ts:46`, JSON-LD `event-meta.ts:99`); "Don't-miss only" (`FilterRail.svelte:70`); "don't-miss only" (pill `query.ts:119`); "What don't-miss means" and "A don't-miss event" (`about.astro:29-30`) | "pick" in prose, filters and feed names; "Don't miss" only as the tag; About defines one by the other (F6) |
+| Always there | "Always there" (front h2, explorer group `group.ts:129`); "Include always-there" (`FilterRail.svelte:71`); "including always-there" (pill `query.ts:120`); "always-there events" (README) | Heading "Always there"; filter "Include recurring events"; README hyphen is fine as a modifier |
+| Own page | "the event's own page" meaning the venue's page (index lede, About:23, banner); "an event's own page" meaning the site's `/e/` page (About:43); issue form "Event page" meaning the own page | Prose: "the venue's or organizer's page"; the site's page: "the event's page here"; form: "Event's own page" (F1, F13) |
+| End of a limited run | "Until" (tile), "Closes" (rows, labels), "Through" (event page) | "Closes" for runs, "through" for one-off spans (F7) |
+| Verification | "Researched weekly", "last researched on" (run level); "Verified", "Date and venue verified" (event level); "read from" (claims); "failed check" (404) | Consistent apart from the 404; drop "failed check" (F11) |
+| Explore / explorer | Nav and h1 "Explore"; links "in the explorer" | Fine as verb and noun; keep |
+| Kind names | Slash form in chips, rows, pills, screen-reader text ("theater/dance"); "and" form in headings, feeds, About ("Theater and dance") | Slash on chips, "and" in anything read aloud (F21) |
+| Empty states | "at the moment" and "right now" mix | One form (F24) |
+| Quotes | Site copy uses straight quotes and apostrophes; the search pill uses curly; dataset text is curly | Acceptable; if unified, curly everywhere |
+| Numbers in prose | "9 days" (About) and "seven days", "two weeks" elsewhere | Spell out (F18) |
+| Time, date, range style | "7:00 pm", "Oct 9", "Fri Oct 9", "Friday, October 9", en dash ranges, Oxford comma, sentence case | Consistent; keep |
+
+### Truthfulness table
+
+| Claim | Where | What the code does | Verdict |
+|---|---|---|---|
+| "Every date is read from the event's own page" | index:27, about:23, README:11, llms.txt | Read from the primary (list) page; `eventUrl` never verifies (ADR 0009); the event page says "from the list at" | False (F1) |
+| Listings and reasons are written by a model, "and the site says so" | PRODUCT, README:14 | About credits a model only for the don't-miss call | Partly false (F2) |
+| "If 9 days pass without a run, every page says so" | about:24 | Banner from run day + 10, client-side only | Off by one in a plain reading (F18) |
+| "Once a week" | about:23, 27 | Cron Mondays 6:17 | True |
+| Crawler name and user agent | about:27 | Generated from `src/adapters/identity.ts`, exact match | True; README imprecise (F25) |
+| "Every event shows when it was last verified" | about:24, README:11 | Every event page does; rows hide it under 800 px; cards show it only when older than the run | True at the event page level |
+| "Each listing links to your own event page" | about:27, README:31 | 414 of 437 link to the own page, the rest to the list page | Mostly true |
+| Analytics "sets no cookies, keeps nothing that identifies you, loads from this site" | about:20 | Vercel Web Analytics served from the deployment | True per the security lane |
+| "Events you save stay in your own browser" | about:20 | localStorage only, no network | True |
+| Footer geography | Footer.astro:12 | Verbatim from `research.config.yaml` `geography` | True |
+| "Browse all 437 events" | index:47 | Links `/explore?recurring=1`, which shows 437 | True |
+| "It updates weekly; remove the calendar to stop" | Subscribe.astro:11 | Feed rebuilt each run; REFRESH-INTERVAL daily | True |
+| "Recurring events are never flagged; they are listed under Always there instead" | about:30 | Front page shows 3 hand-picked (one is the wrong match); explorer shows all 11 | Misleading (F15) |
+| 404 "passed or been taken down after a failed check" | 404:7 | Removal reasons: past, cancelled, two-strike, unverified after outages, duplicate, held | Incomplete; "failed check" wrong (F11) |
+| Gone reason "No longer listed by the venue" | changes.ts:144 | Two-strike, on primary pages that are often organizers' | Mostly true (F19) |
+| "first listed in the last seven days" | changes.astro:36 | First seen by the job | Misleading (F16) |
+| "the report is posted publicly on GitHub"; "sends the event's pages with it" | about:43, ReportForm:29 | Files a public issue with the site page, the primary page and the own page | True (the security lane's F1 concerns trusting those fields) |
+| "a link back is all that is asked" | about:40, llms.txt | data/LICENSE also requires a change notice and carves out quoted text | Understated (F12) |
+| Descriptions are quoted publisher text | data/LICENSE:17-19 | Model-written, no sentence copied | False (F12) |
+| "/llms.txt ... how to cite it" | about:40, README:21 | No citation line | Unmet (F25) |
+| "All day" | group.ts:36 | Date-only start means no time was listed | False (F3) |
+| Calendar end times | ics.ts:73-75 | Two-hour placeholder, not stated | Unlabelled guess (F17) |
+| "Every venue with events listed, 97 in all" | venues.astro:13 | 3 of the 97 have none | Slightly false (F20) |
+
+### What reads well and should stay
+
+- The event page's verified line, "Date and venue verified Oct 19 from the list at thecoterie.org." It is precise, sourced and honest; the rest of the site should match it.
+- The staleness banner: "This list was last researched on Oct 19 and may have missed changes since. Check the event's own page before you go." Calm, and says what to do.
+- The no-JavaScript notice: "Filters need JavaScript. Without it, this page lists every event, whatever the link asked for."
+- The passed-event notice: "This has already happened. The page stays up until the next weekly run; see what's coming."
+- The shortlist notice: "None of this shortlist's events are still to come. Showing everything instead."
+- On /changes: "Not recorded for this run." and "Compared with the run of ...".
+- The landing page descriptions, such as "157 music events in Kansas City, Oct 21–Dec 16."
+- The About privacy paragraph and footer, "No ads, no accounts, no cookies." Both are factual.
+- For venues' robots.txt instructions, which are exact and copyable.
+- The report form helper, "No name or contact needed."
+- The Support paragraph: "Each weekly run costs a few dollars in model and search fees". A fact, not a slogan.
+- Mechanics: no "we", no exclamation marks, no em dashes, no marketing adjectives in any site string; sentence case, Oxford comma, en dash ranges and lowercase "pm" are consistent.
+
+### Not checked
+
+- Client-rendered states (empty saved view, no match, gone shortlist, started pick, banner): read from the Svelte source, not seen in a browser.
+- Screen readers: how they voice "/", "–", "Wed" and "Sun".
+- Layout fit: whether "Closes" fits the 4rem tile, and "No time listed" the row's date column.
+- The analytics claim: taken from the security lane.
+- External rendering: how a filed issue looks on GitHub, and how calendar apps show the feed names.
