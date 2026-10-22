@@ -11721,7 +11721,7 @@
       "lastVerified": "2026-10-19T19:18:51-05:00",
       "lastChanged": "2026-10-03T21:47:36-05:00",
       "lastJudged": "2026-10-03T21:47:36-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -11731,7 +11731,8 @@
       "evidence": {
         "date": "October 27 @ 6:00 pm – 9:00 pm",
         "venue": "Events for October 2026 – Replay Lounge"
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_1a9757cb624d",
@@ -16367,7 +16368,7 @@
       "lastVerified": "2026-10-19T19:18:51-05:00",
       "lastChanged": "2026-10-03T21:47:36-05:00",
       "lastJudged": "2026-10-03T21:47:36-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -16377,7 +16378,8 @@
       "evidence": {
         "date": "November 6",
         "venue": "Kansas City Zoo & Aquarium"
-      }
+      },
+      "expiryReason": "not-public"
     },
     {
       "id": "evt_8b94e77a3476",
@@ -38132,7 +38134,7 @@
       "lastVerified": "2026-10-19T19:18:51-05:00",
       "lastChanged": "2026-10-19T19:18:51-05:00",
       "lastJudged": "2026-10-19T19:18:51-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -38142,7 +38144,8 @@
       "evidence": {
         "date": "Tuesday, November 3, 2026 from 6:00-7:00 PM",
         "venue": "Attend this in-person info session!"
-      }
+      },
+      "expiryReason": "not-public"
     },
     {
       "id": "evt_f1606419e8e8",

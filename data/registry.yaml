@@ -169,7 +169,7 @@ sources:
     urls: [https://www.replaylounge.com/calendar-full/]
     kind: music
     neighborhood: Lawrence
-    checkHints: Bar at 946 Massachusetts St, Lawrence; many nights are recurring DJ or free shows.
+    checkHints: Bar at 946 Massachusetts St, Lawrence; many nights are recurring DJ or free shows. Its community nights (the Dungeons & Dragons Community Gathering) are the bar's standing nights, not events.
     status: active
     notes: ICS feed at https://www.replaylounge.com/calendar-full/?ical=1
 
@@ -351,7 +351,7 @@ sources:
     urls: [https://charlottestreet.org/2026-event-calendar/]
     kind: art/exhibitions
     neighborhood: Midtown
-    checkHints: Arts nonprofit; events are at its own spaces and partner venues, so read the venue from each listing. A series the calendar lists once per date under one title (Artists in Dialogue, "Wednesdays, November 4, 11, and 18") is one event, never one event per date.
+    checkHints: Arts nonprofit; events are at its own spaces and partner venues, so read the venue from each listing. A series the calendar lists once per date under one title (Artists in Dialogue, "Wednesdays, November 4, 11, and 18") is one event, never one event per date. An info session on applying to one of its programs (Crossroads Artboards 2027-28 Info Session) is not public; the artworks on view are the event.
     status: active
     notes: The calendar page's address carries the year; update it each January.
 
@@ -510,7 +510,7 @@ sources:
     urls: [https://kansascityzoo.org/events]
     kind: outdoors/community
     neighborhood: Swope Park
-    checkHints: Zoo at 6800 Zoo Dr in Swope Park.
+    checkHints: Zoo at 6800 Zoo Dr in Swope Park. Scout programs (Cub Scout Night at the Zoo) are for scout groups only, not the public.
     status: active
 
   - name: Powell Gardens
