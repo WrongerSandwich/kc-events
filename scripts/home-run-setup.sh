@@ -185,9 +185,10 @@ finish() {
 #
 # The weekly run (scripts/weekly-run.sh) needs a clone of its own, the two keys and a token for this
 # repository alone in that clone's gitignored .env (with, optionally, a healthchecks.io ping URL for
-# the alert), and a cron line that can find pnpm and the Node
-# .nvmrc names. This wizard sets up each from the checkout it is run in. Re-running is safe: the
-# clone is reused, keys and token are offered back, and the cron line is replaced.
+# the alert and the Vercel Deploy Hook's URL for the site's daily rebuild), and cron lines that can
+# find pnpm and the Node .nvmrc names. This wizard sets up each from the checkout it is run in.
+# Re-running is safe: the clone is reused, keys and token are offered back, and the cron lines are
+# replaced.
 #
 #   bash scripts/home-run-setup.sh
 #
@@ -197,6 +198,7 @@ finish() {
 TOTAL_STAGES=8
 DEFAULT_RUN_DIR="$HOME/kc-this-week-run"
 CRON_SCHEDULE="17 6 * * 1" # Mondays 6:17 a.m. local: early in the week, off the top of the hour
+DEPLOY_SCHEDULE="5 0 * * *" # 12:05 a.m. local, every day: the site rebuilt as of the new day (scripts/daily-deploy.sh)
 
 # bare VALUE prints VALUE without a trailing CR or one pair of surrounding quotes. The CLI reads .env
 # with Node's loader, which drops both, but the library's re-run default is the raw line.
@@ -359,9 +361,24 @@ else
   fi
 fi
 
-# ── Stage 7: the cron line ─────────────────────────────────────────────────
-stage "Cron: Mondays at 6:17 a.m. local"
+# ── Stage 7: the cron lines ────────────────────────────────────────────────
+stage "Cron: the weekly run, and the site's daily rebuild"
+# The site is built only when a commit lands, so without this every page is Monday's all week; a
+# daily POST to the project's Deploy Hook builds main again at the real day (scripts/daily-deploy.sh).
+# Anyone with the hook's URL can start a deploy, so it lives in .env and is never printed.
+say "The site is rebuilt once a day through a Vercel Deploy Hook, so its pages are never a week old."
+step "Vercel → the project → Settings → Git → Deploy Hooks: name kc-this-week daily, branch main, Create Hook"
+step "Copy the hook's URL (https://api.vercel.com/v1/integrations/deploy/…)"
+ask_secret DEPLOY_HOOK_URL "Deploy hook URL (Enter to skip):"
+DEPLOY_HOOK_URL=$(bare "${DEPLOY_HOOK_URL:-}")
+if [[ -z "$DEPLOY_HOOK_URL" ]]; then
+  warn "no deploy hook; the site is rebuilt only by the weekly commit, so its pages age all week"
+  SKIPPED+=("make a Deploy Hook for main in the Vercel project and put its URL in $ENV_FILE as DEPLOY_HOOK_URL")
+else
+  write_env DEPLOY_HOOK_URL "$DEPLOY_HOOK_URL"
+fi
 CRON_LINE="$CRON_SCHEDULE PATH=$CRON_PATH $RUN_DIR/scripts/weekly-run.sh"
+DEPLOY_CRON_LINE="$DEPLOY_SCHEDULE PATH=$CRON_PATH $RUN_DIR/scripts/daily-deploy.sh"
 # Every test and CI job runs the Node major in .nvmrc; a run on another would use an untested fetch.
 NODE_WANTED=$(tr -d '[:space:]' <"$RUN_DIR/.nvmrc")
 NODE_WANTED=${NODE_WANTED#v}
@@ -374,14 +391,17 @@ if [[ "$NODE_HAVE_MAJOR" != "${NODE_WANTED%%.*}" ]]; then
   SKIPPED+=("install Node $NODE_WANTED (this machine has $NODE_HAVE), then re-run this wizard for the cron line")
 else
   say "Node $NODE_HAVE matches the repository's .nvmrc ($NODE_WANTED)."
-  say "This line goes in your crontab (PATH is set for this job alone; other lines are untouched):"
-  note "$CRON_LINE"
-  if confirm "Install it?"; then
-    { crontab -l 2>/dev/null | grep -v 'scripts/weekly-run.sh' || true; echo "$CRON_LINE"; } | crontab -
+  # The daily line only with a hook to call; without one the script would fail every night and tell no one.
+  LINES=("$CRON_LINE")
+  if [[ -n "$DEPLOY_HOOK_URL" ]]; then LINES+=("$DEPLOY_CRON_LINE"); fi
+  say "These lines go in your crontab (PATH is set for these jobs alone; other lines are untouched):"
+  for line in "${LINES[@]}"; do note "$line"; done
+  if confirm "Install them?"; then
+    { crontab -l 2>/dev/null | grep -v 'scripts/weekly-run.sh' | grep -v 'scripts/daily-deploy.sh' || true; printf '%s\n' "${LINES[@]}"; } | crontab -
     say "Installed. crontab -l now has:"
     crontab -l | sed 's/^/    /'
   else
-    SKIPPED+=("add to crontab: $CRON_LINE")
+    SKIPPED+=("add to crontab: ${LINES[*]}")
   fi
 fi
 
