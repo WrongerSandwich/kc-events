@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildVenues, readVenueTable, type VenueRow } from "../src/build/venues";
 import { loadPublished } from "../src/build/load-dataset";
 import { addressLine, mapUrl, NOTHING_LISTED, venueDirectory, venueJsonLd, venuePath, venueSlug } from "../src/lib/venues";
@@ -152,12 +152,21 @@ describe("buildVenues", () => {
     expect(() => build({ rows: [{ ...kauffman, name: "Helzberg Hall" }] })).toThrow(/key the row on "Kauffman Center for the Performing Arts"/);
   });
 
-  it("refuses a row for a venue nothing in the dataset or the aliases names", () => {
-    expect(() => build({ rows: [{ ...kauffman, name: "Knuckleheads" }], recordVenues: ["recordBar"] })).toThrow('venue table row "Knuckleheads" names no venue: no event in the dataset is at it, as spelled, and venueAliases has no entry for it');
+  it("keeps a row for a venue no record in the dataset names, with a warning, so an archived venue cannot refuse a deploy", () => {
+    // The job archives expired records eight weeks on; a row whose venue's last record went that way must not fail the
+    // weekly data commit's build. Its page lists nothing until an event appears.
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const venues = build({ rows: [{ ...kauffman, name: "Knuckleheads" }], recordVenues: ["recordBar"] });
+      expect(venues.map((v) => v.name)).toEqual(["Knuckleheads"]);
+      expect(warned).toHaveBeenCalledWith(expect.stringMatching(/^site: venue table row "Knuckleheads" names no venue a record in the dataset is at/));
+    } finally {
+      warned.mockRestore();
+    }
   });
 
   it("refuses a row spelled other than the site spells the venue", () => {
-    expect(() => build({ rows: [{ ...kauffman, name: "the truman" }], recordVenues: ["The Truman"] })).toThrow(/"the truman" names no venue/);
+    expect(() => build({ rows: [{ ...kauffman, name: "the truman" }], recordVenues: ["The Truman"] })).toThrow('venue table row "the truman" is spelled other than the site spells "The Truman"; key the row on "The Truman"');
   });
 
   it("refuses two rows for one page", () => {
