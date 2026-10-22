@@ -847,3 +847,40 @@ test("the changes page lists the run's new picks, moves, new events by kind, and
   await expect(page.locator(".site-footer").getByRole("link", { name: "What changed" })).toHaveAttribute("href", "/changes");
   await expect(page.locator('meta[name="robots"]')).toHaveCount(0);
 });
+
+// Two defects the 2026-10-21 pre-launch audit measured (its lane A): an event page with a long kind label beside its
+// Don't miss tag scrolled sideways at 320 px, and the explorer's sticky bar covered the row that Shift+Tab had just
+// focused, because nothing told the browser to scroll focus clear of the bar.
+test("an event page with a long kind label and a Don't miss tag does not scroll sideways at 320 px (WCAG 1.4.10)", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await on(page, BUILD_DAY, "/e/evt_e2e000000005"); // a festivals/markets pick
+  await expect(page.locator(".dont-miss")).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBe(0);
+});
+
+test("tabbing backwards through the explorer never leaves the focused row under the sticky bar (WCAG 2.4.11)", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.emulateMedia({ reducedMotion: "reduce" }); // instant scrolling, so each stop's position can be read at once
+  await on(page, BUILD_DAY, "/explore");
+  await page.getByRole("button", { name: /^Save / }).last().focus();
+  for (let stop = 0; stop < 24; stop++) {
+    await page.keyboard.press("Shift+Tab");
+    await page.evaluate(() => new Promise(requestAnimationFrame));
+    // Covered: the point at the focused element's centre paints something else (the bar, a sticky heading), or the
+    // element sits outside the viewport.
+    const covered = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return "none";
+      const r = el.getBoundingClientRect();
+      if (r.height === 0) return "none";
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const where = `${el.tagName} "${el.textContent?.trim().slice(0, 30)}" at ${Math.round(cx)},${Math.round(cy)} in ${innerWidth}x${innerHeight}`;
+      if (cy < 0 || cy > innerHeight || cx < 0 || cx > innerWidth) return `${where}: outside the viewport`;
+      const top = document.elementFromPoint(cx, cy);
+      return el === top || (top !== null && el.contains(top)) ? "no" : `${where}: under ${top?.tagName}.${top?.className}`;
+    });
+    expect(covered, `stop ${stop}`).toMatch(/^(no|none)$/);
+  }
+});

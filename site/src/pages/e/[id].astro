@@ -80,7 +80,8 @@ const jsonLd = [...(eventLd === undefined ? [] : [eventLd]), breadcrumbJsonLd(ev
   .event { margin-top: var(--space-8); }
   .head { margin-bottom: var(--space-4); }
   .head.dated { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-4); align-items: start; }
-  .kind { display: flex; gap: var(--space-2); align-items: center; margin: 0; }
+  /* Wraps: beside the tile at 320 px, "outdoors/community" and the Don't miss tag together are wider than the column (audit 2026-10-21, A2). */
+  .kind { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0; }
   h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: var(--space-2) 0; }
   .date { font-size: var(--text-lg); margin: 0; }
   .where, .admission { color: var(--fg-muted); margin: 0; }

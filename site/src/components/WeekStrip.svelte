@@ -60,7 +60,8 @@
   a.day:active { transform: translateY(1px); }
   .name { font-size: var(--text-xs); color: var(--fg-muted); }
   .num { font-size: var(--text-lg); font-weight: var(--weight-strong); }
-  .icons { display: flex; align-items: center; justify-content: center; gap: 0.15rem; min-height: 1.15rem; font-size: var(--text-sm); }
+  /* Clipped to the tile: a row of icons wider than the tile would paint into the next day's (audit 2026-10-21, A3). */
+  .icons { display: flex; align-items: center; justify-content: center; gap: 0.15rem; min-height: 1.15rem; max-width: 100%; overflow: hidden; font-size: var(--text-sm); }
   .icons > span:not(.more) { color: var(--hue); display: inline-flex; }
   .more { font-size: var(--text-xs); color: var(--fg-muted); }
   .more.narrow { display: none; }
@@ -75,8 +76,9 @@
   .today { border: 1px solid var(--fg); }
   .today .name, .today .num { color: var(--fg); font-weight: var(--weight-strong); }
   @media (prefers-reduced-motion: reduce) { .day { transition: none; } a.day:active { transform: none; } }
-  /* Narrow phones: a week of columns at 320 px leaves ~40 px each; the icons drop to one and "+n" counts the rest. */
-  @media (max-width: 24rem) {
+  /* Phones: a week of columns at 320 px leaves ~40 px each, and even five columns at 390 px leave 66 px, less than
+     three icons and "+n" need (~84 px); the icons drop to one and "+n" counts the rest, up to where a tile is ~92 px. */
+  @media (max-width: 33rem) {
     .icons > span:not(.more):nth-child(n + 2), .more.wide { display: none; }
     .more.narrow { display: inline; }
   }
