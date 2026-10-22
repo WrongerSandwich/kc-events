@@ -20,11 +20,12 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
     <p>{siteConfig.tagline} It is for anyone in or near the city who wants to know what is on without wading through sponsored posts or a feed. It is free, and it has no ads and no accounts. It counts visits with Vercel's cookieless analytics, which sets no cookies, keeps nothing that identifies you, and loads from this site rather than anyone else's servers; nothing else is measured. Events you save stay in your own browser.</p>
 
     <h2>How it is made</h2>
-    <p>Once a week a research job reads venue and organizer pages directly. A date and a venue are published only when they were read from the event's own page; when the job cannot cite one, the event is held back rather than guessed at. The rules it reads pages by are <a href={extractionRules}>written down in the repository</a>.</p>
+    <p>Once a week a research job reads venue and organizer pages directly. A language model reads each page and writes the listing: its title, date, venue, and a short description; code then checks that the date and venue it quoted are on the page. A date and a venue are published only when they were read from the venue's or organizer's own page, never from a listings site or a search result; when the job cannot cite one, the event is held back rather than guessed at. The rules it reads pages by are <a href={extractionRules}>written down in the repository</a>.</p>
     <p>Every event shows when it was last verified, and the stamp under the site name says when the job last ran. <a href="/changes">What changed</a> lists what the last run added, moved, and took off. If {siteConfig.staleAfterDays} days pass without a run, every page says so.</p>
 
     <h2 id="for-venues">For venues</h2>
     <p>The research job fetches pages once a week as <code>{about.crawler}</code>, with the user agent <code>{about.userAgent}</code>. It obeys <code>robots.txt</code>: to keep it off your site, add a <code>User-agent: {about.crawler}</code> group with <code>Disallow: /</code>. Each listing links to your own event page.</p>
+    <p>To correct a listing, use <a href="#wrong-listing">Wrong listing</a> below, or "Wrong? Report it" on the event's page; both are public. For anything else, such as asking for your calendar page to be read, <a href={`${siteConfig.repoUrl}/issues/new`}>open an issue on GitHub</a>.</p>
 
     <h2>What don't-miss means</h2>
     <p>A don't-miss event is a one-off or a limited run that is worth going out of your way for. It is an editorial call, made by a model under <a href={curationRules}>written rules</a> kept in the repository, and each one comes with a one-line reason. Recurring events are never flagged; they are listed under Always there instead.</p>
@@ -39,7 +40,7 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
     <h2>The data</h2>
     <p>Every active event is at <a href="/events.json">/events.json</a>, with the fields this site shows. It is free to reuse under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>; a link back is all that is asked. For language models and other readers, <a href="/llms.txt">/llms.txt</a> describes the site, the dataset, and how to cite it.</p>
 
-    <h2>Wrong listing?</h2>
+    <h2 id="wrong-listing">Wrong listing?</h2>
     <p>If a date, venue, or anything else is wrong, say so here; the report is posted publicly on GitHub. On an event's own page, "Wrong? Report it" sends the event's pages with it.</p>
     <ReportForm summary="Report a wrong listing" />
 

@@ -20,7 +20,7 @@ Success is a stranger from /r/kansascity coming back, and Evan proposing somethi
 
 ## Positioning
 
-The only KC events list that tells you which things you'd regret missing, with a reason for each, and that publishes a date only when it was read from the event's own page.
+The only KC events list that tells you which things you'd regret missing, with a reason for each, and that publishes a date only when it was read from the venue's or organizer's own page.
 
 ## Brand Personality
 

@@ -10,6 +10,8 @@ async function on(page: Page, when: Date, path: string) {
 test("the front page buckets the fixture's don't-miss events", async ({ page }) => {
   await on(page, BUILD_DAY, "/");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("What's on in Kansas City");
+  // The lede says who makes the picks and where a date comes from (the venue's list, as the event page's verified line says).
+  await expect(page.locator(".lede")).toContainText("chosen and explained by a model under written rules. Every date is read from the venue's or organizer's own page");
   const sections = page.getByRole("region");
   await expect(sections.nth(0)).toHaveAccessibleName("This week, Oct 5–11");
   // The exhibition is on now, so it sorts as today, ahead of Tuesday's show.
@@ -455,7 +457,7 @@ test("the site's page for an event sends the reader to the event's own page and 
   await on(page, BUILD_DAY, "/e/evt_e2e000000001");
   await expect(page.getByRole("link", { name: "Details and tickets at tickets.example.com" })).toHaveAttribute("href", "https://tickets.example.com/frizzi");
   const verified = page.locator(".verified");
-  await expect(verified).toContainText("Date and venue verified Oct 3 from the list at example.com.");
+  await expect(verified).toContainText("Date and venue verified Oct 3 from the list at example.com. The reason and description are written by a model.");
   await expect(verified.getByRole("link", { name: "the list at example.com" })).toHaveAttribute("href", "https://example.com/recordbar/frizzi");
   await page.getByText("Wrong? Report it").click();
   await expect(page.getByRole("link", { name: "report it on GitHub" })).toHaveAttribute("href", /template=wrong-listing\.yml&.*event-page=https%3A%2F%2Ftickets\.example\.com%2Ffrizzi/);

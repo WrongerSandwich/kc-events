@@ -8,7 +8,7 @@ The front page is the don't-miss list (one-offs and limited runs worth going out
 
 Once a week a research job reads Kansas City venue and organizer pages directly. Two rules shape what it publishes:
 
-- **Cite or drop.** A date and a venue are published only when they were read from the event's own page. An event the job cannot cite is held back, not guessed at. Every event shows when it was last verified.
+- **Cite or drop.** A date and a venue are published only when they were read from the venue's or organizer's own page, never from a listings site or a search result. An event the job cannot cite is held back, not guessed at. Every event shows when it was last verified.
 - **Don't-miss is scarcity of occurrence.** A model flags the one-offs and limited runs you would regret missing, under written rules, with a reason for each. Recurring events are never flagged.
 
 The listings and the reasons are written by a model, and the site says so. The rules it works by are plain Markdown in [`prompts/`](prompts/): [`extraction-rules.md`](prompts/extraction-rules.md) for reading a page, [`curation-prompt.md`](prompts/curation-prompt.md) for the don't-miss call. The sources it checks are [`data/registry.yaml`](data/registry.yaml). Each run writes a report to [`data/runs/`](data/runs/).
@@ -28,7 +28,7 @@ Use "Wrong? Report it" on the event's page: a short form there sends the report 
 
 ## For venues
 
-The job fetches pages once a week with the user agent `kc-this-week` and obeys `robots.txt`. To keep it off your site, add a `User-agent: kc-this-week` group with `Disallow: /`. Each listing links to your own event page. See [For venues](https://www.kcthisweek.com/about#for-venues).
+The job fetches pages once a week, identifying itself as `kc-this-week`, and obeys `robots.txt`. To keep it off your site, add a `User-agent: kc-this-week` group with `Disallow: /`. Each listing links to your own event page. To correct a listing, use "Wrong? Report it" on the event's page; to ask for your calendar page to be read, [open an issue](https://github.com/WrongerSandwich/kc-events/issues/new). See [For venues](https://www.kcthisweek.com/about#for-venues).
 
 ## Running it
 
