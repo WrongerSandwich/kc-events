@@ -17,7 +17,7 @@ Last run: ${meta.lastSuccessfulRun}. ${events.length} active events.
 ## Pages
 
 - ${origin}/ : the don't-miss list by horizon, then recurring events
-- ${origin}/explore : active events, today through Sunday by default and every date at ?when=all, filterable by date, kind, region, don't-miss, and search (filters are in the query string)
+- ${origin}/explore : active events, filterable by date, kind, region, don't-miss, and search (filters are in the query string, applied in the browser); its HTML lists today through Sunday whatever the query, so read every event from /events.json below
 - ${origin}/e/<id> : one event; add .ics for a calendar file
 - ${origin}/about : how the site is made and where to report a wrong listing
 

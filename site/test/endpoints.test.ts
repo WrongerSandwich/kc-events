@@ -55,6 +55,8 @@ describe("committed data", () => {
 
     it("writes llms.txt, robots.txt, the sitemap, and the 404", () => {
       expect(read("llms.txt")).toContain("/events.json");
+      // An agent's plain fetch runs no script, so the explorer's HTML is the week whatever the query; say where every event is.
+      expect(read("llms.txt")).toContain("its HTML lists today through Sunday whatever the query, so read every event from /events.json");
       expect(read("robots.txt")).toContain("/sitemap.xml");
       const sitemap = read("sitemap.xml");
       expect(sitemap).toContain("<urlset");

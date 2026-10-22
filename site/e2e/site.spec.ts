@@ -274,6 +274,10 @@ test("without JavaScript, a filtered link says the filters need it", async ({ br
   const notice = page.locator(".no-js");
   await expect(notice).toBeVisible();
   await expect(notice).toContainText("Filters need JavaScript.");
+  // It points to pages that list further ahead without JavaScript.
+  await expect(notice).toContainText("list three weeks ahead");
+  await expect(notice.locator("a[href^='/k/']")).toHaveCount(1);
+  await expect(notice.locator("a[href^='/r/']")).toHaveCount(1);
   // Hidden by the <noscript> style, which the CSP lets through by its hash.
   await expect(page.getByRole("button", { name: /^Filters/ })).toBeHidden();
   expect(violations).toEqual([]);
@@ -309,9 +313,16 @@ for (const js of [true, false]) {
     await expect(results.locator("details")).toHaveCount(0);
     await expect(results.getByRole("heading", { name: "Closing exhibition" })).toBeVisible();
     const keep = results.getByRole("link", { name: /^Keep going/ });
-    await expect(keep).toHaveText("Keep going: next week · 1 event →");
-    await expect(keep).toHaveAttribute("href", "/explore?when=2026-10-05..2026-10-18");
-    await expect(results.getByRole("link", { name: "or see all 9" })).toHaveAttribute("href", "/explore?when=all");
+    const all = results.getByRole("link", { name: "or see all 9" });
+    if (js) {
+      await expect(keep).toHaveText("Keep going: next week · 1 event →");
+      await expect(keep).toHaveAttribute("href", "/explore?when=2026-10-05..2026-10-18");
+      await expect(all).toHaveAttribute("href", "/explore?when=all");
+    } else {
+      // Without JavaScript either link would reload this same week, so the noscript style hides them.
+      await expect(keep).toBeHidden();
+      await expect(all).toBeHidden();
+    }
     await context.close();
   });
 }
