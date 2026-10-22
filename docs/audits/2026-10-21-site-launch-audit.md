@@ -6,7 +6,7 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 
 | Lane | Scope | State |
 |---|---|---|
-| A | Technical frontend: accessibility beyond axe, responsive, theming, performance, anti-patterns | running (third attempt) |
+| A | Technical frontend: accessibility beyond axe, responsive, theming, performance, anti-patterns | done, below |
 | B | UX critique: heuristics, personas, journeys | done, below |
 | C | Security and the trust boundary: `/api/report`, CSP, injection surfaces, dependencies, privacy claims | done, below |
 | D | SEO, sharing, structured data, calendar feeds | done, below |
@@ -34,7 +34,11 @@ The P1s, deduplicated across lanes and ordered by what a new reader would hit fi
 | 9 | The week strip's Fri and Sat jump to the first card that starts that day, not to a Thursday span; "On now" stays folded above a few rows whatever the date filter | B (B3) | `WeekStrip.svelte`, `group.ts` | small; day presets are the P2 half |
 | 10 | "For venues" says how to correct a listing or ask to be read, not only how to block the crawler | F (F5), B (Morgan) | `about.astro`, `README.md` | copy; a private address is the owner's call |
 
-Of these, 1, 3, 4, 5, 6, 8 and the copy half of 9 and 10 are site code or copy an agent can land in one pull request from this worktree, with tests; 2 needs the deploy hook created in the Vercel dashboard (the cron line is then one `curl`); 7 is hand edits to the dataset plus prompt rules, which a reviewer should read.
+| 11 | The explorer's sticky bar and day headings hide the focused row when tabbing backwards (WCAG 2.4.11): `scroll-padding-top` for the bar, and no sticky bars in short viewports | A (A1) | `Explorer.svelte`, `base.css` | small, CSS |
+| 12 | An event page scrolls sideways at 320 px when "Don't miss" sits beside a long kind label (today: Dark Forest, Graveyard 5K; WCAG 1.4.10): let the kind line wrap | A (A2) | `e/[id].astro` | one line |
+| 13 | A week-strip day with four or more picks spills its icons into the next day's tile between 385 and 520 px (live on Saturday's tile now): fewer icons on phones, and clip the row | A (A3) | `WeekStrip.svelte` | small, CSS |
+
+Of these, 1, 3, 4, 5, 6, 8, 11, 12, 13 and the copy half of 9 and 10 are site code or copy an agent can land in one pull request from this worktree, with tests; 2 needs the deploy hook created in the Vercel dashboard (the cron line is then one `curl`); 7 is hand edits to the dataset plus prompt rules, which a reviewer should read.
 
 The P2s cluster into a few themes rather than forty separate tasks:
 
@@ -46,7 +50,7 @@ The P2s cluster into a few themes rather than forty separate tasks:
 - **Search and names** (E5): accent folding in the middle of a word ("rolon" finds "Rolón"), and the same for slugs.
 - **One idea, one name** (F6, F15): "pick" in prose and filters, "Don't miss" only as the tag, and About defines one by the other; "Include recurring events" for the explorer's checkbox.
 
-Lane A (technical frontend: contrast measured in both schemes, touch targets, reflow, reduced motion, forced colours, per-page payloads) is the one lane still to land; its findings go below when it does.
+Lane A's measurements back the rest: every text pair clears 5:1 in both schemes (lowest 5.03 light, 5.99 dark), the focus ring 4.23:1 and 8.78:1, reduced motion fully honoured, no colour literal outside the tokens, no anti-pattern tell, pages 83 to 96 KB with LCP under 300 ms on the home page. Its P2 themes join the ones above: nothing for `forced-colors` (pressed chips and the strip's bands vanish), 326 crowded sub-24 px links in the explorer's rows on a phone, `/explore` at 8,163 DOM nodes and 933 tab stops with no skip past the results, and Josefin Sans costing 12 KB for a twelve-letter wordmark.
 
 ## Lane-by-lane headlines
 
@@ -1098,3 +1102,161 @@ The site's own copy follows the house style everywhere: no "we", no exclamation 
 - Layout fit: whether "Closes" fits the 4rem tile, and "No time listed" the row's date column.
 - The analytics claim: taken from the security lane.
 - External rendering: how a filed issue looks on GitHub, and how calendar apps show the feed names.
+
+## Lane A: technical frontend quality
+
+All measurements were run by scripts against the local preview (`site/dist`, 559 pages) and, for performance, against production. Numbered A1 to A20 here; the lane's own harness names them F1 to F20.
+
+### Summary
+
+- **Scores:** Accessibility 3, Performance 3, Theming 4, Responsive 3, Anti-patterns 4. **Total 17/20.**
+- **Strong:** the token system holds up under measurement. Every text pair is at least 5.03:1 in light and 5.99:1 in dark, the focus ring is 4.23:1 / 8.78:1, and reduced motion is fully honoured. There are no hard-coded colours, no anti-pattern tells, and the home page weighs 96 KB with LCP at 288 ms.
+- **Must fix before launch (P1):** three confirmed defects: A1, the explorer's sticky bar fully hides the focused row when tabbing backwards (WCAG 2.4.11, AA); A2, two event pages scroll sideways at 320 px (WCAG 1.4.10); A3, the week-strip icons spill into the neighbouring day's tile at iPhone widths.
+- **Biggest P2s:** nothing for `forced-colors`, 326 crowded sub-24 px touch targets in the explorer at 390 px, a heavy `/explore` (8,163 DOM nodes), and truncated titles on desktop.
+
+### P1 (fix before launch)
+
+#### A1. [P1] [confirmed] Focus is entirely hidden under the explorer's sticky bar when tabbing backwards. WCAG 2.4.11 (AA, new in 2.2)
+
+- Location: `site/src/components/Explorer.svelte:220` (`.bar`, sticky, `top: 0`); `site/src/styles/base.css:89-92` (`.section-heading.group`, sticky under the bar); `Explorer.svelte:273` (`.collapsed[open] summary`, also sticky). Only `.results` has a `scroll-margin-top`; there is no `scroll-padding-top` anywhere.
+- Evidence: tabbed down 70 stops on `/explore` at 1280x900, then Shift+Tab through 25 stops. 6 were entirely obscured (all 9 sample points covered), 3 more partly. Examples: the "SUNN O)))" link at top=43 px and a "Save" at top=20 px, with the bar's bottom at 47 px and the sticky day heading below it. At 400% zoom (320x256) the bar (96 px) plus the group heading (17.5 px) cover 113 of 256 px (44%) of the viewport permanently.
+- Fix: `html:has(.explorer) { scroll-padding-top: calc(var(--bar-height, 3rem) + 2.5rem); }` (the bar is already measured into `--bar-height`), and `@media (max-height: 500px) { .bar, .section-heading.group, .collapsed[open] summary { position: static; } }`.
+
+#### A2. [P1] [confirmed] Event pages overflow horizontally at 320 px when "Don't miss" sits beside a long kind label. WCAG 1.4.10 (AA)
+
+- Location: `site/src/pages/e/[id].astro:83`, `.kind { display: flex; gap: var(--space-2); align-items: center; margin: 0; }`. It does not wrap, and the column beside the 80 px date tile is only 192 px wide.
+- Evidence: all 553 event, venue, kind and region pages scanned at 320 px. Only `/e/evt_41a40a81ea8a` (Dark Forest) and `/e/evt_55d3a5832023` (Graveyard 5K) overflow: `scrollWidth` 350 vs 320, `span.dont-miss` right edge at 350 px. The "outdoors/community" chip is 154 px wide and the pill 76 px. The page also overflows by 3 px (393/390) at 390 px under the 1.4.12 text-spacing override. Any new don't-miss in a long-labelled kind (outdoors/community, festivals/markets, art/exhibitions, theater/dance) will do the same.
+- Fix: `flex-wrap: wrap` on `.kind`.
+
+#### A3. [P1] [confirmed] Week strip: a day with 4 or more picks spills its icons out of the tile at phone widths from 385 px up
+
+- Location: `site/src/components/WeekStrip.svelte:79`. The narrow rule `@media (max-width: 24rem)` (384 px) is what limits the icons to one plus "+n". Above it, `SHOWN = 3` icons plus "+n" need about 84 px and the tile is 66 px.
+- Evidence: at 390 px the Saturday tile (4 picks) has `.icons` scrollWidth 84 vs 66 px, 17 px past the edge. Because the row is centred, the left tree icon paints inside Friday's tile and reads as a second Friday pick. "+1" pokes out of Saturday's right edge. It stays broken until about 520 px, since the tile only reaches 92 px then. It is live on production today.
+- Fix: switch the narrow rule to a container query on `.week` (`@container (max-width: 33rem)`), or use `SHOWN = 2` below 34rem. Add `.icons { max-width: 100%; overflow: hidden; }` as a backstop.
+
+### P2 (next pass)
+
+#### A4. [P2] [confirmed] No `forced-colors` handling: pressed states and chip affordance disappear
+
+- Location: no `forced-colors` rule exists in `site/src`. Affected: `DontMissList.svelte:236-243` (`.kinds .chip`, `border: 0`, pressed is background only), `FilterRail.svelte:89` (pressed is tint, border colour and weight 500), `WeekStrip.svelte` (`.lane.open` is background only).
+- Evidence: with `forcedColors: "active"`, home kind chips compute identically pressed and unpressed (white bg, black text, weight 500, no border) and render as bare text; the explorer rail's pressed differs only by weight; the week-strip "running" bands vanish. Survivors: the focus ring, Save (its label changes), the Don't miss pill (it has a border), and kind identity (icon plus text). WCAG 1.4.1 and 1.4.11.
+- Fix: `@media (forced-colors: active)`: `.kinds .chip { border: 1px solid ButtonText; }`; `[aria-pressed="true"] { border-width: 3px; text-decoration: underline; }`, or `forced-color-adjust: none` with `Highlight`/`HighlightText`; `.lane.open { forced-color-adjust: none; background: CanvasText; }`.
+
+#### A5. [P2] [confirmed] Touch targets: crowded sub-24 px links in rows, and a stated 44 px rule that does not hold. WCAG 2.5.8 (AA)
+
+- Location: `site/src/components/ResultRow.svelte` (`.title a`, `a.venue` at lines 26-27, `.where`) at 800 px and below. Rail pills are in `FilterRail.svelte:86`.
+- Evidence (390 px touch emulation, inline links in sentences excluded): `/explore` 1,476 targets, 975 under 44 px, 851 under 24 px, 326 under 24 px and crowded (the 24 px spacing circle touches another target); `/changes` 181 crowded; a venue page 15. The 15 px tall `a.venue` (tabindex -1) sits 2 px under the 21 px title link, so both fail. Rail pills are 28 px tall, home kind chips 30 px: AA passes, but it contradicts `--tap: 2.75rem` and the "44 px" comments in the code. Primary actions (Save, Share, Add to calendar) are 44 px.
+- Fix: drop the venue and host links from rows on phones (they are out of the Tab order anyway and the event page links them), or give them `padding-block` to reach 24 px. `min-height: 2rem` or more on rail pills on phones.
+
+#### A6. [P2] [confirmed] Repeated identical link and button names in the screen-reader links list
+
+- Evidence: on `/explore` the links are named "screenland.com" x38, "Screenland Armour" x37, "recordBar" x34, "therecordbar.com" x34 (the `tabindex="-1"` host and venue links, in the AX tree and the rotor). "Save The Wizard of Oz" appears x7 (same title, different dates, with the date outside the name). WCAG 2.4.4, arguable.
+- Fix: `aria-label="{host}, source for {title}"` and `aria-label="{venue}, venue of {title}"`; for Save, add the date to the name or `aria-describedby` the `.when` span.
+
+#### A7. [P2] [confirmed] Desktop explorer truncates the primary content with ellipses
+
+- Location: `ResultRow.svelte:105` (`.title h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis }` from 1024 px), `:64-70` (venue, host, neighbourhood).
+- Evidence (488 rows): at 1024, 3 truncated titles, 150 venues, 93 hosts; at 1280, 145 titles (30%), 138 venues, 309 hosts; at 1920, 83 titles. Titles carry no `title` attribute. Under the 1.4.12 text-spacing override, truncated elements at 1280 go from 633 to 990.
+- Fix: let titles wrap to 2 lines (`line-clamp: 2` with a `title` fallback), or widen the title track.
+
+#### A8. [P2] [confirmed] `/explore` has about 933 Tab stops and nothing skips past the results
+
+- Evidence: about 933 stops at 1280 and 904 at 390, against 68 on `/`, 22 on an event page and 49 on a venue page. Rows are already two stops each.
+- Fix: a "Skip past results" link or landmark after the bar, and/or paginate the list ("Show 50 more"), which also helps A9.
+
+#### A9. [P2] [confirmed] Explorer weight, long tasks and post-build CLS
+
+Measured on production with Chromium (CPU throttling 4x applied; network emulation did not, so throttled figures are CPU-only).
+
+| | `/explore` | `/` |
+|---|---|---|
+| Transfer | 157 KB, 17 requests | 96 KB, 16 requests |
+| HTML | 45.8 KB br / 556.7 KB decoded | 13.8 KB br / 57.6 KB decoded |
+| Explorer JS | 35.2 KB br / 188.8 KB (96% used) | n/a |
+| DOM nodes | 8,163 | 614 |
+| FCP/LCP, unthrottled | 204 / 348 ms | 288 / 288 ms |
+| TBT, unthrottled | 363 ms (3 long tasks) | 0 ms |
+| FCP/LCP, 4x CPU | 1,260 / 1,260 ms | n/a |
+| TBT, 4x CPU | 1,652 ms | 149 ms |
+
+- CLS with the clock set to Oct 24: `/explore` 0.492 on desktop and 0.457 on phone (source `ARTICLE.row`, at 1.85 to 2.25 s); `/` 0.104. This confirms the code lane's numbers on production.
+- Fix: `content-visibility: auto; contain-intrinsic-size: auto 26px` on `.row` (about 70 px on phones), render only the first groups server-side, and chunk hydration.
+
+#### A10. [P2] [confirmed] Josefin Sans costs 12 KB and a request for a 12-letter wordmark, and is not preloaded
+
+- Evidence: `josefin-sans-latin-700-normal.woff2` is 12.0 KB, 12.5% of the home page's 96.4 KB, for 9 distinct glyphs ("KC THIS WEEK"). Only Geist is preloaded, and `font-display: swap` is set on every face, so the wordmark paints in the fallback first. Geist ships its full 100 to 900 axis (28.9 KB latin) though only 400 to 600 is used.
+- Fix: subset Josefin to those glyphs (about 1.5 KB) or draw the wordmark as SVG next to `Mark`. Limit Geist's `wght` axis with `fonttools varLib.instancer`.
+
+### P3 (polish)
+
+- **A11 [confirmed] Control edges below the token comment's own claim.** `tokens.css` says "Control edges clear 3:1", but these use `--rule` or `--rule-strong`: `.export` 1.23:1 light / 1.32 dark, `button.pill` 1.23 / 1.32, `.collapsed summary` ("On now") 1.92 / 2.38, and the unpressed rail chips. Text identifies them, so 1.4.11 is arguable. Use `--control-border` (3.49 / 3.65) for the explorer's own controls.
+- **A12 [confirmed] Label in name, WCAG 2.5.3.** Save: the visible text becomes "Saved" while the accessible name stays "Save <title>". Week strip: visible "Today 21" vs name "Wed 21: 1 pick" (`WeekStrip.svelte:48`). Put the visible words first.
+- **A13 [plausible] `<main id="main">` is not focusable** (`Base.astro:56`). Chromium moves the sequential start point after the skip link, but older Safari and VoiceOver combinations may not. Add `tabindex="-1"`.
+- **A14 [confirmed] Tight leading.** `.row { line-height: var(--leading-tight) }` (1.25) also applies to the wrapping `.why` sentence at 14 px. The detector flags this 27 times: explore 16, changes 8, venue 3.
+- **A15 [confirmed] Heading and group noise.** `Explorer.svelte:193` puts `<h2>` inside `<summary>` (other AT flatten summary children); `/explore` has 547 headings, one h3 per row; `FilterRail.svelte:35-36` nests `<div role="group" aria-label="When">` inside `<fieldset><legend>When`, so "When" is announced twice.
+- **A16 [confirmed] Event page h1 at 320 px takes 8 lines (about 270 px) beside the tile.** Stack the tile above the title below about 26rem.
+- **A17 [plausible] Dates are plain text with abbreviations.** No `<time>` on rows and no `<abbr>` ("Wed Oct 21"). The event page spells dates out in full, which is good.
+- **A18 [confirmed] The Svelte runtime (17.3 KB br, plus about 5 requests) loads on static pages** such as `/about`, `/venues` and the 404, only for the "Saved" link and the staleness banner (`client:idle`). Vanilla JS would save about 20 KB of transfer on every non-interactive page.
+- **A19 [confirmed] DOM order vs visual order on desktop.** The `.bar` comes first in the DOM, then `aside.rail`, then results, while visually the rail is on the left. Deliberate (comment at `Explorer.svelte:~140`) and mild under 2.4.3.
+- **A20 [confirmed] No `prefers-contrast: more` handling and no `theme-color`/`color-scheme` meta.** `<meta name="color-scheme" content="light dark">` avoids a first-paint flash in dark mode.
+
+### Detector (`npx impeccable`)
+
+- `src`: exit 0, no findings.
+- Built pages (index, explore, about, event, venue, changes): 39 warnings. tight-leading, 27: true positive (A14). cramped-padding, 12 on index and changes: false positives (`.later li` has `padding-block: var(--space-2)`; `.tile` has 8 to 12 px padding).
+- Manual grep for anti-patterns: no side-stripe borders (the only `border-right` is the 1.5 px chevron icon), no gradients, glass, hero metrics, bounce or elastic easing, no layout-property animation, and Josefin appears only in `.name`. The wordmark fountain animation is hover-only, small, and disabled under reduced motion.
+
+### Measured results by dimension
+
+**Accessibility**
+- Keyboard walk: home 69 stops (light mode), event 23, venue 46, about 33. In every stop the 2 px outline at 2 px offset was present, none was zero-size, and ring contrast was 4.23:1 on `--bg` in light (8.78 dark; 4.42 on `--bg-raised`).
+- Skip links: the first Tab on `/explore` is "Skip to content" (visible). It lands on `#main`, and the next Tab goes to search. "Skip to results" focuses `#results`, and the next Tab lands on the first row.
+- Explorer keyboard: the music chip toggles `aria-pressed` with Space and focus stays on it; the URL becomes `?kind=music`; the live region goes "426 events" to "158 events" (500 ms debounce). `/` focuses search, Escape clears and then blurs, and the Filters disclosure on a phone toggles `aria-expanded` with Enter. "Custom dates" opens with Enter. Save on the event page toggles `aria-pressed` and persists. Share announces "Link copied" via `aria-live=polite`. The report form opens and its first field is labelled "What is wrong". The home chip announces "Showing 2 film picks" via `role=status`.
+- Landmarks and headings (9 page types): one h1 everywhere, no level skips, `<html lang="en">`. Landmarks: `header`, `nav "Site"`, `main`, `footer`; home adds `nav "This week by day"`, the explorer adds `aside "Filters"` and `section "Events"`. No duplicate `view-transition-name` on any page.
+- Contrast (17 page states in both schemes): 28 distinct text pairs per scheme, 0 failures. Lowest text 5.03 light (`p.stamp`, `--fg-faint`, 12 px on `--bg`), 5.99 dark (placeholder on `--bg-raised`); kind text on tint 5.11 light / 7.29 dark minimum; kind icon on `--bg` 5.68 / 10.29; pressed chip text on hue 5.93 / 9.62; "Don't miss" pill 5.38 / 6.10; Save border 3.49 / 3.65. The border failures are in A11.
+- Text-spacing override (1.4.12): no vertical clipping on any page. Truncation grows (A7), and the event page overflows by 3 px at 390 (A2).
+- Reduced motion: `animation-name: none` on all 5 fountain drops; no `getAnimations()` running; `scroll-behavior: auto`; zero running view-transition animations after a chip click, against 4 or more in no-preference.
+
+**Responsive**
+- Horizontal overflow: 15 URLs x 6 viewports (320, 390, 768, 1024, 1280, 1920) produced one real overflow (A2); all 553 event, venue, kind and region pages scanned at 320 px: only the two in A2.
+- Zoom: 640x450 (200%) and 320x256 (400%) show no scroll-width overflow on `/`, `/explore`, an event page and `/about`.
+- Long strings: the longest title (92 chars) and the longest venue (102 chars) wrap cleanly with no overflow at 320 and 390. Chips, pills and buttons are `nowrap`, with no mid-word wraps.
+
+**Theming**
+- Colour literals outside `tokens.css`: `markSvg` in `site/src/lib/mark.ts:14,23` (a standalone favicon SVG that cannot read CSS variables, legitimate) and `site/scripts/icons.ts:19` (`#fff` for icon PNG generation). Nothing else.
+- `color-scheme: light dark` is on `:root`. Dark and light kind chips and tiles are at parity.
+- Colour-only checks: kind is carried by icon plus text, don't-miss by a "Don't miss" word with a border, saved by "Saved" with a tick, passed by "Passed" text, today by "Today" text. The two exceptions are in A4.
+
+**Performance** (production, Chromium)
+
+| Page | Transfer | Requests | LCP (unthrottled) | CLS (build day) |
+|---|---|---|---|---|
+| `/` | 96.4 KB | 16 | 288 ms (`P.lede`) | 0.032 |
+| `/explore` | 157.4 KB | 17 | 348 ms | 0.001 |
+| `/e/<id>` | 85.3 KB | 15 | 216 ms | 0.003 |
+| `/v/<slug>` | 83.4 KB | 12 | 228 ms | n/a |
+| `/about` | 86.6 KB | 13 | 264 ms | n/a |
+| `/venues` | 82.6 KB | 12 | 264 ms | n/a |
+| `/k/music` | 93.2 KB | 12 | 272 ms | n/a |
+| `/changes` | 91.0 KB | 12 | 400 ms | n/a |
+
+- Request breakdown (home): HTML 13.8 KB br, Geist latin 28.9 KB, Josefin latin 12.0 KB, `client` runtime 17.5 KB br, DontMissList 7.3 KB br, Base CSS 3.9 KB br, `index.css` 2.1 KB br, analytics 2.3 KB br (first-party path), small chunks about 8 KB.
+- Hydration: home loads DontMissList with `client:load`, plus SavedLink and StalenessBanner with `client:idle`. `/explore` loads Explorer with `client:load`. Event pages load EventPageIsland with `client:load`.
+- Transport: br on all text, HTTP/2, `/_astro/*` immutable, HTML `max-age=0, must-revalidate`. Render-blocking: only the two small stylesheets. Coverage: Base CSS 49 to 54% used; page CSS 58 to 69%; JS at load 94 to 96% used for the page chunks and 46 to 51% for the shared runtime.
+
+### Positive findings
+
+- Token system: `tokens.css` is a single source for every colour in both schemes; contrast is comfortable everywhere, and dark mode has real parity rather than inversion.
+- Focus: a global 2 px `:focus-visible` ring with 4.23:1 / 8.78:1 contrast, padded inside overflow-hidden rows so it is not clipped.
+- Chips and live regions: chips are real `<button aria-pressed>`; live regions are hidden `role=status` paragraphs seeded on mount so they do not announce on load, with a 500 ms debounce on the count. Removing a filter pill hands focus to the neighbour.
+- Reduced motion: thorough, including view transitions and smooth scroll.
+- Layout robustness: no horizontal overflow at 390 px or wider on any tested page, and none at 320 px except A2. Zoom to 200% and 400% reflows cleanly. Long titles and venues wrap.
+- Weight: pages are 83 to 96 KB, with no third-party requests and a first-party analytics script. Geist is preloaded with `crossorigin`; latin subsets only.
+- Semantics: one h1 per page, correct landmark names, kind never by colour alone, no images without alt. Anti-patterns: none; the detector found 0 issues in `src`. Pinch zoom is allowed; Save, Share and Add to calendar are 44 px.
+
+### Not checked, and why
+
+- Real assistive tech (NVDA, JAWS, VoiceOver): the Chromium AX tree and `ariaSnapshot` were used, so A13 and A15 are plausible, not confirmed. Real Windows High Contrast or macOS Increase Contrast: Chromium's `forcedColors: active` emulation. Safari and Firefox: only Chromium was installed. Real devices: iOS Dynamic Type, real touch accuracy and mobile Safari's sticky behaviour.
+- Network throttling: CDP network emulation did not apply, so mobile LCP figures are CPU-throttled only (4x). Real 4G could be slower for the 157 KB explorer.
+- `:hover` and other transient states were not scanned for contrast. No print stylesheet or `prefers-contrast` exists (A20).
+- Data variance: the contrast and overflow scans used today's dataset. The A2 scan ran against the local preview; the two overflowing events are on production today (their HTML is identical).
