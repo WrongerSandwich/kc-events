@@ -2,11 +2,17 @@
 import Base from "../layouts/Base.astro";
 import Explorer from "../components/Explorer.svelte";
 import { events } from "../generated/events";
+import { meta } from "../generated/meta";
+import { kindName, kindPath, regionPath } from "../lib/landing";
 import { QUERY_KEYS } from "../lib/query";
 import { cspHash } from "../build/csp";
-const description = `Every one of ${events.length} active Kansas City events, by date, kind, and region.`;
-// Built here rather than written inline so the page can hash exactly what it renders for the CSP.
-const noJsStyle = ".sheet-toggle { display: none !important; }";
+const description = `Opens on this week in Kansas City, today through Sunday, with all ${events.length} active events a tap away, by date, kind, and region.`;
+// Built here rather than written inline so the page can hash exactly what it renders for the CSP. Keep going and see
+// all go too: without JavaScript every link shows this same week.
+const noJsStyle = ".sheet-toggle, .keep { display: none !important; }";
+// The kind and region pages list three weeks without JavaScript, and each links to the others, so one of each leads to all.
+const [firstKind] = meta.kinds;
+const [firstRegion] = meta.regions;
 const sliceScript = `const keys = ${JSON.stringify(QUERY_KEYS)};
 const params = new URLSearchParams(location.search);
 if (keys.some((k) => params.has(k))) {
@@ -18,16 +24,16 @@ Astro.csp?.insertScriptHash(cspHash(sliceScript));
 ---
 <Base title="Explore" description={description} wide>
   <h1>Explore</h1>
-  <!-- The explorer filters in the browser, so without JavaScript every link shows every event; say so, and hide the
-       phone's Filters button, which could not open. -->
+  <!-- The explorer filters in the browser, so without JavaScript every link shows the default week; say so, point to
+       pages that go further without it, and hide the controls that could not work. -->
   <noscript>
-    <p class="no-js">Filters need JavaScript. Without it, this page lists every event, whatever the link asked for.</p>
+    <p class="no-js">Filters need JavaScript. Without it, this page lists today through Sunday, whatever the link asked for.{firstKind !== undefined && firstRegion !== undefined && <> The kind and region pages, such as <a href={kindPath(firstKind)}>{kindName(firstKind)}</a> and <a href={regionPath(firstRegion)}>{firstRegion}</a>, list three weeks ahead.</>}</p>
     <style is:inline set:html={noJsStyle} />
   </noscript>
-  <!-- The server HTML is the unfiltered view, so a filtered link would paint every event and then swap to its slice
+  <!-- The server HTML is the default view, so a filtered link would paint the week and then swap to its slice
        on hydration. Before anything below is parsed, a link that asks for a slice holds the explorer and the footer
        hidden (laid out, so nothing visible shifts) until the explorer releases them on mount, or three seconds pass
-       without it. Without JavaScript this never runs, and the notice above explains the full list. -->
+       without it. Without JavaScript this never runs, and the notice above explains the week it shows. -->
   <script is:inline set:html={sliceScript} />
   <Explorer client:load />
 </Base>

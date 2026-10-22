@@ -1,7 +1,7 @@
 import { addDays, formatRange } from "./dates";
 import { hasStartDay } from "./events";
 import { groupResults, resultEvents, type ResultGroup } from "./group";
-import { DEFAULT_FILTERS, toQuery, type Filters } from "./query";
+import { DEFAULT_FILTERS, EVERY_DATE, toQuery, type Filters } from "./query";
 import { slugify } from "./slugs";
 import type { PublishedEvent } from "./types";
 
@@ -73,7 +73,7 @@ function landing(path: string, heading: string, noun: string, where: string, f: 
     path,
     heading,
     description: `${countLine(count, noun)}${listed} ${where}, ${formatRange(range.from, range.to)}.`,
-    explorePath: `/explore?${toQuery({ ...DEFAULT_FILTERS, ...f })}`,
+    explorePath: `/explore?${toQuery({ ...DEFAULT_FILTERS, when: EVERY_DATE, ...f })}`,
     groups,
     count,
   };

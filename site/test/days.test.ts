@@ -7,7 +7,7 @@ import { matches } from "../src/lib/filter";
 import { groupResults, rowDateLine } from "../src/lib/group";
 import { closingLine } from "../src/lib/horizon";
 import { toIcs } from "../src/lib/ics";
-import { DEFAULT_FILTERS } from "../src/lib/query";
+import { DEFAULT_FILTERS, EVERY_DATE } from "../src/lib/query";
 import { dateTile } from "../src/lib/tile";
 import { weekDays } from "../src/lib/week";
 import { event } from "./fixtures/event";
@@ -59,7 +59,7 @@ describe("a limited run that plays only some weekdays (#143)", () => {
   });
 
   it("is listed under its next playing day in the explorer on a day it does not play, and under On now on one it does", () => {
-    const groups = (today: string) => groupResults([poe], DEFAULT_FILTERS, today, new Set()).map((g) => [g.key, g.events.map((e) => e.id)]);
+    const groups = (today: string) => groupResults([poe], { ...DEFAULT_FILTERS, when: EVERY_DATE }, today, new Set()).map((g) => [g.key, g.events.map((e) => e.id)]);
     expect(groups(THU)).toEqual([[FRI, ["poe"]]]);
     expect(groups(FRI)).toEqual([["on-now", ["poe"]]]);
     expect(groups("2026-10-05")).toEqual([["2026-10-14", ["poe"]]]);

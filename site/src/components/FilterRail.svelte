@@ -1,9 +1,15 @@
 <script lang="ts">
+  import { shortWeekday } from "../lib/dates";
+  import { dayPresets } from "../lib/filter";
   import { DEFAULT_FILTERS, WHEN_LABELS, WHEN_PRESETS, type Filters } from "../lib/query";
   import { slugify } from "../lib/slugs";
   import KindIcon from "./KindIcon.svelte";
 
-  let { filters, onchange, kinds, regions }: { filters: Filters; onchange: (f: Filters) => void; kinds: string[]; regions: string[] } = $props();
+  let { filters, today, onchange, kinds, regions }: { filters: Filters; today: string; onchange: (f: Filters) => void; kinds: string[]; regions: string[] } = $props();
+
+  // From Thursday, a chip for each weekend day still to come (#183), after Today: a one-day range, shareable as any.
+  let days = $derived(dayPresets(today));
+  const isDay = (d: string) => "from" in filters.when && filters.when.from === d && filters.when.to === d;
 
   // The range inputs follow the range in force, so a shared ?when=a..b link fills them; between changes they hold a
   // half-entered range locally until both ends are set. The effect reads only the range's key, a string, so a change
@@ -15,10 +21,11 @@
     range = { from, to };
   });
   // The fields wait behind "Custom dates…" so the presets lead; a range in force opens it, so a shared ?when=a..b link
-  // shows its dates. Closed, a native disclosure keeps the fields out of the Tab order.
+  // shows its dates; a day chip's range does not, since the chip shows it. Closed, a native disclosure keeps the
+  // fields out of the Tab order.
   let custom = $state(false);
   $effect(() => {
-    if (rangeKey !== "") custom = true;
+    if (rangeKey !== "" && !days.some((d) => rangeKey === `${d}..${d}`)) custom = true;
   });
 
   const toggleIn = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
@@ -36,6 +43,11 @@
     <div class="segments" role="group" aria-label="When">
       {#each WHEN_PRESETS as p (p)}
         <button type="button" aria-pressed={"preset" in filters.when && filters.when.preset === p} onclick={() => onchange({ ...filters, when: { preset: p } })}>{WHEN_LABELS[p]}</button>
+        {#if p === "today"}
+          {#each days as d (d)}
+            <button type="button" aria-pressed={isDay(d)} onclick={() => onchange({ ...filters, when: { from: d, to: d } })}>{shortWeekday(d)}</button>
+          {/each}
+        {/if}
       {/each}
     </div>
     <details class="custom" bind:open={custom}>

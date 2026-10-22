@@ -36,7 +36,7 @@ describe("kindLanding", () => {
     expect(page.heading).toBe("Music in Kansas City");
     expect(page.description).toBe("3 music events in Kansas City, Oct 13–Nov 3.");
     expect(page.path).toBe("/k/music");
-    expect(page.explorePath).toBe("/explore?kind=music");
+    expect(page.explorePath).toBe("/explore?when=all&kind=music");
   });
 
   it("names a two-word kind in words and its slug as the explorer's", () => {
@@ -44,7 +44,7 @@ describe("kindLanding", () => {
     expect(p.heading).toBe("Theater and dance in Kansas City");
     expect(p.description).toBe("1 theater and dance event in Kansas City, Oct 13–Nov 3.");
     expect(p.path).toBe("/k/theater-dance");
-    expect(p.explorePath).toBe("/explore?kind=theater-dance");
+    expect(p.explorePath).toBe("/explore?when=all&kind=theater-dance");
   });
 
   it("keeps a run open today under On now", () => {
@@ -66,7 +66,7 @@ describe("regionLanding", () => {
     expect(p.heading).toBe("Things to do in Johnson County");
     expect(p.description).toBe("2 events in Johnson County, Oct 13–Nov 3.");
     expect(p.path).toBe("/r/johnson-county");
-    expect(p.explorePath).toBe("/explore?region=johnson-county");
+    expect(p.explorePath).toBe("/explore?when=all&region=johnson-county");
     expect(p.neighborhoods).toEqual(["Overland Park", "Olathe", "Lenexa"]);
   });
 

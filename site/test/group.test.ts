@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { SHORTLIST_GROUP, groupResults, resultEvents, rowDateLine } from "../src/lib/group";
-import { DEFAULT_FILTERS, type Filters } from "../src/lib/query";
+import { DEFAULT_FILTERS, EVERY_DATE, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
 
 const today = "2026-10-05";
-const f = (over: Partial<Filters> = {}): Filters => ({ ...DEFAULT_FILTERS, ...over });
+// Every date unless a test says otherwise; the explorer's default is the week (#183).
+const f = (over: Partial<Filters> = {}): Filters => ({ ...DEFAULT_FILTERS, when: EVERY_DATE, ...over });
 const none = new Set<string>();
 
 const fri7 = event({ id: "fri7", title: "Late show", start: "2026-10-09T19:00:00-05:00", venue: "recordBar" });
@@ -18,6 +19,8 @@ const festLater = event({ id: "fest", title: "Festival", start: "2026-10-29", en
 const festNow = event({ id: "festNow", title: "Fair", start: "2026-10-03", end: "2026-10-07", venue: "Fairground" });
 const trivia = event({ id: "trivia", title: "Pub trivia", recurrence: "recurring", start: undefined, schedule: "Tuesdays", kind: "food/drink", venue: "A bar" });
 const all = [fri7, fri5, friAll, tue, onNow, onNowSooner, opensLater, trivia];
+/** More runs open today, each closing in November. */
+const exhibitions = (n: number) => Array.from({ length: n }, (_, i) => event({ id: `ex${i}`, title: `Exhibition ${i}`, recurrence: "limited-run", start: "2026-09-01", end: "2026-11-30", venue: "Kemper" }));
 
 describe("groupResults", () => {
   it("puts underway spans first, then days ascending with all-day first, then always there when asked", () => {
@@ -31,22 +34,27 @@ describe("groupResults", () => {
     ]);
   });
 
-  it("collapses On now when no when-filter is set, so the dated days lead, and keeps it open under a when-filter", () => {
-    const collapsed = (over: Partial<Filters>) => groupResults(all, f(over), today, none).map((g) => [g.key, g.collapsed]);
-    expect(collapsed({})).toEqual([["on-now", true], ["2026-10-06", false], ["2026-10-09", false], ["2026-10-20", false]]);
-    expect(collapsed({ kinds: ["music"], recurring: true })[0]).toEqual(["on-now", true]);
-    expect(collapsed({ when: { preset: "7d" } })[0]).toEqual(["on-now", false]);
-    expect(collapsed({ when: { preset: "fri-sun" } })[0]).toEqual(["on-now", false]);
-    expect(collapsed({ when: { from: "2026-10-05", to: "2026-10-31" } })[0]).toEqual(["on-now", false]);
+  it("collapses On now past six rows under any when-filter, so the dated days lead, and keeps six or fewer open (#183)", () => {
+    const collapsed = (list: typeof all, over: Partial<Filters>) => groupResults(list, f(over), today, none).map((g) => [g.key, g.collapsed]);
+    const many = [...all, ...exhibitions(5)]; // seven on now
+    const six = [...all, ...exhibitions(4)];
+    expect(collapsed(many, {})).toEqual([["on-now", true], ["2026-10-06", false], ["2026-10-09", false], ["2026-10-20", false]]);
+    expect(collapsed(many, { kinds: ["music"], recurring: true })[0]).toEqual(["on-now", true]);
+    for (const when of [{ preset: "weekend" }, { preset: "7d" }, { preset: "fri-sun" }, { from: "2026-10-05", to: "2026-10-31" }] as const) {
+      expect(collapsed(many, { when })[0]).toEqual(["on-now", true]);
+      expect(collapsed(six, { when })[0]).toEqual(["on-now", false]);
+    }
+    expect(collapsed(six, {})[0]).toEqual(["on-now", false]);
   });
 
   it("keeps On now open in the saved view: a list the reader made is short, and a folded save looks lost (audit B1)", () => {
-    const saved = new Set(["onNow", "tue"]);
-    expect(groupResults(all, f({ saved: true }), today, saved).map((g) => [g.key, g.collapsed])).toEqual([["on-now", false], ["2026-10-06", false]]);
+    const list = [...all, ...exhibitions(5)];
+    const saved = new Set(["tue", ...list.filter((e) => e.recurrence === "limited-run").map((e) => e.id)]);
+    expect(groupResults(list, f({ saved: true }), today, saved).map((g) => [g.key, g.collapsed])).toEqual([["on-now", false], ["2026-10-06", false], ["2026-10-20", false]]);
   });
 
   it("leaves On now open when no dated day follows it, so a filter never shows just a closed line", () => {
-    expect(groupResults([onNow, onNowSooner, trivia], f({ recurring: true }), today, none).map((g) => [g.key, g.collapsed])).toEqual([
+    expect(groupResults([onNow, onNowSooner, ...exhibitions(5), trivia], f({ recurring: true }), today, none).map((g) => [g.key, g.collapsed])).toEqual([
       ["on-now", false],
       ["always-there", false],
     ]);

@@ -1,4 +1,4 @@
-import { addDays, comingSunday } from "./dates";
+import { addDays, comingSunday, weekday } from "./dates";
 import { firstDay, isDated, isPast, lastDay, playsOn } from "./events";
 import { fold } from "./fold";
 import type { Filters, When } from "./query";
@@ -21,6 +21,42 @@ export function dateRange(when: When, today: string): { from: string; to: string
     case "7d": return { from: today, to: addDays(today, 6) };
     case "30d": return { from: today, to: addDays(today, 29) };
   }
+}
+
+/**
+ * The days the When group offers as one-day presets (#183): from Thursday, each of Friday, Saturday and Sunday still
+ * to come, never today ("Today" covers it). Monday through Wednesday, and on Sunday, none.
+ */
+export function dayPresets(today: string): string[] {
+  const day = weekday(today);
+  if (day < 4) return []; // Sunday is 0
+  const sunday = comingSunday(today);
+  const days: string[] = [];
+  for (let d = addDays(sunday, -2); d <= sunday; d = addDays(d, 1)) if (d > today) days.push(d);
+  return days;
+}
+
+/**
+ * "Keep going" under a bounded date filter (#183): the same filters through the Sunday after the range's end, the
+ * events that adds, and how many every date holds. `nextWeek` when the added days are a whole week (the range ended
+ * on a Sunday), else they are the rest of this one. Undefined with no end to extend (every date, a shortlist).
+ */
+export type KeepGoing = { next: Filters; through: string; nextWeek: boolean; added: number; everyDate: Filters; total: number };
+
+export function keepGoing(events: readonly PublishedEvent[], f: Filters, today: string, saved: ReadonlySet<string>): KeepGoing | undefined {
+  const range = dateRange(f.when, today);
+  if (range === undefined || f.ids.length > 0) return undefined;
+  const through = comingSunday(addDays(range.to, 1));
+  const next: Filters = { ...f, when: { from: range.from, to: through } };
+  const everyDate: Filters = { ...f, when: { preset: "all" } };
+  let added = 0;
+  let total = 0;
+  for (const e of events) {
+    if (!matches(e, everyDate, today, saved)) continue;
+    total++;
+    if (matches(e, next, today, saved) && !matches(e, f, today, saved)) added++;
+  }
+  return { next, through, nextWeek: weekday(range.to) === 0, added, everyDate, total };
 }
 
 /**

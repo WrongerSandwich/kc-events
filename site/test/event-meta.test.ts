@@ -138,7 +138,7 @@ describe("frontPageJsonLd", () => {
       url: "https://www.kcthisweek.com/",
       potentialAction: {
         "@type": "SearchAction",
-        target: { urlTemplate: "https://www.kcthisweek.com/explore?q={search_term_string}" },
+        target: { urlTemplate: "https://www.kcthisweek.com/explore?when=all&q={search_term_string}" },
         "query-input": "required name=search_term_string",
       },
     });

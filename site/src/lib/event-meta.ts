@@ -91,7 +91,7 @@ export function frontPageJsonLd(picks: PublishedEvent[], origin: string): object
         url: at("/"),
         potentialAction: {
           "@type": "SearchAction",
-          target: { "@type": "EntryPoint", urlTemplate: `${at("/explore")}?q={search_term_string}` },
+          target: { "@type": "EntryPoint", urlTemplate: `${at("/explore")}?when=all&q={search_term_string}` },
           "query-input": "required name=search_term_string",
         },
       },

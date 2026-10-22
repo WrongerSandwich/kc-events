@@ -4,9 +4,11 @@
   import { meta } from "../generated/meta";
   import { downloadText } from "../lib/download";
   import { isDated, isPast, lastDay } from "../lib/events";
-  import { groupResults, PASSED_GROUP, resultEvents, SHORTLIST_GROUP } from "../lib/group";
+  import { keepGoing } from "../lib/filter";
+  import { formatDay } from "../lib/dates";
+  import { groupResults, isTrailingGroup, PASSED_GROUP, resultEvents, SHORTLIST_GROUP } from "../lib/group";
   import { toIcs } from "../lib/ics";
-  import { DEFAULT_FILTERS, filterPills, isDefault, parseQuery, shortlistQuery, toQuery, type Filters } from "../lib/query";
+  import { DEFAULT_FILTERS, EVERY_DATE, filterPills, isDefault, parseQuery, shortlistQuery, toQuery, type Filters } from "../lib/query";
   import { saves } from "../lib/saves";
   import { slugify } from "../lib/slugs";
   import { siteConfig } from "../site.config";
@@ -45,6 +47,7 @@
   let search: HTMLInputElement;
   let pillList: HTMLElement | undefined = $state();
   let results: HTMLElement;
+  let keepBlock: HTMLElement | undefined = $state();
 
   onMount(() => {
     // A shortlist keeps only the ids of events still to come, so its pill counts what it can show.
@@ -61,11 +64,37 @@
     return unsubscribe;
   });
 
-  async function change(next: Filters) {
+  function setFilters(next: Filters) {
     filters = next;
     shortlistGone = false;
     const q = toQuery(next);
     history.replaceState(null, "", q === "" ? location.pathname : `${location.pathname}?${q}`);
+  }
+
+  // A link's plain left click, which the explorer takes in place; one that asks for a new tab or window is left to it.
+  const inPlace = (then: () => unknown) => (e: MouseEvent) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    void then();
+  };
+
+  // Keep going (#183) adds days below where the reader is: the first new day takes the button's place on screen, and
+  // focus, so the next Tab goes on through it.
+  async function goOn(next: Filters) {
+    const was = keepBlock?.getBoundingClientRect().top;
+    const shown = new Set(groups.map((g) => g.key));
+    setFilters(next);
+    await tick();
+    const first = groups.find((g) => !shown.has(g.key) && !isTrailingGroup(g));
+    const heading = first === undefined ? null : results.querySelector<HTMLElement>(`[data-group="${first.key}"]`);
+    if (heading === null) return;
+    if (was !== undefined) window.scrollBy({ top: heading.getBoundingClientRect().top - was, behavior: "instant" });
+    heading.tabIndex = -1;
+    heading.focus({ preventScroll: true });
+  }
+
+  async function change(next: Filters) {
+    setFilters(next);
     // Scrolled past the results' top, a new slice would open mid-list; bring its first result up under the bar. The
     // bar is measured now, not through barHeight, which lags a pill that has just wrapped it onto another line.
     await tick();
@@ -102,6 +131,13 @@
   }
 
   let groups = $derived(groupResults(events, filters, today, saved));
+  // Under the date sort only, after the last dated day, above Always there and Already happened; the venue sort has no
+  // days to follow.
+  let more = $derived(filters.sort === "date" ? keepGoing(events, filters, today, saved) : undefined);
+  let moreAt = $derived.by(() => {
+    const i = groups.findIndex(isTrailingGroup);
+    return i === -1 ? groups.length : i;
+  });
   let listed = $derived(resultEvents(groups));
   let count = $derived(listed.length);
   let countText = $derived(`${count} ${count === 1 ? "event" : "events"}`);
@@ -128,7 +164,7 @@
 
   // The saved view's Share and Export (#132) take every save still to come, in date order, whatever else the view
   // narrows to: what is saved is the list, the view's filters only how it is looked at.
-  let upcomingSaves = $derived(resultEvents(groupResults(events, { ...DEFAULT_FILTERS, saved: true, recurring: true }, today, saved)).filter((e) => !isPast(e, today)));
+  let upcomingSaves = $derived(resultEvents(groupResults(events, { ...DEFAULT_FILTERS, when: EVERY_DATE, saved: true, recurring: true }, today, saved)).filter((e) => !isPast(e, today)));
   const savedName = `${siteConfig.name} · saved`;
 
   function shareSaved() {
@@ -170,7 +206,7 @@
   <aside class="rail" aria-label="Filters">
     <button type="button" class="sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={() => { sheetOpen = !sheetOpen; }}>Filters{#if pills.length > 0}{` (${pills.length})`}{/if}</button>
     <div class="sheet" class:open={sheetOpen} id="filter-sheet">
-      <FilterRail {filters} onchange={change} kinds={meta.kinds} regions={meta.regions} />
+      <FilterRail {filters} {today} onchange={change} kinds={meta.kinds} regions={meta.regions} />
     </div>
   </aside>
 
@@ -182,7 +218,7 @@
         <!-- The header's Saved link lands here on a first visit: an empty list of one's own, not a filter that failed. -->
         <p class="empty">Nothing saved yet. Save any event and it appears here; saves stay in this browser, with no account. Start with <a href="/">the picks</a>.</p>
       {:else if pills.length > 0}
-        <p class="empty">No events match <strong>{pills.map((p) => p.label).join(" · ")}</strong>. <button type="button" class="link" onclick={() => change(DEFAULT_FILTERS)}>Clear them</button> to see everything.</p>
+        <p class="empty">No events match <strong>{pills.map((p) => p.label).join(" · ")}</strong>. <button type="button" class="link" onclick={() => change({ ...DEFAULT_FILTERS, when: EVERY_DATE })}>Clear them</button> to see everything.</p>
       {:else}
         <p class="empty">No events to show right now.</p>
       {/if}
@@ -193,18 +229,36 @@
         <ResultRow {event} {today} withDay={filters.sort === "venue" || g.key === PASSED_GROUP || g.key === SHORTLIST_GROUP} />
       {/each}
     {/snippet}
-    {#each groups as g (g.key)}
+    <!-- Keep going (#183): the days after the range, or every date. Links, so they work without JavaScript; hydrated,
+         they change the filter in place. -->
+    {#snippet keep()}
+      {#if more !== undefined && (more.added > 0 || more.total > count)}
+        {@const next = more.next}
+        {@const everyDate = more.everyDate}
+        <p class="keep" bind:this={keepBlock}>
+          {#if more.added > 0}
+            <a class="keep-going" href={`/explore?${toQuery(next)}`} onclick={inPlace(() => goOn(next))}>Keep going: {more.nextWeek ? "next week" : `through ${formatDay(more.through)}`} · {more.added} {more.added === 1 ? "event" : "events"} <span aria-hidden="true">→</span></a>
+          {/if}
+          {#if more.total > count}
+            <a class="see-all" href={`/explore?${toQuery(everyDate)}`} onclick={inPlace(() => change(everyDate))}>{more.added > 0 ? "or see" : "See"} all {more.total}</a>
+          {/if}
+        </p>
+      {/if}
+    {/snippet}
+    {#each groups as g, i (g.key)}
+      {#if i === moreAt}{@render keep()}{/if}
       {#if g.collapsed}
         <!-- A native disclosure, so it opens without JS and announces its state; closed, it is one line. -->
         <details class="collapsed">
-          <summary><h2 class="heading">{g.heading}</h2> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
+          <summary><h2 class="heading" data-group={g.key}>{g.heading}</h2> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
           {@render rows(g)}
         </details>
       {:else}
-        <h2 class={`section-heading group${filters.sort === "venue" ? " venue" : ""}`}>{g.heading}</h2>
+        <h2 class={`section-heading group${filters.sort === "venue" ? " venue" : ""}`} data-group={g.key}>{g.heading}</h2>
         {@render rows(g)}
       {/if}
     {/each}
+    {#if moreAt === groups.length}{@render keep()}{/if}
   </section>
 </div>
 
@@ -259,6 +313,15 @@
   .export { font: inherit; font-size: var(--text-xs); color: var(--accent); background: none; border: 1px solid var(--rule); border-radius: var(--radius); padding: var(--space-1) var(--space-2); cursor: pointer; }
   .export[disabled] { opacity: 0.5; cursor: default; }
   .empty { color: var(--fg-muted); }
+  /* Keep going: a full-width tap target after the last day, the see-all link quieter beside it. */
+  .keep { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin: var(--space-6) 0; font-size: var(--text-sm); }
+  .keep-going {
+    display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--tap); padding: 0 var(--space-4);
+    color: var(--accent); font-weight: var(--weight-medium); text-decoration: none;
+    border: 1px solid var(--rule); border-radius: var(--radius); background: var(--bg-raised);
+  }
+  .keep-going:hover { border-color: var(--rule-strong); }
+  .see-all { color: var(--fg-muted); }
   /* A collapsed group (On now with no when-filter): one raised line, a full tap target, with a chevron that turns
      when it opens. Open, its line sticks under the bar like a day heading, so it can be closed from anywhere. */
   .collapsed { margin-top: var(--space-2); }

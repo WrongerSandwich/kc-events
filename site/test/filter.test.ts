@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dateRange, matches } from "../src/lib/filter";
-import { DEFAULT_FILTERS, type Filters } from "../src/lib/query";
+import { dateRange, dayPresets, keepGoing, matches } from "../src/lib/filter";
+import { DEFAULT_FILTERS, EVERY_DATE, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
 
 const today = "2026-10-05"; // a Monday
-const f = (over: Partial<Filters> = {}): Filters => ({ ...DEFAULT_FILTERS, ...over });
+// Every date unless a test says otherwise; the explorer's default is the week (#183).
+const f = (over: Partial<Filters> = {}): Filters => ({ ...DEFAULT_FILTERS, when: EVERY_DATE, ...over });
 const none = new Set<string>();
 
 describe("dateRange", () => {
@@ -26,6 +27,61 @@ describe("dateRange", () => {
     expect(dateRange(weekend, "2026-10-10")).toEqual({ from: "2026-10-10", to: "2026-10-11" }); // Sat
     expect(dateRange(weekend, "2026-10-11")).toEqual({ from: "2026-10-11", to: "2026-10-11" }); // Sun
     expect(dateRange(weekend, "2026-10-28")).toEqual({ from: "2026-10-30", to: "2026-11-01" }); // Wed, into the DST Sunday
+  });
+});
+
+describe("dayPresets", () => {
+  it("offers Friday, Saturday and Sunday from Thursday, each only while it is still to come and not today (#183)", () => {
+    const week: [string, string[]][] = [
+      ["2026-10-05", []], // Mon
+      ["2026-10-06", []], // Tue
+      ["2026-10-07", []], // Wed
+      ["2026-10-08", ["2026-10-09", "2026-10-10", "2026-10-11"]], // Thu
+      ["2026-10-09", ["2026-10-10", "2026-10-11"]], // Fri
+      ["2026-10-10", ["2026-10-11"]], // Sat
+      ["2026-10-11", []], // Sun
+    ];
+    for (const [day, presets] of week) expect(dayPresets(day), day).toEqual(presets);
+    expect(dayPresets("2026-10-29")).toEqual(["2026-10-30", "2026-10-31", "2026-11-01"]); // across a month, into the DST Sunday
+  });
+});
+
+describe("keepGoing", () => {
+  const mon = event({ id: "mon", start: "2026-10-12T19:00:00-05:00" }); // next Monday
+  const sun2 = event({ id: "sun2", start: "2026-10-18T19:00:00-05:00" }); // next Sunday
+  const later = event({ id: "later", start: "2026-10-19T19:00:00-05:00" }); // the Monday after
+  const sat = event({ id: "sat", start: "2026-10-10T19:00:00-05:00" }); // this Saturday
+  const fair = event({ id: "fair", start: "2026-10-10", end: "2026-10-13" }); // in the week already, into the next
+  const trivia = event({ id: "trivia", recurrence: "recurring", start: undefined, schedule: "Tuesdays" });
+  const list = [mon, sun2, later, sat, fair, trivia];
+
+  it("extends a bounded filter to the Sunday after its end, counting only the events that adds", () => {
+    const k = keepGoing(list, f({ when: { preset: "weekend" } }), today, none)!;
+    expect(k.next).toEqual(f({ when: { from: today, to: "2026-10-18" } }));
+    expect(k.through).toBe("2026-10-18");
+    expect(k.nextWeek).toBe(true);
+    expect(k.added).toBe(2); // mon, sun2; fair was already in the week
+    expect(k.everyDate).toEqual(f());
+    expect(k.total).toBe(5);
+  });
+
+  it("follows the same rule from any end: Today on a Monday to this Sunday, a Saturday to the next Sunday", () => {
+    expect(keepGoing(list, f({ when: { preset: "today" } }), today, none)).toMatchObject({ next: { when: { from: today, to: "2026-10-11" } }, nextWeek: false, added: 2 });
+    const satOnly = keepGoing(list, f({ when: { from: "2026-10-10", to: "2026-10-10" } }), today, none)!;
+    expect(satOnly).toMatchObject({ next: { when: { from: "2026-10-10", to: "2026-10-11" } }, added: 0 });
+    expect(keepGoing(list, f({ when: { from: "2026-10-11", to: "2026-10-11" } }), today, none)).toMatchObject({ next: { when: { from: "2026-10-11", to: "2026-10-18" } }, added: 2 });
+  });
+
+  it("keeps the other filters, and counts every date's events with them, always-there included only when asked", () => {
+    const k = keepGoing(list, f({ when: { preset: "weekend" }, recurring: true, q: "zzz" }), today, none)!;
+    expect(k.next.q).toBe("zzz");
+    expect(k).toMatchObject({ added: 0, total: 0 });
+    expect(keepGoing(list, f({ when: { preset: "weekend" }, recurring: true }), today, none)!.total).toBe(6);
+  });
+
+  it("has nothing to extend under every date or a shortlist", () => {
+    expect(keepGoing(list, f(), today, none)).toBeUndefined();
+    expect(keepGoing(list, f({ when: { preset: "weekend" }, ids: ["evt_mon"] }), today, none)).toBeUndefined();
   });
 });
 
