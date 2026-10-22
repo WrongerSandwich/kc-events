@@ -38,7 +38,7 @@ The P1s, deduplicated across lanes and ordered by what a new reader would hit fi
 | 12 | An event page scrolls sideways at 320 px when "Don't miss" sits beside a long kind label (today: Dark Forest, Graveyard 5K; WCAG 1.4.10): let the kind line wrap | A (A2) | `e/[id].astro` | one line |
 | 13 | A week-strip day with four or more picks spills its icons into the next day's tile between 385 and 520 px (live on Saturday's tile now): fewer icons on phones, and clip the row | A (A3) | `WeekStrip.svelte` | small, CSS |
 
-Of these, 1, 3, 4, 5, 6, 8, 11, 12, 13 and the copy half of 9 and 10 are site code or copy an agent can land in one pull request from this worktree, with tests; 2 needs the deploy hook created in the Vercel dashboard (the cron line is then one `curl`); 7 is hand edits to the dataset plus prompt rules, which a reviewer should read.
+Of these, 1, 3, 4, 5, 6, 8, 11, 12, 13 and the copy half of 9 and 10 are site code or copy an agent can land in one pull request from this worktree, with tests; 2 needs the deploy hook created in the Vercel dashboard (the cron line is then one `curl`); 7 is hand edits to the dataset plus prompt rules, which a reviewer should read. **Landed:** pull request #179 carries every item but 2, one commit per fix, with the data edits in their own commit.
 
 The P2s cluster into a few themes rather than forty separate tasks:
 
