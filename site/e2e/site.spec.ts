@@ -87,7 +87,7 @@ test.describe("a section's kind filter", () => {
     test("is a link to the explorer", async ({ page }) => {
       await page.goto("/");
       const kinds = page.getByRole("region").nth(0).getByRole("list", { name: "Picks by kind" });
-      await expect(kinds.getByRole("link", { name: "1 music" })).toHaveAttribute("href", "/explore?when=weekend&kind=music&dontmiss=1");
+      await expect(kinds.getByRole("link", { name: "1 music" })).toHaveAttribute("href", "/explore?when=weekend&kind=music&picks=1");
       await expect(kinds.getByRole("button")).toHaveCount(0);
     });
   });
@@ -101,11 +101,11 @@ test.describe("a section's kind filter", () => {
     await expect(music).toHaveAttribute("aria-pressed", "true");
     await expect(week.getByRole("heading", { level: 3 })).toHaveText(["Fabio Frizzi plays Fulci"]);
     await expect(week.getByRole("status")).toHaveText("Showing 1 music pick");
-    await expect(week.getByRole("link", { name: "These picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&kind=music&dontmiss=1");
+    await expect(week.getByRole("link", { name: "These picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&kind=music&picks=1");
     await expect(page.getByRole("region").nth(1).getByRole("heading", { level: 3 })).toHaveText(["Mid-month reading"]);
     await music.click();
     await expect(week.getByRole("heading", { level: 3 })).toHaveText(["Closing exhibition", "Fabio Frizzi plays Fulci"]);
-    await expect(week.getByRole("link", { name: "These picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&dontmiss=1");
+    await expect(week.getByRole("link", { name: "These picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&picks=1");
   });
 
   /**
@@ -151,6 +151,17 @@ test("the explorer honors the URL and writes it back", async ({ page }) => {
   await expect(page.getByRole("status")).toHaveText("3 events");
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page).toHaveURL("/explore");
+});
+
+test("the explorer's picks=1 shows only the picks, under a picks only pill, and writes it back (#185)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/explore?when=all&picks=1");
+  const rows = page.locator(".results article.row");
+  await expect(rows.first()).toBeVisible();
+  await expect(page.locator(".results article.row:not(.flagged)")).toHaveCount(0);
+  await expect(page.getByRole("list", { name: "Active filters" }).getByRole("button", { name: "Remove picks only" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Picks only", exact: true })).toBeChecked();
+  await page.getByRole("button", { name: "comedy" }).click();
+  await expect(page).toHaveURL(/[?&]picks=1(&|$)/);
 });
 
 /**
@@ -804,7 +815,7 @@ test("an event at a venue with a row is addressed to its street in its JSON-LD a
 });
 
 test("the calendar feeds build from the fixture, each event with a UID, a start, a summary, and its page (#136)", async ({ request }) => {
-  const feeds = { "/calendar/dont-miss.ics": "KC This Week · Don't miss", "/calendar.ics": "KC This Week", "/calendar/music.ics": "KC This Week · Music" };
+  const feeds = { "/calendar/picks.ics": "KC This Week · Picks", "/calendar.ics": "KC This Week", "/calendar/music.ics": "KC This Week · Music" };
   const counts: Record<string, number> = {};
   for (const [path, name] of Object.entries(feeds)) {
     const ics = (await (await request.get(path)).text()).replace(/\r\n[ \t]/g, "");
@@ -820,15 +831,15 @@ test("the calendar feeds build from the fixture, each event with a UID, a start,
     counts[path] = vevents.length;
   }
   // The picks are a slice of everything, and so is one kind.
-  expect(counts["/calendar/dont-miss.ics"]).toBeGreaterThan(0);
+  expect(counts["/calendar/picks.ics"]).toBeGreaterThan(0);
   expect(counts["/calendar/music.ics"]).toBeGreaterThan(0);
-  expect(counts["/calendar.ics"]).toBeGreaterThan(Math.max(counts["/calendar/dont-miss.ics"]!, counts["/calendar/music.ics"]!));
+  expect(counts["/calendar.ics"]).toBeGreaterThan(Math.max(counts["/calendar/picks.ics"]!, counts["/calendar/music.ics"]!));
 });
 
 test("the front page offers the picks as a calendar subscription, with the address to copy (#136)", async ({ page }) => {
   await on(page, BUILD_DAY, "/");
-  await expect(page.getByRole("link", { name: "Subscribe to the picks" })).toHaveAttribute("href", /^webcal:\/\/[^/]+\/calendar\/dont-miss\.ics$/);
-  await expect(page.locator(".subscribe code")).toHaveText(/^https?:\/\/[^/]+\/calendar\/dont-miss\.ics$/);
+  await expect(page.getByRole("link", { name: "Subscribe to the picks" })).toHaveAttribute("href", /^webcal:\/\/[^/]+\/calendar\/picks\.ics$/);
+  await expect(page.locator(".subscribe code")).toHaveText(/^https?:\/\/[^/]+\/calendar\/picks\.ics$/);
 });
 
 // The explorer link carries a query so its inline script takes the slice-pending branch.

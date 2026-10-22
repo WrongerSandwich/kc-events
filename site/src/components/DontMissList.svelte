@@ -68,7 +68,7 @@
   function explorerHref(h: Horizon, kind?: string): string {
     const { sunday, twoWeeks } = horizonBounds(today);
     const when = h === "through-sunday" ? "weekend" : `${addDays(sunday, 1)}..${twoWeeks}`;
-    return `/explore?when=${when}${kind === undefined ? "" : `&kind=${slugify(kind)}`}&dontmiss=1`;
+    return `/explore?when=${when}${kind === undefined ? "" : `&kind=${slugify(kind)}`}&picks=1`;
   }
 
   /** A section's picks counted by kind, most first, each with the explorer link the chip is before hydration. */
@@ -138,7 +138,7 @@
             </li>
           {/each}
         </ul>
-        <p class="more"><a href="/explore?when=all&dontmiss=1">Every pick in the explorer</a></p>
+        <p class="more"><a href="/explore?when=all&picks=1">Every pick in the explorer</a></p>
       {:else}
         {@const kind = chosen[h]}
         <ul class="kinds" aria-label="Picks by kind">

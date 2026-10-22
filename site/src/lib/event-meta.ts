@@ -97,7 +97,7 @@ export function frontPageJsonLd(picks: PublishedEvent[], origin: string): object
       },
       {
         "@type": "ItemList",
-        name: "Don't miss",
+        name: "Picks",
         itemListElement: picks.filter(hasStartDay).map((e, i) => ({ "@type": "ListItem", position: i + 1, url: at(`/e/${e.id}`) })),
       },
     ],

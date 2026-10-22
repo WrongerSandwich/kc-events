@@ -36,7 +36,7 @@ describe("query state", () => {
   });
 
   it("parses every filter, with repeated keys for multi-values", () => {
-    const f = parse("when=weekend&kind=music&kind=theater-dance&region=kansas-city-kansas&dontmiss=1&recurring=1&saved=1&q=jazz%20night&sort=venue");
+    const f = parse("when=weekend&kind=music&kind=theater-dance&region=kansas-city-kansas&picks=1&recurring=1&saved=1&q=jazz%20night&sort=venue");
     expect(f).toEqual<Filters>({
       when: { preset: "weekend" },
       kinds: ["music", "theater/dance"],
@@ -57,7 +57,7 @@ describe("query state", () => {
   });
 
   it("ignores unknown keys, unknown slugs, malformed values, and keeps the first of repeated when", () => {
-    const f = parse("when=soon&when=today&kind=opera&kind=film&region=mars&sort=price&foo=bar&dontmiss=yes");
+    const f = parse("when=soon&when=today&kind=opera&kind=film&region=mars&sort=price&foo=bar&picks=yes");
     expect(f.when).toEqual(DEFAULT_WHEN);
     expect(f.kinds).toEqual(["film"]);
     expect(f.regions).toEqual([]);
@@ -98,7 +98,7 @@ describe("query state", () => {
       "when=2026-13-45..2026-10-11&q=%20jazz%20",
       "when=7d&when=today&when=30d",
       "kind=music&kind=music&region=central-kc&region=central-kc",
-      "when=2026-10-09..2026-10-10..2026-10-11&sort=price&dontmiss=yes",
+      "when=2026-10-09..2026-10-10..2026-10-11&sort=price&picks=yes",
     ];
     for (const s of dirty) {
       const f = parse(s);
@@ -114,7 +114,7 @@ describe("query state", () => {
     expect(parse("when=2026-10-11..2026-10-09").when).toEqual({ from: "2026-10-09", to: "2026-10-11" });
     expect(parse("when=2026-13-45..2026-10-11&q=%20jazz%20")).toEqual({ ...DEFAULT_FILTERS, q: "jazz" });
     expect(parse("kind=music&kind=music&region=central-kc&region=central-kc")).toEqual({ ...DEFAULT_FILTERS, kinds: ["music"], regions: ["Central KC"] });
-    expect(parse("when=2026-10-09..2026-10-10..2026-10-11&sort=price&dontmiss=yes")).toEqual(DEFAULT_FILTERS);
+    expect(parse("when=2026-10-09..2026-10-10..2026-10-11&sort=price&picks=yes")).toEqual(DEFAULT_FILTERS);
   });
 
   it("trims and drops a blank search", () => {
@@ -131,7 +131,7 @@ describe("query state", () => {
     expect(labels(DEFAULT_FILTERS)).toEqual(["Through Sunday"]);
     expect(labels({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toEqual([]);
     expect(labels({ ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Kansas City, Kansas"], dontMiss: true, saved: true, q: " zzz " }))
-      .toEqual(["Through Sunday", "music", "film", "Kansas City, Kansas", "don't-miss only", "saved only", "“zzz”"]);
+      .toEqual(["Through Sunday", "music", "film", "Kansas City, Kansas", "picks only", "saved only", "“zzz”"]);
     expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-11" }, recurring: true, sort: "venue" })).toEqual(["Oct 9–11", "including always-there"]);
     expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-09" } })).toEqual(["Oct 9"]);
   });
@@ -147,12 +147,12 @@ describe("query state", () => {
     expect(filterPills(DEFAULT_FILTERS)).toEqual([{ label: "Through Sunday", without: { ...DEFAULT_FILTERS, when: EVERY_DATE } }]);
     const f: Filters = { ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Lawrence"], dontMiss: true, recurring: true, saved: true, q: "jazz", sort: "venue" };
     const pills = filterPills(f);
-    expect(pills.map((p) => p.label)).toEqual(["Through Sunday", "music", "film", "Lawrence", "don't-miss only", "including always-there", "saved only", "“jazz”"]);
+    expect(pills.map((p) => p.label)).toEqual(["Through Sunday", "music", "film", "Lawrence", "picks only", "including always-there", "saved only", "“jazz”"]);
     const without = Object.fromEntries(pills.map((p) => [p.label, p.without]));
     expect(without["Through Sunday"]).toEqual({ ...f, when: { preset: "all" } });
     expect(without["music"]).toEqual({ ...f, kinds: ["film"] });
     expect(without["Lawrence"]).toEqual({ ...f, regions: [] });
-    expect(without["don't-miss only"]).toEqual({ ...f, dontMiss: false });
+    expect(without["picks only"]).toEqual({ ...f, dontMiss: false });
     expect(without["including always-there"]).toEqual({ ...f, recurring: false });
     expect(without["saved only"]).toEqual({ ...f, saved: false });
     expect(without["“jazz”"]).toEqual({ ...f, q: "" });

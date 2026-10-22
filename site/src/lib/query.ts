@@ -32,7 +32,7 @@ export type Filters = {
 };
 
 /** Every key toQuery can write; the explore page checks for them before the explorer hydrates. */
-export const QUERY_KEYS = ["ids", "when", "kind", "region", "dontmiss", "recurring", "saved", "q", "sort"] as const;
+export const QUERY_KEYS = ["ids", "when", "kind", "region", "picks", "recurring", "saved", "q", "sort"] as const;
 
 /** What the explorer opens on (#183): today through Sunday, the front page's first horizon; omitted from URLs. */
 export const DEFAULT_WHEN = { preset: "weekend" } as const satisfies When;
@@ -91,7 +91,7 @@ export function parseQuery(params: URLSearchParams, known: Known): Filters {
     when: parseWhen(params.get("when"), impliedWhen(isList)),
     kinds: pick("kind", kinds),
     regions: pick("region", regions),
-    dontMiss: params.get("dontmiss") === "1",
+    dontMiss: params.get("picks") === "1",
     recurring: params.get("recurring") === "1",
     saved,
     q: (params.get("q") ?? "").trim(),
@@ -107,7 +107,7 @@ export function toQuery(f: Filters): string {
   else if (f.when.preset !== impliedWhen(f.saved || f.ids.length > 0).preset) p.set("when", f.when.preset);
   for (const k of f.kinds) p.append("kind", slugify(k));
   for (const r of f.regions) p.append("region", slugify(r));
-  if (f.dontMiss) p.set("dontmiss", "1");
+  if (f.dontMiss) p.set("picks", "1");
   if (f.recurring) p.set("recurring", "1");
   if (f.saved) p.set("saved", "1");
   if (f.q.trim() !== "") p.set("q", f.q.trim());
@@ -135,7 +135,7 @@ export function filterPills(f: Filters): FilterPill[] {
   if (when !== undefined) out.push({ label: when, without: { ...f, when: EVERY_DATE } });
   for (const k of f.kinds) out.push({ label: k, kind: k, without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
   for (const r of f.regions) out.push({ label: r, without: { ...f, regions: f.regions.filter((x) => x !== r) } });
-  if (f.dontMiss) out.push({ label: "don't-miss only", without: { ...f, dontMiss: false } });
+  if (f.dontMiss) out.push({ label: "picks only", without: { ...f, dontMiss: false } });
   if (f.recurring) out.push({ label: "including always-there", without: { ...f, recurring: false } });
   if (f.saved) out.push({ label: "saved only", without: { ...f, saved: false } });
   if (f.q.trim() !== "") out.push({ label: `“${f.q.trim()}”`, without: { ...f, q: "" } });

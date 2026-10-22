@@ -149,6 +149,7 @@ describe("frontPageJsonLd", () => {
     const ld = frontPageJsonLd([event({ id: "evt_a" }), startless, event({ id: "evt_b" })], origin) as { "@graph": object[] };
     expect(ld["@graph"][1]).toMatchObject({
       "@type": "ItemList",
+      name: "Picks",
       itemListElement: [
         { "@type": "ListItem", position: 1, url: "https://www.kcthisweek.com/e/evt_a" },
         { "@type": "ListItem", position: 2, url: "https://www.kcthisweek.com/e/evt_b" },

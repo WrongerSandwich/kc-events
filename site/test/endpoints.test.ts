@@ -35,7 +35,8 @@ describe("committed data", () => {
     it("writes the calendar feeds: the picks, every dated event, and each kind's (#136)", () => {
       const unfolded = (p: string) => read(p).replace(/\r\n[ \t]/g, "");
       const vevents = (p: string) => unfolded(p).split("BEGIN:VEVENT").length - 1;
-      expect(unfolded("calendar/dont-miss.ics")).toContain("X-WR-CALNAME:KC This Week · Don't miss\r\nREFRESH-INTERVAL;VALUE=DURATION:P1D\r\nX-PUBLISHED-TTL:P1D\r\n");
+      expect(unfolded("calendar/picks.ics")).toContain("X-WR-CALNAME:KC This Week · Picks\r\nREFRESH-INTERVAL;VALUE=DURATION:P1D\r\nX-PUBLISHED-TTL:P1D\r\n");
+      expect(has("calendar/dont-miss.ics")).toBe(false);
       expect(unfolded("calendar.ics")).toContain("X-WR-CALNAME:KC This Week\r\n");
       expect(vevents("calendar.ics")).toBe(events.filter(isDated).length);
       for (const kind of meta.kinds) expect(vevents(`calendar/${slugify(kind)}.ics`), kind).toBe(events.filter((e) => isDated(e) && e.kind === kind).length);
@@ -43,7 +44,12 @@ describe("committed data", () => {
     });
 
     it("links the picks' feed by webcal from the front page and the about page (#136)", () => {
-      for (const page of ["index.html", "about.html"]) expect(read(page), page).toMatch(/href="webcal:\/\/[^"]+\/calendar\/dont-miss\.ics"/);
+      for (const page of ["index.html", "about.html"]) expect(read(page), page).toMatch(/href="webcal:\/\/[^"]+\/calendar\/picks\.ics"/);
+    });
+
+    it("calls a flagged event a pick in reader-facing prose, keeping the tag's words (#185)", () => {
+      expect(read("about.html")).toContain("What a pick is");
+      for (const page of ["index.html", "about.html", "explore.html", "llms.txt"]) expect(read(page), page).not.toMatch(/don(['’]|&#39;)t-miss/i);
     });
 
     it("publishes the projection, not the job's file", () => {
