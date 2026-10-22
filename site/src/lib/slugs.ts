@@ -1,6 +1,11 @@
-/** A URL-safe token for a kind or region name: lowercase, runs of anything but letters and digits become one dash. */
+import { fold } from "./fold";
+
+/**
+ * A URL-safe token for a kind, region, or venue name: the name folded as search folds it (lowercase, accents dropped),
+ * its words joined by dashes. "Salón La Villa" → "salon-la-villa".
+ */
 export function slugify(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return fold(name).replace(/ /g, "-");
 }
 
 export function slugTable(names: readonly string[]): { toSlug(name: string): string; fromSlug(slug: string): string | undefined } {
