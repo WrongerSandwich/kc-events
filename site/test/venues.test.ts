@@ -36,6 +36,8 @@ describe("venueSlug", () => {
     expect(venueSlug("ZHOU B ART CENTER KC")).toBe(venueSlug("Zhou B Art Center KC"));
     expect(venueSlug("Mildred’s")).toBe("mildreds");
     expect(venueSlug("St. Paul's Episcopal Church")).toBe("st-pauls-episcopal-church");
+    expect(venueSlug("Café Corazón")).toBe("cafe-corazon");
+    expect(venueSlug("Salón La Villa")).toBe("salon-la-villa");
   });
 
   it("keeps a The that is not the first word", () => {

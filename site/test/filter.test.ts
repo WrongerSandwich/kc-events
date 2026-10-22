@@ -99,6 +99,15 @@ describe("matches", () => {
     expect(matches(cafe, f({ q: "café opera" }), today, none)).toBe(false);
   });
 
+  it("folds an accent inside a word, not only at its end (#193)", () => {
+    const rolon = event({ title: "Carlos Rolón: All We Have Is Right Now" });
+    const raices = event({ title: "Un campo con raíces" });
+    expect(matches(rolon, f({ q: "rolon" }), today, none)).toBe(true);
+    expect(matches(rolon, f({ q: "carlos rolon" }), today, none)).toBe(true);
+    expect(matches(rolon, f({ q: "rolón" }), today, none)).toBe(true);
+    expect(matches(raices, f({ q: "raices" }), today, none)).toBe(true);
+  });
+
   it("never matches a past event, except a save in the saved view", () => {
     expect(matches(show, f(), "2026-10-10", none)).toBe(false);
     expect(matches(show, f(), "2026-10-10", new Set([show.id]))).toBe(false);

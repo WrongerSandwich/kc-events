@@ -17,6 +17,7 @@ describe("slugs", () => {
     expect(slugify("theater/dance")).toBe("theater-dance");
     expect(slugify("Elsewhere in the metro")).toBe("elsewhere-in-the-metro");
     expect(slugify("18th & Vine")).toBe("18th-vine");
+    expect(slugify("Día de los Muertos")).toBe("dia-de-los-muertos");
   });
 
   it("round-trips through a table and rejects unknowns", () => {
