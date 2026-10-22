@@ -15,7 +15,7 @@ import type { Source } from "./registry.js";
 import { deriveRecurrence } from "./recurrence.js";
 import { toKind, toNeighborhood } from "./taxonomy.js";
 import { fromLocal, toLocalIso } from "./time.js";
-import { givesDays, orderedDays } from "./weekdays.js";
+import { orderedDays, statesDays } from "./weekdays.js";
 
 /** A page body longer than this is cut before it reaches the model; venue calendars rarely need more, link markers included. */
 export const MAX_PAGE_CHARS = 70_000;
@@ -490,7 +490,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
 
 /**
  * The weekdays a verified run's date quote gives (#196), in week order and each once: the model's, when
- * the quote names every one of them (givesDays), as the own-page read holds its days to their quote;
+ * the quote states every one of them as days the run plays (statesDays), as the own-page read holds its days to their quote;
  * none when the model named none, or every day of the week, which a run without days already means;
  * and none with a line saying why when the quote does not give them.
  */
@@ -498,7 +498,7 @@ function listDays(named: Weekday[] | null, dateQuote: string): { value?: Weekday
   if (named === null || named.length === 0) return {};
   const days = orderedDays(named);
   if (days.length === WEEKDAYS.length) return {};
-  if (!givesDays(dateQuote, days)) return { problem: `named ${days.join(", ")} as its days, which its date quote does not give; no days taken` };
+  if (!statesDays(dateQuote, days)) return { problem: `named ${days.join(", ")} as its days, which its date quote does not state; no days taken` };
   return { value: days };
 }
 

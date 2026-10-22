@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { DEFAULT_PLATFORM_HOSTS, ELSEWHERE_IN_THE_METRO, type RunConfig } from "./config.js";
 import { onHost, samePage, sameSite } from "./hosts.js";
+import { withinOneOffSpan } from "./recurrence.js";
 import { hasTime } from "./time.js";
 
 /** Bump when the published dataset's shape changes; downstream readers key on it. */
@@ -183,6 +184,9 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
           e.evidence.venue !== undefined),
       { message: "an active event needs a cited date (a schedule when recurring), venue, lastVerified, and evidence for both date and venue" },
     )
+    .refine((e) => e.recurrence !== "one-off" || e.start === undefined || e.end === undefined || withinOneOffSpan(e.start, e.end), {
+      message: "a one-off spans a few days at most; a longer span is a limited run",
+    })
     .refine((e) => !e.dontMiss || (e.recurrence !== "recurring" && e.whyLine !== undefined), {
       message: "a don't-miss flag needs a why-line and is never on a recurring event",
     })

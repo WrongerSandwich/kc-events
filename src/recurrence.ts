@@ -21,8 +21,13 @@ export interface RecurrenceEvidence {
 
 export function deriveRecurrence({ start, end, schedule }: RecurrenceEvidence): RecurrenceClass {
   if (schedule !== undefined && end === undefined) return "recurring";
-  if (end !== undefined && (start === undefined || spanDays(start, end) > ONE_OFF_MAX_SPAN_DAYS)) return "limited-run";
+  if (end !== undefined && (start === undefined || !withinOneOffSpan(start, end))) return "limited-run";
   return "one-off";
+}
+
+/** Whether a span from start to end is short enough for a one-off; a longer one is a limited run, and the dataset refuses a one-off past it (#196). */
+export function withinOneOffSpan(start: string, end: string): boolean {
+  return spanDays(start, end) <= ONE_OFF_MAX_SPAN_DAYS;
 }
 
 /** Whole calendar days between two ISO dates or date-times, by their local dates. */

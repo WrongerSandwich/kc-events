@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyDataset } from "../src/dataset.js";
+import { statesDays } from "../src/weekdays.js";
 import { candidateAt, judging, source, WEEK_1, WEEK_2 } from "./fakes/fixtures.js";
 import { testConfig } from "./fakes/config.js";
 import type { CannedPage, ScriptedReply } from "./fakes/ports.js";
@@ -109,7 +110,21 @@ describe("the weekdays a limited run plays, from the list's own date quote (#196
     expect(dataset.events[0]).toMatchObject({ status: "active" });
     expect(dataset.events[0]).not.toHaveProperty("days");
     expect(dataset.events[0]!.evidence).not.toHaveProperty("days");
-    expect(report.sources[0]!.detail).toContain(`"Tower After Hours" on ${LIST_URL} named Thu, Sun as its days, which its date quote does not give; no days taken`);
+    expect(report.sources[0]!.detail).toContain(`"Tower After Hours" on ${LIST_URL} named Thu, Sun as its days, which its date quote does not state; no days taken`);
+  });
+
+  it("weekends state Saturday and Sunday", async () => {
+    const { dataset } = await runAt(WEEK_1, { completions: [listed({ days: ["Sat", "Sun"], dateEvidence: "Oct. 9 – Nov. 1 (Weekends) | 7:30 p.m." })] });
+    expect(dataset.events[0]!.days).toEqual(["Sat", "Sun"]);
+  });
+
+  it("a weekday beside a date is the date's, not a day the run plays", async () => {
+    const { dataset, report } = await runAt(WEEK_1, {
+      completions: [listed({ days: ["Fri"], startDate: "2026-10-02", endDate: "2027-02-05", dateEvidence: "Fri, October 2, 2026 – Fri, February 5, 2027" })],
+    });
+    expect(dataset.events[0]).toMatchObject({ recurrence: "limited-run" });
+    expect(dataset.events[0]).not.toHaveProperty("days");
+    expect(report.sources[0]!.detail).toContain("does not state; no days taken");
   });
 
   it("every day of the week is no days", async () => {
@@ -166,6 +181,15 @@ describe("the weekdays a limited run plays, from the list's own date quote (#196
       expect(report.ownPages[0]).toMatchObject({ source: "Picks", read: 1, dayed: 0 });
     });
 
+    it("an own page whose days do not hold leaves the list's", async () => {
+      const { dataset, report } = await runAt(WEEK_1, {
+        completions: [listed(), ownPage({ days: ["Wed", "Thu"], daysEvidence: "Wednesdays and Thursdays after hours" })],
+        curate: flagAll,
+      });
+      expect(dataset.events[0]).toMatchObject({ days: ["Wed"], evidence: { days: { page: LIST_URL, quote: DATE_QUOTE } } });
+      expect(report.ownPages[0]!.problems).toEqual([expect.stringContaining("not on the page")]);
+    });
+
     it("an own page stating the days gives them over the list's", async () => {
       const OWN_QUOTE = "Open Wednesdays and Thursdays after hours";
       const { dataset, report } = await runAt(WEEK_1, {
@@ -199,5 +223,23 @@ describe("the weekdays a limited run plays, from the list's own date quote (#196
       const { dataset } = await runAt(WEEK_2, { dataset: first.dataset, completions: [listed()], curate: flagAll });
       expect(dataset.events[0]).toMatchObject({ days: ["Wed", "Thu"], evidence: { days: { page: OWN_URL, quote: OWN_QUOTE } } });
     });
+  });
+});
+
+describe("statesDays", () => {
+  it.each([
+    ["Wednesdays, Oct. 7-28, 2026 | 5:30-8 p.m.", ["Wed"], true],
+    ["Thursdays through Oct 25", ["Thu"], true],
+    ["Fridays and Saturdays, Nov 6–21", ["Fri", "Sat"], true],
+    ["Thursday–Sunday, Oct 14–Nov 1", ["Thu", "Fri", "Sat", "Sun"], true],
+    ["Oct. 9 – Nov. 1 (Weekends) | 7:30 p.m.", ["Sat", "Sun"], true],
+    ["Fri & Sat through Nov 1", ["Fri", "Sat"], true],
+    ["Fri, October 2, 2026 – Fri, February 5, 2027", ["Fri"], false],
+    ["Friday, Sept. 25 - Wednesday, Nov. 11", ["Fri", "Wed"], false],
+    ["Sat 24 Oct – Sun 1 Nov", ["Sat", "Sun"], false],
+    ["Oct 14 – Nov 1", ["Fri"], false],
+    ["Wednesdays, Oct. 7-28", ["Wed", "Thu"], false],
+  ])("%s states %s: %s", (quote, days, expected) => {
+    expect(statesDays(quote, days as never)).toBe(expected);
   });
 });

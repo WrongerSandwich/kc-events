@@ -1044,7 +1044,7 @@ function keepsOwnPageRead(known: Event, sighting: Event): boolean {
   return calendarDate(sighting.start) === calendarDate(known.start) && samePage(sighting.eventUrl, read.page);
 }
 
-/** Whether a stored start kept with its quotes (keepsStart) keeps a run's days (#143): the reading still makes it a limited run. */
+/** Whether a record keeps the days it carries (#143): the reading still makes it a limited run. Enough on its own for a stored start kept with its quotes (keepsStart); a kept own-page read also asks where they came from (keepsOwnPageDays). */
 function keepsDays(known: Event, sighting: Event): boolean {
   return known.days !== undefined && sighting.recurrence === "limited-run";
 }
@@ -1476,11 +1476,11 @@ async function readOwnPage(
   for (const problem of outcome.problems) line.problems.push(`"${event.title}": ${url} ${problem}`);
   const { start, price, ages, description } = outcome;
   // Days the list's own date line gave (#196) stand unless this page gives its own; its ticket page is not followed for them.
-  const listDays = fromList(event) ? { value: event.days!, ...event.evidence.days! } : undefined;
+  const listed = fromList(event) ? { value: event.days!, ...event.evidence.days! } : undefined;
   const followed =
-    outcome.days === undefined && outcome.ticketPage !== undefined && listDays === undefined ? await readTicketPage(event, outcome.ticketPage, route, ports, context, rules, line) : undefined;
+    outcome.days === undefined && outcome.ticketPage !== undefined && listed === undefined ? await readTicketPage(event, outcome.ticketPage, route, ports, context, rules, line) : undefined;
   const ownDays = outcome.days ? { ...outcome.days, page: url } : followed !== "unread" ? followed : undefined;
-  const days = ownDays ?? listDays;
+  const days = ownDays ?? listed;
   const timed = start !== undefined && !hasTime(event.start);
   const described =
     description !== undefined && (event.description === undefined || (event.description.length <= LISTING_LINE_LENGTH && description.length > event.description.length));
@@ -1513,7 +1513,7 @@ async function readOwnPage(
 /**
  * A run's ticket page, followed from its own page when that gives no weekdays and links a page of performances (#143),
  * fetched and read, one more call, for the days alone. It must be on the run's primary page's site, its own page's, or
- * a ticketing platform. It is fetched through the browser, waiting for the platform's selector, on a platform the
+ * a ticketing platform, and not the list itself, whose quotes are the list's (#196). It is fetched through the browser, waiting for the platform's selector, on a platform the
  * config lists as rendered by script (platformWaitFor), and the source's way otherwise. A page that could not be read
  * (a fetch or model failure, or the spend cap) is "unread", with a line saying why, so the caller does not record the
  * read and the next run follows the link again; a page read that gives no days, or none that hold, gives undefined.
@@ -1535,6 +1535,11 @@ async function readTicketPage(
   const { platformHosts, platformWaitFor } = config.discovery;
   if (!ownPageAllowed(url, event.primaryUrl, platformHosts)) {
     note(`${event.eventUrl} links its performances at ${url}, which is not on the venue's site or a ticketing platform; not followed`);
+    return undefined;
+  }
+  // Days quoted from the primary page are the list's (fromList), so a link back to it is not a page of performances.
+  if (samePage(url, event.primaryUrl)) {
+    note(`${event.eventUrl} links its performances at ${url}, the list itself; not followed`);
     return undefined;
   }
   if (ports.model.exhausted()) return unread(`${url} not read: the spend cap was reached`);

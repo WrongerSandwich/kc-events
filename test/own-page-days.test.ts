@@ -272,6 +272,7 @@ describe("givesDays", () => {
     ["OCT 14 – NOV 1", ["Fri"], false],
     ["Sunday matinees", ["Mon"], false],
     ["Monday", ["Mon"], true],
+    ["Performances on weekends", ["Sat", "Sun"], true],
     ["Satisfying shows", ["Sat"], false],
   ])("%s gives %j: %s", (quote, days, expected) => {
     expect(givesDays(quote, days as never)).toBe(expected);

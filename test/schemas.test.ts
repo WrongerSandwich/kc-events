@@ -98,6 +98,21 @@ describe("dataset", () => {
     expect(parseDataset(withEvent)).toEqual(withEvent);
   });
 
+  it("refuses a one-off whose span is a limited run's (#196), the class a reading would derive", () => {
+    const long = { ...event, end: "2026-10-19T20:00:00-05:00" };
+    expect(() => parseDataset({ ...emptyDataset(), events: [long] })).toThrow(/a one-off spans a few days at most/);
+    expect(parseDataset({ ...emptyDataset(), events: [{ ...long, recurrence: "limited-run" }] }).events[0]).toMatchObject({ recurrence: "limited-run" });
+    expect(parseDataset({ ...emptyDataset(), events: [{ ...event, end: "2026-10-12T20:00:00-05:00" }] }).events[0]).toMatchObject({ recurrence: "one-off" });
+  });
+
+  it("accepts a run's days quoted from its primary page (#196) as from its own page, and refuses them from anywhere else", () => {
+    const run = { ...event, recurrence: "limited-run", end: "2026-10-31T20:00:00-05:00", days: ["Sat"] };
+    const quoted = (page: string) => ({ ...run, evidence: { ...event.evidence, days: { page, quote: "Saturdays, Oct 10–31" } } });
+    expect(parseDataset({ ...emptyDataset(), events: [quoted(event.primaryUrl)] }).events[0]).toMatchObject({ days: ["Sat"] });
+    expect(() => parseDataset({ ...emptyDataset(), events: [quoted("https://elsewhere.example/run")] })).toThrow(/days carry their quote/);
+    expect(() => parseDataset({ ...emptyDataset(), events: [run] })).toThrow(/days carry their quote/);
+  });
+
   it("loads an event written before the outage counter existed with no outages", () => {
     const { consecutiveOutages: _, ...older } = event;
     expect(parseDataset({ ...emptyDataset(), events: [older] }).events[0]).toEqual(event);
