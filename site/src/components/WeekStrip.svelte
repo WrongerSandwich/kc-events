@@ -1,12 +1,12 @@
 <script lang="ts">
   import type { PublishedEvent } from "../lib/types";
-  import { weekDays, type WeekDay } from "../lib/week";
+  import { dayTarget, weekDays, type WeekDay } from "../lib/week";
   import { slugify } from "../lib/slugs";
   import KindIcon from "./KindIcon.svelte";
 
-  // The rest of this week at a glance: a column per day with an icon per pick, each day a jump to its first card.
-  // Runs open that day are bands under the icons, one lane per run in the kind's colour, as a calendar draws a
-  // multi-day event; a run's icon still marks its opening and closing day.
+  // The rest of this week at a glance: a column per day with an icon per pick, each day a jump to the first card that
+  // starts on it (dayTarget). Runs open that day are bands under the icons, one lane per run in the kind's colour, as
+  // a calendar draws a multi-day event; a run's icon still marks its opening and closing day.
   let { picks, today, sunday }: { picks: PublishedEvent[]; today: string; sunday: string } = $props();
   let days = $derived(weekDays(picks, today, sunday));
   const SHOWN = 3; // icons per day before "+n"
@@ -24,7 +24,7 @@
 
 <nav class="week" aria-label="This week by day" style={`--days: ${days.length}`}>
   {#each days as d (d.date)}
-    {@const first = d.picks[0] ?? d.running[0]}
+    {@const first = dayTarget(d)}
     {#snippet inside()}
       <span class="name">{d.date === today ? "Today" : d.weekday}</span>
       <span class="num">{d.day}</span>
