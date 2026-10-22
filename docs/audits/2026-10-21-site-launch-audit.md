@@ -15,7 +15,40 @@ The site as deployed from `cb366f2` (the 2026-10-19 run's data), audited lane by
 | G | Data accuracy: a live sample checked against source pages | done, below |
 | H | Operations and launch: Vercel, DNS, HTTP behaviour, repo face | done, below (by the orchestrating session) |
 
-## Headline so far
+## Synthesis
+
+**Verdict: launchable, with a short list first.** No lane found a P0. The static surfaces are sound at the level that matters to a first wave: hash-only CSP and the security headers, no injection sink for dataset text, unique canonicals and valid structured data on all 559 pages, 439 calendar files that parse clean, first-party requests only, and, most of all, every sampled date, time and venue on the 14 current picks matches its source page. What the lanes found is a layer above that: a function that trusts its form, a build cadence that leaves most of the week's pages stale, trust copy that over-claims, and a handful of editorial lines on the front page that the source pages do not support.
+
+The P1s, deduplicated across lanes and ordered by what a new reader would hit first. Where several lanes found the same thing, each is named.
+
+| # | Fix | Lanes | Where the fix lives | Size |
+|---|---|---|---|---|
+| 1 | `/api/report` derives title and links from the event id and refuses unknown ids; drop the three hidden fields | C (F1) | `site/src/server/report.ts`, `ReportForm.astro` | small |
+| 2 | Rebuild the site daily (Vercel Deploy Hook, POSTed at about 00:05 Central from the home cron or a scheduled workflow); add one e2e at build day + 3 | E (E1), B (B2) | Vercel dashboard, `scripts/`, `site/e2e` | small, mostly ops |
+| 3 | A `venues.yaml` row with no live record warns instead of throwing, so an archived venue cannot refuse a weekly deploy | E (E2) | `site/src/build/venues.ts` | small |
+| 4 | Say where dates come from truthfully ("the venue's or organizer's own page", matching the event page's own verified line) and say, where readers land, that a model writes the picks, reasons and descriptions | F (F1, F2), B (B7) | `index.astro`, `about.astro`, `e/[id].astro`, `README.md`, `llms.txt.ts`, `PRODUCT.md` | small, copy |
+| 5 | "All day" on 59 rows becomes "no time listed" (the page gave no time) | F (F3), G | `site/src/lib/group.ts:36` | small |
+| 6 | The Saved view gets its own empty state and never folds a save into "On now"; the shared shortlist says it is one | B (B1), F (F4) | `Explorer.svelte`, `group.ts` | small to medium |
+| 7 | Four why-lines on current picks say what the pages do not (Dark Forest "three nights only" is seven; Graveyard 5K "open once a year"; Invincible Czars "a Kansas City band"; Hedwig "likely" in person), and the City Market is a one-off through a Monday it does not run; plus two prompt rules so they do not come back | G | `data/events.json` hand edits, `prompts/curation-prompt.md`, `prompts/extraction-rules.md` | small |
+| 8 | The catch-all region stops claiming "Kansas City" in JSON-LD, and the three picks' venues get `venues.yaml` rows (Powell Gardens, Union Cemetery, Elmwood Cemetery) and `venueNeighborhoods` entries | D (D1, D2), G | `site/src/lib/event-meta.ts:20`, `data/venues.yaml`, `research.config.yaml` | small |
+| 9 | The week strip's Fri and Sat jump to the first card that starts that day, not to a Thursday span; "On now" stays folded above a few rows whatever the date filter | B (B3) | `WeekStrip.svelte`, `group.ts` | small; day presets are the P2 half |
+| 10 | "For venues" says how to correct a listing or ask to be read, not only how to block the crawler | F (F5), B (Morgan) | `about.astro`, `README.md` | copy; a private address is the owner's call |
+
+Of these, 1, 3, 4, 5, 6, 8 and the copy half of 9 and 10 are site code or copy an agent can land in one pull request from this worktree, with tests; 2 needs the deploy hook created in the Vercel dashboard (the cron line is then one `curl`); 7 is hand edits to the dataset plus prompt rules, which a reviewer should read.
+
+The P2s cluster into a few themes rather than forty separate tasks:
+
+- **One component vocabulary** (B4, B5, B6, F7, F9, F10, F21, F22): Save, Calendar and the kind chip look and behave the same everywhere; the explorer row stops repeating "✓ Oct 19" 430 times and gives the width to the title; "Export this view" names its count; the report form hides after sending and warns before; the "Until" tile becomes "Closes"; accessible names say what the visible labels say.
+- **Richer structured data and discovery** (D3 to D8, F25): Event `url`/`@id` on the site's own page, a description fallback and an `organizer`, meta descriptions that name the event, `llms.txt` with the feeds, the landing pages, the query grammar and a cite line, "By kind" and "By region" links from the front page and `/venues` in the footer, an `https` subscribe path beside `webcal:`.
+- **Operations that fail loudly** (E3, E6, C/F2, C/F3): the weekly run polls Vercel's commit status and fails the health check on a failed deploy; the committed-data tests move out of PR CI into the run; the report function caps its own filing rate and dedupes by event; the vite 8.3.3 bump when it clears the cooldown.
+- **Typecheck the islands** (E4): `svelte-check` in `typecheck`, free today.
+- **Data rules the next run should carry** (G): `days` read from a list's own quote so Wednesday-only runs stop showing as every day; placeholders ("Offsite Location") and rooms (the Nerman lobby, "1801 East 18th Street") become venues through `venueAliases`; a weekday that disagrees with its date holds the event rather than trusting the date; the always-there picks are re-pointed (`thecitymarket.org` no longer matches).
+- **Search and names** (E5): accent folding in the middle of a word ("rolon" finds "Rolón"), and the same for slugs.
+- **One idea, one name** (F6, F15): "pick" in prose and filters, "Don't miss" only as the tag, and About defines one by the other; "Include recurring events" for the explorer's checkbox.
+
+Lane A (technical frontend: contrast measured in both schemes, touch targets, reflow, reduced motion, forced colours, per-page payloads) is the one lane still to land; its findings go below when it does.
+
+## Lane-by-lane headlines
 
 - The crawl, share and calendar surfaces are sound: unique canonicals on all 559 pages, all 975 JSON-LD blocks parse, all 558 sitemap URLs answer 200, every link-preview crawler gets static tags and a 1200x630 card, and all 439 calendar files parse clean in two parsers with stable UIDs across builds.
 - The P1s found so far are data, not markup: the catch-all region labels venues outside the city as "Kansas City" in JSON-LD (Powell Gardens is in Kingsville), and three of the fourteen current picks are at venues with no `data/venues.yaml` row, so the flagship don't-miss feed carries no mappable address for them.
