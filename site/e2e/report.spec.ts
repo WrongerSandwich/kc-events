@@ -2,10 +2,11 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
-import { handleReport } from "../src/server/report";
+import { handleReport, publishedEvents } from "../src/server/report";
 
 // The preview serves only the static build, so /api/report is answered here by the real function, with GitHub faked:
-// what the browser posts and what it is shown are the function's own (#129).
+// what the browser posts and what it is shown are the function's own (#129). The event lookup reads the preview's own
+// /events.json, as the deployed function reads its deployment's.
 async function serveReports(page: Page) {
   const filed: { title: string; body: string; labels: string[] }[] = [];
   const github = (async (_url: string, init: RequestInit) => {
@@ -16,7 +17,7 @@ async function serveReports(page: Page) {
     const request = route.request();
     const response = await handleReport(
       new Request(request.url(), { method: request.method(), headers: await request.allHeaders(), body: request.postData() ?? "" }),
-      { token: "e2e-token", origins: ["http://localhost:4321"], fetch: github },
+      { token: "e2e-token", origins: ["http://localhost:4321"], fetch: github, published: publishedEvents("http://localhost:4321", fetch) },
     );
     await route.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body: await response.text() });
   });
