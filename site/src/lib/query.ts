@@ -22,6 +22,7 @@ export type Filters = {
   when: When;
   kinds: string[];
   regions: string[];
+  /** The picks only; `picks=1` in the URL, the reader's word (#185). */
   dontMiss: boolean;
   recurring: boolean;
   saved: boolean;
@@ -81,7 +82,7 @@ function parseWhen(raw: string | null, implied: When): When {
 export function parseQuery(params: URLSearchParams, known: Known): Filters {
   const kinds = slugTable(known.kinds);
   const regions = slugTable(known.regions);
-  const pick = (key: string, table: ReturnType<typeof slugTable>) =>
+  const fromSlugs = (key: string, table: ReturnType<typeof slugTable>) =>
     params.getAll(key).map((s) => table.fromSlug(s)).filter((n): n is string => n !== undefined).filter((n, i, all) => all.indexOf(n) === i);
   const sort = params.get("sort");
   const saved = params.get("saved") === "1";
@@ -89,8 +90,8 @@ export function parseQuery(params: URLSearchParams, known: Known): Filters {
   const isList = saved || (params.get("ids") ?? "") !== "";
   return {
     when: parseWhen(params.get("when"), impliedWhen(isList)),
-    kinds: pick("kind", kinds),
-    regions: pick("region", regions),
+    kinds: fromSlugs("kind", kinds),
+    regions: fromSlugs("region", regions),
     dontMiss: params.get("picks") === "1",
     recurring: params.get("recurring") === "1",
     saved,
