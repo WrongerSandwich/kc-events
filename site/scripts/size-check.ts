@@ -62,8 +62,9 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // 50 KB, plus 200 bytes for a run's days (#143), 250 for each row's link to its venue's page (#137), and 100 for the calendar
   // writer's page link and extra properties, which the feeds use (#136), and 300 for the report form's two CSP hashes, which every
   // page's policy carries (#129), and the dependency bump of #152, and 200 each for the saved view's own empty state and for the
-  // scroll padding that keeps a focused row clear of the sticky bar (audit 2026-10-21)
-  { page: "explore.html", budget: 51_250, build: "fixture" },
+  // scroll padding that keeps a focused row clear of the sticky bar (audit 2026-10-21), and 750 for opening on the week with
+  // day chips and Keep going (#183)
+  { page: "explore.html", budget: 52_000, build: "fixture" },
 ];
 
 function main(): void {

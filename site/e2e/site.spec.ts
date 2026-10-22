@@ -22,7 +22,7 @@ test("the front page buckets the fixture's don't-miss events", async ({ page }) 
   await expect(sections.nth(2).getByRole("listitem")).toHaveText([/November festival/]);
   // No hand-kept Always there pick matches the fixture, so the section is left out rather than shown empty.
   await expect(page.getByRole("heading", { name: "Always there" })).toHaveCount(0);
-  await expect(page.getByText("Browse all 10 events")).toBeVisible();
+  await expect(page.getByRole("link", { name: "Browse all 10 events" })).toHaveAttribute("href", "/explore?when=all&recurring=1");
   // On a Monday the week strip runs today through Sunday; a day with a pick jumps to its card.
   const week = page.getByRole("navigation", { name: "This week by day" });
   await expect(week.locator(".day")).toHaveCount(7);
@@ -147,7 +147,7 @@ test("the explorer honors the URL and writes it back", async ({ page }) => {
   await expect(page.getByRole("status")).toHaveText("2 events");
   await expect(page.getByRole("article").getByRole("heading")).toHaveText(["Fabio Frizzi plays Fulci", "Friday night jazz"]);
   await page.getByRole("button", { name: "comedy" }).click();
-  await expect(page).toHaveURL(/when=weekend&kind=music&kind=comedy/);
+  await expect(page).toHaveURL(/\/explore\?kind=music&kind=comedy$/); // the week is the default, so the URL leaves it out
   await expect(page.getByRole("status")).toHaveText("3 events");
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page).toHaveURL("/explore");
@@ -182,7 +182,7 @@ test.describe("the explorer's active slice at 390 px", () => {
     for (const pill of await pills.all()) await expect(pill).toBeInViewport();
     await expect(page.locator("#filter-sheet")).toBeHidden();
     await page.getByRole("button", { name: "Remove Through Sunday" }).click();
-    await expect(page).toHaveURL("/explore?kind=music");
+    await expect(page).toHaveURL("/explore?when=all&kind=music");
     await expect(pills).toHaveText(["music"]);
     await expect(page.getByRole("button", { name: /^Filters/ })).toHaveText("Filters (1)");
   });
@@ -286,7 +286,7 @@ test("the region fallback places a region-named neighborhood", async ({ page }) 
 });
 
 // The explorer's two row layouts: under day headings, and with the day first (the venue sort).
-const EXPLORER_SORTS = ["/explore", "/explore?sort=venue"];
+const EXPLORER_SORTS = ["/explore?when=all", "/explore?when=all&sort=venue"];
 
 /**
  * Opens the collapsed On now line, if there is one, so its rows are measured with the rest. The page is prerendered in
@@ -300,21 +300,41 @@ async function openOnNow(page: Page) {
 }
 
 for (const js of [true, false]) {
-  test(`bare /explore leads with a dated day, On now one closed line that opens, ${js ? "with" : "without"} JS`, async ({ browser }) => {
+  test(`bare /explore opens on the week, a short On now open, with Keep going after Sunday, ${js ? "with" : "without"} JS (#183)`, async ({ browser }) => {
     const context = await browser.newContext({ javaScriptEnabled: js });
     const page = await context.newPage();
     await on(page, BUILD_DAY, "/explore");
     const results = page.getByRole("region", { name: "Events" });
-    // On now keeps its heading inside the closed line; the first heading outside it is a day.
-    await expect(results.locator(":scope > h2").first()).toHaveText("Tue Oct 6");
-    const summary = results.locator("details > summary");
-    await expect(summary).toHaveText("On now · 2 events");
-    await expect(results.getByRole("heading", { name: "Closing exhibition" })).toBeHidden();
-    await summary.click();
+    await expect(results.getByRole("heading", { level: 2 })).toHaveText(["On now", "Tue Oct 6", "Thu Oct 8", "Fri Oct 9", "Sat Oct 10"]);
+    await expect(results.locator("details")).toHaveCount(0);
     await expect(results.getByRole("heading", { name: "Closing exhibition" })).toBeVisible();
+    const keep = results.getByRole("link", { name: /^Keep going/ });
+    await expect(keep).toHaveText("Keep going: next week · 1 event →");
+    await expect(keep).toHaveAttribute("href", "/explore?when=2026-10-05..2026-10-18");
+    await expect(results.getByRole("link", { name: "or see all 9" })).toHaveAttribute("href", "/explore?when=all");
     await context.close();
   });
 }
+
+test("Keep going adds next week below where the reader is, without moving the page (#183)", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await on(page, BUILD_DAY, "/explore");
+  await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+  const keep = page.getByRole("link", { name: /^Keep going/ });
+  await keep.scrollIntoViewIfNeeded();
+  const before = await keep.evaluate((el) => el.getBoundingClientRect().top);
+  await keep.click();
+  await expect(page).toHaveURL("/explore?when=2026-10-05..2026-10-18");
+  const next = page.getByRole("heading", { level: 2, name: "Sat Oct 17" });
+  await expect(next).toBeFocused();
+  await expect(next).toBeInViewport();
+  // The new first day sits where the button was, the week above it unmoved.
+  expect(Math.abs((await next.evaluate((el) => el.getBoundingClientRect().top)) - before)).toBeLessThan(2);
+  await expect(page.getByRole("article").filter({ hasText: "Mid-month reading" })).toBeVisible();
+  // Nothing is listed the week after, so only every date is left to offer.
+  await expect(page.getByRole("link", { name: /^Keep going/ })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "See all 9" })).toBeVisible();
+});
 
 for (const width of [1280, 1440]) {
   for (const path of EXPLORER_SORTS) {
@@ -358,7 +378,7 @@ for (const width of [1024, 1280, 1440]) {
       );
       // Every active event but the always-there one, which the default filters leave out; the date sort lists the
       // three-day November festival under each of its days (#90).
-      expect(rows.length).toBe(path === "/explore" ? 11 : 9);
+      expect(rows.length).toBe(path === EXPLORER_SORTS[0] ? 11 : 9);
       expect(new Set(rows.map((r) => r.title)).size).toBe(9);
       for (const row of rows) {
         if (row.dated) expect(row.dateFits, `${row.title}: date fits`).toBe(true);
@@ -388,7 +408,7 @@ for (const path of EXPLORER_SORTS) {
         };
       }),
     );
-    expect(rows.length).toBe(path === "/explore" ? 11 : 9); // every row is dated: the default filters leave out the always-there one; the festival is under each of its days
+    expect(rows.length).toBe(path === EXPLORER_SORTS[0] ? 11 : 9); // every row is dated: the default filters leave out the always-there one; the festival is under each of its days
     const chipLeft = rows[0]!.chip.left;
     for (const r of rows) {
       expect(r.when.bottom, `${r.title}: date above title`).toBeLessThanOrEqual(r.heading.top + 0.5);
@@ -581,9 +601,7 @@ for (const width of [1280, 390]) {
     await expect(skip).toBeInViewport();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("region", { name: "Events" })).toBeFocused();
-    // From the results: On now's line, then each row's title and Save, with the host left out.
-    await page.keyboard.press("Tab");
-    await expect(page.locator(".results details > summary")).toBeFocused();
+    // From the results (On now, short, is open like a day): each row's title and Save, with the host left out.
     const first = page.locator(".results > article.row").first();
     for (const stop of [first.locator("h3 a"), first.locator("button.save"), page.locator(".results > article.row").nth(1).locator("h3 a")]) {
       await page.keyboard.press("Tab");
@@ -640,7 +658,7 @@ test("a don't-miss row keeps its why-line on a phone", async ({ page }) => {
 });
 
 test("explorer rows read their dates relative to the day headings and the sort", async ({ page }) => {
-  await on(page, BUILD_DAY, "/explore");
+  await on(page, BUILD_DAY, "/explore?when=all");
   await openOnNow(page);
   const row = (title: string) => page.locator("article.row", { has: page.getByRole("heading", { name: title }) }).locator(".when");
   await expect(row("Closing exhibition")).toHaveText("Closes Sun Oct 11");
@@ -653,7 +671,7 @@ test("explorer rows read their dates relative to the day headings and the sort",
   const verified = page.locator("article.row", { has: page.getByRole("heading", { name: "Fabio Frizzi plays Fulci" }) }).locator(".verified");
   await expect(verified.locator('[aria-hidden="true"]')).toHaveText("✓ Oct 3");
   await expect(verified.locator(".visually-hidden")).toHaveText("Verified Oct 3");
-  await on(page, BUILD_DAY, "/explore?sort=venue");
+  await on(page, BUILD_DAY, "/explore?when=all&sort=venue");
   await expect(row("Friday night jazz")).toHaveText("Fri Oct 9 · 8:00 pm");
   await expect(row("Haunted house")).toHaveText("Wed Oct 28, 10:00 am–Wed Nov 18");
 });
@@ -748,7 +766,7 @@ test("a kind's page lists its events by day and leads into the explorer with the
   const ld = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
   expect(ld).toMatchObject({ "@type": "ItemList", numberOfItems: 2 });
   await page.getByRole("link", { name: "Filter further in the explorer" }).click();
-  await expect(page).toHaveURL(/\/explore\?kind=music$/);
+  await expect(page).toHaveURL(/\/explore\?when=all&kind=music$/);
 });
 
 test("a region with nothing listed still has its page, which says so (#138)", async ({ page }) => {

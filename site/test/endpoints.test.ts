@@ -81,7 +81,7 @@ describe("committed data", () => {
       const html = read("index.html");
       expect(html).toContain('"@type":"WebSite"');
       expect(html).toContain('"@type":"ItemList"');
-      expect(html).toContain("explore?q={search_term_string}");
+      expect(html).toContain("explore?when=all&amp;q={search_term_string}");
     });
 
     it("titles the front page for the search it answers, and names the site in its JSON-LD (#168)", () => {

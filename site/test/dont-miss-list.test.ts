@@ -293,7 +293,7 @@ describe("DontMissList", () => {
     render(DontMissList);
     await tick();
     expect(screen.getByText(/Nothing is picked right now/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Browse everything" })).toHaveAttribute("href", "/explore");
+    expect(screen.getByRole("link", { name: "Browse everything" })).toHaveAttribute("href", "/explore?when=all");
     expect(screen.queryAllByRole("region")).toEqual([]);
   });
 });

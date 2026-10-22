@@ -34,7 +34,7 @@ test("a shortlist link shows only its events, in its order, under Shortlist · N
   await page.getByRole("button", { name: "music" }).click();
   await expect(page.getByRole("heading", { level: 2 })).toHaveText("Shortlist · 2 events");
   await page.getByRole("button", { name: "Remove Shortlist (3)" }).click();
-  await expect(page).toHaveURL("/explore?kind=music");
+  await expect(page).toHaveURL("/explore?when=all&kind=music");
   await expect(page.getByText(/Shortlist/)).toHaveCount(0);
 });
 

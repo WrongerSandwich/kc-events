@@ -119,7 +119,7 @@
 </script>
 
 {#if total === 0}
-  <p class="empty">Nothing is picked right now. <a href="/explore">Browse everything</a> instead.</p>
+  <p class="empty">Nothing is picked right now. <a href="/explore?when=all">Browse everything</a> instead.</p>
 {:else}
   {#each HORIZONS as h (h)}
     {@const heading = horizonHeading(h, today)}
@@ -138,7 +138,7 @@
             </li>
           {/each}
         </ul>
-        <p class="more"><a href="/explore?dontmiss=1">Every pick in the explorer</a></p>
+        <p class="more"><a href="/explore?when=all&dontmiss=1">Every pick in the explorer</a></p>
       {:else}
         {@const kind = chosen[h]}
         <ul class="kinds" aria-label="Picks by kind">

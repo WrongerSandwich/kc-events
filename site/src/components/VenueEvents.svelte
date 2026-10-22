@@ -1,7 +1,7 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { groupResults } from "../lib/group";
-  import { DEFAULT_FILTERS } from "../lib/query";
+  import { DEFAULT_FILTERS, EVERY_DATE } from "../lib/query";
   import type { PublishedEvent } from "../lib/types";
   import ResultRow from "./ResultRow.svelte";
 
@@ -10,7 +10,7 @@
   // (ChangeRows.svelte), so the page ships no script and the row's Save is left to the event's own page. Styled by
   // styles/venues.css, not a style block of its own (that file says why).
   let { events }: { events: PublishedEvent[] } = $props();
-  let groups = $derived(groupResults(events, { ...DEFAULT_FILTERS, recurring: true }, meta.buildToday, new Set()));
+  let groups = $derived(groupResults(events, { ...DEFAULT_FILTERS, when: EVERY_DATE, recurring: true }, meta.buildToday, new Set()));
 </script>
 
 {#if groups.length === 0}

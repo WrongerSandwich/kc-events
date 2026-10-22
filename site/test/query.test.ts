@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_FILTERS, QUERY_KEYS, WHEN_LABELS, filterPills, isDefault, parseQuery, shortlistQuery, toQuery, type Filters } from "../src/lib/query";
+import { DEFAULT_FILTERS, DEFAULT_WHEN, EVERY_DATE, QUERY_KEYS, WHEN_LABELS, filterPills, isDefault, parseQuery, shortlistQuery, toQuery, type Filters } from "../src/lib/query";
 
 const known = { kinds: ["music", "film", "theater/dance"], regions: ["Central KC", "Kansas City, Kansas", "Elsewhere in the metro"] };
 const parse = (s: string) => parseQuery(new URLSearchParams(s), known);
@@ -10,6 +10,29 @@ describe("query state", () => {
     expect(parse("")).toEqual(DEFAULT_FILTERS);
     expect(isDefault(parse(""))).toBe(true);
     expect(toQuery(DEFAULT_FILTERS)).toBe("");
+  });
+
+  it("opens on the week with no when, and writes every date out as when=all (#183)", () => {
+    expect(parse("").when).toEqual({ preset: "weekend" });
+    expect(toQuery({ ...DEFAULT_FILTERS, when: { preset: "weekend" } })).toBe("");
+    expect(parse("when=all").when).toEqual(EVERY_DATE);
+    expect(toQuery({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toBe("when=all");
+    expect(isDefault({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toBe(false);
+    expect(parse("when=all&recurring=1")).toEqual({ ...DEFAULT_FILTERS, when: EVERY_DATE, recurring: true });
+  });
+
+  it("reads a shortlist or saved-view link without when as every date, so a list is never cut to the week", () => {
+    expect(parse("saved=1").when).toEqual(EVERY_DATE);
+    expect(parse("ids=evt_a1").when).toEqual(EVERY_DATE);
+    expect(parse("ids=evt_a1&when=soon").when).toEqual(EVERY_DATE);
+    // A shortlist none of whose events is still published shows every date in its place.
+    expect(parseQuery(new URLSearchParams("ids=evt_gone"), { ...known, ids: [] })).toMatchObject({ ids: [], when: EVERY_DATE });
+    expect(toQuery({ ...DEFAULT_FILTERS, saved: true, when: EVERY_DATE })).toBe("saved=1");
+    expect(toQuery({ ...DEFAULT_FILTERS, ids: ["evt_a1"], when: EVERY_DATE })).toBe("ids=evt_a1");
+    // Narrowed to the week, the list says so.
+    const week = { ...DEFAULT_FILTERS, saved: true };
+    expect(toQuery(week)).toBe("when=weekend&saved=1");
+    expect(parse(toQuery(week))).toEqual(week);
   });
 
   it("parses every filter, with repeated keys for multi-values", () => {
@@ -35,13 +58,13 @@ describe("query state", () => {
 
   it("ignores unknown keys, unknown slugs, malformed values, and keeps the first of repeated when", () => {
     const f = parse("when=soon&when=today&kind=opera&kind=film&region=mars&sort=price&foo=bar&dontmiss=yes");
-    expect(f.when).toEqual({ preset: "all" });
+    expect(f.when).toEqual(DEFAULT_WHEN);
     expect(f.kinds).toEqual(["film"]);
     expect(f.regions).toEqual([]);
     expect(f.sort).toBe("date");
     expect(f.dontMiss).toBe(false);
-    expect(parse("when=2026-13-45..2026-10-11").when).toEqual({ preset: "all" });
-    expect(parse("when=2026-10-09..").when).toEqual({ preset: "all" });
+    expect(parse("when=2026-13-45..2026-10-11").when).toEqual(DEFAULT_WHEN);
+    expect(parse("when=2026-10-09..").when).toEqual(DEFAULT_WHEN);
   });
 
   it("serializes without defaults and round-trips", () => {
@@ -64,7 +87,7 @@ describe("query state", () => {
 
   it("keeps the first of a repeated when only if it is valid", () => {
     expect(parse("when=7d&when=today").when).toEqual({ preset: "7d" });
-    expect(parse("when=soon&when=today").when).toEqual({ preset: "all" });
+    expect(parse("when=soon&when=today").when).toEqual(DEFAULT_WHEN);
   });
 
   it("serializes dirty input to a stable query that parses back to the same filters", () => {
@@ -100,12 +123,13 @@ describe("query state", () => {
   });
 
   it("exports the date validator the query parser uses", () => {
-    expect(parse("when=2026-02-30..2026-03-01").when).toEqual({ preset: "all" });
+    expect(parse("when=2026-02-30..2026-03-01").when).toEqual(DEFAULT_WHEN);
     expect(parse("when=2026-02-27..2026-03-01").when).toEqual({ from: "2026-02-27", to: "2026-03-01" });
   });
 
   it("describes the active filters in words, for the empty state", () => {
-    expect(labels(DEFAULT_FILTERS)).toEqual([]);
+    expect(labels(DEFAULT_FILTERS)).toEqual(["Through Sunday"]);
+    expect(labels({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toEqual([]);
     expect(labels({ ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Kansas City, Kansas"], dontMiss: true, saved: true, q: " zzz " }))
       .toEqual(["Through Sunday", "music", "film", "Kansas City, Kansas", "don't-miss only", "saved only", "“zzz”"]);
     expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-11" }, recurring: true, sort: "venue" })).toEqual(["Oct 9–11", "including always-there"]);
@@ -118,7 +142,9 @@ describe("query state", () => {
   });
 
   it("names each active filter as a pill that removes only that filter, sort kept", () => {
-    expect(filterPills(DEFAULT_FILTERS)).toEqual([]);
+    expect(filterPills({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toEqual([]);
+    // The default week narrows too, so it has a pill, which widens to every date.
+    expect(filterPills(DEFAULT_FILTERS)).toEqual([{ label: "Through Sunday", without: { ...DEFAULT_FILTERS, when: EVERY_DATE } }]);
     const f: Filters = { ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Lawrence"], dontMiss: true, recurring: true, saved: true, q: "jazz", sort: "venue" };
     const pills = filterPills(f);
     expect(pills.map((p) => p.label)).toEqual(["Through Sunday", "music", "film", "Lawrence", "don't-miss only", "including always-there", "saved only", "“jazz”"]);
@@ -161,10 +187,10 @@ describe("shortlist ids (#132)", () => {
   });
 
   it("writes ids with plain commas, first, and round-trips with the other filters", () => {
-    const f = parseQuery(new URLSearchParams("ids=evt_b2,evt_a1&when=weekend"), withIds);
-    expect(f).toEqual({ ...DEFAULT_FILTERS, ids: ["evt_b2", "evt_a1"], when: { preset: "weekend" } });
+    const f = parseQuery(new URLSearchParams("ids=evt_b2,evt_a1&when=7d"), withIds);
+    expect(f).toEqual({ ...DEFAULT_FILTERS, ids: ["evt_b2", "evt_a1"], when: { preset: "7d" } });
     const q = toQuery(f);
-    expect(q).toBe("ids=evt_b2,evt_a1&when=weekend");
+    expect(q).toBe("ids=evt_b2,evt_a1&when=7d");
     expect(parseQuery(new URLSearchParams(q), withIds)).toEqual(f);
     expect(isDefault({ ...DEFAULT_FILTERS, ids: [] })).toBe(true);
     expect(isDefault({ ...DEFAULT_FILTERS, ids: ["evt_a1"] })).toBe(false);

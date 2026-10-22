@@ -9,6 +9,8 @@ import type { PublishedEvent } from "./types";
 export const PASSED_GROUP = "passed";
 /** A shortlist's one group (#132): its events in the link's order, each row carrying its day. */
 export const SHORTLIST_GROUP = "shortlist";
+/** The most rows "On now" shows open; past it, the group folds to one line (#183). */
+export const ON_NOW_OPEN_MAX = 6;
 
 /** `collapsed`: shown as one closed line with its count, opening to its rows. */
 export type ResultGroup = { key: string; heading: string; events: PublishedEvent[]; collapsed: boolean };
@@ -86,8 +88,9 @@ export function resultEvents(groups: readonly ResultGroup[]): PublishedEvent[] {
  * The explorer's results: "On now" (limited runs open today), then one group per day, a multi-day one-off under each of
  * its days (#90), then "Always there" when recurring events are included, then, in the saved view, "Already happened";
  * sorted by venue, one group per venue instead (a passed save among them, its row marked).
- * Under the date sort, with no when-filter, "On now" is collapsed: its runs (often dozens of exhibitions closing months out) would
- * otherwise push the first dated day off the first screen. A when-filter slice is short enough to show it open.
+ * Under the date sort, "On now" is collapsed when it has more than ON_NOW_OPEN_MAX rows, whatever the when-filter
+ * (#183): its runs (often dozens of exhibitions closing months out) would otherwise push the first dated day off the
+ * first screen, even on a weekend's slice. A short one stays open.
  */
 export function groupResults(events: PublishedEvent[], f: Filters, today: string, saved: ReadonlySet<string>): ResultGroup[] {
   const hits = events.filter((e) => matches(e, f, today, saved));
@@ -123,10 +126,9 @@ export function groupResults(events: PublishedEvent[], f: Filters, today: string
   const passed = hits.filter((e) => isPast(e, today)).sort((a, b) => lastDay(b)!.localeCompare(lastDay(a)!) || sortStart(b).localeCompare(sortStart(a)) || a.title.localeCompare(b.title));
 
   const groups: ResultGroup[] = [];
-  const noWhenFilter = "preset" in f.when && f.when.preset === "all";
   // Collapsed only when dated days follow it to lead instead; alone, a closed line would hide every result. The saved
   // view is a list the reader made, short and shown whole: a save folded away looks lost.
-  if (onNow.length > 0) groups.push({ key: "on-now", heading: "On now", events: onNow, collapsed: noWhenFilter && byDay.size > 0 && !f.saved });
+  if (onNow.length > 0) groups.push({ key: "on-now", heading: "On now", events: onNow, collapsed: onNow.length > ON_NOW_OPEN_MAX && byDay.size > 0 && !f.saved });
   for (const day of [...byDay.keys()].sort()) groups.push({ key: day, heading: formatDay(day), events: byDay.get(day)!.sort(byTimeThenTitle), collapsed: false });
   if (always.length > 0) groups.push({ key: "always-there", heading: "Always there", events: always, collapsed: false });
   if (passed.length > 0) groups.push({ key: PASSED_GROUP, heading: "Already happened", events: passed, collapsed: false });

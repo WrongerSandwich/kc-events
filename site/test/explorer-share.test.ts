@@ -57,7 +57,7 @@ describe("a shortlist link (#132)", () => {
     await tick();
     expect(titles()).toEqual(["Friday jazz", "Tuesday talk"]);
     await fireEvent.click(screen.getByRole("button", { name: "Remove Shortlist (3)" }));
-    expect(location.search).toBe("?kind=music");
+    expect(location.search).toBe("?when=all&kind=music");
     expect(screen.queryByText(/Shortlist/)).toBeNull();
   });
 });

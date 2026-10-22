@@ -34,7 +34,12 @@ export type Filters = {
 /** Every key toQuery can write; the explore page checks for them before the explorer hydrates. */
 export const QUERY_KEYS = ["ids", "when", "kind", "region", "dontmiss", "recurring", "saved", "q", "sort"] as const;
 
-export const DEFAULT_FILTERS: Filters = { when: { preset: "all" }, kinds: [], regions: [], dontMiss: false, recurring: false, saved: false, q: "", sort: "date", ids: [] };
+/** What the explorer opens on (#183): today through Sunday, the front page's "This week" span; omitted from URLs. */
+export const DEFAULT_WHEN = { preset: "weekend" } as const satisfies When;
+/** Every date: the "All" preset, written out as `when=all` since the default is the week. */
+export const EVERY_DATE = { preset: "all" } as const satisfies When;
+
+export const DEFAULT_FILTERS: Filters = { when: DEFAULT_WHEN, kinds: [], regions: [], dontMiss: false, recurring: false, saved: false, q: "", sort: "date", ids: [] };
 
 /** `ids`, the published events' ids, drops a shortlisted id that is not one; without it any well-formed id is kept. */
 export type Known = { kinds: readonly string[]; regions: readonly string[]; ids?: readonly string[] };
@@ -56,11 +61,19 @@ export function shortlistQuery(ids: readonly string[]): string {
   return `ids=${ids.filter((id) => ID.test(id)).join(",")}`;
 }
 
-function parseWhen(raw: string | null): When {
-  if (raw === null) return { preset: "all" };
+/**
+ * What a link without `when` means: every date for a shortlist or the saved view, lists the reader was sent or made
+ * whose events are not this week's alone; else the week.
+ */
+function impliedWhen(list: boolean): { preset: WhenPreset } {
+  return list ? EVERY_DATE : DEFAULT_WHEN;
+}
+
+function parseWhen(raw: string | null, implied: When): When {
+  if (raw === null) return implied;
   if ((WHEN_PRESETS as readonly string[]).includes(raw)) return { preset: raw as WhenPreset };
   const [from, to, ...rest] = raw.split("..");
-  if (rest.length > 0 || from === undefined || to === undefined || !isValidDate(from) || !isValidDate(to)) return { preset: "all" };
+  if (rest.length > 0 || from === undefined || to === undefined || !isValidDate(from) || !isValidDate(to)) return implied;
   return from <= to ? { from, to } : { from: to, to: from };
 }
 
@@ -71,24 +84,27 @@ export function parseQuery(params: URLSearchParams, known: Known): Filters {
   const pick = (key: string, table: ReturnType<typeof slugTable>) =>
     params.getAll(key).map((s) => table.fromSlug(s)).filter((n): n is string => n !== undefined).filter((n, i, all) => all.indexOf(n) === i);
   const sort = params.get("sort");
+  const saved = params.get("saved") === "1";
+  // By the link's ids, not those still published: a shortlist that is all gone shows every date in its place.
+  const listed = saved || (params.get("ids") ?? "") !== "";
   return {
-    when: parseWhen(params.get("when")),
+    when: parseWhen(params.get("when"), impliedWhen(listed)),
     kinds: pick("kind", kinds),
     regions: pick("region", regions),
     dontMiss: params.get("dontmiss") === "1",
     recurring: params.get("recurring") === "1",
-    saved: params.get("saved") === "1",
+    saved,
     q: (params.get("q") ?? "").trim(),
     sort: sort === "venue" ? "venue" : "date",
     ids: parseIds(params.get("ids"), known.ids),
   };
 }
 
-/** The query string without "?", defaults omitted; "" when everything is default. */
+/** The query string without "?", defaults omitted (the date filter when it is what the rest implies); "" when everything is default. */
 export function toQuery(f: Filters): string {
   const p = new URLSearchParams();
   if ("from" in f.when) p.set("when", `${f.when.from}..${f.when.to}`);
-  else if (f.when.preset !== "all") p.set("when", f.when.preset);
+  else if (f.when.preset !== impliedWhen(f.saved || f.ids.length > 0).preset) p.set("when", f.when.preset);
   for (const k of f.kinds) p.append("kind", slugify(k));
   for (const r of f.regions) p.append("region", slugify(r));
   if (f.dontMiss) p.set("dontmiss", "1");
@@ -108,12 +124,15 @@ export function isDefault(f: Filters): boolean {
 /** One active filter: its words, its kind when it is one, and the filters with it removed. */
 export type FilterPill = { label: string; kind?: string; without: Filters };
 
-/** The filters that narrow the results, one pill each, in words ("Through Sunday", "music", "“jazz”"); sort narrows nothing and has none. */
+/**
+ * The filters that narrow the results, one pill each, in words ("Through Sunday", "music", "“jazz”"); sort narrows
+ * nothing and has none. A date's pill, the default week's among them, widens to every date when removed.
+ */
 export function filterPills(f: Filters): FilterPill[] {
   const out: FilterPill[] = [];
   if (f.ids.length > 0) out.push({ label: `Shortlist (${f.ids.length})`, without: { ...f, ids: [] } });
   const when = "from" in f.when ? (f.when.from === f.when.to ? formatShort(f.when.from) : formatRange(f.when.from, f.when.to)) : f.when.preset === "all" ? undefined : WHEN_LABELS[f.when.preset];
-  if (when !== undefined) out.push({ label: when, without: { ...f, when: DEFAULT_FILTERS.when } });
+  if (when !== undefined) out.push({ label: when, without: { ...f, when: EVERY_DATE } });
   for (const k of f.kinds) out.push({ label: k, kind: k, without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
   for (const r of f.regions) out.push({ label: r, without: { ...f, regions: f.regions.filter((x) => x !== r) } });
   if (f.dontMiss) out.push({ label: "don't-miss only", without: { ...f, dontMiss: false } });
