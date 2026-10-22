@@ -196,7 +196,15 @@ venueAliases:
   # #155: the Music Hall is part of the Convention Center complex, at its address; its calendar lists the hall's shows.
   Kansas City Convention Center: [Bartle Hall, Bartle Exhibit Hall, Kansas City Music Hall]
   # #155: the museum's own page names each show's gallery; the Arts Council names the museum.
-  Nerman Museum of Contemporary Art: [Nerman Museum, Irma Starr Gallery, McCaffree Gallery, Oppenheimer New Media Gallery, Tony and Marti Oppenheimer Gallery, Dean E. Thompson Gallery, Kansas Focus Gallery]
+  # #197: the exhibitions page names the lobby and mezzanine alone, under the museum's own header.
+  Nerman Museum of Contemporary Art: [Nerman Museum, Irma Starr Gallery, McCaffree Gallery, Oppenheimer New Media Gallery, Tony and Marti Oppenheimer Gallery, Dean E. Thompson Gallery, Kansas Focus Gallery, "The Richard I. and Jeanne S. Galamba Lobby, First Floor", "The Richard I. and Jeanne S. Galamba Lobby, First Floor and The Harrison Jedel Mezzanine, Second Floor"]
+  # #197: its calendar gives some events the street address ("Location: Zhou B Art Center KC, 1801 E. 18th St.").
+  Zhou B Art Center KC: [Zhou B Art Center Kansas City, 1801 East 18th Street]
+  # #197: Music Theater Heritage's Ruby Room, Suite 301 at Crown Center, as Crown Center's calendar gives it.
+  Music Theater Heritage: [Ruby Room, "2450 Grand Blvd., Suite 301"]
+  # #197: spellings as pages give them.
+  Worlds of Fun: []
+  Rainy Day Books: [Rainy Day Books- Fairway]
   Midwest Trust Center: [Yardley Hall, Polsky Theatre, Midwest Trust Center at Johnson County Community College]
   Kansas City Power & Light District: [Kansas City Power & Light, PBR Big Sky]
   # #137: Crown Center is one venue page, the Shops and the Square in it.
