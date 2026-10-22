@@ -73,8 +73,9 @@ const eventFields = z.strictObject({
   ages: z.string().min(1).max(MAX_AGES).optional(),
   /**
    * The weekdays a limited run plays (#143), in week order, each once, as its own page states them or as the page of
-   * performances it links lists them, with the quote under evidence; absent when no own page read gave them, which the
-   * site takes as every day of its span. Never all seven: that is every day.
+   * performances it links lists them, or as the list's own date line states them (#196), with the quote under
+   * evidence; absent when no reading gave them, which the site takes as every day of its span. Never all seven: that
+   * is every day.
    */
   days: z
     .array(z.enum(WEEKDAYS))
@@ -131,7 +132,8 @@ const eventFields = z.strictObject({
     ages: ownPageQuote.optional(),
     /**
      * Where a limited run's days were read (#143): its own page, or the page of performances the own page links, on the
-     * venue's site or a ticketing platform. Present exactly when the days are.
+     * venue's site or a ticketing platform; or the primary page, with its date quote, when the list's own date line
+     * named them (#196). Present exactly when the days are.
      */
     days: ownPageQuote.optional(),
   }),
@@ -214,8 +216,10 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     .refine(
       (e) =>
         (e.days === undefined) === (e.evidence.days === undefined) &&
-        (e.evidence.days === undefined || (e.eventUrl !== undefined && (samePage(e.evidence.days.page, e.eventUrl) || ownPageAllowed(e.evidence.days.page, e.primaryUrl, platformHosts)))),
-      { message: "a run's days carry their quote, from its own page or a page of performances on its site or a ticketing platform, and a days quote its days" },
+        (e.evidence.days === undefined ||
+          samePage(e.evidence.days.page, e.primaryUrl) ||
+          (e.eventUrl !== undefined && (samePage(e.evidence.days.page, e.eventUrl) || ownPageAllowed(e.evidence.days.page, e.primaryUrl, platformHosts)))),
+      { message: "a run's days carry their quote, from its primary page, its own page, or a page of performances on its site or a ticketing platform, and a days quote its days" },
     )
     .refine((e) => e.unplaced === undefined || e.neighborhood === ELSEWHERE_IN_THE_METRO, {
       message: "only an event in the elsewhere-in-the-metro catch-all is marked unplaced",

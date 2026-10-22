@@ -37,7 +37,7 @@ Which of three shapes an event's occurrence takes: one-off, limited run, or recu
 An event that happens once, including a short consecutive span such as a festival weekend or a band playing two nights.
 
 **Limited run**:
-An event that happens over a bounded span with a known end date, such as an exhibition or a theatre run. It is named by when it closes: two records with the same title at the same venue ending on one calendar date are one event, whatever their starts (ADR 0007, amended #68). A sighting matched that way keeps the stored start (#120). It is open every day of its span unless its own page names the weekdays it plays (its days, #143); then it is on, in the site's sense of "On now", only on those.
+An event that happens over a bounded span with a known end date, such as an exhibition or a theatre run. It is named by when it closes: two records with the same title at the same venue ending on one calendar date are one event, whatever their starts (ADR 0007, amended #68). A sighting matched that way keeps the stored start (#120). It is open every day of its span unless a page names the weekdays it plays (its days, #143): its own page or the page of performances that links, or the list's own date line ("Wednesdays, Oct. 7-28", #196), quoted as its date; then it is on, in the site's sense of "On now", only on those. The own page's days stand over the list's; the list's come and go with its date line.
 
 **Recurring**:
 An event that repeats indefinitely on a schedule, such as a monthly market, First Fridays, or a museum's weekly tour.

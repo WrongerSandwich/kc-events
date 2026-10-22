@@ -622,6 +622,7 @@ async function extractPage(
       tally.quoteNotOnPage++;
       problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.quoteProblem.phrase}, which is not on the page, and was held unverified`);
     }
+    if (sighting.daysProblem !== undefined) problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.daysProblem}`);
     sightings.push(sighting);
   }
   return { sightings, extracted: parsed.data.events.length, tally, problems };
@@ -1043,14 +1044,28 @@ function keepsOwnPageRead(known: Event, sighting: Event): boolean {
   return calendarDate(sighting.start) === calendarDate(known.start) && samePage(sighting.eventUrl, read.page);
 }
 
-/** Whether a kept own-page read keeps a run's days (#143): the reading still makes it a limited run. */
+/** Whether a stored start kept with its quotes (keepsStart) keeps a run's days (#143): the reading still makes it a limited run. */
 function keepsDays(known: Event, sighting: Event): boolean {
   return known.days !== undefined && sighting.recurrence === "limited-run";
 }
 
 /**
- * What a kept own-page read carries over (keepsOwnPageRead): the read, the price and age limit, a run's days, and the stored
- * description over a list that still gives none or only a line (LISTING_LINE_LENGTH), which the read replaced.
+ * Whether a kept own-page read keeps a run's days (#143): the reading still makes it a limited run, and the days were the
+ * own page's (or its ticket page's), not the list's. Days quoted from the list (#196) are the date line's, so the list's
+ * new reading of them stands, and the own page's stand over it.
+ */
+function keepsOwnPageDays(known: Event, sighting: Event): boolean {
+  return keepsDays(known, sighting) && !fromList(known);
+}
+
+/** Whether a run's days were quoted from its primary page (#196) rather than read from an own page. */
+function fromList(event: Event): boolean {
+  return event.evidence.days !== undefined && samePage(event.evidence.days.page, event.primaryUrl);
+}
+
+/**
+ * What a kept own-page read carries over (keepsOwnPageRead): the read, the price and age limit, a run's days it gave, and the
+ * stored description over a list that still gives none or only a line (LISTING_LINE_LENGTH), which the read replaced.
  */
 function ownPageFields(known: Event, sighting: Event): Partial<Event> {
   const listLine = sighting.description === undefined || sighting.description.length <= LISTING_LINE_LENGTH;
@@ -1059,7 +1074,7 @@ function ownPageFields(known: Event, sighting: Event): Partial<Event> {
     ownPageRead: known.ownPageRead!,
     ...(known.price !== undefined ? { price: known.price } : {}),
     ...(known.ages !== undefined ? { ages: known.ages } : {}),
-    ...(keepsDays(known, sighting) ? { days: known.days! } : {}),
+    ...(keepsOwnPageDays(known, sighting) ? { days: known.days! } : {}),
     ...(fuller ? { description: known.description! } : {}),
   };
 }
@@ -1088,7 +1103,7 @@ function refreshReading(known: Event, sighting: Event): Event {
       ...(keepsOwnPageTime(known, sighting) ? { time: known.evidence.time } : {}),
       ...(ownPageKept && known.evidence.price !== undefined ? { price: known.evidence.price } : {}),
       ...(ownPageKept && known.evidence.ages !== undefined ? { ages: known.evidence.ages } : {}),
-      ...(ownPageKept && keepsDays(known, sighting) ? { days: known.evidence.days! } : {}),
+      ...(ownPageKept && keepsOwnPageDays(known, sighting) ? { days: known.evidence.days! } : {}),
     },
     id: known.id,
     firstSeen: known.firstSeen,
@@ -1460,15 +1475,19 @@ async function readOwnPage(
   }
   for (const problem of outcome.problems) line.problems.push(`"${event.title}": ${url} ${problem}`);
   const { start, price, ages, description } = outcome;
-  const followed = outcome.days === undefined && outcome.ticketPage !== undefined ? await readTicketPage(event, outcome.ticketPage, route, ports, context, rules, line) : undefined;
-  const days = outcome.days ? { ...outcome.days, page: url } : followed !== "unread" ? followed : undefined;
+  // Days the list's own date line gave (#196) stand unless this page gives its own; its ticket page is not followed for them.
+  const listDays = fromList(event) ? { value: event.days!, ...event.evidence.days! } : undefined;
+  const followed =
+    outcome.days === undefined && outcome.ticketPage !== undefined && listDays === undefined ? await readTicketPage(event, outcome.ticketPage, route, ports, context, rules, line) : undefined;
+  const ownDays = outcome.days ? { ...outcome.days, page: url } : followed !== "unread" ? followed : undefined;
+  const days = ownDays ?? listDays;
   const timed = start !== undefined && !hasTime(event.start);
   const described =
     description !== undefined && (event.description === undefined || (event.description.length <= LISTING_LINE_LENGTH && description.length > event.description.length));
   if (timed) line.timed++;
   if (price) line.priced++;
   if (ages) line.aged++;
-  if (days) line.dayed++;
+  if (ownDays) line.dayed++;
   if (described) line.described++;
   const { price: _price, ages: _ages, days: _days, ...unread } = event;
   const { price: _priceQuote, ages: _agesQuote, days: _daysQuote, ...evidence } = event.evidence;

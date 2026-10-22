@@ -11,6 +11,7 @@ import { comparable, EXTRACTION_TIMEOUT_MS, localIso, MAX_DESCRIPTION, MAX_QUOTE
 import { calendarDate } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
+import { givesDays, orderedDays } from "./weekdays.js";
 
 /**
  * A stored description at most this long is a list's line ("X performs with Y."), so an own page's
@@ -179,7 +180,7 @@ function statedDays(
 ): Quoted<Weekday[]> | undefined {
   const quote = unmarked(reply.daysEvidence);
   if (reply.days === null || reply.days.length === 0 || !quote) return undefined;
-  const days = WEEKDAYS.filter((d) => reply.days!.includes(d));
+  const days = orderedDays(reply.days);
   const problem =
     days.length === WEEKDAYS.length
       ? "named every day of the week"
@@ -201,35 +202,6 @@ function linkedPage(link: number | null, reading: PageReading, problems: string[
   const url = reading.links[link - 1];
   if (url === undefined) problems.push(`named link ${link} for its performances, which the page does not have; not followed`);
   return url;
-}
-
-/** Each weekday's names on a page: "Fri", "Friday", "Fridays", "Thurs"; the three-letter form alone needs a word break after it. */
-const DAY_NAMES: Record<Weekday, string> = {
-  Mon: "mon(?:day)?s?",
-  Tue: "tue(?:s|sday)?s?",
-  Wed: "wed(?:nesday)?s?",
-  Thu: "thu(?:r|rs|rsday)?s?",
-  Fri: "fri(?:day)?s?",
-  Sat: "sat(?:urday)?s?",
-  Sun: "sun(?:day)?s?",
-};
-const DAY_NAME = new RegExp(`\\b(?:${WEEKDAYS.map((d) => `(${DAY_NAMES[d]})`).join("|")})\\b\\.?`, "gi");
-/** What joins two weekdays into a span: "Thursday–Sunday", "Thurs - Sun", "Wednesdays through Saturdays". */
-const SPAN_JOIN = /^\s*(?:[-–—]|to|through|thru)\s*$/i;
-
-/**
- * Whether a quote names every one of the days: by name ("Fridays, Saturdays and Sundays", "Fri & Sat"), inside a span
- * of them ("Thursday–Sunday"), or as the weekdays of the performances it lists ("Friday 16 October 2026 6:30 pm").
- */
-export function givesDays(quote: string, days: readonly Weekday[]): boolean {
-  const named = [...quote.matchAll(DAY_NAME)].map((m) => ({ day: WEEKDAYS[m.slice(1).findIndex((g) => g !== undefined)]!, at: m.index, end: m.index + m[0].length }));
-  const covered = new Set(named.map((n) => n.day));
-  for (let i = 1; i < named.length; i++) {
-    const [from, to] = [named[i - 1]!, named[i]!];
-    if (!SPAN_JOIN.test(quote.slice(from.end, to.at))) continue;
-    for (let d = WEEKDAYS.indexOf(from.day); WEEKDAYS[d] !== to.day; d = (d + 1) % WEEKDAYS.length) covered.add(WEEKDAYS[d]!);
-  }
-  return days.every((d) => covered.has(d));
 }
 
 /** The start an own page's time and quote give on the list's date, or why they give none when that is worth a line. */

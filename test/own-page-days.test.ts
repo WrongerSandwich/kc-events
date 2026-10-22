@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyDataset, parseDataset } from "../src/dataset.js";
-import { givesDays } from "../src/own-page.js";
+import { givesDays } from "../src/weekdays.js";
 import { renderReportMarkdown } from "../src/report.js";
 import { candidateAt, judging, source, WEEK_1, WEEK_2 } from "./fakes/fixtures.js";
 import { testConfig } from "./fakes/config.js";

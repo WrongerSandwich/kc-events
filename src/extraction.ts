@@ -5,7 +5,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
-import { citedDate, ownPageAllowed, type Event } from "./dataset.js";
+import { citedDate, ownPageAllowed, WEEKDAYS, type Event, type Weekday } from "./dataset.js";
 import { linkTarget } from "./discovery.js";
 import { samePage } from "./hosts.js";
 import { calendarDate } from "./identity.js";
@@ -15,6 +15,7 @@ import type { Source } from "./registry.js";
 import { deriveRecurrence } from "./recurrence.js";
 import { toKind, toNeighborhood } from "./taxonomy.js";
 import { fromLocal, toLocalIso } from "./time.js";
+import { givesDays, orderedDays } from "./weekdays.js";
 
 /** A page body longer than this is cut before it reaches the model; venue calendars rarely need more, link markers included. */
 export const MAX_PAGE_CHARS = 70_000;
@@ -69,6 +70,12 @@ export const candidateSchema = z.object({
     .string()
     .nullable()
     .describe("One or two plain sentences on what the event is, from the page's own text only. Null when the page says nothing about it beyond its listing line."),
+  days: z
+    .array(z.enum(WEEKDAYS))
+    .nullable()
+    .describe(
+      'For a dated run of more than a few days whose date text names the weekdays it plays ("Wednesdays, Oct. 7-28", "Thursdays through Oct 25"): those weekdays. Null when the text gives only the span, for a one-off, for a recurring thing, and when the run plays every day.',
+    ),
 });
 
 export const extractionReplySchema = z.object({ events: z.array(candidateSchema) });
@@ -394,6 +401,8 @@ export interface Sighting {
    * run read (#124).
    */
   quoteProblem?: { phrase: string; pageText: string };
+  /** Why the weekdays the model named for a run were not taken (#196); the event stands without them. */
+  daysProblem?: string;
 }
 
 /**
@@ -408,7 +417,9 @@ export interface Sighting {
  * whatever the status, and so does the description; neither plays any part in verifying. Both
  * quotes must be on the page (#74): the model quotes the page as `readPage` gave it, so the job's
  * own link markers are stripped from every text field first, and a quote then counts only when it
- * occurs in the page's quotable text.
+ * occurs in the page's quotable text. A verified limited run whose date quote names the weekdays the
+ * model gave it carries them as its days (#196), quoted from this page (listDays); the days are the
+ * date line's, so they come and go with it.
  */
 export function candidateToSighting(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Sighting {
   const { timezone } = context.config;
@@ -439,6 +450,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     venueEvidence !== undefined;
   const quoteProblem = cited ? quoteNotOnPage({ date: dateEvidence, venue: venueEvidence }, origin.quotableText) : undefined;
   const verified = cited && quoteProblem === undefined;
+  const days = verified && recurrence === "limited-run" ? listDays(candidate.days, dateEvidence!) : {};
 
   const event: Event = {
     id: newEventId(primaryUrl, title, context.nowIso, when.start),
@@ -451,6 +463,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     ...placement,
     primaryUrl,
     ...(eventUrl !== undefined ? { eventUrl } : {}),
+    ...(days.value !== undefined ? { days: days.value } : {}),
     kind: toKind(candidate.kind, context.config.kinds),
     recurrence,
     dontMiss: false,
@@ -463,6 +476,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     evidence: {
       ...(dateEvidence !== undefined ? { date: dateEvidence } : {}),
       ...(venueEvidence !== undefined ? { venue: venueEvidence } : {}),
+      ...(days.value !== undefined ? { days: { page: primaryUrl, quote: dateEvidence! } } : {}),
     },
   };
   return {
@@ -470,7 +484,22 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     cancelled: candidate.notice === "cancelled",
     ...(dateProblem !== undefined ? { dateProblem } : {}),
     ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText: origin.quotableText } } : {}),
+    ...(days.problem !== undefined ? { daysProblem: days.problem } : {}),
   };
+}
+
+/**
+ * The weekdays a verified run's date quote gives (#196), in week order and each once: the model's, when
+ * the quote names every one of them (givesDays), as the own-page read holds its days to their quote;
+ * none when the model named none, or every day of the week, which a run without days already means;
+ * and none with a line saying why when the quote does not give them.
+ */
+function listDays(named: Weekday[] | null, dateQuote: string): { value?: Weekday[]; problem?: string } {
+  if (named === null || named.length === 0) return {};
+  const days = orderedDays(named);
+  if (days.length === WEEKDAYS.length) return {};
+  if (!givesDays(dateQuote, days)) return { problem: `named ${days.join(", ")} as its days, which its date quote does not give; no days taken` };
+  return { value: days };
 }
 
 /**
