@@ -124,8 +124,9 @@ export function groupResults(events: PublishedEvent[], f: Filters, today: string
 
   const groups: ResultGroup[] = [];
   const noWhenFilter = "preset" in f.when && f.when.preset === "all";
-  // Collapsed only when dated days follow it to lead instead; alone, a closed line would hide every result.
-  if (onNow.length > 0) groups.push({ key: "on-now", heading: "On now", events: onNow, collapsed: noWhenFilter && byDay.size > 0 });
+  // Collapsed only when dated days follow it to lead instead; alone, a closed line would hide every result. The saved
+  // view is a list the reader made, short and shown whole: a save folded away looks lost.
+  if (onNow.length > 0) groups.push({ key: "on-now", heading: "On now", events: onNow, collapsed: noWhenFilter && byDay.size > 0 && !f.saved });
   for (const day of [...byDay.keys()].sort()) groups.push({ key: day, heading: formatDay(day), events: byDay.get(day)!.sort(byTimeThenTitle), collapsed: false });
   if (always.length > 0) groups.push({ key: "always-there", heading: "Always there", events: always, collapsed: false });
   if (passed.length > 0) groups.push({ key: PASSED_GROUP, heading: "Already happened", events: passed, collapsed: false });

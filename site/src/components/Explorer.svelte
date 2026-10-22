@@ -171,7 +171,10 @@
   <section class="results" id="results" bind:this={results} tabindex="-1" aria-label="Events">
     {#if shortlistGone}<p class="empty">None of this shortlist's events are still to come. Showing everything instead.</p>{/if}
     {#if count === 0}
-      {#if pills.length > 0}
+      {#if filters.saved && saved.size === 0}
+        <!-- The header's Saved link lands here on a first visit: an empty list of one's own, not a filter that failed. -->
+        <p class="empty">Nothing saved yet. Save any event and it appears here; saves stay in this browser, with no account. Start with <a href="/">the picks</a>.</p>
+      {:else if pills.length > 0}
         <p class="empty">No events match <strong>{pills.map((p) => p.label).join(" · ")}</strong>. <button type="button" class="link" onclick={() => change(DEFAULT_FILTERS)}>Clear them</button> to see everything.</p>
       {:else}
         <p class="empty">No events to show right now.</p>

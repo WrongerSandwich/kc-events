@@ -265,6 +265,17 @@ describe("Explorer", () => {
     expect(rows()).toEqual(["Later talk"]);
   });
 
+  it("says nothing is saved yet, and how to save, when the saved view is opened with no saves (audit B1, F4)", async () => {
+    // The header's Saved link lands here on a first visit; "No events match saved only" read as a failed filter.
+    history.replaceState(null, "", "/explore?saved=1");
+    render(Explorer);
+    flushSync();
+    const empty = screen.getByText(/Nothing saved yet/);
+    expect(empty).toHaveTextContent("Nothing saved yet. Save any event and it appears here; saves stay in this browser, with no account.");
+    expect(screen.queryByText(/No events match/)).toBeNull();
+    expect(within(empty).getByRole("link", { name: "the picks" })).toHaveAttribute("href", "/");
+  });
+
   it("shows a save that has passed as passed in the saved view, and keeps it out of the export (#93)", async () => {
     vi.setSystemTime(new Date("2026-10-10T17:00:00Z")); // Saturday: Friday jazz is over
     localStorage.setItem(STORAGE_KEY, JSON.stringify([{ id: "a", last: "2026-10-09" }]));

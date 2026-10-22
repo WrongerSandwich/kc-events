@@ -40,6 +40,11 @@ describe("groupResults", () => {
     expect(collapsed({ when: { from: "2026-10-05", to: "2026-10-31" } })[0]).toEqual(["on-now", false]);
   });
 
+  it("keeps On now open in the saved view: a list the reader made is short, and a folded save looks lost (audit B1)", () => {
+    const saved = new Set(["onNow", "tue"]);
+    expect(groupResults(all, f({ saved: true }), today, saved).map((g) => [g.key, g.collapsed])).toEqual([["on-now", false], ["2026-10-06", false]]);
+  });
+
   it("leaves On now open when no dated day follows it, so a filter never shows just a closed line", () => {
     expect(groupResults([onNow, onNowSooner, trivia], f({ recurring: true }), today, none).map((g) => [g.key, g.collapsed])).toEqual([
       ["on-now", false],
