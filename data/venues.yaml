@@ -207,3 +207,18 @@
   lat: 39.090101
   lng: -94.583744
   url: https://kccrossroads.org/
+# Added 2026-10-21 for the picks the pre-launch audit found without a row (its D2): addresses from each venue's own
+# site or the city's parks page, coordinates from OpenStreetMap Nominatim.
+- name: Powell Gardens
+  address: 1609 NW US Hwy 50, Kingsville, MO 64061
+  lat: 38.8747875
+  lng: -94.0364190
+  url: https://www.powellgardens.org/
+- name: Union Cemetery
+  address: 227 E 28th Terrace, Kansas City, MO 64108
+  lat: 39.0754423
+  lng: -94.5812523
+- name: Elmwood Cemetery
+  address: 4900 E Truman Rd, Kansas City, MO 64127
+  lat: 39.0960460
+  lng: -94.5259601

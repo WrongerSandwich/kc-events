@@ -117,8 +117,9 @@ describe("postalAddress", () => {
     expect(postalAddress(event({ neighborhood: "Northland", region: "Northland" }))).toEqual({ addressLocality: "Kansas City", addressRegion: "MO" });
   });
 
-  it("states no state for the catch-all, which spans both", () => {
-    expect(postalAddress(event({ neighborhood: "Independence", region: "Elsewhere in the metro" }))).toEqual({ addressLocality: "Kansas City" });
+  it("states no city or state for the catch-all, which spans both states and reaches outside the city", () => {
+    // Powell Gardens is in Kingsville, thirty miles east: "Kansas City" would be a false address, worse than none.
+    expect(postalAddress(event({ neighborhood: "Elsewhere in the metro", region: "Elsewhere in the metro" }))).toEqual({});
   });
 
   it("has an address for every region the config names but the catch-all", () => {
