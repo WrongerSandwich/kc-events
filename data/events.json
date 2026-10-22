@@ -4884,7 +4884,7 @@
         "date": "Free and open to the public every Second Friday from 5 to 8 PM.",
         "venue": "1801 East 18th Street\nKansas City, MO, 64108"
       },
-      "expiryReason": "two-strike"
+      "expiryReason": "past"
     },
     {
       "id": "evt_45916329bb31",
@@ -6100,7 +6100,7 @@
       },
       "evidence": {
         "date": "Rescheduled: FrankenWines\nWednesday, November 4, 2026\n6:30pm",
-        "venue": "Union Cemetery",
+        "venue": "Gather among the graves for FrankenWines, a truly terrifying storytelling event co-presented by Young Friends of the Kansas City Public Library and Union Cemetery Historical Society of Kansas City.",
         "ages": {
           "page": "https://kclibrary.org/events/rescheduled-frankenwines",
           "quote": "All attendees must be at least 21 years old."
