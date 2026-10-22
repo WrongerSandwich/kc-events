@@ -27,8 +27,8 @@ const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rule
     <p>The research job fetches pages once a week as <code>{about.crawler}</code>, with the user agent <code>{about.userAgent}</code>. It obeys <code>robots.txt</code>: to keep it off your site, add a <code>User-agent: {about.crawler}</code> group with <code>Disallow: /</code>. Each listing links to your own event page.</p>
     <p>To correct a listing, use <a href="#wrong-listing">Wrong listing</a> below, or "Wrong? Report it" on the event's page; both are public. For anything else, such as asking for your calendar page to be read, <a href={`${siteConfig.repoUrl}/issues/new`}>open an issue on GitHub</a>.</p>
 
-    <h2>What don't-miss means</h2>
-    <p>A don't-miss event is a one-off or a limited run that is worth going out of your way for. It is an editorial call, made by a model under <a href={curationRules}>written rules</a> kept in the repository, and each one comes with a one-line reason. Recurring events are never flagged; they are listed under Always there instead.</p>
+    <h2>What a pick is</h2>
+    <p>A pick, tagged Don't miss, is a one-off or a limited run worth going out of your way for. It is an editorial call, made by a model under <a href={curationRules}>written rules</a> kept in the repository, and each one comes with a one-line reason. Recurring events are never picks; they are listed under Always there instead.</p>
 
     <h2 id="subscribe">In your calendar</h2>
     <Subscribe origin={origin} />

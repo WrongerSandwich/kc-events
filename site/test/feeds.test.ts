@@ -20,7 +20,7 @@ describe("calendarFeeds (#136)", () => {
   it("makes the picks' feed, the whole calendar, and one feed per kind by the explorer's slug", () => {
     expect(feeds([]).map((f) => [f.path, f.calendarName])).toEqual([
       ["/calendar.ics", "KC This Week"],
-      ["/calendar/dont-miss.ics", "KC This Week · Don't miss"],
+      ["/calendar/picks.ics", "KC This Week · Picks"],
       ["/calendar/music.ics", "KC This Week · Music"],
       ["/calendar/theater-dance.ics", "KC This Week · Theater and dance"],
       ["/calendar/other.ics", "KC This Week · Other events"],
@@ -37,7 +37,7 @@ describe("calendarFeeds (#136)", () => {
       event({ id: "evt_pick_after", dontMiss: true, recurrence: "limited-run", end: "2026-10-20" }),
       event({ id: "evt_not_pick", start: "2026-10-09T19:00:00-05:00" }),
     ];
-    expect(ids(events, "/calendar/dont-miss.ics")).toEqual(["evt_pick_soon", "evt_pick_edge", "evt_pick_run", "evt_pick_after"]);
+    expect(ids(events, "/calendar/picks.ics")).toEqual(["evt_pick_soon", "evt_pick_edge", "evt_pick_run", "evt_pick_after"]);
   });
 
   it("puts every dated event in the whole calendar and its kind's feed, and no recurring one", () => {
@@ -96,7 +96,7 @@ describe("feedIcs (#136)", () => {
 
 describe("webcalUrl", () => {
   it("turns the feed's https address into the webcal one a calendar app opens", () => {
-    expect(webcalUrl("https://www.kcthisweek.com", "/calendar/dont-miss.ics")).toBe("webcal://www.kcthisweek.com/calendar/dont-miss.ics");
+    expect(webcalUrl("https://www.kcthisweek.com", "/calendar/picks.ics")).toBe("webcal://www.kcthisweek.com/calendar/picks.ics");
     expect(webcalUrl("http://localhost:4321", "/calendar.ics")).toBe("webcal://localhost:4321/calendar.ics");
   });
 });

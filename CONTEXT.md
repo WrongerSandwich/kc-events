@@ -56,8 +56,12 @@ _Avoid_: special, deal
 How a recurring event repeats, in a few words from its page ("Every Tuesday, 7pm"). A recurring event carries it instead of a start and end date. A sports team's home game is a one-off, one per game; a season as a whole is not an event (#159).
 
 **Don't-miss flag**:
-The editorial call that a one-off or limited run is worth going out of your way for. Never applied to recurring events. The curation prompt names a density, on the order of 30 to 50 flags across an eight-week horizon of about 500 events: a calibration for the threshold, never a quota for a batch.
+The editorial call that a one-off or limited run is worth going out of your way for. Never applied to recurring events. The curation prompt names a density, on the order of 30 to 50 flags across an eight-week horizon of about 500 events: a calibration for the threshold, never a quota for a batch. The domain's and the code's term (`dontMiss`); a reader sees a flagged event called a **pick**, tagged "Don't miss" (#185).
 _Avoid_: featured, top pick, interest score, rating
+
+**Pick**:
+The reader's word for an event carrying the don't-miss flag, in every sentence the site writes (the About page's "What a pick is", the explorer's "Picks only", the "Picks" calendar feed, `?picks=1`). "Don't miss" is only the text of the tag that marks one. Code and the dataset keep `dontMiss`.
+_Avoid_: don't-miss as a noun or adjective in reader-facing copy
 
 **Why-line**:
 The one sentence stating why an event carries the don't-miss flag.
@@ -179,8 +183,8 @@ A source the job knows about but does not fetch, with the reason recorded: its `
 ### Site
 
 **Don't-miss list**:
-The top section of the site: one-offs and limited runs carrying the don't-miss flag, grouped by horizon.
-_Avoid_: picks, highlights, featured
+The top section of the site: one-offs and limited runs carrying the don't-miss flag, grouped by horizon. Readers know its events as picks.
+_Avoid_: highlights, featured
 
 **Region**:
 A group of neighborhoods at the scale of a trip decision (Central KC, Johnson County, the Northland). Fixed by the config, which lists each neighborhood under one region, not read from any page: an event's region is its neighborhood's. What the site lets a reader browse by; the neighborhood is what each event shows.
@@ -199,7 +203,7 @@ The page explaining how the site is made and where to report a wrong listing.
 The notice shown on every page when the last successful run is more than nine days old. The site cannot see a failed run (a failed run commits nothing), so age is the proxy: a weekly cadence plus two days of slack.
 
 **Explorer**:
-The page that lets a reader slice every active event by date, kind, region, don't-miss, recurrence, and search, with the filters in the URL so a view can be shared. It opens on today through Sunday; every date is `?when=all`, and "Keep going" extends a date filter a week at a time.
+The page that lets a reader slice every active event by date, kind, region, picks, recurrence, and search, with the filters in the URL so a view can be shared. It opens on today through Sunday; every date is `?when=all`, and "Keep going" extends a date filter a week at a time.
 _Avoid_: browse page, search page, list view
 
 **Shortlist**:
@@ -219,7 +223,7 @@ _Avoid_: location page, place page
 _Avoid_: venue list, venue database
 
 **Calendar feed**:
-A calendar file the build rewrites for a reader's calendar app to subscribe to (#136): `/calendar/dont-miss.ics`, the picks from today through the horizon; `/calendar.ics`, every dated event; and `/calendar/<kind>.ics` by the explorer's slug. Each asks to be refreshed daily and links every event's event page; an event keeps its UID, so a moved date moves in the calendar and an expired one drops out. Offered by webcal from the front page and the methods page. Not the explorer's Export, a one-time file of a view.
+A calendar file the build rewrites for a reader's calendar app to subscribe to (#136): `/calendar/picks.ics`, the picks from today through the horizon; `/calendar.ics`, every dated event; and `/calendar/<kind>.ics` by the explorer's slug. Each asks to be refreshed daily and links every event's event page; an event keeps its UID, so a moved date moves in the calendar and an expired one drops out. Offered by webcal from the front page and the methods page. Not the explorer's Export, a one-time file of a view.
 _Avoid_: feed alone (the published dataset is not one), subscription (the reader's, not the file)
 
 **Changes page**:

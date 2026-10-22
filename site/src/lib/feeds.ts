@@ -19,8 +19,8 @@ export function slugFeedPath(slug: string): string {
   return `/calendar/${slug}.ics`;
 }
 
-const DONT_MISS_SLUG = "dont-miss";
-export const DONT_MISS_FEED = slugFeedPath(DONT_MISS_SLUG);
+const PICKS_SLUG = "picks";
+export const PICKS_FEED = slugFeedPath(PICKS_SLUG);
 
 /** A kind's feed, by the explorer's slug: "theater/dance" at /calendar/theater-dance.ics. */
 export function kindFeedPath(kind: string): string {
@@ -43,7 +43,7 @@ export function calendarFeeds(
   return {
     allEvents: { path: ALL_EVENTS_FEED, calendarName: opts.siteName, events: dated },
     bySlug: [
-      slugFeed(DONT_MISS_SLUG, "Don't miss", picks),
+      slugFeed(PICKS_SLUG, "Picks", picks),
       ...opts.kinds.map((kind) => slugFeed(slugify(kind), kindName(kind), dated.filter((e) => e.kind === kind))),
     ],
   };

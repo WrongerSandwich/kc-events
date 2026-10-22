@@ -10,14 +10,14 @@ export const GET: APIRoute = () =>
 
 > ${siteConfig.tagline}
 
-A weekly research job reads Kansas City venue and organizer pages directly, a language model writes each listing from the page, and an event is published only when its date and venue were read from the venue's or organizer's own page (cite-or-drop). Anything it cannot cite is held back. Every event shows when it was last verified. Don't-miss is an editorial call, made by a model under written rules, that a one-off or limited run is worth going out of the way for; recurring events are never flagged.
+A weekly research job reads Kansas City venue and organizer pages directly, a language model writes each listing from the page, and an event is published only when its date and venue were read from the venue's or organizer's own page (cite-or-drop). Anything it cannot cite is held back. Every event shows when it was last verified. A pick, tagged Don't miss, is an editorial call, made by a model under written rules, that a one-off or limited run is worth going out of the way for; recurring events are never picks.
 
 Last run: ${meta.lastSuccessfulRun}. ${events.length} active events.
 
 ## Pages
 
-- ${origin}/ : the don't-miss list by horizon, then recurring events
-- ${origin}/explore : active events, filterable by date, kind, region, don't-miss, and search (filters are in the query string, applied in the browser); its HTML lists today through Sunday whatever the query, so read every event from /events.json below
+- ${origin}/ : the picks by horizon, then recurring events
+- ${origin}/explore : active events, filterable by date, kind, region, picks, and search (filters are in the query string, applied in the browser); its HTML lists today through Sunday whatever the query, so read every event from /events.json below
 - ${origin}/e/<id> : one event; add .ics for a calendar file
 - ${origin}/about : how the site is made and where to report a wrong listing
 

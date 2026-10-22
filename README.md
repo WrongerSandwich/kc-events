@@ -2,16 +2,16 @@
 
 A weekly researched, ad-free list of what's worth doing in Kansas City: **[www.kcthisweek.com](https://www.kcthisweek.com)**
 
-The front page is the don't-miss list (one-offs and limited runs worth going out of the way for, each with a one-line reason), grouped by horizon, with the always-there events below. The explorer slices every active event by date, kind, region, and search, and every slice is a shareable URL. Events can be saved in the browser and exported to a calendar. No ads, no accounts, no cookies.
+The front page is the picks (one-offs and limited runs worth going out of the way for, each with a one-line reason), grouped by horizon, with the always-there events below. The explorer slices every active event by date, kind, region, and search, and every slice is a shareable URL. Events can be saved in the browser and exported to a calendar. No ads, no accounts, no cookies.
 
 ## How a week's list is made
 
 Once a week a research job reads Kansas City venue and organizer pages directly. Two rules shape what it publishes:
 
 - **Cite or drop.** A date and a venue are published only when they were read from the venue's or organizer's own page, never from a listings site or a search result. An event the job cannot cite is held back, not guessed at. Every event shows when it was last verified.
-- **Don't-miss is scarcity of occurrence.** A model flags the one-offs and limited runs you would regret missing, under written rules, with a reason for each. Recurring events are never flagged.
+- **A pick is scarcity of occurrence.** A model picks the one-offs and limited runs you would regret missing, under written rules, with a reason for each, and tags them Don't miss. Recurring events are never picks.
 
-The listings and the reasons are written by a model, and the site says so. The rules it works by are plain Markdown in [`prompts/`](prompts/): [`extraction-rules.md`](prompts/extraction-rules.md) for reading a page, [`curation-prompt.md`](prompts/curation-prompt.md) for the don't-miss call. The sources it checks are [`data/registry.yaml`](data/registry.yaml). Each run writes a report to [`data/runs/`](data/runs/).
+The listings and the reasons are written by a model, and the site says so. The rules it works by are plain Markdown in [`prompts/`](prompts/): [`extraction-rules.md`](prompts/extraction-rules.md) for reading a page, [`curation-prompt.md`](prompts/curation-prompt.md) for the picks. The sources it checks are [`data/registry.yaml`](data/registry.yaml). Each run writes a report to [`data/runs/`](data/runs/).
 
 More: the site's [About page](https://www.kcthisweek.com/about), the design in [`PROPOSAL.md`](PROPOSAL.md), the decisions in [`docs/adr/`](docs/adr/), and the terms in [`CONTEXT.md`](CONTEXT.md).
 

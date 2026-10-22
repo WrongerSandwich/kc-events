@@ -1,14 +1,14 @@
 ---
-import { DONT_MISS_FEED, webcalUrl } from "../lib/feeds";
+import { PICKS_FEED, webcalUrl } from "../lib/feeds";
 
 // The picks' feed (#136): the webcal link opens a calendar app's subscribe dialog; the https address is for one that
 // asks for a URL instead (Google Calendar on the web, Outlook). The page passes the build's origin.
 interface Props { origin: string }
 const { origin } = Astro.props;
-const address = new URL(DONT_MISS_FEED, origin).toString();
+const address = new URL(PICKS_FEED, origin).toString();
 ---
 <p>
-  <a href={webcalUrl(origin, DONT_MISS_FEED)}>Subscribe to the picks</a> in your calendar app. It updates weekly; remove
+  <a href={webcalUrl(origin, PICKS_FEED)}>Subscribe to the picks</a> in your calendar app. It updates weekly; remove
   the calendar to stop. If it asks for an address, use <code>{address}</code>.
 </p>
 

@@ -204,14 +204,14 @@ describe("DontMissList", () => {
     it("carries the kind on the section's explorer link exactly while one is on", async () => {
       const [week, next] = await front();
       const link = () => within(week!).getByRole("link", { name: /in the explorer/ });
-      expect(link()).toHaveAttribute("href", "/explore?when=weekend&dontmiss=1");
+      expect(link()).toHaveAttribute("href", "/explore?when=weekend&picks=1");
       within(week!).getByRole("button", { name: "2 music" }).click();
       await tick();
-      expect(link()).toHaveAttribute("href", "/explore?when=weekend&kind=music&dontmiss=1");
+      expect(link()).toHaveAttribute("href", "/explore?when=weekend&kind=music&picks=1");
       within(week!).getByRole("button", { name: "2 music" }).click();
       await tick();
-      expect(link()).toHaveAttribute("href", "/explore?when=weekend&dontmiss=1");
-      expect(within(next!).getByRole("link", { name: /in the explorer/ })).toHaveAttribute("href", "/explore?when=2026-10-12..2026-10-19&dontmiss=1");
+      expect(link()).toHaveAttribute("href", "/explore?when=weekend&picks=1");
+      expect(within(next!).getByRole("link", { name: /in the explorer/ })).toHaveAttribute("href", "/explore?when=2026-10-12..2026-10-19&picks=1");
     });
 
     it("announces what the section now shows", async () => {
@@ -237,8 +237,8 @@ describe("DontMissList", () => {
         const chips = target.querySelector("section .kinds")!;
         expect(chips.querySelectorAll("button")).toHaveLength(0);
         expect([...chips.querySelectorAll("a")].map((a) => a.getAttribute("href"))).toEqual([
-          "/explore?when=weekend&kind=music&dontmiss=1",
-          "/explore?when=weekend&kind=art-exhibitions&dontmiss=1",
+          "/explore?when=weekend&kind=music&picks=1",
+          "/explore?when=weekend&kind=art-exhibitions&picks=1",
         ]);
         flushSync();
         expect(chips.querySelectorAll("a")).toHaveLength(0);

@@ -79,7 +79,7 @@
 
   <fieldset>
     <legend>Show</legend>
-    <label><input type="checkbox" checked={filters.dontMiss} onchange={() => onchange({ ...filters, dontMiss: !filters.dontMiss })} /> Don't-miss only</label>
+    <label><input type="checkbox" checked={filters.dontMiss} onchange={() => onchange({ ...filters, dontMiss: !filters.dontMiss })} /> Picks only</label>
     <label><input type="checkbox" checked={filters.recurring} onchange={() => onchange({ ...filters, recurring: !filters.recurring })} /> Include always-there</label>
     <label><input type="checkbox" checked={filters.saved} onchange={() => onchange({ ...filters, saved: !filters.saved })} /> Saved only</label>
   </fieldset>
