@@ -34,7 +34,7 @@ export type Filters = {
 /** Every key toQuery can write; the explore page checks for them before the explorer hydrates. */
 export const QUERY_KEYS = ["ids", "when", "kind", "region", "dontmiss", "recurring", "saved", "q", "sort"] as const;
 
-/** What the explorer opens on (#183): today through Sunday, the front page's "This week" span; omitted from URLs. */
+/** What the explorer opens on (#183): today through Sunday, the front page's first horizon; omitted from URLs. */
 export const DEFAULT_WHEN = { preset: "weekend" } as const satisfies When;
 /** Every date: the "All" preset, written out as `when=all` since the default is the week. */
 export const EVERY_DATE = { preset: "all" } as const satisfies When;
@@ -65,8 +65,8 @@ export function shortlistQuery(ids: readonly string[]): string {
  * What a link without `when` means: every date for a shortlist or the saved view, lists the reader was sent or made
  * whose events are not this week's alone; else the week.
  */
-function impliedWhen(list: boolean): { preset: WhenPreset } {
-  return list ? EVERY_DATE : DEFAULT_WHEN;
+function impliedWhen(isList: boolean): { preset: WhenPreset } {
+  return isList ? EVERY_DATE : DEFAULT_WHEN;
 }
 
 function parseWhen(raw: string | null, implied: When): When {
@@ -86,9 +86,9 @@ export function parseQuery(params: URLSearchParams, known: Known): Filters {
   const sort = params.get("sort");
   const saved = params.get("saved") === "1";
   // By the link's ids, not those still published: a shortlist that is all gone shows every date in its place.
-  const listed = saved || (params.get("ids") ?? "") !== "";
+  const isList = saved || (params.get("ids") ?? "") !== "";
   return {
-    when: parseWhen(params.get("when"), impliedWhen(listed)),
+    when: parseWhen(params.get("when"), impliedWhen(isList)),
     kinds: pick("kind", kinds),
     regions: pick("region", regions),
     dontMiss: params.get("dontmiss") === "1",

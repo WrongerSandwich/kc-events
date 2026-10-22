@@ -5,7 +5,8 @@
   import { downloadText } from "../lib/download";
   import { isDated, isPast, lastDay } from "../lib/events";
   import { keepGoing } from "../lib/filter";
-  import { groupResults, PASSED_GROUP, resultEvents, SHORTLIST_GROUP } from "../lib/group";
+  import { formatDay } from "../lib/dates";
+  import { groupResults, isTrailingGroup, PASSED_GROUP, resultEvents, SHORTLIST_GROUP } from "../lib/group";
   import { toIcs } from "../lib/ics";
   import { DEFAULT_FILTERS, EVERY_DATE, filterPills, isDefault, parseQuery, shortlistQuery, toQuery, type Filters } from "../lib/query";
   import { saves } from "../lib/saves";
@@ -70,19 +71,21 @@
     history.replaceState(null, "", q === "" ? location.pathname : `${location.pathname}?${q}`);
   }
 
-  // A plain left click, which the explorer takes in place; one that asks for a new tab or window is left to the link.
-  const inPlace = (e: MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+  // A link's plain left click, which the explorer takes in place; one that asks for a new tab or window is left to it.
+  const inPlace = (then: () => unknown) => (e: MouseEvent) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    void then();
+  };
 
   // Keep going (#183) adds days below where the reader is: the first new day takes the button's place on screen, and
   // focus, so the next Tab goes on through it.
-  async function goOn(e: MouseEvent, next: Filters) {
-    if (!inPlace(e)) return;
-    e.preventDefault();
+  async function goOn(next: Filters) {
     const was = keepBlock?.getBoundingClientRect().top;
     const shown = new Set(groups.map((g) => g.key));
     setFilters(next);
     await tick();
-    const first = groups.find((g) => !shown.has(g.key) && g.key !== "always-there" && g.key !== PASSED_GROUP);
+    const first = groups.find((g) => !shown.has(g.key) && !isTrailingGroup(g));
     const heading = first === undefined ? null : results.querySelector<HTMLElement>(`[data-group="${first.key}"]`);
     if (heading === null) return;
     if (was !== undefined) window.scrollBy({ top: heading.getBoundingClientRect().top - was, behavior: "instant" });
@@ -131,7 +134,10 @@
   // Under the date sort only, after the last dated day, above Always there and Already happened; the venue sort has no
   // days to follow.
   let more = $derived(filters.sort === "date" ? keepGoing(events, filters, today, saved) : undefined);
-  let moreAt = $derived(((i) => (i === -1 ? groups.length : i))(groups.findIndex((g) => g.key === "always-there" || g.key === PASSED_GROUP)));
+  let moreAt = $derived.by(() => {
+    const i = groups.findIndex(isTrailingGroup);
+    return i === -1 ? groups.length : i;
+  });
   let listed = $derived(resultEvents(groups));
   let count = $derived(listed.length);
   let countText = $derived(`${count} ${count === 1 ? "event" : "events"}`);
@@ -231,10 +237,10 @@
         {@const everyDate = more.everyDate}
         <p class="keep" bind:this={keepBlock}>
           {#if more.added > 0}
-            <a class="keep-going" href={`/explore?${toQuery(next)}`} onclick={(e) => goOn(e, next)}>Keep going: {more.nextWeek ? "next week" : "through Sunday"} · {more.added} {more.added === 1 ? "event" : "events"} <span aria-hidden="true">→</span></a>
+            <a class="keep-going" href={`/explore?${toQuery(next)}`} onclick={inPlace(() => goOn(next))}>Keep going: {more.nextWeek ? "next week" : `through ${formatDay(more.through)}`} · {more.added} {more.added === 1 ? "event" : "events"} <span aria-hidden="true">→</span></a>
           {/if}
           {#if more.total > count}
-            <a class="see-all" href={`/explore?${toQuery(everyDate)}`} onclick={(e) => { if (inPlace(e)) { e.preventDefault(); void change(everyDate); } }}>{more.added > 0 ? "or see" : "See"} all {more.total}</a>
+            <a class="see-all" href={`/explore?${toQuery(everyDate)}`} onclick={inPlace(() => change(everyDate))}>{more.added > 0 ? "or see" : "See"} all {more.total}</a>
           {/if}
         </p>
       {/if}

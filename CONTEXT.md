@@ -199,7 +199,7 @@ The page explaining how the site is made and where to report a wrong listing.
 The notice shown on every page when the last successful run is more than nine days old. The site cannot see a failed run (a failed run commits nothing), so age is the proxy: a weekly cadence plus two days of slack.
 
 **Explorer**:
-The page that lets a reader slice every active event by date, kind, region, don't-miss, recurrence, and search, with the filters in the URL so a view can be shared.
+The page that lets a reader slice every active event by date, kind, region, don't-miss, recurrence, and search, with the filters in the URL so a view can be shared. It opens on today through Sunday; every date is `?when=all`, and "Keep going" extends a date filter a week at a time.
 _Avoid_: browse page, search page, list view
 
 **Shortlist**:

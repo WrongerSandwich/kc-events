@@ -85,9 +85,14 @@ export function formatShort(date: string): string {
   return `${SHORT_MONTHS[m - 1]} ${d}`;
 }
 
+/** "Fri" */
+export function shortWeekday(date: string): string {
+  return SHORT_DAYS[weekday(date)]!;
+}
+
 /** "Fri Oct 9" */
 export function formatDay(date: string): string {
-  return `${SHORT_DAYS[weekday(date)]} ${formatShort(date)}`;
+  return `${shortWeekday(date)} ${formatShort(date)}`;
 }
 
 /** "Friday, October 9" */

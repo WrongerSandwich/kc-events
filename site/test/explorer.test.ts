@@ -142,6 +142,12 @@ describe("Explorer", () => {
     }
   });
 
+  it("names the day it keeps going to when that is not a whole week: Today on a Monday runs on to Sunday", () => {
+    history.replaceState(null, "", "/explore?when=today");
+    render(Explorer);
+    expect(screen.getByRole("link", { name: /^Keep going/ })).toHaveTextContent("Keep going: through Sun Oct 11 · 2 events");
+  });
+
   it("sits above Always there, and leaves a modified click to the browser", async () => {
     history.replaceState(null, "", "/explore?recurring=1");
     vi.setSystemTime(new Date("2026-10-15T17:00:00Z"));

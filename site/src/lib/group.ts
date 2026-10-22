@@ -9,6 +9,11 @@ import type { PublishedEvent } from "./types";
 export const PASSED_GROUP = "passed";
 /** A shortlist's one group (#132): its events in the link's order, each row carrying its day. */
 export const SHORTLIST_GROUP = "shortlist";
+export const ALWAYS_THERE_GROUP = "always-there";
+/** The groups after the dated days, which Keep going sits above (#183). */
+export function isTrailingGroup(g: ResultGroup): boolean {
+  return g.key === ALWAYS_THERE_GROUP || g.key === PASSED_GROUP;
+}
 /** The most rows "On now" shows open; past it, the group folds to one line (#183). */
 export const ON_NOW_OPEN_MAX = 6;
 
@@ -130,7 +135,7 @@ export function groupResults(events: PublishedEvent[], f: Filters, today: string
   // view is a list the reader made, short and shown whole: a save folded away looks lost.
   if (onNow.length > 0) groups.push({ key: "on-now", heading: "On now", events: onNow, collapsed: onNow.length > ON_NOW_OPEN_MAX && byDay.size > 0 && !f.saved });
   for (const day of [...byDay.keys()].sort()) groups.push({ key: day, heading: formatDay(day), events: byDay.get(day)!.sort(byTimeThenTitle), collapsed: false });
-  if (always.length > 0) groups.push({ key: "always-there", heading: "Always there", events: always, collapsed: false });
+  if (always.length > 0) groups.push({ key: ALWAYS_THERE_GROUP, heading: "Always there", events: always, collapsed: false });
   if (passed.length > 0) groups.push({ key: PASSED_GROUP, heading: "Already happened", events: passed, collapsed: false });
   return groups;
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { weekday } from "../lib/dates";
+  import { shortWeekday } from "../lib/dates";
   import { dayPresets } from "../lib/filter";
   import { DEFAULT_FILTERS, WHEN_LABELS, WHEN_PRESETS, type Filters } from "../lib/query";
   import { slugify } from "../lib/slugs";
@@ -8,7 +8,6 @@
   let { filters, today, onchange, kinds, regions }: { filters: Filters; today: string; onchange: (f: Filters) => void; kinds: string[]; regions: string[] } = $props();
 
   // From Thursday, a chip for each weekend day still to come (#183), after Today: a one-day range, shareable as any.
-  const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   let days = $derived(dayPresets(today));
   const isDay = (d: string) => "from" in filters.when && filters.when.from === d && filters.when.to === d;
 
@@ -46,7 +45,7 @@
         <button type="button" aria-pressed={"preset" in filters.when && filters.when.preset === p} onclick={() => onchange({ ...filters, when: { preset: p } })}>{WHEN_LABELS[p]}</button>
         {#if p === "today"}
           {#each days as d (d)}
-            <button type="button" aria-pressed={isDay(d)} onclick={() => onchange({ ...filters, when: { from: d, to: d } })}>{DAY_NAMES[weekday(d)]}</button>
+            <button type="button" aria-pressed={isDay(d)} onclick={() => onchange({ ...filters, when: { from: d, to: d } })}>{shortWeekday(d)}</button>
           {/each}
         {/if}
       {/each}
