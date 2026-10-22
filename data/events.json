@@ -4873,7 +4873,7 @@
       "firstSeen": "2026-10-03T16:05:31-05:00",
       "lastVerified": "2026-10-19T19:18:51-05:00",
       "lastChanged": "2026-10-19T19:18:51-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -4883,7 +4883,8 @@
       "evidence": {
         "date": "Free and open to the public every Second Friday from 5 to 8 PM.",
         "venue": "1801 East 18th Street\nKansas City, MO, 64108"
-      }
+      },
+      "expiryReason": "past"
     },
     {
       "id": "evt_45916329bb31",
@@ -5011,7 +5012,7 @@
       "firstSeen": "2026-10-03T16:05:31-05:00",
       "lastVerified": "2026-10-13T22:13:36-05:00",
       "lastChanged": "2026-10-19T19:18:51-05:00",
-      "status": "unverified",
+      "status": "active",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -5446,7 +5447,7 @@
       "neighborhood": "Crossroads",
       "primaryUrl": "https://kccrossroads.org/",
       "eventUrl": "https://kccrossroads.org/crossroads-events/the-secret-show-18/",
-      "kind": "other",
+      "kind": "comedy",
       "recurrence": "recurring",
       "dontMiss": false,
       "firstSeen": "2026-10-03T16:05:31-05:00",
@@ -6079,9 +6080,8 @@
       "title": "FrankenWines",
       "description": "A storytelling event co-presented by Young Friends of the Kansas City Public Library and Union Cemetery Historical Society of Kansas City.",
       "start": "2026-11-04T18:30:00-06:00",
-      "venue": "Offsite Location",
-      "neighborhood": "Elsewhere in the metro",
-      "unplaced": {},
+      "venue": "Union Cemetery",
+      "neighborhood": "Midtown",
       "primaryUrl": "https://kclibrary.org/events",
       "eventUrl": "https://kclibrary.org/events/rescheduled-frankenwines",
       "kind": "talks/readings",
@@ -6100,8 +6100,13 @@
       },
       "evidence": {
         "date": "Rescheduled: FrankenWines\nWednesday, November 4, 2026\n6:30pm",
-        "venue": "Offsite Location"
-      }
+        "venue": "Gather among the graves for FrankenWines, a truly terrifying storytelling event co-presented by Young Friends of the Kansas City Public Library and Union Cemetery Historical Society of Kansas City.",
+        "ages": {
+          "page": "https://kclibrary.org/events/rescheduled-frankenwines",
+          "quote": "All attendees must be at least 21 years old."
+        }
+      },
+      "ages": "21+"
     },
     {
       "id": "evt_b7ce6925b0ca",
@@ -8578,7 +8583,7 @@
     {
       "id": "evt_41a40a81ea8a",
       "title": "Dark Forest",
-      "description": "Powell Gardens and Quixotic invite visitors to experience the woods with eerie performances, music, creative technology, and surprises.",
+      "description": "Powell Gardens and Quixotic invite visitors to experience the woods with eerie performances, music, creative technology, and surprises. Thursday, October 22, is for ages 21 and up.",
       "start": "2026-10-22T19:00:00-05:00",
       "end": "2026-10-24",
       "venue": "Powell Gardens",
@@ -13564,7 +13569,7 @@
     },
     {
       "id": "evt_34307d022112",
-      "title": "Legacy Tour 2026",
+      "title": "Legacy Tour 2026 with Udit Narayan & Aditya Narayan",
       "description": "Legacy Tour 2026 features Udit Narayan and Aditya Narayan.",
       "start": "2026-11-22T18:45:00-06:00",
       "venue": "The Midland",
@@ -26889,7 +26894,7 @@
       "id": "evt_376dc64c38e0",
       "title": "Kenneth Spencer Lecture: An Evening with Tao Leigh Goffe",
       "description": "A Kenneth Spencer Lecture featuring Tao Leigh Goffe, presented by KU Commons.",
-      "start": "2026-11-09T18:00:00-06:00",
+      "start": "2026-11-09T19:00:00-06:00",
       "venue": "Liberty Hall",
       "neighborhood": "Lawrence",
       "primaryUrl": "https://www.liberty-hall.com/upcoming-events",
@@ -36767,7 +36772,7 @@
       "neighborhood": "Midtown",
       "primaryUrl": "https://thecoterie.org/2026-2027-season/",
       "eventUrl": "https://thecoterie.org/2026-2027-season/electric-poe/",
-      "ages": "AGES 10+",
+      "ages": "Ages 10+",
       "days": [
         "Fri",
         "Sat",

@@ -26,6 +26,14 @@ describe("pickAlwaysThere", () => {
     expect(pickAlwaysThere([dated, elsewhere, market], picks).map((e) => e.id)).toEqual(["m"]);
   });
 
+  it("needs the venue to match too when the pick names one, ignoring case and punctuation", () => {
+    const comedy = recurring({ id: "c", title: "Free First Friday Comedy", venue: "The Bird Comedy Theater", primaryUrl: "https://kccrossroads.org/" });
+    const district = recurring({ id: "f", title: "First Friday", venue: "Crossroads Arts District", primaryUrl: "https://kccrossroads.org/" });
+    const pick = { title: "First Friday", host: "kccrossroads.org", venue: "crossroads arts district." };
+    expect(pickAlwaysThere([comedy, district], [pick]).map((e) => e.id)).toEqual(["f"]);
+    expect(pickAlwaysThere([comedy], [pick])).toEqual([]);
+  });
+
   it("does not match a title word inside another word", () => {
     const e = recurring({ title: "Triviality night", primaryUrl: "https://www.replaylounge.com/" });
     expect(pickAlwaysThere([e], [{ title: "Trivia", host: "replaylounge.com" }])).toEqual([]);
@@ -66,5 +74,10 @@ describe("committed data", () => {
     const up = alwaysTherePicks.filter((p) => hosts.has(p.host));
     expect(up.length, "picks whose source is up").toBeGreaterThanOrEqual(3);
     expect(pickAlwaysThere(events, alwaysTherePicks).length).toBeGreaterThanOrEqual(up.length - 1);
+  });
+
+  it("puts the Crossroads' own First Friday on the front page, never a night at The Bird (#197)", () => {
+    const rows = pickAlwaysThere(events, alwaysTherePicks).filter((e) => /first friday/i.test(e.title));
+    for (const e of rows) expect(e.venue, e.title).toBe("Crossroads Arts District");
   });
 });

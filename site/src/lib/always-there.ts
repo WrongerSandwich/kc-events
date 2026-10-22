@@ -2,7 +2,8 @@ import { hostOf, isDated, venueLine } from "./events";
 import { fold } from "./fold";
 import type { PublishedEvent } from "./types";
 
-export type Pick = { title: string; host: string };
+/** A pick names its event by host and title words, and by venue too when the title alone would match another's night. */
+export type Pick = { title: string; host: string; venue?: string };
 
 /** Whether `text` holds `words` as whole words, once both are folded. */
 function holdsWords(text: string, words: string): boolean {
@@ -14,7 +15,13 @@ export function pickAlwaysThere(events: readonly PublishedEvent[], picks: readon
   const recurring = events.filter((e) => !isDated(e));
   const out: PublishedEvent[] = [];
   for (const pick of picks) {
-    const hit = recurring.find((e) => hostOf(e.primaryUrl) === pick.host && holdsWords(e.title, pick.title) && !out.includes(e));
+    const hit = recurring.find(
+      (e) =>
+        hostOf(e.primaryUrl) === pick.host &&
+        holdsWords(e.title, pick.title) &&
+        (pick.venue === undefined || fold(e.venue) === fold(pick.venue)) &&
+        !out.includes(e),
+    );
     if (hit !== undefined) out.push(hit);
   }
   return out;
