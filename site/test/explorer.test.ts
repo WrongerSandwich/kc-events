@@ -111,7 +111,7 @@ describe("Explorer", () => {
     const jazz = screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Friday jazz")!;
     expect(jazz).toHaveTextContent("Fri Oct 9 · 7:00 pm");
     const film = screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Saturday film")!;
-    expect(film).toHaveTextContent("Sat Oct 10 · all day");
+    expect(film).toHaveTextContent("Sat Oct 10 · no time listed");
   });
 
   it("puts a heading over each venue's rows under the venue sort", () => {
