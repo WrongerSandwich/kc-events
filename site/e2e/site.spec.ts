@@ -979,3 +979,20 @@ test("tabbing backwards through the explorer never leaves the focused row under 
     expect(covered, `stop ${stop}`).toMatch(/^(no|none)$/);
   }
 });
+
+test("the header's Saved count follows a Save on the explorer, and a page with no island shows it without the Svelte runtime (#195)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/explore");
+  const saved = page.getByRole("navigation", { name: "Site" }).getByRole("link", { name: /^Saved/ });
+  await expect(saved).toHaveAccessibleName("Saved");
+  await page.getByRole("button", { name: "Save Fabio Frizzi plays Fulci" }).click();
+  await expect(saved).toHaveAccessibleName("Saved, 1");
+  const scripts: string[] = [];
+  page.on("request", (r) => {
+    if (r.resourceType() === "script") scripts.push(new URL(r.url()).pathname);
+  });
+  await on(page, BUILD_DAY, "/venues");
+  await expect(saved).toHaveAccessibleName("Saved, 1");
+  expect(scripts.length).toBeGreaterThan(0);
+  expect(scripts.filter((s) => /client|svelte|render/i.test(s))).toEqual([]);
+  await expect(page.locator("astro-island")).toHaveCount(0);
+});

@@ -1,98 +1,59 @@
-import { render, screen } from "@testing-library/svelte";
-import { flushSync, mount, tick, unmount } from "svelte";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // Literals only inside a vi.mock factory: vitest hoists the call above every import and declaration.
-// vi.hoisted so a test can change the build's date; the factory still sees only what is hoisted with it.
-const { meta } = vi.hoisted(() => ({
+vi.mock("../src/generated/meta", () => ({
   meta: { kinds: [], regions: [], lastSuccessfulRun: "2026-10-05T06:30:00-05:00", buildToday: "2026-10-05", timeZone: "America/Chicago" },
 }));
-vi.mock("../src/generated/meta", () => ({ meta }));
+import { showWhenStale, staleFrom } from "../src/components/header";
 
-import StalenessBanner from "../src/components/StalenessBanner.svelte";
+/** The banner as StalenessBanner.astro renders it on a fresh build: hidden, for the page's script to show. */
+function banner(hidden = true): HTMLElement {
+  const el = document.body.appendChild(document.createElement("div"));
+  el.setAttribute("role", "status");
+  el.hidden = hidden;
+  el.textContent = "Out of date.";
+  return el;
+}
 
-// Islands switch to the visitor's date in onMount; `await tick()` lets that render land before asserting.
-describe("StalenessBanner", () => {
+describe("the staleness banner's script", () => {
+  let stops: (() => void)[] = [];
+  const shown = (el: HTMLElement) => {
+    stops.push(showWhenStale(el));
+    return el;
+  };
+
   afterEach(() => {
+    for (const stop of stops) stop();
+    stops = [];
+    document.body.replaceChildren();
     vi.useRealTimers();
-    meta.buildToday = "2026-10-05";
   });
 
-  it("is absent while the run is fresh", async () => {
-    vi.useFakeTimers({ now: new Date("2026-10-13T12:00:00Z") }); // 8 days
-    render(StalenessBanner);
-    await tick();
-    expect(screen.queryByRole("status")).toBeNull();
+  it("goes stale on the tenth day after the run", () => {
+    expect(staleFrom()).toBe("2026-10-15");
   });
 
-  it("is fresh on the ninth day after the run and stale on the tenth", async () => {
+  it("stays hidden while the run is fresh", () => {
     vi.useFakeTimers({ now: new Date("2026-10-14T12:00:00Z") }); // 9 days
-    const day9 = render(StalenessBanner);
-    await tick();
-    expect(screen.queryByRole("status")).toBeNull();
-    day9.unmount();
-    vi.setSystemTime(new Date("2026-10-15T12:00:00Z")); // 10 days
-    render(StalenessBanner);
-    await tick();
-    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(shown(banner())).not.toBeVisible();
   });
 
-  it("appears when a tab left open comes back on the day the list goes stale (#93)", async () => {
-    vi.useFakeTimers({ now: new Date("2026-10-14T12:00:00Z") }); // 9 days
-    render(StalenessBanner);
-    await tick();
-    expect(screen.queryByRole("status")).toBeNull();
-    vi.setSystemTime(new Date("2026-10-15T12:00:00Z")); // 10 days
-    document.dispatchEvent(new Event("visibilitychange"));
-    await tick();
-    expect(screen.getByRole("status")).toBeInTheDocument();
-  });
-
-  it("first renders with the build's date even after another island has read the visitor's clock (client:idle)", async () => {
-    vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") }); // the visitor's clock says stale; the build's does not
-    render(StalenessBanner); // an island that has already hydrated, so the shared clock is read
-    await tick();
-    expect(screen.getAllByRole("status")).toHaveLength(1);
-    const target = document.body.appendChild(document.createElement("div"));
-    const component = mount(StalenessBanner, { target }); // the later island's first render, before its own mount
-    expect(target.querySelector('[role="status"]')).toBeNull();
-    flushSync();
-    expect(target.querySelector('[role="status"]')).not.toBeNull();
-    unmount(component);
-    target.remove();
-  });
-
-  it("is already there in the first render when the build itself is stale", () => {
-    meta.buildToday = "2026-10-20";
-    vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") }); // the visitor's clock would say fresh
-    const target = document.body.appendChild(document.createElement("div"));
-    // mount renders synchronously and runs no effects, so this is what the server would have sent.
-    const component = mount(StalenessBanner, { target });
-    expect(target.querySelector('[role="status"]')).not.toBeNull();
-    unmount(component);
-    target.remove();
-  });
-
-  it("takes the header's one width on every page (#181)", async () => {
-    vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") });
-    render(StalenessBanner);
-    await tick();
-    expect(screen.getByRole("status").firstElementChild).toHaveClass("wide");
-  });
-
-  it("marks itself a warning, with an icon and a lead in words, so it does not read as one more grey panel (#184)", async () => {
-    vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") });
-    render(StalenessBanner);
-    await tick();
-    const banner = screen.getByRole("status");
-    expect(banner.querySelector("svg use")).toHaveAttribute("href", "#ui-icon-alert");
-    expect(banner.querySelector("strong")).toHaveTextContent("Out of date.");
-  });
-
-  it("says when it was last researched once stale, with the run date in it", async () => {
+  it("shows on the tenth day", () => {
     vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") }); // 10 days
-    render(StalenessBanner);
-    await tick();
-    expect(screen.getByRole("status")).toHaveTextContent("This list was last researched on Oct 5 and may have missed changes since. Check the event's own page before you go.");
+    expect(shown(banner())).toBeVisible();
+  });
+
+  it("appears when a tab left open comes back on the day the list goes stale (#93)", () => {
+    vi.useFakeTimers({ now: new Date("2026-10-14T12:00:00Z") });
+    const el = shown(banner());
+    expect(el).not.toBeVisible();
+    vi.setSystemTime(new Date("2026-10-15T12:00:00Z"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(el).toBeVisible();
+  });
+
+  it("goes by the visitor's clock over the build's: a stale build seen on a fresh day hides the banner", () => {
+    vi.useFakeTimers({ now: new Date("2026-10-06T12:00:00Z") });
+    expect(shown(banner(false))).not.toBeVisible();
   });
 });

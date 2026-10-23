@@ -25,7 +25,9 @@ function watch(): () => void {
 /**
  * The clock as one island sees it; call during the island's setup. Until that island has mounted it is the build's
  * date and no clock, whatever an island hydrated earlier has read: its first render must equal the server's (the
- * hydration rule), and a `client:idle` island hydrates after the `client:load` ones have read the clock.
+ * hydration rule), and an island that hydrates later than another (a `client:idle` or `client:visible` one) would
+ * otherwise see the clock already read. The header's Saved link and staleness banner are plain script, not islands, and
+ * read the clock themselves (src/lib/header.ts).
  */
 export function islandClock(): { readonly now: string | undefined; readonly today: string } {
   let mounted = $state(false);

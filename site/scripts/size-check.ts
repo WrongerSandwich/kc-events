@@ -73,10 +73,14 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // and 300 for the front page's next pass: a row's Don't miss on its date line on phones, the staleness banner's warning sign
   // in every page's sprite, and the closing-date wording (#184; measured 284 on the fixture build), and 400 for the next
   // accessibility pass: a <time> on each row, Skip past results, forced colours, phone-sized chips and prefers-contrast (#194;
-  // measured 399)
-  { page: "explore.html", budget: 53_850, build: "fixture" },
+  // measured 399), less 200 for the header's Saved link as plain script rather than a Svelte island (#195; measured 231)
+  { page: "explore.html", budget: 53_650, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
+  // A page with no island of its own loads no Svelte runtime: the header's Saved link and staleness banner are plain
+  // script (#195; audit 2026-10-21, A18). The 404 stands for those pages: 12.9 KB, against 32.8 KB with the runtime,
+  // so this trips if it comes back.
+  { page: "404.html", budget: 13_500, build: "fixture" },
 ];
 
 function main(): void {
@@ -103,8 +107,10 @@ function main(): void {
   }
   // Event pages share their scripts and differ only in markup, so the largest one is the one that could go over; venue
   // pages (#137) likewise, their markup growing with the venue's events. A kind or region page (#138) lists a whole
-  // slice through the horizon with no script, so its ceiling is for the data: Central KC was 59 KB on the 10-19 run.
-  for (const [dir, kind, budget] of [["e", "event", 40_000], ["v", "venue", 40_000], ["k", "kind", 100_000], ["r", "region", 100_000]] as const) {
+  // slice through the horizon with no island, so its ceiling is for the data: Central KC was 59 KB on the 10-19 run.
+  // Venue, kind and region pages load no Svelte runtime since #195, which took 20 KB off each (Screenland's venue page
+  // 36.9 to 17.1 KB, Central KC 58.3 to 38.4 KB, on the 10-19 run), so their ceilings came down by as much.
+  for (const [dir, kind, budget] of [["e", "event", 40_000], ["v", "venue", 20_000], ["k", "kind", 80_000], ["r", "region", 80_000]] as const) {
     const pagesDir = join(dist, dir);
     const pages = existsSync(pagesDir) ? readdirSync(pagesDir).filter((f) => f.endsWith(".html")) : [];
     const largest = pages

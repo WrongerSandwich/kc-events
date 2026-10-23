@@ -1,0 +1,29 @@
+---
+import { meta } from "../generated/meta";
+import { formatShort, localDate } from "../lib/dates";
+import { staleFrom } from "./header";
+
+// Rendered on every page, hidden while the build's own day is fresh; the script beneath shows it from the day the
+// list goes stale by the visitor's clock (#195: plain script, so a page with no island loads no Svelte runtime).
+const runDay = localDate(meta.lastSuccessfulRun);
+---
+<div class="banner" role="status" data-staleness hidden={meta.buildToday < staleFrom()}>
+  <!-- The header's width, on every page (#181). -->
+  <!-- A warning sign and a lead in words, so it does not read as one more grey panel (#184). -->
+  <p class="wide"><svg class="mark" aria-hidden="true" focusable="false"><use href="#ui-icon-alert" /></svg> <strong>Out of date.</strong> This list was last researched on {formatShort(runDay)} and may have missed changes since. Check the event's own page before you go.</p>
+</div>
+
+<script>
+  import { showWhenStale } from "./header";
+
+  const banner = document.querySelector<HTMLElement>("[data-staleness]");
+  if (banner) showWhenStale(banner);
+</script>
+
+<style>
+  .banner { background: var(--bg-raised); border-block: 1px solid var(--rule); padding-block: var(--space-2); font-size: var(--text-sm); color: var(--fg); }
+  .banner[hidden] { display: none; }
+  /* The don't-miss tag's red, the site's one alarm colour, on the sign alone; the words stay ink. */
+  .mark { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.18em; color: var(--flag-red); }
+  strong { font-weight: var(--weight-strong); }
+</style>

@@ -6,7 +6,7 @@ import { siteConfig } from "../site.config";
 import { origin, shareImage } from "../build/origin";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-import StalenessBanner from "../components/StalenessBanner.svelte";
+import StalenessBanner from "../components/StalenessBanner.astro";
 import IconSprite from "../components/IconSprite.astro";
 import Analytics from "@vercel/analytics/astro";
 // The one face every page sets its text in, latin subset, and the wordmark's: preloaded so they are not found only once
@@ -60,7 +60,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
   </head>
   <body>
     <IconSprite />
-    <Header><StalenessBanner client:idle /></Header>
+    <Header><StalenessBanner /></Header>
     {/* Focusable, so the skip link moves focus here in every browser, not only where it moves the sequential start
         point (audit 2026-10-21, A13); base.css draws it no ring. */}
     <main id="main" class={wide ? "wide" : "measure"} tabindex="-1">
