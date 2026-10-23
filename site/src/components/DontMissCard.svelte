@@ -1,7 +1,7 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { admissionLine, daysSaid, hostOf, detailsUrl, lastDay, venueLine } from "../lib/events";
+  import { admissionLine, daysSaid, hostOf, detailsUrl, lastDay, neighborhoodShown, venueLine } from "../lib/events";
   import { kindPath } from "../lib/landing";
   import { slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
@@ -29,7 +29,7 @@
     <p class="info">
       <span class="visually-hidden">{tile.label}.</span>
       {#if tile.detail}<span class="fact" aria-hidden="true"><UiIcon name="clock" />{tile.detail}</span>{/if}
-      <span class="fact"><UiIcon name="map-pin" />{venueLine(event)}, {event.neighborhood}</span>
+      <span class="fact"><UiIcon name="map-pin" />{[venueLine(event), neighborhoodShown(event)].filter(Boolean).join(", ")}</span>
       {#if admission}<span class="fact"><UiIcon name="ticket" /><span class="admission">{admission}</span></span>{/if}
     </p>
     {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}

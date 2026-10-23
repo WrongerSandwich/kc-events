@@ -19,7 +19,7 @@ vi.mock("../src/generated/meta", () => ({
 vi.mock("../src/lib/download", () => ({ downloadText: vi.fn() }));
 import Explorer from "../src/components/Explorer.svelte";
 
-describe("export this view", () => {
+describe("export the view (#186: the count on the button)", () => {
   beforeEach(() => {
     vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") });
     history.replaceState(null, "", "/explore");
@@ -31,7 +31,7 @@ describe("export this view", () => {
   it("downloads the current results as a calendar", async () => {
     history.replaceState(null, "", "/explore?recurring=1"); // the recurring event is in the view but has no date to export
     render(Explorer);
-    await fireEvent.click(screen.getByRole("button", { name: "Export this view" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Export 1 to calendar" }));
     expect(downloadText).toHaveBeenCalledTimes(1);
     const [name, text, mime] = vi.mocked(downloadText).mock.calls[0]!;
     expect(name).toBe("kc-this-week.ics");
@@ -44,7 +44,7 @@ describe("export this view", () => {
   it("names the file and the calendar after the slice (#190)", async () => {
     history.replaceState(null, "", "/explore?kind=music");
     render(Explorer);
-    await fireEvent.click(screen.getByRole("button", { name: "Export this view" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Export 1 to calendar" }));
     const [name, text] = vi.mocked(downloadText).mock.calls[0]!;
     expect(name).toBe("kc-this-week-music.ics");
     expect(text).toContain("X-WR-CALNAME:KC This Week · Music\r\n");
@@ -55,7 +55,7 @@ describe("export this view", () => {
     render(Explorer);
     await tick();
     expect(screen.getByRole("status")).toHaveTextContent("1 event");
-    expect(screen.getByRole("button", { name: "Export this view" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Export to calendar" })).toBeDisabled();
   });
 
   it("is disabled before mount, even with events to export", () => {
@@ -72,7 +72,7 @@ describe("export this view", () => {
   it("is disabled with nothing to export", () => {
     history.replaceState(null, "", "/explore?q=zzz");
     render(Explorer);
-    expect(screen.getByRole("button", { name: "Export this view" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Export to calendar" })).toBeDisabled();
   });
 });
 

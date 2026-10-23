@@ -30,7 +30,7 @@ Use "Wrong? Report it" on the event's page: a short form there sends the report 
 
 ## For venues
 
-The job fetches pages once a week, identifying itself as `kc-this-week`, and obeys `robots.txt`. To keep it off your site, add a `User-agent: kc-this-week` group with `Disallow: /`. Each listing links to your own event page. To correct a listing, use "Wrong? Report it" on the event's page; to ask for your calendar page to be read, [open an issue](https://github.com/WrongerSandwich/kc-events/issues/new). See [For venues](https://www.kcthisweek.com/about#for-venues).
+The job fetches pages once a week, identifying itself as `kc-this-week` (user agent `Mozilla/5.0 (compatible; kc-this-week/0.1; +https://www.kcthisweek.com/about)`), and obeys `robots.txt`. To keep it off your site, add a `User-agent: kc-this-week` group with `Disallow: /`. Each listing links to your own event page. To correct a listing, use "Wrong? Report it" on the event's page; to ask for your calendar page to be read, [open an issue](https://github.com/WrongerSandwich/kc-events/issues/new). See [For venues](https://www.kcthisweek.com/about#for-venues).
 
 ## Running it
 
@@ -51,4 +51,4 @@ The repository is two packages: the research job in `src/` (one pure `run` funct
 ## Licenses
 
 - The code is under the [MIT License](LICENSE).
-- The data in [`data/`](data/) and the published `/events.json` are under [CC BY 4.0](data/LICENSE): reuse them freely, with a link back to [www.kcthisweek.com](https://www.kcthisweek.com). Text quoted from venue and organizer pages stays its publishers'.
+- The data in [`data/`](data/) and the published `/events.json` are under [CC BY 4.0](data/LICENSE): reuse them freely, crediting KC This Week with a link to [www.kcthisweek.com](https://www.kcthisweek.com) and saying if you changed them. Text quoted from venue and organizer pages (the evidence quotes, and the price and age lines quoted from event pages) stays its publishers'.

@@ -16,8 +16,8 @@
 
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   function label(d: WeekDay): string {
-    const parts = [d.picks.length === 0 ? (d.running.length === 0 ? "no picks" : "nothing new") : count(d.picks.length, "pick", "picks")];
-    if (d.running.length > 0) parts.push(`${d.running.length} running`);
+    const parts = [d.picks.length === 0 ? (d.running.length === 0 ? "no picks" : "no new picks") : count(d.picks.length, "pick", "picks")];
+    if (d.running.length > 0) parts.push(`${count(d.running.length, "run", "runs")} still on`);
     return `${d.weekday} ${d.day}: ${parts.join(", ")}`;
   }
 </script>

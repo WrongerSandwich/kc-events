@@ -5,6 +5,7 @@
   import { addDays, formatDay, formatShort, formatTime } from "../lib/dates";
   import { firstDay, isMultiDay, lastDay, venueLine } from "../lib/events";
   import { bucketDontMiss, horizonBounds, horizonHeading, HORIZONS } from "../lib/horizon";
+  import { kindName, kindWords } from "../lib/landing";
   import { hashId, slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
@@ -86,7 +87,9 @@
       chosen = next;
       const n = picksOf(next).length;
       const picks = n === 1 ? "pick" : "picks";
-      announced = next === undefined ? `Showing all ${n} ${picks}` : `Showing ${n} ${next} ${picks}`;
+      // The kind in words before "picks": "2 theater and dance picks", "2 other picks" (kindName's "other events" would
+      // read "other events picks").
+      announced = next === undefined ? `Showing all ${n} ${picks}` : `Showing ${n} ${kindWords(next)} ${picks}`;
       return tick();
     };
     // The kept cards slide into place and the others fade: the browser's view transition, by each card's name (its
@@ -116,7 +119,7 @@
 </script>
 
 {#if total === 0}
-  <p class="empty">Nothing is picked right now. <a href="/explore?when=all">Browse everything</a> instead.</p>
+  <p class="empty">Nothing picked right now. <a href="/explore?when=all">Browse everything</a> instead.</p>
 {:else}
   {#each HORIZONS as h (h)}
     {@const heading = horizonHeading(h, today)}
@@ -131,7 +134,7 @@
           {#each buckets[h] as event (event.id)}
             <li class={`kind-${slugify(event.kind)}`}>
               <span class="when">{shortWhen(event)}</span>
-              <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {event.kind}</span></a>
+              <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {kindName(event.kind).toLowerCase()}</span></a>
               <span class="where">{venueLine(event)}</span>
             </li>
           {/each}
@@ -171,7 +174,7 @@
               {#each started as event (event.id)}
                 <li class={`kind-${slugify(event.kind)}`} id={`pick-${event.id}`}>
                   <span class="when">{formatTime(event.start!)}</span>
-                  <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {event.kind}</span></a>
+                  <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {kindName(event.kind).toLowerCase()}</span></a>
                   <span class="where">{venueLine(event)}</span>
                 </li>
               {/each}

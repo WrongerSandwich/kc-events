@@ -14,7 +14,7 @@
 </script>
 
 {#if groups.length === 0}
-  <p class="venue-none">Nothing listed at the moment.</p>
+  <p class="venue-none">Nothing listed right now.</p>
 {:else}
   {#each groups as g (g.key)}
     <h2 class="section-heading group">{g.heading}</h2>

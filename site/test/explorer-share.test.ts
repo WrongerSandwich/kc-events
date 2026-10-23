@@ -79,8 +79,8 @@ describe("the saved view's Share saved and Export saved (#132)", () => {
     render(Explorer);
     await tick();
     expect(screen.queryByRole("button", { name: "Share saved" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Export saved" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Export this view" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Export saved to calendar" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Export 3 to calendar" })).toBeInTheDocument();
   });
 
   it("Share saved copies a shortlist link of the saves still to come, in date order", async () => {
@@ -99,7 +99,7 @@ describe("the saved view's Share saved and Export saved (#132)", () => {
     history.replaceState(null, "", "/explore?saved=1&kind=film"); // the view's own filters do not narrow what is saved
     render(Explorer);
     await tick();
-    await fireEvent.click(screen.getByRole("button", { name: "Export saved" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Export saved to calendar" }));
     const [name, text, mime] = vi.mocked(downloadText).mock.calls[0]!;
     expect(name).toBe("kc-this-week-saved.ics");
     expect(mime).toBe("text/calendar");
@@ -116,6 +116,6 @@ describe("the saved view's Share saved and Export saved (#132)", () => {
     render(Explorer);
     await tick();
     expect(screen.getByRole("button", { name: "Share saved" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Export saved" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Export saved to calendar" })).toBeDisabled();
   });
 });

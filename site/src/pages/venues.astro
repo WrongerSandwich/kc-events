@@ -4,13 +4,14 @@ import { events } from "../generated/events";
 import { meta } from "../generated/meta";
 import { venues } from "../generated/venues";
 import { addressLine, venueDirectory } from "../lib/venues";
+import { samePlace } from "../lib/events";
 import { slugify } from "../lib/slugs";
 import "../styles/venues.css";
 
 // Every venue page (#137), by region; built with no script, like the venue pages themselves.
 const groups = venueDirectory(venues, events, meta.regions);
 ---
-<Base title="Venues" description={`Every venue with events listed, ${venues.length} in all, by region.`}>
+<Base title="Venues" description={`${venues.length} venues in and around Kansas City, by region, each with what's coming up there.`}>
   <div class="directory">
     <h1>Venues</h1>
     <p class="lede">{venues.length} venues, by region. Each one's page lists what's coming up there.</p>
@@ -22,7 +23,7 @@ const groups = venueDirectory(venues, events, meta.regions);
           {g.venues.map(({ venue, events: count }) => (
             <li>
               <a href={`/v/${venue.slug}`}>{venue.name}</a>
-              <span class="detail">{[count > 0 ? `${count} ${count === 1 ? "event" : "events"}` : undefined, venue.neighborhood].filter(Boolean).join(" · ")}</span>
+              <span class="detail">{[count > 0 ? `${count} ${count === 1 ? "event" : "events"}` : undefined, venue.neighborhood !== undefined && !samePlace(venue.neighborhood, venue.name) && venue.neighborhood].filter(Boolean).join(" · ")}</span>
               {venue.address !== undefined && <span class="detail">{addressLine(venue.address)}</span>}
             </li>
           ))}

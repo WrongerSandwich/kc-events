@@ -37,7 +37,7 @@ export function regionPath(region: string): string {
 }
 
 /** A kind in words: "theater/dance" is "theater and dance". */
-function kindWords(kind: string): string {
+export function kindWords(kind: string): string {
   return kind.replace(/\//g, " and ");
 }
 

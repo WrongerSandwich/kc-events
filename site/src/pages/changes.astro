@@ -16,7 +16,7 @@ const empty = {
   gone: emptyLine(comparison?.gone),
 };
 ---
-<Base title="What changed" description="New picks, events that moved, events new this week, and events cancelled or no longer listed, since the last weekly run." wide>
+<Base title="What changed" description="New picks, events that moved, events new this week, and events cancelled or no longer listed, in the last weekly run." wide>
   <h1>What changed</h1>
   <p class="lede">From the run of {formatLong(localDate(meta.lastSuccessfulRun))}.</p>
 
@@ -33,7 +33,7 @@ const empty = {
   <section aria-labelledby="new-this-week">
     <h2 id="new-this-week" class="section-heading">New this week</h2>
     {empty.newThisWeek ? <p class="none">{empty.newThisWeek}</p> : <>
-      <p class="note">{newThisWeek.length === 1 ? "1 event" : `${newThisWeek.length} events`} first listed in the last seven days.</p>
+      <p class="note">{newThisWeek.length === 1 ? "1 event" : `${newThisWeek.length} events`} found for the first time in the seven days through this run.</p>
       {kinds.map(({ kind, events }) => (
         <details class="kind">
           <summary>{kind} <span class="count">{events.length}</span></summary>

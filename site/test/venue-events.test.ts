@@ -32,7 +32,7 @@ describe("VenueEvents (#137)", () => {
 
   it("says so when the venue has nothing coming up", () => {
     render(VenueEvents, { props: { events: [] } });
-    expect(screen.getByText("Nothing listed at the moment.")).toBeTruthy();
+    expect(screen.getByText("Nothing listed right now.")).toBeTruthy();
   });
 });
 

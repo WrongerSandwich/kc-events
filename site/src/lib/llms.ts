@@ -141,7 +141,7 @@ Example: ${at("/explore")}?${kind === undefined ? "" : `kind=${kind}&`}${region 
 
 ## The dataset
 
-- ${at("/events.json")} : every active event as JSON, free to reuse under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/) with a link back
+- ${at("/events.json")} : every active event as JSON, free to reuse under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/): credit ${i.siteName} with a link and say if you changed it; prices and age limits are quoted from venues' pages and stay theirs
 - ${at("/sitemap.xml")} : every page
 - ${i.repoUrl} : the code and the research rules
 

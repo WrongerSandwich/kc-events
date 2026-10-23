@@ -1,7 +1,7 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { daysSaid, isPast, lastDay, venueLine } from "../lib/events";
+  import { daysSaid, isPast, lastDay, neighborhoodShown, venueLine, verifiedLabel } from "../lib/events";
   import { rowDateLine } from "../lib/group";
   import { kindPath } from "../lib/landing";
   import { venuePath } from "../lib/venues";
@@ -17,7 +17,8 @@
   // its own check is older than that, like a pick's card (#182).
   const runDay = localDate(meta.lastSuccessfulRun);
   let checked = $derived(localDate(event.lastVerified));
-  let verifiedLine = $derived(`Date and venue verified ${formatShort(checked)}`);
+  let hood = $derived(neighborhoodShown(event));
+  let verifiedLine = $derived(`${verifiedLabel(event)} ${formatShort(checked)}`);
   // Only a save is listed once it has passed (the saved view keeps it), and it says so.
   let passed = $derived(isPast(event, today));
 </script>
@@ -34,7 +35,7 @@
        too, and the source, which the row leaves to it (#182). The link's name says whose venue it is, so a list of
        links does not read "recordBar" forty times (#181). On the venue's own page only the room is left. -->
   {#if hide !== "venue"}
-    <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><a class="venue" href={venuePath(event.venue)} tabindex="-1" aria-label={`${venueLine(event)}, venue of ${event.title}`}>{venueLine(event)}</a><span class="hood">{` · ${event.neighborhood}`}</span></span>
+    <span class="where" title={[venueLine(event), hood].filter(Boolean).join(" · ")}><a class="venue" href={venuePath(event.venue)} tabindex="-1" aria-label={`${venueLine(event)}, venue of ${event.title}`}>{venueLine(event)}</a>{#if hood}<span class="hood">{` · ${hood}`}</span>{/if}</span>
   {:else if event.room}
     <span class="where">{event.room}</span>
   {/if}

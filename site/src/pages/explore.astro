@@ -6,7 +6,7 @@ import { meta } from "../generated/meta";
 import { kindName, kindPath, regionPath } from "../lib/landing";
 import { QUERY_KEYS } from "../lib/query";
 import { cspHash } from "../build/csp";
-const description = `Opens on this week in Kansas City, today through Sunday, with all ${events.length} active events a tap away, by date, kind, and region.`;
+const description = `Opens on this week in Kansas City, today through Sunday, with all ${events.length} upcoming events a tap away, by date, kind, and region.`;
 // Built here rather than written inline so the page can hash exactly what it renders for the CSP. Keep going and see
 // all go too: without JavaScript every link shows this same week.
 const noJsStyle = ".sheet-toggle, .keep { display: none !important; }";
