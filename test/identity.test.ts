@@ -548,12 +548,27 @@ describe("ruledTitle (#217)", () => {
   it("takes the form without the venue behind it, the venue as either reading names it", () => {
     const venues = ["Union Station Kansas City"];
     expect(ruledTitle("The Berlin Wall. A World Divided. Exhibition at Union Station", "The Berlin Wall. A World Divided.", venues)).toBe("The Berlin Wall. A World Divided.");
-    expect(ruledTitle("Yoga", "Yoga at the Kauffman Center", ["Kauffman Center for the Performing Arts"])).toBe("Yoga");
+    expect(ruledTitle("Mitski at The Truman", "Mitski", ["The Truman"])).toBe("Mitski");
+    expect(ruledTitle("Jazz at the Kauffman Center", "Jazz", ["Kauffman Center for the Performing Arts"])).toBe("Jazz");
   });
 
-  it("is none for an 'at' that names somewhere else, or a venue sharing only its first word", () => {
+  it("takes the form without the sponsor behind it, the venue kept", () => {
+    const yoga = "Yoga at the Kauffman Center";
+    expect(ruledTitle(`${yoga} Presented by Premier Partner Saint Luke’s`, yoga, ["Kauffman Center for the Performing Arts"])).toBe(yoga);
+  });
+
+  it("is none for an 'at' that names somewhere else, a venue sharing only its first word, or only a kind of place", () => {
     expect(ruledTitle("Breakfast", "Breakfast at Tiffany's", ["Screenland Armour"])).toBeUndefined();
     expect(ruledTitle("Lights", "Lights at Union Hill", ["Union Station Kansas City"])).toBeUndefined();
+    expect(ruledTitle("Concert", "Concert at the Gallery", ["Gallery"])).toBeUndefined();
+  });
+
+  it("is none when more than one word stands before the venue: they may be the act", () => {
+    expect(ruledTitle("Breakfast", "Breakfast with Santa at Crown Center", ["Crown Center"])).toBeUndefined();
+  });
+
+  it("weighs the two forms as normalized, whatever their punctuation", () => {
+    expect(ruledTitle("Big Show at Knuckleheads", "The Big Show!!!!!!!!!!!!!!!!!!!!", ["Knuckleheads"])).toBe("The Big Show!!!!!!!!!!!!!!!!!!!!");
   });
 
   it("is none for two titles that are not one cut short of the other", () => {

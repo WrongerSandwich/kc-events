@@ -339,28 +339,33 @@ export function variantTitles(a: string, b: string): boolean {
 }
 
 /**
- * Of two forms of one title, the one cut short of the other, the form the title rules make (#196, #217)
- * when the words between them are what those rules strip or add: the event's venue behind it ("… at
- * Union Station"), a sponsor ("… Presented by …"), or the act after a title that is only its presenter
- * ("EMAS Presents" and "EMAS Presents Lilah Powlas"). None otherwise, and a refresh keeps the stored
- * form (variantTitles). The answer depends on the pair alone, so a page giving both forms in turn does
- * not flap. The venues are the names the two readings give the event's venue.
+ * Of two forms of one title, the one cut short of the other, the form the title rules in
+ * prompts/extraction-rules.md prefer (#196, #217) when the words the longer adds are what those rules
+ * strip: the event's venue at its end, with at most one word before it ("… Exhibition at Union
+ * Station"), or a sponsor ("… Presented by …"). A title that is only its presenter ("EMAS Presents")
+ * gives way to one that adds the act, which names the event where it named nothing. None otherwise,
+ * and a refresh keeps the stored form (variantTitles). The answer depends on the pair alone, so a page
+ * giving both forms in turn does not flap. The venues are the names the two readings give the venue.
  */
 export function ruledTitle(a: string, b: string, venues: string[]): string | undefined {
-  const [shorter, longer] = byLength(a, b);
-  const [short, long] = [normalizeName(shorter), normalizeName(longer)];
-  if (short === "" || short === long || !long.startsWith(`${short} `)) return undefined;
+  const [x, y] = [normalizeName(a), normalizeName(b)];
+  const [[short, shorter], [long, longer]] = x.length <= y.length ? [[x, a], [y, b]] : [[y, b], [x, a]];
+  if (short === "" || !long.startsWith(`${short} `)) return undefined;
   if (/(?:^| )presents$/u.test(short)) return longer;
-  const added = long.slice(short.length + 1).split(" ");
-  if (/^(?:presented|sponsored) by /u.test(added.join(" "))) return shorter;
-  return added.some((word, i) => word === "at" && venues.some((venue) => namesVenue(added.slice(i + 1), venue))) ? shorter : undefined;
+  const added = long.slice(short.length + 1);
+  if (/^(?:presented|sponsored) by /u.test(added)) return shorter;
+  const atVenue = /^(?:\S+ )?at (.+)$/u.exec(added)?.[1];
+  return atVenue !== undefined && venues.some((venue) => namesVenue(atVenue, venue)) ? shorter : undefined;
 }
 
-/** Whether the words after an "at" start with a venue's name, its first two words or its one. */
-function namesVenue(words: string[], venue: string): boolean {
-  const name = normalizeName(venue).split(" ").slice(0, 2).join(" ");
-  const after = normalizeName(words.join(" "));
-  return name !== "" && (after === name || after.startsWith(`${name} `));
+/**
+ * Whether the normalized words after an "at" are a venue's name, one cut short of the other ("Union
+ * Station" for "Union Station Kansas City"), and not only words for a kind of place. normalizeName again drops
+ * the "the" in "at the Kauffman Center".
+ */
+function namesVenue(words: string, venue: string): boolean {
+  const [said, name] = [normalizeName(words), normalizeName(venue)];
+  return name !== "" && !genericVenueName(said) && sameOrCutShort(...byLength(said, name));
 }
 
 function sameOrCutShort(shorter: string, longer: string): boolean {
