@@ -28,6 +28,12 @@ export function datePlaceSentence(e: PublishedEvent, today: string): string {
   return line === "" ? `At ${venueLine(e)}.` : `${line} at ${venueLine(e)}.`;
 }
 
+/** When and where as a phrase after the event's name: "Friday, October 9, 7:00 pm at recordBar."; "at recordBar." */
+function datePlacePhrase(e: PublishedEvent, today: string): string {
+  const line = longDateLine(e, today);
+  return line === "" ? `at ${venueLine(e)}.` : `${line} at ${venueLine(e)}.`;
+}
+
 /**
  * The page's meta description (#189): what the event is (its title, or its kind when the title is long), when and
  * where, then the page's description text cut to about 110 characters, else the why-line; under 160 characters in all.
@@ -35,8 +41,7 @@ export function datePlaceSentence(e: PublishedEvent, today: string): string {
  */
 export function eventDescription(e: PublishedEvent, today: string, about?: string): string {
   const name = e.title.length <= TITLE_MAX ? e.title : kindName(e.kind);
-  const sentence = datePlaceSentence(e, today);
-  const head = clip(`${name}: ${sentence.startsWith("At ") ? `at${sentence.slice(2)}` : sentence}`, META_MAX - 1);
+  const head = clip(`${name}: ${datePlacePhrase(e, today)}`, META_MAX - 1);
   const tail = about !== undefined && about.trim() !== "" ? clip(about, ABOUT_MAX) : e.whyLine?.trim();
   const room = META_MAX - 1 - head.length - 1;
   // A tail cut to a stub says less than none: leave it off when fewer than a few words fit.
@@ -124,11 +129,16 @@ function eventDates(e: PublishedEvent): { startDate: string; endDate?: string } 
   return { startDate: start, endDate: e.end };
 }
 
-/** A run that plays only some weekdays (#143) as a weekly schedule over its span. */
+/**
+ * A run that plays only some weekdays (#143) as a weekly schedule over its span: `repeatFrequency` makes the weekly
+ * rule explicit, as schema.org reads `byDay` with it. The schedule starts on the run's first date even when that is
+ * not one of its weekdays; `byDay` says which days in the span it plays.
+ */
 function eventSchedule(e: PublishedEvent): object | undefined {
   if (e.days === undefined || e.days.length === 0) return undefined;
   return {
     "@type": "Schedule",
+    repeatFrequency: "P1W",
     byDay: e.days.map((n) => SCHEMA_DAYS[n]),
     startDate: localDate(e.start!),
     ...(e.end !== undefined && { endDate: localDate(e.end) }),

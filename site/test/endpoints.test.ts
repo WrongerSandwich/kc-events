@@ -86,7 +86,8 @@ describe("built output", () => {
         // Entities count as one character each, as a snippet shows them.
         const length = description.replace(/&(?:#\d+|#x[\da-f]+|\w+);/gi, "x").length;
         expect(length, e.id).toBeLessThan(160);
-        expect(descriptions.get(description), `${e.id} says what ${descriptions.get(description)} says`).toBeUndefined();
+        // Two events with the same title, day and venue are a duplicate listing in the data, not a site fault.
+        expect(descriptions.get(description), `${e.id} says what ${descriptions.get(description)} says: a duplicate listing in the data?`).toBeUndefined();
         descriptions.set(description, e.id);
         const canonical = /rel="canonical" href="([^"]+)"/.exec(html)![1]!;
         if (html.includes('"@type":"Event"')) expect(html, e.id).toContain(`"@id":"${canonical}"`);

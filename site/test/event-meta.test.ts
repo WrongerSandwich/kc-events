@@ -126,6 +126,7 @@ describe("eventJsonLd", () => {
       endDate: "2026-11-01",
       eventSchedule: {
         "@type": "Schedule",
+        repeatFrequency: "P1W",
         byDay: ["https://schema.org/Friday", "https://schema.org/Saturday", "https://schema.org/Sunday"],
         startDate: "2026-10-14",
         endDate: "2026-11-01",
@@ -230,6 +231,7 @@ describe("organizerLd", () => {
     expect(organizerLd(event({ primaryUrl: "https://lied.ku.edu/events" }), venue)).toBeDefined();
     expect(organizerLd(event({ primaryUrl: "https://www.lied.ku.edu/events" }), venue)).toBeDefined();
     expect(organizerLd(event({ primaryUrl: "https://tickets.lied.ku.edu/e/1" }), venue)).toBeDefined();
+    expect(organizerLd(event({ primaryUrl: "https://lied.ku.edu/events" }), { ...venue, url: "https://www.lied.ku.edu/" })).toBeDefined();
   });
 
   it("does not take a parent domain, or a host that merely ends in the same letters, for the venue's", () => {
