@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { pageKey, samePage } from "../src/hosts.js";
 import type { EventIdentity } from "../src/identity.js";
-import { aliasedVenue, findMatch, genericVenueName, matchSighting, nearDates, normalizeName, sameEvent, sameVenue, venueAndRoom } from "../src/identity.js";
+import { aliasedVenue, findMatch, genericVenueName, matchSighting, nearDates, normalizeName, ruledTitle, sameEvent, sameVenue, venueAndRoom } from "../src/identity.js";
 
 const CALENDAR = "https://venue.test/calendar";
 
@@ -541,5 +541,23 @@ describe("two recurring records at one venue (#119)", () => {
     expect(findMatch(dated, [market], {})).toBeUndefined();
     expect(findMatch(market, [dated], {})).toBeUndefined();
     expect(sameEvent(market, dated, [market, dated], {})).toBe(false);
+  });
+});
+
+describe("ruledTitle (#217)", () => {
+  it("takes the form without the venue behind it, the venue as either reading names it", () => {
+    const venues = ["Union Station Kansas City"];
+    expect(ruledTitle("The Berlin Wall. A World Divided. Exhibition at Union Station", "The Berlin Wall. A World Divided.", venues)).toBe("The Berlin Wall. A World Divided.");
+    expect(ruledTitle("Yoga", "Yoga at the Kauffman Center", ["Kauffman Center for the Performing Arts"])).toBe("Yoga");
+  });
+
+  it("is none for an 'at' that names somewhere else, or a venue sharing only its first word", () => {
+    expect(ruledTitle("Breakfast", "Breakfast at Tiffany's", ["Screenland Armour"])).toBeUndefined();
+    expect(ruledTitle("Lights", "Lights at Union Hill", ["Union Station Kansas City"])).toBeUndefined();
+  });
+
+  it("is none for two titles that are not one cut short of the other", () => {
+    expect(ruledTitle("EMAS Presents", "Lilah Powlas", [])).toBeUndefined();
+    expect(ruledTitle("Big Show", "BIG SHOW!", [])).toBeUndefined();
   });
 });

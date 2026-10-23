@@ -229,6 +229,41 @@ describe("the stored title across a re-reading", () => {
     expect(only(second.dataset)).toMatchObject({ title: "Pershing Lecture Series | The Wars Before the War" });
   });
 
+  // The title rules (#196) strip a venue and a sponsor and take the act over a bare presenter; a stored
+  // form from before them gives way to the reading they make, whichever form came first (#217).
+  it("takes the stored title without the venue behind it, and keeps it so", async () => {
+    const first = await titled("The Berlin Wall. A World Divided. Exhibition at Knuckleheads Saloon");
+    const second = await titled("The Berlin Wall. A World Divided.", WEEK_2, first.dataset);
+    expect(only(second.dataset)).toMatchObject({ id: first.dataset.events[0]!.id, title: "The Berlin Wall. A World Divided.", lastChanged: WEEK_2_ISO });
+
+    const third = await titled("The Berlin Wall. A World Divided. Exhibition at Knuckleheads Saloon", WEEK_2, second.dataset);
+    expect(only(third.dataset)).toMatchObject({ title: "The Berlin Wall. A World Divided." });
+  });
+
+  it("keeps an 'at' that does not name the venue: the cut-short reading is only the title's lead", async () => {
+    const first = await titled("Breakfast at Tiffany's");
+    const second = await titled("Breakfast", WEEK_2, first.dataset);
+    expect(only(second.dataset)).toMatchObject({ title: "Breakfast at Tiffany's" });
+  });
+
+  it("takes the stored title without the sponsor behind it, and keeps it so", async () => {
+    const first = await titled("Yoga at the Garden Presented by Premier Partner Saint Luke's");
+    const second = await titled("Yoga at the Garden", WEEK_2, first.dataset);
+    expect(only(second.dataset)).toMatchObject({ title: "Yoga at the Garden" });
+
+    const third = await titled("Yoga at the Garden Presented by Premier Partner Saint Luke's", WEEK_2, second.dataset);
+    expect(only(third.dataset)).toMatchObject({ title: "Yoga at the Garden" });
+  });
+
+  it("takes the act after a stored title that is only the presenter, and keeps it so", async () => {
+    const first = await titled("EMAS Presents");
+    const second = await titled("EMAS Presents Lilah Powlas", WEEK_2, first.dataset);
+    expect(only(second.dataset)).toMatchObject({ title: "EMAS Presents Lilah Powlas" });
+
+    const third = await titled("EMAS Presents", WEEK_2, second.dataset);
+    expect(only(third.dataset)).toMatchObject({ title: "EMAS Presents Lilah Powlas" });
+  });
+
   it("takes the new spelling of the same title, as before", async () => {
     const first = await titled("Big Show");
     const second = await titled("BIG SHOW", WEEK_2, first.dataset);

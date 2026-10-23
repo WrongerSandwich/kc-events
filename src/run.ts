@@ -42,6 +42,7 @@ import {
   nearDates,
   normalizeName,
   oneMonthOf,
+  ruledTitle,
   sameEnd,
   sameEvent,
   sameMoment,
@@ -1113,7 +1114,9 @@ function refreshReading(known: Event, sighting: Event): Event {
   return {
     ...(known.description !== undefined ? { description: known.description } : {}),
     ...sighting,
-    ...(variantTitles(known.title, sighting.title) ? { title: known.title } : keepIfSame("title", known.title, sighting.title, sameText)),
+    ...(variantTitles(known.title, sighting.title)
+      ? { title: ruledTitle(known.title, sighting.title, [known.venue, sighting.venue].filter((v) => v !== undefined)) ?? known.title }
+      : keepIfSame("title", known.title, sighting.title, sameText)),
     ...keepIfSame("description", known.description, sighting.description, sameText),
     ...keepIfSame("eventUrl", known.eventUrl, sighting.eventUrl, samePage),
     ...(holdsSchedule(known, sighting) ? { schedule: known.schedule } : {}),

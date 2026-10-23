@@ -263,8 +263,8 @@ describe("what counts as a change for curation (#79)", () => {
     expect(second.dataset.events[0]).toMatchObject({ lastChanged: WEEK_2_ISO, lastJudged: WEEK_2_ISO });
   });
 
-  // No reading changes a known event's title past case and punctuation today (identity keeps the stored
-  // form of a variant title), so this is held at markChanged itself; #66 would make a retitle reachable.
+  // A reading changes a known event's title past case and punctuation only when the title rules make
+  // another form of a variant title (#217, ruledTitle), so this is held at markChanged itself.
   it("marks a retitled event changed, and not one whose title only changed case or punctuation", async () => {
     const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
     const event = first.dataset.events[0]!;
