@@ -6,10 +6,12 @@ import { handleReport, publishedEvents } from "../src/server/report";
 
 // The preview serves only the static build, so /api/report is answered here by the real function, with GitHub faked:
 // what the browser posts and what it is shown are the function's own (#129). The event lookup reads the preview's own
-// /events.json, as the deployed function reads its deployment's.
+// /events.json, as the deployed function reads its deployment's. GitHub's search finds nothing: no issues this hour,
+// and no open issue for the event.
 async function serveReports(page: Page) {
   const filed: { title: string; body: string; labels: string[] }[] = [];
-  const github = (async (_url: string, init: RequestInit) => {
+  const github = (async (url: string, init: RequestInit = {}) => {
+    if (new URL(url).pathname === "/search/issues") return Response.json({ total_count: 0, items: [] });
     filed.push(JSON.parse(init.body as string));
     return Response.json({ html_url: "https://github.com/WrongerSandwich/kc-events/issues/1" }, { status: 201 });
   }) as typeof fetch;
@@ -24,14 +26,24 @@ async function serveReports(page: Page) {
   return filed;
 }
 
-test("an event's report sends in place with its pages, and says so", async ({ page }) => {
+test("an event's report sends in place with its pages, links the issue, and takes the form away", async ({ page }) => {
   const filed = await serveReports(page);
   await page.goto("/e/evt_e2e000000001");
   await page.getByText("Wrong? Report it").click();
-  await expect(page.getByText("Posted publicly on GitHub. No name or contact needed.")).toBeVisible();
+  await expect(page.getByText("Posted publicly on GitHub, so leave out anything private. No name or contact needed.")).toBeVisible();
   await page.getByLabel("What is wrong").fill("It starts at 8, not 7.");
   await page.getByRole("button", { name: "Send report" }).click();
-  await expect(page.locator(".report").getByRole("status")).toHaveText("Sent. Thanks.");
+  const status = page.locator(".report").getByRole("status");
+  await expect(status).toHaveText("Sent. It is now a public issue on GitHub.");
+  await expect(status.getByRole("link", { name: "public issue on GitHub" })).toHaveAttribute("href", "https://github.com/WrongerSandwich/kc-events/issues/1");
+  await expect(status).toBeFocused();
+  // The form is gone from the page and from the tab order, so the report cannot go twice.
+  const form = page.locator(".report form");
+  await expect(form).toBeHidden();
+  await expect(page.getByLabel("What is wrong")).toBeHidden();
+  await expect(page.getByRole("button", { name: "Send report" })).toBeHidden();
+  await page.keyboard.press("Tab");
+  expect(await page.evaluate(() => document.activeElement?.closest(".report form") === null)).toBe(true);
   await expect(page).toHaveURL(/\/e\/evt_e2e000000001$/);
   expect(filed).toHaveLength(1);
   expect(filed[0]!.title).toBe("Wrong listing: Fabio Frizzi plays Fulci");
@@ -50,7 +62,8 @@ test.describe("with JavaScript off", () => {
     await page.getByText("Report a wrong listing", { exact: true }).click();
     await page.getByLabel("What is wrong").fill("The Midland show is listed twice.");
     await page.getByRole("button", { name: "Send report" }).click();
-    await expect(page.getByText("Sent. Thanks.")).toBeVisible();
+    await expect(page.getByText("Sent. It is now a public issue on GitHub.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "public issue on GitHub" })).toHaveAttribute("href", "https://github.com/WrongerSandwich/kc-events/issues/1");
     await expect(page.getByRole("link", { name: "Back to the about page" })).toHaveAttribute("href", "/about");
     expect(filed).toHaveLength(1);
   });

@@ -256,9 +256,9 @@ confirm "Is the rule published?" || SKIPPED+=("publish a Vercel Firewall rate-li
 stage "Try it on the pull request's preview"
 say "Open the PR's Vercel preview (the link in the PR's Vercel comment), redeployed after stage 2."
 step "Open any event's page, click 'Wrong? Report it', write 'Test from the report form, please close',"
-step "and send. It should say 'Sent. Thanks.'"
+step "and send. It should say 'Sent. It is now a public issue on GitHub.', linked."
 step "Optional: turn JavaScript off in the browser and send one from the About page: you should land on"
-step "a plain page that says 'Sent. Thanks.'"
+step "a plain page that says 'Sent. It is now a public issue on GitHub.'"
 pause "Press Enter once it says Sent, and this wizard will look for the issue."
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
   say "Newest issues labelled needs-triage:"

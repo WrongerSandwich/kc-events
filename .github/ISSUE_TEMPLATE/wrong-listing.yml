@@ -18,10 +18,10 @@ body:
   - type: input
     id: primary-page
     attributes:
-      label: Primary page
-      description: The page the listing was read from.
+      label: Page it was read from
+      description: The venue's or organizer's page the date and venue were read from.
   - type: input
     id: event-page
     attributes:
-      label: Event page
-      description: The event's own page, when the listing links one.
+      label: Event's own page
+      description: Where the listing's Details and tickets link goes, when it is not the page above.
