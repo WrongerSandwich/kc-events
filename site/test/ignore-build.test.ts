@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, chmod, copyFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 // scripts/ignore-build.sh is Vercel's ignored build step: exit 0 skips, exit 1 builds. Driven here in a temporary
@@ -26,19 +26,23 @@ function centralDay(offset: number): string {
   return `${day}T18:00:00.000Z`;
 }
 
-/** Two commits, the second changing only the README, and a fake curl answering /events.json with `generatedAt`. */
-async function repo(generatedAt: string | undefined) {
+/**
+ * Two commits, the second changing only `changed` (the README unless given), and a fake curl answering /events.json
+ * with `generatedAt`.
+ */
+async function repo(generatedAt: string | undefined, changed = "README.md") {
   const dir = await mkdtemp(join(tmpdir(), "kc-ignore-"));
   made.push(dir);
   const git = (...args: string[]) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.com", ...args], { cwd: dir, stdio: "pipe" });
   git("init", "-q");
   await mkdir(join(dir, "site", "scripts"), { recursive: true });
   await copyFile(SCRIPT, join(dir, "site", "scripts", "ignore-build.sh"));
-  await writeFile(join(dir, "README.md"), "one\n");
+  await mkdir(join(dir, dirname(changed)), { recursive: true });
+  await writeFile(join(dir, changed), "one\n");
   git("add", "-A");
   git("commit", "-q", "-m", "one");
   const prev = git("rev-parse", "HEAD").toString().trim();
-  await writeFile(join(dir, "README.md"), "two\n");
+  await writeFile(join(dir, changed), "two\n");
   git("commit", "-q", "-am", "two");
   const head = git("rev-parse", "HEAD").toString().trim();
   const bin = join(dir, "bin");
@@ -56,6 +60,8 @@ async function repo(generatedAt: string | undefined) {
   };
 }
 
+const exists = (path: string) => access(path).then(() => true, () => false);
+
 describe("the ignored build step", () => {
   it("builds a production deployment when the live site was last built on another Kansas City day, though the commits changed nothing the site reads", async () => {
     expect((await repo(centralDay(-1)))()).toBe(1);
@@ -71,5 +77,18 @@ describe("the ignored build step", () => {
 
   it("leaves a preview deployment to the commits alone", async () => {
     expect((await repo(centralDay(-1)))({ VERCEL_ENV: "preview" })).toBe(0);
+  });
+
+  it("builds when only a run report changed: the changes page reads data/runs (#192)", async () => {
+    expect((await repo(centralDay(0), "data/runs/2026-10-19.json"))()).toBe(1);
+  });
+
+  it("builds, and hands git nothing, when the previous SHA is not a full commit hash (#192)", async () => {
+    const out = join(tmpdir(), `kc-ignore-planted-${process.pid}`);
+    made.push(out);
+    const run = await repo(centralDay(0));
+    expect(run({ VERCEL_ENV: "preview", VERCEL_GIT_PREVIOUS_SHA: `--output=${out}` })).toBe(1);
+    expect(await exists(out)).toBe(false);
+    expect(run({ VERCEL_ENV: "preview", VERCEL_GIT_PREVIOUS_SHA: "HEAD~1" })).toBe(1);
   });
 });
