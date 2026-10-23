@@ -78,15 +78,16 @@ describe("regionLanding", () => {
 });
 
 describe("landingJsonLd", () => {
-  it("is an ItemList of the listed event pages in page order, each once, leaving out a run with no start", () => {
+  it("is an ItemList of the listed event pages in page order, each once, leaving out a run with no start, as of the last run (#189)", () => {
     const startless = event({ id: "evt_startless", recurrence: "limited-run", start: undefined, end: "2026-10-31" });
     const multi = event({ id: "evt_multi", start: "2026-10-13", end: "2026-10-14" });
     const p = kindLanding("music", [tue, tuePick, startless, multi], today, range);
-    expect(landingJsonLd(p, origin)).toEqual({
+    expect(landingJsonLd(p, origin, "2026-10-19T06:40:12-05:00")).toEqual({
       "@context": "https://schema.org",
       "@type": "ItemList",
       name: "Music in Kansas City",
       url: "https://www.kcthisweek.com/k/music",
+      dateModified: "2026-10-19T06:40:12-05:00",
       numberOfItems: 3,
       itemListElement: [
         { "@type": "ListItem", position: 1, url: "https://www.kcthisweek.com/e/evt_tuepick" },

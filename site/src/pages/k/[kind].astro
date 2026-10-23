@@ -14,4 +14,4 @@ export function getStaticPaths() {
 }
 const { page } = Astro.props;
 ---
-<Landing page={page} jsonLd={landingJsonLd(page, origin)} />
+<Landing page={page} jsonLd={landingJsonLd(page, origin, meta.lastSuccessfulRun)} />

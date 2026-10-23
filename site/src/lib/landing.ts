@@ -93,9 +93,9 @@ export function regionLanding(region: string, events: PublishedEvent[], today: s
 
 /**
  * The page's ItemList of event pages, in the order it lists them. As on the front page (frontPageJsonLd), only events
- * whose page carries Event JSON-LD: a run with no start has none.
+ * whose page carries Event JSON-LD: a run with no start has none. `dateModified` is the last run (#189).
  */
-export function landingJsonLd(page: Landing, origin: string): object {
+export function landingJsonLd(page: Landing, origin: string, lastSuccessfulRun: string): object {
   const at = (path: string) => new URL(path, origin).toString();
   const listed = resultEvents(page.groups).filter(hasStartDay);
   return {
@@ -103,6 +103,7 @@ export function landingJsonLd(page: Landing, origin: string): object {
     "@type": "ItemList",
     name: page.heading,
     url: at(page.path),
+    dateModified: lastSuccessfulRun,
     numberOfItems: listed.length,
     itemListElement: listed.map((e, i) => ({ "@type": "ListItem", position: i + 1, url: at(`/e/${e.id}`) })),
   };
