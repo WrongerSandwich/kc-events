@@ -409,11 +409,11 @@ describe("Explorer", () => {
     expect(screen.getByRole("searchbox").closest("details")).toBeNull();
   });
 
-  it("gives every row at most two Tab stops, its title and Save, with the host still a link", () => {
+  it("gives every row at most two Tab stops, its title and Save, with the venue still a link", () => {
     render(Explorer);
     for (const row of screen.getAllByRole("article")) {
       expect(tabStops(row).length).toBeLessThanOrEqual(2);
-      expect(row.querySelector("a.host")).toHaveAttribute("href");
+      expect(row.querySelector("a.venue")).toHaveAttribute("href");
     }
   });
 

@@ -8,9 +8,10 @@ import "../styles/venues.css";
 
 // A kind or region page (#138), with no script: the heading, the dates it covers, its events by day, a way into the
 // explorer with the same filter, and the other kind and region pages, so each is a link from all the others.
-/** jsonLd: landingJsonLd of the page, made by the page, since only a page may read the build-only origin. */
-interface Props { page: Landing; jsonLd: object; subline?: string }
-const { page, jsonLd, subline } = Astro.props;
+/** jsonLd: landingJsonLd of the page, made by the page, since only a page may read the build-only origin. hide: "kind" on
+    a kind's page, whose every row would carry its chip (#182). */
+interface Props { page: Landing; jsonLd: object; subline?: string; hide?: "kind" }
+const { page, jsonLd, subline, hide } = Astro.props;
 const others = (names: readonly string[], path: (n: string) => string, label: (n: string) => string) =>
   names.map((n) => ({ href: path(n), label: label(n) })).filter((l) => l.href !== page.path);
 const kinds = others(meta.kinds, kindPath, kindName);
@@ -26,7 +27,7 @@ const regions = others(meta.regions, regionPath, (r) => r);
     <p class="venue-links"><a href={page.explorePath}><UiIcon name="chevron-right" />Filter further in the explorer</a></p>
   </header>
   <section aria-label="Events">
-    <LandingEvents groups={page.groups} />
+    <LandingEvents groups={page.groups} hide={hide} />
   </section>
   <nav class="landing-more" aria-label="More lists">
     <p>By kind: {kinds.map((l, i) => <>{i > 0 && " · "}<a href={l.href}>{l.label}</a></>)}</p>

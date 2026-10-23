@@ -411,9 +411,10 @@ for (const width of [1024, 1280, 1440]) {
   }
 }
 
-// A phone row has one shape: the date, the title, then the kind chip leading the venue line, with Save at the end.
+// A phone row has one shape: the date, the title, then the kind chip leading the venue line, with Save at the end. The
+// title link, the chip and the venue are 24 px tall, so none crowds another under a finger (WCAG 2.5.8, #182).
 for (const path of EXPLORER_SORTS) {
-  test(`every explorer row has the same shape and a 44 px Save at 390 px on ${path}`, async ({ page }) => {
+  test(`every explorer row has the same shape, 24 px links and a 44 px Save at 390 px on ${path}`, async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await on(page, BUILD_DAY, path);
     await openOnNow(page);
@@ -421,12 +422,12 @@ for (const path of EXPLORER_SORTS) {
     const rows = await page.locator("article.row").evaluateAll((els) =>
       els.map((row) => {
         const box = (sel: string) => row.querySelector<HTMLElement>(sel)!.getBoundingClientRect();
-        const shown = (sel: string) => box(sel).width > 0;
+        const shown = (sel: string) => (row.querySelector<HTMLElement>(sel)?.getBoundingClientRect().width ?? 0) > 0;
         return {
           title: row.querySelector("h3")!.textContent,
           row: row.getBoundingClientRect(),
           when: box(".when"), heading: box(".title"), where: box(".where"), chip: box(".chip"), save: box("button.save"),
-          hostShown: shown(".host"), verifiedShown: shown(".verified"),
+          link: box(".title a"), venue: box("a.venue"), verifiedShown: shown(".verified"),
         };
       }),
     );
@@ -438,7 +439,9 @@ for (const path of EXPLORER_SORTS) {
       expect(Math.abs(r.chip.top + r.chip.height / 2 - (r.where.top + r.where.height / 2)), `${r.title}: chip on the venue line`).toBeLessThan(2);
       expect(r.chip.left, `${r.title}: chip position`).toBeCloseTo(chipLeft, 0);
       expect(r.chip.right, `${r.title}: chip before venue`).toBeLessThanOrEqual(r.where.left + 0.5);
-      expect(r.hostShown, `${r.title}: no host`).toBe(false);
+      expect(r.link.height, `${r.title}: title link height`).toBeGreaterThanOrEqual(24);
+      expect(r.chip.height, `${r.title}: chip height`).toBeGreaterThanOrEqual(24);
+      expect(r.venue.height, `${r.title}: venue link height`).toBeGreaterThanOrEqual(24);
       expect(r.verifiedShown, `${r.title}: no verified stamp`).toBe(false);
       expect(r.save.width, `${r.title}: Save width`).toBeGreaterThanOrEqual(44);
       expect(r.save.height, `${r.title}: Save height`).toBeGreaterThanOrEqual(44);
@@ -460,14 +463,12 @@ for (const width of [1280, 1440]) {
         els.slice(0, 20).map((row) => ({
           title: row.querySelector("h3")!.textContent,
           chip: row.querySelector(".chip")!.getBoundingClientRect().left,
-          host: row.querySelector(".host")!.getBoundingClientRect().left,
           save: row.querySelector("button.save")!.getBoundingClientRect().left,
         })),
       );
       expect(lefts.length).toBeGreaterThan(5);
       for (const r of lefts) {
         expect(r.chip, `${r.title}: chip`).toBeCloseTo(lefts[0]!.chip, 0);
-        expect(r.host, `${r.title}: host`).toBeCloseTo(lefts[0]!.host, 0);
         expect(r.save, `${r.title}: save`).toBeCloseTo(lefts[0]!.save, 0);
       }
     });
@@ -531,14 +532,14 @@ test("an event with no page of its own links its primary page and says so", asyn
   await expect(page.locator(".verified")).toContainText("verified Oct 3 from the page linked above.");
 });
 
-test("the front page card and the explorer row link the event's own page too", async ({ page }) => {
+// The explorer row leaves the source to the event page, which links it (#182).
+test("the front page card links the event's own page too", async ({ page }) => {
   await on(page, BUILD_DAY, "/");
   await expect(page.locator("#pick-evt_e2e000000001 a.primary")).toHaveAttribute("href", "https://tickets.example.com/frizzi");
   await page.setViewportSize({ width: 1280, height: 800 });
   await on(page, BUILD_DAY, "/explore");
   const row = page.locator("article.row", { has: page.getByRole("heading", { name: "Fabio Frizzi plays Fulci" }) });
-  await expect(row.locator(".host")).toHaveAttribute("href", "https://tickets.example.com/frizzi");
-  await expect(row.locator(".host")).toHaveText("tickets.example.com");
+  await expect(row.locator('a[href="https://tickets.example.com/frizzi"]')).toHaveCount(0);
 });
 
 test("the explorer sets nothing in uppercase", async ({ page }) => {
@@ -594,12 +595,12 @@ test("the venue sort puts each venue's rows under its own heading", async ({ pag
   expect(seen.length).toBeGreaterThan(5);
 });
 
-test("from 800 px a row shows the host and the verified stamp again", async ({ page }) => {
+// Every fixture event was last verified before the run, so every row has its stamp.
+test("from 800 px a row shows its verified stamp again", async ({ page }) => {
   await page.setViewportSize({ width: 900, height: 800 });
   await on(page, BUILD_DAY, "/explore");
   await openOnNow(page);
   const row = page.locator("article.row").first();
-  await expect(row.locator(".host")).toBeVisible();
   await expect(row.locator(".verified")).toBeVisible();
 });
 
@@ -623,7 +624,7 @@ for (const width of [1280, 390]) {
     await expect(skip).toBeInViewport();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("region", { name: "Events" })).toBeFocused();
-    // From the results (On now, short, is open like a day): each row's title and Save, with the host left out.
+    // From the results (On now, short, is open like a day): each row's title and Save, its venue and chip left out.
     const first = page.locator(".results > article.row").first();
     for (const stop of [first.locator("h3 a"), first.locator("button.save"), page.locator(".results > article.row").nth(1).locator("h3 a")]) {
       await page.keyboard.press("Tab");
@@ -692,7 +693,8 @@ test("explorer rows read their dates relative to the day headings and the sort",
   await expect(row("Haunted house")).toHaveText("10:00 am–Wed Nov 18");
   const verified = page.locator("article.row", { has: page.getByRole("heading", { name: "Fabio Frizzi plays Fulci" }) }).locator(".verified");
   await expect(verified.locator('[aria-hidden="true"]')).toHaveText("✓ Oct 3");
-  await expect(verified.locator(".visually-hidden")).toHaveText("Verified Oct 3");
+  await expect(verified.locator(".visually-hidden")).toHaveText("Date and venue verified Oct 3");
+  await expect(verified).toHaveAttribute("title", "Date and venue verified Oct 3");
   await on(page, BUILD_DAY, "/explore?when=all&sort=venue");
   await expect(row("Friday night jazz")).toHaveText("Fri Oct 9 · 8:00 pm");
   await expect(row("Haunted house")).toHaveText("Wed Oct 28, 10:00 am–Wed Nov 18");
