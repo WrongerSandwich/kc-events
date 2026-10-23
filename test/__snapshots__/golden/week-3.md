@@ -99,6 +99,10 @@ _None._
 
 _None._
 
+## Skipped: expired as a promotion or not public
+
+_None._
+
 ## Identity churn
 
 _None._

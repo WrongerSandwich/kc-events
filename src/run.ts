@@ -202,7 +202,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       venuelessAmbiguous: merged.counts.venuelessAmbiguous,
       heldForPromotion: countEvents(held.heldByHost),
       releasedForPromotion: countEvents(held.releasedByHost),
-      ...sumTallies(extraction.tally, discovery.tally, reverified.tally),
+      ...sumTallies(extraction.tally, discovery.tally, reverified.tally, merged.tally),
       expired: countExpired(dataset.events, events),
       archived: archived.length,
     },
@@ -230,6 +230,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     uncitableReadings: uncitable.map(titleAndUrl),
     keptOnStoredCitation: kept.map((e) => ({ ...titleAndUrl(e), failedQuote: keptOn.get(e.id)! })),
     cancellationsFromElsewhere: merged.cancellationsFromElsewhere,
+    skippedAsExpired: merged.skippedAsExpired,
     identityChurn: identityChurn(dataset.events, events),
     changes: runChanges(dataset.events, events, dataset.lastSuccessfulRun, today),
   };
@@ -642,6 +643,9 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
  * to publish. Matching includes expired events, so a page listing one again revives it under
  * its old id rather than starting a duplicate; all but those expired as index-page, which were
  * never read from an event's own page, so a reading of the real page starts a new event. A record
+ * expired as a promotion or as not public is matched and not revived (#216): that is a call about
+ * what the thing is, not news a page can overturn, so the sighting is counted as skipped, the
+ * record named in the report, and nothing is made of it, not even a second night. A record
  * expired as duplicate stands for the record it was folded into (#77), which takes its sightings;
  * one folded before that pointer was kept takes none. Within one page's reading, a verified
  * candidate with a known event's title on a date outside the fuzzy window, where the page also
@@ -669,6 +673,8 @@ function mergeSightings(existing: Event[], sightings: Sighting[], { today, nowIs
   const uncitable = new Set<string>();
   const kept = new Map<string, string>();
   const cancellationsFromElsewhere: RunReport["cancellationsFromElsewhere"] = [];
+  const skippedAsExpired = new Map<string, RunReport["skippedAsExpired"][number]>();
+  const tally = noTally();
   let venuelessAmbiguous = 0;
 
   const create = (event: Event) => {
@@ -691,6 +697,13 @@ function mergeSightings(existing: Event[], sightings: Sighting[], { today, nowIs
       continue;
     }
     const { event: known, rule } = match;
+    // Expired as a promotion or not public is a call about what the thing is; a page listing it again does not overturn it (#216).
+    const skippedAs = expiredAsSkip(known);
+    if (skippedAs !== undefined) {
+      tally[SKIPPED_AS[skippedAs]]++;
+      skippedAsExpired.set(known.id, { ...titleAndUrl(known), reason: skippedAs });
+      continue;
+    }
     if (cancelled && !cancellationReaches(event, known, rule)) continue;
     const standing = standingOf(event, known, config.discovery.platformHosts);
     if (cancelled && standing === "none") {
@@ -728,6 +741,8 @@ function mergeSightings(existing: Event[], sightings: Sighting[], { today, nowIs
     uncitable,
     kept,
     cancellationsFromElsewhere,
+    tally,
+    skippedAsExpired: [...skippedAsExpired.values()],
     counts: { found: touched.size, new: created.size, updated: refreshed.size, heldUnverified, venuelessAmbiguous },
   };
 }
@@ -797,6 +812,12 @@ function listsNear(known: Event, sighting: Sighting, sightings: Sighting[]): boo
   return sightings.some(
     (other) => other !== sighting && samePage(other.event.primaryUrl, sighting.event.primaryUrl) && sameName(other.event.title, sighting.event.title) && nearDates(other.event, known),
   );
+}
+
+/** The skip a known event was expired under, when it was expired as a promotion or as not public (#216); else nothing. */
+function expiredAsSkip(event: Event): SkipReason | undefined {
+  if (event.status !== "expired") return undefined;
+  return event.expiryReason === "promotion" || event.expiryReason === "not-public" ? event.expiryReason : undefined;
 }
 
 /**

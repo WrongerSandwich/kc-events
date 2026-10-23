@@ -85,6 +85,7 @@ const full: RunReport = {
   uncitableReadings: [{ title: "Wobble Night", primaryUrl: "https://venue.test/calendar" }],
   keptOnStoredCitation: [{ title: "Steady Night", primaryUrl: "https://venue.test/calendar", failedQuote: 'quoted "Fri · Buy Tickets" for its date' }],
   cancellationsFromElsewhere: [{ title: "Big Show", primaryUrl: "https://venue.test/calendar", reportedBy: "https://blog.test/news" }],
+  skippedAsExpired: [{ title: "Speed Dating", primaryUrl: "https://venue.test/calendar", reason: "promotion" }],
   identityChurn: [{ title: "Big Show: Encore", primaryUrl: "https://venue.test/calendar", was: { title: "Big Show", primaryUrl: "https://venue.test/old" } }],
 };
 
@@ -203,6 +204,10 @@ describe("the run report", () => {
 
       - https://blog.test/news says Big Show (https://venue.test/calendar) is cancelled; the event was left as it was
 
+      ## Skipped: expired as a promotion or not public
+
+      - Speed Dating: https://venue.test/calendar (expired as promotion; left so)
+
       ## Identity churn
 
       - Big Show (https://venue.test/old) is now Big Show: Encore (https://venue.test/calendar)
@@ -224,13 +229,13 @@ describe("the run report", () => {
   });
 
   it("fills the fields a report from before them does not carry", () => {
-    const { reverification, offListNeighborhoods, venueNeighborhoods, heldForPromotion, releasedForPromotion, outageLimited, uncitableReadings, keptOnStoredCitation, cancellationsFromElsewhere, identityChurn, ...older } = full;
+    const { reverification, offListNeighborhoods, venueNeighborhoods, heldForPromotion, releasedForPromotion, outageLimited, uncitableReadings, keptOnStoredCitation, cancellationsFromElsewhere, skippedAsExpired, identityChurn, ...older } = full;
     const { archived, heldThroughOutage, quoteNotOnPage, keptOnStoredCitation: keptCount, expired, ...counts } = full.counts;
     const { stale, ...expiredBefore } = expired;
     const parsed = parseRunReport({ ...older, counts: { ...counts, expired: expiredBefore }, spend: { ...full.spend, modelCalls: undefined } });
 
     expect(parsed.counts).toMatchObject({ archived: 0, heldThroughOutage: 0, quoteNotOnPage: 0, keptOnStoredCitation: 0, expired: { ...expiredBefore, stale: 0 } });
-    expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], venueNeighborhoods: [], identityChurn: [], keptOnStoredCitation: [], spend: { modelCalls: [] } });
+    expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], venueNeighborhoods: [], identityChurn: [], keptOnStoredCitation: [], skippedAsExpired: [], spend: { modelCalls: [] } });
   });
 
   it("refuses a key it does not name", () => {

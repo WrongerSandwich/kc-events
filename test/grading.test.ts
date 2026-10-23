@@ -28,6 +28,7 @@ function report(overrides: Partial<RunReport> = {}): RunReport {
     uncitableReadings: [],
     keptOnStoredCitation: [],
     cancellationsFromElsewhere: [],
+    skippedAsExpired: [],
     identityChurn: [],
     ...overrides,
   };

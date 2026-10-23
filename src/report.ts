@@ -2,6 +2,7 @@ import { z } from "zod";
 import { EXPIRY_REASONS, type ExpiryReason } from "./dataset.js";
 import { ARCHIVE_AFTER_WEEKS } from "./archive.js";
 import { markdownList, plural, tableCell } from "./markdown.js";
+import type { SkipReason } from "./skip.js";
 import type { ModelCall } from "./spend.js";
 
 export type SourceResult = "fetched" | "failed" | "blocked" | "excluded";
@@ -39,9 +40,9 @@ export interface OwnPagesReport {
 export interface CandidateTally {
   /** Dropped because their page placed them outside the geography, or as an away game a team's schedule names no venue for (#81). */
   outsideGeography: number;
-  /** Skipped because their title is a promotion's: a business's standing night, a watch party (#81). */
+  /** Skipped because their title is a promotion's: a business's standing night, a watch party (#81); or a sighting of a record expired as one (#216). */
   skippedPromotion: number;
-  /** Skipped because they are not open to the public: a graduation, a board meeting, an online session (#81). */
+  /** Skipped because they are not open to the public: a graduation, a board meeting, an online session (#81); or a sighting of a record expired as such (#216). */
   skippedNotPublic: number;
   /** Dropped because a field the model wrote ran past its length cap. */
   overCap: number;
@@ -186,6 +187,11 @@ export interface RunReport {
    * known event is cancelled (ADR 0008, amended #75). The event was left as it was; its own page decides.
    */
   cancellationsFromElsewhere: (EventRef & { reportedBy: string })[];
+  /**
+   * Records expired as a promotion or as not public that a page listed again this run (#216), each once:
+   * left expired, the sightings counted under the skips, named here so a wrong call can be undone by hand.
+   */
+  skippedAsExpired: (EventRef & { reason: SkipReason })[];
   /** Events whose title or primary page changed this run, as they are now and as they were (#82): a flap shows here the week it happens. */
   identityChurn: (EventRef & { was: EventRef })[];
   /** What changed on the site this run, for its changes page (#135; runChanges). Absent in reports before it. */
@@ -308,6 +314,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   uncitableReadings: listSince(eventRef),
   keptOnStoredCitation: listSince(eventRef.extend({ failedQuote: z.string() })),
   cancellationsFromElsewhere: listSince(eventRef.extend({ reportedBy: z.string() })),
+  skippedAsExpired: listSince(eventRef.extend({ reason: z.enum(["promotion", "not-public"]) })),
   identityChurn: listSince(eventRef.extend({ was: eventRef })),
   changes: z
     .strictObject({
@@ -438,6 +445,10 @@ ${markdownList(report.keptOnStoredCitation.map((e) => `${e.title}: ${e.primaryUr
 ## Cancellations from elsewhere
 
 ${markdownList(report.cancellationsFromElsewhere.map((c) => `${c.reportedBy} says ${c.title} (${c.primaryUrl}) is cancelled; the event was left as it was`))}
+
+## Skipped: expired as a promotion or not public
+
+${markdownList(report.skippedAsExpired.map((e) => `${e.title}: ${e.primaryUrl} (expired as ${e.reason}; left so)`))}
 
 ## Identity churn
 

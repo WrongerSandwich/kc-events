@@ -129,6 +129,52 @@ describe("stored promotions and non-public events", () => {
     expect(markdown).toContain("| Expired: not-public | 2 |");
   });
 
+  it.each([
+    ["promotion", "skippedPromotion", "Skipped as promotion"],
+    ["not-public", "skippedNotPublic", "Skipped as not public"],
+  ] as const)("one expired as %s is not revived by a page listing it again, and the sighting is counted and named (#216)", async (reason, count, row) => {
+    const expired = stored("soft clubbing with DJ hunni bunni", { status: "expired", expiryReason: reason });
+
+    const { dataset, report } = await runOver([expired], candidate({ title: "soft clubbing with DJ hunni bunni" }), candidate({ title: "Big Show" }));
+
+    expect(dataset.events.map((e) => [e.title, e.status, e.expiryReason])).toEqual([
+      ["soft clubbing with DJ hunni bunni", "expired", reason],
+      ["Big Show", "active", undefined],
+    ]);
+    expect(dataset.events[0]).toEqual(expired);
+    expect(report.counts[count]).toBe(1);
+    expect(report.counts).toMatchObject({ new: 1, found: 1 });
+    expect(report.skippedAsExpired).toEqual([{ title: expired.title, primaryUrl: CALENDAR_URL, reason }]);
+    const markdown = renderReportMarkdown(report);
+    expect(markdown).toContain(`| ${row} | 1 |`);
+    expect(markdown).toContain(`- soft clubbing with DJ hunni bunni: ${CALENDAR_URL} (expired as ${reason}; left so)`);
+  });
+
+  it("one expired as promotion stays so when a page lists it on another night, which starts no record (#216)", async () => {
+    const expired = stored("soft clubbing", { status: "expired", expiryReason: "promotion" });
+
+    const { dataset, report } = await runOver(
+      [expired],
+      candidate({ title: "soft clubbing" }),
+      candidate({ title: "soft clubbing", startDate: "2026-11-21", dateEvidence: "Sat, Nov 21" }),
+    );
+
+    expect(dataset.events).toEqual([expired]);
+    expect(report.counts.skippedPromotion).toBe(2);
+    expect(report.skippedAsExpired).toHaveLength(1);
+  });
+
+  it.each(["past", "two-strike", "stale", "cancelled"] as const)("one expired as %s is revived by a page listing it again under its old id", async (reason) => {
+    const expired = stored("Big Show", { status: "expired", expiryReason: reason });
+
+    const { dataset, report } = await runOver([expired], candidate());
+
+    expect(dataset.events).toEqual([expect.objectContaining({ id: expired.id, status: "active" })]);
+    expect(dataset.events[0]?.expiryReason).toBeUndefined();
+    expect(report.skippedAsExpired).toEqual([]);
+    expect(report.counts.skippedPromotion + report.counts.skippedNotPublic).toBe(0);
+  });
+
   it("a page read as listing only skipped candidates was read: the events it leaves out are struck, not held as through an outage", async () => {
     const events = [stored("Mutts & Merlot"), stored("Boozy Book Exchange"), stored("Wine Walk")];
 

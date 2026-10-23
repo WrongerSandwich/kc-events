@@ -24077,29 +24077,30 @@
     },
     {
       "id": "evt_bba4b171442d",
-      "title": "Soft clubbing at Elixir with DJ hunni bunni",
-      "start": "2026-10-29",
-      "venue": "Museum of Kansas City",
+      "title": "soft clubbing at Elixir with DJ hunni bunni",
+      "start": "2026-10-29T18:00:00-05:00",
+      "venue": "The Museum of Kansas City",
       "neighborhood": "Northeast",
-      "primaryUrl": "https://museumofkansascity.org/film-series/",
+      "primaryUrl": "https://museumofkansascity.org/events/",
       "eventUrl": "https://museumofkansascity.org/events/soft-clubbing-at-elixir-with-dj-hunni-bunni-7/",
       "kind": "music",
       "recurrence": "one-off",
       "dontMiss": false,
       "firstSeen": "2026-10-06T22:25:10-05:00",
-      "lastVerified": "2026-10-23T12:32:11-05:00",
-      "lastChanged": "2026-10-23T12:32:11-05:00",
-      "lastJudged": "2026-10-23T12:32:11-05:00",
-      "status": "active",
-      "verificationFailures": 0,
+      "lastVerified": "2026-10-13T22:13:36-05:00",
+      "lastChanged": "2026-10-12T17:17:57-05:00",
+      "lastJudged": "2026-10-12T17:17:57-05:00",
+      "status": "expired",
+      "expiryReason": "promotion",
+      "verificationFailures": 1,
       "consecutiveOutages": 0,
       "lead": {
         "lane": "discovery",
         "query": "film events in Kansas City, October to December 2026"
       },
       "evidence": {
-        "date": "29 Oct\nsoft clubbing at Elixir with DJ hunni bunni",
-        "venue": "The Museum of Kansas City"
+        "date": "October 29, 2026\n6:00 pm-10:00 pm",
+        "venue": "The Museum of Kansas City\n3218 Gladstone Blvd."
       }
     },
     {
