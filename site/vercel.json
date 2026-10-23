@@ -14,7 +14,19 @@
       ]
     },
     {
-      "source": "/(.*)\\.ics",
+      "source": "/calendar/(.*)\\.ics",
+      "headers": [
+        { "key": "Content-Type", "value": "text/calendar; charset=utf-8" }
+      ]
+    },
+    {
+      "source": "/calendar\\.ics",
+      "headers": [
+        { "key": "Content-Type", "value": "text/calendar; charset=utf-8" }
+      ]
+    },
+    {
+      "source": "/e/(.*)\\.ics",
       "headers": [
         { "key": "Content-Type", "value": "text/calendar; charset=utf-8" }
       ]

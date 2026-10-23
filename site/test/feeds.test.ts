@@ -102,9 +102,16 @@ describe("webcalUrl", () => {
 });
 
 describe("vercel.json", () => {
+  const config = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8")) as { headers: { source: string; headers: { key: string; value: string }[] }[] };
+  const calendarSources = config.headers.filter((h) => h.headers.some((x) => x.key === "Content-Type" && x.value === "text/calendar; charset=utf-8")).map((h) => h.source);
+  // Vercel's sources are path-to-regexp patterns; these use only literal text, an escaped dot, and the (.*) group.
+  const matches = (path: string) => calendarSources.some((source) => new RegExp(`^${source}$`).test(path));
+
   it("serves every calendar file as UTF-8 text/calendar", () => {
-    const config = JSON.parse(readFileSync(new URL("../vercel.json", import.meta.url), "utf8")) as { headers: { source: string; headers: { key: string; value: string }[] }[] };
-    const rule = config.headers.find((h) => h.headers.some((x) => x.key === "Content-Type" && x.value === "text/calendar; charset=utf-8"));
-    expect(rule?.source).toBe("/(.*)\\.ics");
+    for (const path of ["/calendar.ics", "/calendar/picks.ics", "/calendar/music.ics", "/e/evt_0123456789ab.ics"]) expect(matches(path), path).toBe(true);
+  });
+
+  it("leaves an .ics path the site does not make to the HTML 404's own type (#192)", () => {
+    for (const path of ["/nope.ics", "/v/recordbar.ics", "/k/music.ics"]) expect(matches(path), path).toBe(false);
   });
 });
