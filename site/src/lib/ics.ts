@@ -10,9 +10,8 @@ import { siteConfig } from "../site.config";
  * An event as its calendar file has it: the build adds its venue's street address and position from the venue table
  * (#137), for LOCATION and GEO; the explorer's export has neither, and LOCATION is the venue and neighborhood. That is
  * decided (#190): the table would add about 3 KB gzipped to the explorer for a file whose every event links its page,
- * and the feeds and each event's own file, which a reader keeps, carry the address. A
- * feed's events (#136) carry `pageUrl`, their page on this site, as URL in place of the event's own page, which the
- * notes still give.
+ * and the feeds and each event's own file, which a reader keeps, carry the address. A feed's events (#136) carry
+ * `pageUrl`, their page on this site, as URL in place of the event's own page, which the notes still give.
  */
 export type IcsEvent = PublishedEvent & { addressLine?: string; geo?: Geo; pageUrl?: string };
 
