@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { toIcs } from "../src/lib/ics";
+import { googleCalendarUrl, toIcs } from "../src/lib/ics";
 import { event } from "./fixtures/event";
 
 const opts = { siteName: "KC Events", stamp: "2026-10-05T11:30:00Z" };
@@ -175,5 +175,39 @@ describe("toIcs, what each event says about itself (#190)", () => {
 
   it("puts the time notes before the why-line", () => {
     expect(vevent(event({ whyLine: "Rare; see it." }))).toContain("DESCRIPTION:End time not listed\\; shown as two hours.\\n\\nRare\\; see it.\\n\\nVerified");
+  });
+});
+
+describe("googleCalendarUrl (#188)", () => {
+  const params = (url: string) => {
+    const u = new URL(url);
+    expect(`${u.origin}${u.pathname}`).toBe("https://calendar.google.com/calendar/render");
+    return u.searchParams;
+  };
+
+  it("fills Google Calendar's event template with the same times as the event's calendar file", () => {
+    const p = params(googleCalendarUrl(event({ whyLine: "Rare; see it." }), "KC Events"));
+    expect(p.get("action")).toBe("TEMPLATE");
+    expect(p.get("text")).toBe("A show");
+    // 7 pm Central is midnight UTC, and the two-hour placeholder, as the .ics has them.
+    expect(p.get("dates")).toBe("20261010T000000Z/20261010T020000Z");
+    expect(p.get("location")).toBe("recordBar, Crossroads");
+    expect(p.get("details")).toContain("End time not listed; shown as two hours.");
+    expect(p.get("details")).toContain("Rare; see it.");
+    expect(p.get("details")).toContain("details at https://www.therecordbar.com/shows.");
+    expect(p.has("recur")).toBe(false);
+  });
+
+  it("gives a dated event all-day dates with the exclusive end, and its venue's address when the table has it", () => {
+    const e = { ...event({ start: "2026-10-09", end: "2026-10-11", recurrence: "limited-run" }), addressLine: "1601 Broadway Blvd, Kansas City, MO 64108" };
+    const p = params(googleCalendarUrl(e, "KC Events"));
+    expect(p.get("dates")).toBe("20261009/20261012");
+    expect(p.get("location")).toBe("recordBar, 1601 Broadway Blvd, Kansas City, MO 64108");
+  });
+
+  it("repeats a run with days weekly on them, as the file's RRULE", () => {
+    const p = params(googleCalendarUrl(event({ recurrence: "limited-run", start: "2026-10-01", end: "2026-11-15", days: [3, 4] }), "KC Events"));
+    expect(p.get("dates")).toBe("20261001/20261002");
+    expect(p.get("recur")).toBe("RRULE:FREQ=WEEKLY;BYDAY=WE,TH;UNTIL=20261115");
   });
 });

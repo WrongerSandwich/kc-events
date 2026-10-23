@@ -28,6 +28,11 @@ const url = canonical ?? new URL(publicPath, origin).toString();
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    {/* Both schemes from the first paint, so a dark-mode reader gets no white flash, and the browser's bars in each
+        scheme's background: tokens.css's --bg, oklch(0.985 0 0) and oklch(0.17 0 0), in hex (#188; audit A20, D14). */}
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#fafafa" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f0f0f" />
     <title>{fullTitle}</title>
     <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
     <meta name="description" content={description} />
@@ -38,6 +43,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content={siteConfig.name} />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     {!noindex && <meta property="og:url" content={url} />}

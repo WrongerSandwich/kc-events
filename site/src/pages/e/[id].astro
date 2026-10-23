@@ -18,6 +18,8 @@ import { breadcrumbJsonLd, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
 import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, neighborhoodLine, venueLine } from "../../lib/events";
 import ReportForm from "../../components/ReportForm.astro";
+import { googleCalendarUrl, locatedForCalendar } from "../../lib/ics";
+import { siteConfig } from "../../site.config";
 import type { PublishedEvent } from "../../lib/types";
 
 export function getStaticPaths() {
@@ -39,6 +41,8 @@ const admission = admissionLine(event);
 const venue = venueNamed(venues, event.venue);
 const eventLd = eventJsonLd(event, { origin, today: meta.buildToday, description, image: shareImage.url, ...(venue !== undefined && { venue }) });
 const jsonLd = [...(eventLd === undefined ? [] : [eventLd]), breadcrumbJsonLd(event, origin)];
+// Google Calendar on Android opens no .ics, so its template link sits beside the download (#188); nothing is sent until tapped.
+const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, event), siteConfig.name) : undefined;
 ---
 <Base title={eventPageTitle(event, events)} description={metaDescription} jsonLd={jsonLd}>
   <article class={`event kind-${slugify(event.kind)}`}>
@@ -59,6 +63,7 @@ const jsonLd = [...(eventLd === undefined ? [] : [eventLd]), breadcrumbJsonLd(ev
     <div class="actions">
       <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} shareText={`${line} · ${venueLine(event)}`} />
       {isDated(event) && <a class="ics" href={`/e/${event.id}.ics`} download><UiIcon name="calendar-plus" />Add to calendar</a>}
+      {google !== undefined && <a class="ics" href={google} rel="nofollow">Google Calendar</a>}
     </div>
     <p class="verified">Date and venue verified {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.{(event.whyLine || description) && " The reason and description are written by a model."}</p>
     <ReportForm context={report} summary="Wrong? Report it" />

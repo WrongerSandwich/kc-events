@@ -65,55 +65,86 @@ function spanNote(start: string, end: string | undefined, last: string): string 
   return end !== undefined && !isDateOnly(end) ? `${from}; ends ${formatDay(last)} at ${formatTime(end)}.` : `${from}; through ${formatDay(last)}.`;
 }
 
-function vevent(e: IcsEvent, siteName: string, stamp: string): string[] {
-  const lines = [`UID:${e.id}@kc-events`, `DTSTAMP:${utcStamp(stamp)}`];
+/**
+ * When an event goes in a calendar, and the notes that go with it: the .ics file's DTSTART, DTEND and RRULE, and the
+ * same for Google Calendar's template link (#188), so the two never disagree. Stamps are RFC 5545's: a date for an
+ * all-day event, whose end is exclusive, else a UTC instant.
+ */
+function calendarTimes(e: PublishedEvent): { allDay: boolean; start: string; end: string; rrule?: string; notes: string[] } {
   const notes: string[] = [];
   const first = firstDay(e);
   const last = lastDay(e)!;
-  let allDay = true;
 
   if (first === undefined) {
     // A run read after it began: the one day we can stand behind is its last.
-    lines.push(`DTSTART;VALUE=DATE:${dateStamp(last)}`, `DTEND;VALUE=DATE:${dateStamp(addDays(last, 1))}`);
     notes.push("Last day.");
-  } else if (isDateOnly(e.start!) || (e.end !== undefined && isDateOnly(e.end) && e.recurrence === "limited-run") || last > first) {
+    return { allDay: true, start: dateStamp(last), end: dateStamp(addDays(last, 1)), notes };
+  }
+  if (isDateOnly(e.start!) || (e.end !== undefined && isDateOnly(e.end) && e.recurrence === "limited-run") || last > first) {
     // A date-only start, a run's date end, or a span over more than one day (#190: a timed one-off that ends on a later
     // day is listed on the site under each of its days, so one timed block of 42 hours says less) makes the whole event
     // all-day; a date end is exclusive. A timed start goes in the notes, and with it a timed end.
+    if (!isDateOnly(e.start!)) notes.push(spanNote(e.start!, e.end, last));
+    // A date-only start means the page gave no time, not that the event runs all day (F3); a run's dates are its point.
+    else if (e.recurrence !== "limited-run") notes.push("No time listed on the venue's page; check before you go.");
     const playing = e.days === undefined ? undefined : nextPlayingDay(e, first, last);
     if (playing !== undefined) {
       // A run with days (#143) is one all-day event a week on each of them, from the first it plays through its last day;
       // DTSTART is itself an instance, so it is a day the rule names.
-      lines.push(`DTSTART;VALUE=DATE:${dateStamp(playing)}`, `DTEND;VALUE=DATE:${dateStamp(addDays(playing, 1))}`);
-      lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${e.days!.map((n) => ICS_WEEKDAYS[n]).join(",")};UNTIL=${dateStamp(last)}`);
-    } else {
-      lines.push(`DTSTART;VALUE=DATE:${dateStamp(first)}`, `DTEND;VALUE=DATE:${dateStamp(addDays(last, 1))}`);
+      const rrule = `RRULE:FREQ=WEEKLY;BYDAY=${e.days!.map((n) => ICS_WEEKDAYS[n]).join(",")};UNTIL=${dateStamp(last)}`;
+      return { allDay: true, start: dateStamp(playing), end: dateStamp(addDays(playing, 1)), rrule, notes };
     }
-    if (!isDateOnly(e.start!)) notes.push(spanNote(e.start!, e.end, last));
-    // A date-only start means the page gave no time, not that the event runs all day (F3); a run's dates are its point.
-    else if (e.recurrence !== "limited-run") notes.push("No time listed on the venue's page; check before you go.");
-  } else {
-    // One day, or one night past midnight: the stated end, else the two-hour placeholder, which the notes own up to (#190).
-    allDay = false;
-    const timedEnd = e.end !== undefined && !isDateOnly(e.end) ? e.end : undefined;
-    const end = timedEnd ?? new Date(new Date(e.start!).getTime() + 2 * 3_600_000).toISOString();
-    lines.push(`DTSTART:${utcStamp(e.start!)}`, `DTEND:${utcStamp(end)}`);
-    if (timedEnd === undefined) notes.push("End time not listed; shown as two hours.");
+    return { allDay: true, start: dateStamp(first), end: dateStamp(addDays(last, 1)), notes };
   }
+  // One day, or one night past midnight: the stated end, else the two-hour placeholder, which the notes own up to (#190).
+  const timedEnd = e.end !== undefined && !isDateOnly(e.end) ? e.end : undefined;
+  const end = timedEnd ?? new Date(new Date(e.start!).getTime() + 2 * 3_600_000).toISOString();
+  if (timedEnd === undefined) notes.push("End time not listed; shown as two hours.");
+  return { allDay: false, start: utcStamp(e.start!), end: utcStamp(end), notes };
+}
 
+/** Where the event is, for a calendar: its venue, then its street address, else its neighborhood. */
+function calendarLocation(e: IcsEvent): string {
   // The catch-all region's name ("Elsewhere in the metro") is no place: with no street address, an event there is at its venue alone.
   const place = e.addressLine ?? (siteConfig.regionAddress[e.region] === undefined ? undefined : e.neighborhood);
-  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(place === undefined ? e.venue : `${e.venue}, ${place}`)}`, `URL:${e.pageUrl ?? detailsUrl(e)}`);
+  return place === undefined ? e.venue : `${e.venue}, ${place}`;
+}
+
+/** The notes after the times: the why-line, then where it was verified and where the details are. */
+function calendarNotes(e: IcsEvent, siteName: string, timeNotes: string[]): string {
+  const notes = [...timeNotes];
+  if (e.whyLine) notes.push(e.whyLine);
+  notes.push(`Verified ${formatShort(localDate(e.lastVerified))} by ${siteName}; details at ${detailsUrl(e)}.`);
+  return notes.join("\n\n");
+}
+
+function vevent(e: IcsEvent, siteName: string, stamp: string): string[] {
+  const t = calendarTimes(e);
+  const lines = [`UID:${e.id}@kc-events`, `DTSTAMP:${utcStamp(stamp)}`];
+  if (t.allDay) lines.push(`DTSTART;VALUE=DATE:${t.start}`, `DTEND;VALUE=DATE:${t.end}`);
+  else lines.push(`DTSTART:${t.start}`, `DTEND:${t.end}`);
+  if (t.rrule !== undefined) lines.push(t.rrule);
+  lines.push(`SUMMARY:${escapeText(e.title)}`, `LOCATION:${escapeText(calendarLocation(e))}`, `URL:${e.pageUrl ?? detailsUrl(e)}`);
   if (e.geo) lines.push(`GEO:${e.geo.lat};${e.geo.lng}`);
   // The kind as a category, which Apple Calendar and Thunderbird can colour by, the site's own idiom (#190).
   lines.push(`CATEGORIES:${escapeText(kindName(e.kind))}`);
   // An all-day entry is a span to know about, not a day taken: a seven-week exhibition is not seven weeks busy.
-  if (allDay) lines.push("TRANSP:TRANSPARENT");
+  if (t.allDay) lines.push("TRANSP:TRANSPARENT");
   lines.push(`LAST-MODIFIED:${utcStamp(e.lastVerified)}`);
-  if (e.whyLine) notes.push(e.whyLine);
-  notes.push(`Verified ${formatShort(localDate(e.lastVerified))} by ${siteName}; details at ${detailsUrl(e)}.`);
-  lines.push(`DESCRIPTION:${escapeText(notes.join("\n\n"))}`);
+  lines.push(`DESCRIPTION:${escapeText(calendarNotes(e, siteName, t.notes))}`);
   return ["BEGIN:VEVENT", ...lines, "END:VEVENT"];
+}
+
+/**
+ * Google Calendar's event template for a dated event (#188): Google Calendar on Android does not open a downloaded
+ * .ics, so the event page links this beside Add to calendar. A plain link, so nothing goes to Google until it is
+ * tapped; the times, place and notes are the calendar file's.
+ */
+export function googleCalendarUrl(e: IcsEvent, siteName: string): string {
+  const t = calendarTimes(e);
+  const p = new URLSearchParams({ action: "TEMPLATE", text: e.title, dates: `${t.start}/${t.end}`, details: calendarNotes(e, siteName, t.notes), location: calendarLocation(e) });
+  if (t.rrule !== undefined) p.set("recur", t.rrule);
+  return `https://calendar.google.com/calendar/render?${p.toString()}`;
 }
 
 /**

@@ -8,17 +8,12 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { PUBLISHED_SCHEMA_VERSION } from "../lib/schema-version";
 import type { PublishedDataset } from "../lib/types";
 import { loadPublished } from "./load-dataset.ts";
 
-/**
- * The shape of the public events.json; bumped by hand when a field is removed or changes meaning. It starts at 2
- * because the job's raw file, version 1, was served at the same URL until #89.
- */
-export const PUBLISHED_SCHEMA_VERSION = 2;
-
 /** What the front page may weigh on real data: HTML, CSS, and JS, gzipped. */
-export const FRONT_PAGE_BYTES = 51_000; // 50 KB, plus 200 bytes for a run's days (#143), 300 for the calendar subscription line (#136), 300 for the report form's two CSP hashes (#129) and the dependency bump of #152, and 200 for the lede saying a model makes the picks (audit 2026-10-21)
+export const FRONT_PAGE_BYTES = 52_400; // 50 KB, plus 200 bytes for a run's days (#143), 300 for the calendar subscription line (#136), 300 for the report form's two CSP hashes (#129) and the dependency bump of #152, 200 for the lede saying a model makes the picks (audit 2026-10-21), and 1,400 for the By kind and By region rows, the subscription's https address with its copy button, and the head's colour-scheme, theme-color and locale tags (#188)
 /**
  * The most don't-miss picks the front page was sized for: its code budget, measured on the fixture build, leaves room
  * in FRONT_PAGE_BYTES for this many (scripts/size-check.ts). A week over it is a warning, not a failed deploy.

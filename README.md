@@ -19,7 +19,9 @@ More: the site's [About page](https://www.kcthisweek.com/about), the design in [
 
 - [`/events.json`](https://www.kcthisweek.com/events.json): every active event, with the fields the site shows. Free to reuse under CC BY 4.0 (below).
 - [`/llms.txt`](https://www.kcthisweek.com/llms.txt): the site, the dataset, and how to cite it, for language models and other readers.
+- Calendar feeds, updated with every build: [`/calendar.ics`](https://www.kcthisweek.com/calendar.ics) for every dated event, [`/calendar/picks.ics`](https://www.kcthisweek.com/calendar/picks.ics) for the picks, and `/calendar/<kind>.ics` for one kind (`music`, `theater-dance`, and so on). Subscribe with `webcal://` in Apple Calendar, or with the `https://` address in Google Calendar (Other calendars, From URL) or Outlook.
 - `/e/<id>.ics`: one event as a calendar file.
+- [`/changes`](https://www.kcthisweek.com/changes): what the last run added, moved, and took off.
 - [`data/events.json`](data/events.json): the full dataset the job keeps, including held-back and expired records and the evidence quotes.
 
 ## Wrong listing?

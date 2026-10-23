@@ -1,17 +1,31 @@
 ---
+import CopyButton from "./CopyButton.svelte";
 import { PICKS_FEED, webcalUrl } from "../lib/feeds";
 
-// The picks' feed (#136): the webcal link opens a calendar app's subscribe dialog; the https address is for one that
-// asks for a URL instead (Google Calendar on the web, Outlook). The page passes the build's origin.
+// The picks' feed (#136), two ways (#188): the webcal link opens Apple Calendar's subscribe dialog, but Android and
+// most Windows browsers have nothing for that scheme, so the https address is beside it with a one-tap copy, for an app
+// that asks for a URL (Google Calendar, Outlook). Phones put the address first (first in the source too, so Tab order matches). The page passes the build's origin.
 interface Props { origin: string }
 const { origin } = Astro.props;
 const address = new URL(PICKS_FEED, origin).toString();
 ---
-<p>
-  <a href={webcalUrl(origin, PICKS_FEED)}>Subscribe to the picks</a> in your calendar app. It updates weekly; remove
-  the calendar to stop. If it asks for an address, use <code>{address}</code>.
-</p>
+<div class="subscribe-ways">
+  <p class="by-address">
+    For Google Calendar or Outlook, add it by address: <code>{address}</code> <CopyButton client:load label="Copy address" url={address} />
+    Google Calendar: Other calendars, From URL.
+  </p>
+  <p class="apple">
+    <a href={webcalUrl(origin, PICKS_FEED)}>Subscribe to the picks</a> in Apple Calendar or any app that opens calendar
+    links. It updates weekly; remove the calendar to stop.
+  </p>
+</div>
 
 <style>
+  .subscribe-ways { display: flex; flex-direction: column; gap: var(--space-2); }
+  .subscribe-ways p { margin: 0; }
+  /* The address is first in the source, so reading and Tab order match a phone's; wider screens lead with the link. */
+  @media (min-width: 30.0625rem) {
+    .apple { order: -1; }
+  }
   code { overflow-wrap: anywhere; user-select: all; }
 </style>

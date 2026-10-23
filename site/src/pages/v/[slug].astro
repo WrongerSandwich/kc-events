@@ -36,6 +36,6 @@ const map = mapUrl(venue);
   <section aria-label={`Events at ${venue.name}`}>
     <VenueEvents events={here} />
   </section>
-  {/* The way to the directory: a footer link would weigh on every page, the front page's and the explorer's budgets. */}
-  <p class="venue-all"><a href="/venues">All venues</a></p>
+  {/* The venue's own way in (#188): For venues says how to correct a listing or ask for a calendar page to be read. */}
+  <p class="venue-all"><a href="/about#for-venues">Is this your venue? How to correct a listing</a> · <a href="/venues">All venues</a></p>
 </Base>
