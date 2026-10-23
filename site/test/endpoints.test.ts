@@ -26,7 +26,11 @@ describe("built output", () => {
     it("writes the calendar feeds: the picks, every dated event, and each kind's (#136)", () => {
       const unfolded = (p: string) => read(p).replace(/\r\n[ \t]/g, "");
       const vevents = (p: string) => unfolded(p).split("BEGIN:VEVENT").length - 1;
-      expect(unfolded("calendar/picks.ics")).toContain("X-WR-CALNAME:KC This Week · Picks\r\nREFRESH-INTERVAL;VALUE=DURATION:P1D\r\nX-PUBLISHED-TTL:P1D\r\n");
+      expect(unfolded("calendar/picks.ics")).toContain("NAME:KC This Week · Picks\r\nX-WR-CALNAME:KC This Week · Picks\r\n");
+      expect(unfolded("calendar/picks.ics")).toContain("REFRESH-INTERVAL;VALUE=DURATION:P1D\r\nX-PUBLISHED-TTL:P1D\r\n");
+      // The feed describes itself and links the page it came from; a kind's has its colour (#190).
+      expect(unfolded("calendar/picks.ics")).toMatch(/\r\nX-WR-CALDESC:[^\r]*Last researched [^\r]+\r\nURL:[^\r]+\/\r\n/);
+      expect(unfolded("calendar/music.ics")).toMatch(/\r\nURL:[^\r]+\/k\/music\r\nCOLOR:darkorchid\r\n/);
       expect(has("calendar/dont-miss.ics")).toBe(false);
       expect(unfolded("calendar.ics")).toContain("X-WR-CALNAME:KC This Week\r\n");
       expect(vevents("calendar.ics")).toBe(events.filter(isDated).length);

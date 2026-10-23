@@ -50,7 +50,7 @@ describe("toIcs", () => {
     expect(toIcs([event({ start: "2026-10-09" })], opts)).toBe(fixture("all-day"));
   });
 
-  it("keeps a one-off's start time when its end is a date: two hours from the start, the last day in the notes (#90)", () => {
+  it("writes a timed one-off whose end is a later date as all-day through it, its start time in the notes (#90, #190)", () => {
     expect(toIcs([event({ start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" })], opts)).toBe(fixture("timed-through"));
   });
 
@@ -111,8 +111,69 @@ describe("toIcs", () => {
     expect(toIcs([event({ start: "2026-11-20T19:00:00-06:00" })], opts)).toContain("DTSTART:20261121T010000Z");
   });
 
-  it("names the calendar only when asked, after METHOD:PUBLISH", () => {
-    expect(toIcs([event()], { ...opts, calendarName: "KC Events, weekly" })).toContain("METHOD:PUBLISH\r\nX-WR-CALNAME:KC Events\\, weekly\r\nBEGIN:VEVENT");
+  it("names the calendar only when asked, after METHOD:PUBLISH, as RFC 7986's NAME and the older X-WR-CALNAME (#190)", () => {
+    expect(toIcs([event()], { ...opts, calendarName: "KC Events, weekly" })).toContain("METHOD:PUBLISH\r\nNAME:KC Events\\, weekly\r\nX-WR-CALNAME:KC Events\\, weekly\r\nBEGIN:VEVENT");
     expect(toIcs([event()], opts)).not.toContain("X-WR-CALNAME");
+    expect(toIcs([event()], opts)).not.toMatch(/\r\nNAME:/);
+  });
+
+  it("describes the calendar only when asked, as DESCRIPTION and X-WR-CALDESC, before the events (#190)", () => {
+    const ics = toIcs([event()], { ...opts, calendarName: "KC Events", description: "A list; weekly." });
+    expect(ics).toContain("X-WR-CALNAME:KC Events\r\nDESCRIPTION:A list\\; weekly.\r\nX-WR-CALDESC:A list\\; weekly.\r\nBEGIN:VEVENT");
+    expect(toIcs([event()], opts)).not.toContain("X-WR-CALDESC");
+  });
+});
+
+describe("toIcs, what each event says about itself (#190)", () => {
+  const unfold = (s: string) => s.replace(/\r\n[ \t]/g, "");
+  const vevent = (e: Parameters<typeof toIcs>[0][number]) => unfold(toIcs([e], opts)).split("BEGIN:VEVENT")[1]!;
+
+  it("carries its kind as a category, in the kind's own words", () => {
+    expect(vevent(event({ kind: "music" }))).toContain("\r\nCATEGORIES:Music\r\n");
+    expect(vevent(event({ kind: "theater/dance" }))).toContain("\r\nCATEGORIES:Theater and dance\r\n");
+    expect(vevent(event({ kind: "other" }))).toContain("\r\nCATEGORIES:Other events\r\n");
+  });
+
+  it("is last modified when it was last verified, in UTC", () => {
+    expect(vevent(event({ lastVerified: "2026-10-03T21:47:36-05:00" }))).toContain("\r\nLAST-MODIFIED:20261004T024736Z\r\n");
+  });
+
+  it("is free time, not busy, when it is all-day; a timed event leaves TRANSP to its default", () => {
+    expect(vevent(event({ recurrence: "limited-run", start: "2026-10-01", end: "2026-11-15" }))).toContain("\r\nTRANSP:TRANSPARENT\r\n");
+    expect(vevent(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }))).toContain("\r\nTRANSP:TRANSPARENT\r\n");
+    expect(vevent(event({ recurrence: "limited-run", start: "2026-10-01", end: "2026-11-15", days: [3, 4] }))).toContain("\r\nTRANSP:TRANSPARENT\r\n");
+    expect(vevent(event({ start: "2026-10-09" }))).toContain("\r\nTRANSP:TRANSPARENT\r\n");
+    expect(vevent(event())).not.toContain("TRANSP:");
+  });
+
+  it("says a two-hour end is a placeholder, and gives a stated end without the note", () => {
+    expect(vevent(event())).toContain("DESCRIPTION:End time not listed\\; shown as two hours.\\n\\nVerified");
+    expect(vevent(event({ end: "2026-10-09T22:30:00-05:00" }))).not.toContain("End time not listed");
+    // A night past midnight ends when it says, on the next day.
+    const late = vevent(event({ start: "2026-10-09T21:00:00-05:00", end: "2026-10-10T02:00:00-05:00" }));
+    expect(late).toContain("DTSTART:20261010T020000Z\r\nDTEND:20261010T070000Z\r\n");
+    expect(late).not.toContain("End time not listed");
+  });
+
+  it("says a one-off with a date and no time had no time listed; a run's dates need no such note", () => {
+    expect(vevent(event({ start: "2026-10-09" }))).toContain("DESCRIPTION:No time listed on the venue's page\\; check before you go.\\n\\nVerified");
+    expect(vevent(event({ recurrence: "limited-run", start: "2026-10-01", end: "2026-11-15" }))).not.toContain("No time listed");
+  });
+
+  it("writes a timed one-off that ends on a later day as all-day across its days, with its times in the notes", () => {
+    // PBR Outlaw Days: Friday 7:45 pm to Sunday 1:45 pm, listed on the site under each of its three days.
+    const pbr = vevent(event({ start: "2026-10-23T19:45:00-05:00", end: "2026-10-25T13:45:00-05:00" }));
+    expect(pbr).toContain("DTSTART;VALUE=DATE:20261023\r\nDTEND;VALUE=DATE:20261026\r\n");
+    expect(pbr).toContain("TRANSP:TRANSPARENT\r\n");
+    expect(pbr).toContain("DESCRIPTION:Starts Fri Oct 23 at 7:45 pm\\; ends Sun Oct 25 at 1:45 pm.\\n\\nVerified");
+    expect(pbr).not.toContain("End time not listed");
+    // A date end says the last day and no hour.
+    const stand = vevent(event({ start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" }));
+    expect(stand).toContain("DTSTART;VALUE=DATE:20261009\r\nDTEND;VALUE=DATE:20261011\r\n");
+    expect(stand).toContain("DESCRIPTION:Starts Fri Oct 9 at 8:30 pm\\; through Sat Oct 10.\\n\\nVerified");
+  });
+
+  it("puts the time notes before the why-line", () => {
+    expect(vevent(event({ whyLine: "Rare; see it." }))).toContain("DESCRIPTION:End time not listed\\; shown as two hours.\\n\\nRare\\; see it.\\n\\nVerified");
   });
 });

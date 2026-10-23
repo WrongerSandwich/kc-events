@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { calendarFeeds, feedIcs, webcalUrl } from "../src/lib/feeds";
+import { fileURLToPath } from "node:url";
+import { parse } from "yaml";
+import { calendarFeeds, feedIcs, KIND_CALENDAR_COLORS, webcalUrl } from "../src/lib/feeds";
 import { toIcs } from "../src/lib/ics";
 import type { PublishedVenue } from "../src/lib/types";
 import { event } from "./fixtures/event";
@@ -14,7 +16,7 @@ const feeds = (events: Parameters<typeof calendarFeeds>[0]) => {
   return [allEvents, ...bySlug];
 };
 const feed = (events: Parameters<typeof calendarFeeds>[0], path: string) => found(feeds(events).find((f) => f.path === path), `the feed ${path}`);
-const feedOpts = { siteName: "KC This Week", stamp: "2026-10-05T11:30:00Z", origin: "https://www.kcthisweek.com", venues: [] };
+const feedOpts = { siteName: "KC This Week", tagline: "A weekly list.", stamp: "2026-10-05T06:30:00-05:00", origin: "https://www.kcthisweek.com", venues: [] };
 const ids = (events: Parameters<typeof calendarFeeds>[0], path: string) => feed(events, path).events.map((e) => e.id);
 
 describe("calendarFeeds (#136)", () => {
@@ -26,6 +28,21 @@ describe("calendarFeeds (#136)", () => {
       ["/calendar/theater-dance.ics", "KC This Week · Theater and dance"],
       ["/calendar/other.ics", "KC This Week · Other events"],
     ]);
+  });
+
+  it("gives each feed the page it came from, and each kind's feed a colour (#190)", () => {
+    expect(feeds([]).map((f) => [f.path, f.pagePath, f.color])).toEqual([
+      ["/calendar.ics", "/explore?when=all", undefined],
+      ["/calendar/picks.ics", "/", undefined],
+      ["/calendar/music.ics", "/k/music", "darkorchid"],
+      ["/calendar/theater-dance.ics", "/k/theater-dance", "mediumvioletred"],
+      ["/calendar/other.ics", "/k/other", "gray"],
+    ]);
+  });
+
+  it("has a colour for every kind the config names", () => {
+    const config = parse(readFileSync(fileURLToPath(new URL("../../research.config.yaml", import.meta.url)), "utf8")) as { kinds: string[] };
+    expect(Object.keys(KIND_CALENDAR_COLORS).sort()).toEqual([...config.kinds].sort());
   });
 
   it("puts in the picks' feed only the picks from today through the horizon", () => {
@@ -79,12 +96,28 @@ describe("feedIcs (#136)", () => {
 
   it("asks to be refreshed daily, links each event's page on the site, and locates it at its venue's address", () => {
     const venues: PublishedVenue[] = [{ name: "recordBar", slug: "recordbar", region: "Central KC", address: { street: "1520 Grand Blvd", locality: "Kansas City", region: "MO", postalCode: "64108" } }];
-    const ics = feedIcs({ path: "/calendar.ics", calendarName: "KC This Week", events: [shown] }, { ...feedOpts, venues }).replace(/\r\n[ \t]/g, "");
-    expect(ics).toContain("X-WR-CALNAME:KC This Week\r\nREFRESH-INTERVAL;VALUE=DURATION:P1D\r\nX-PUBLISHED-TTL:P1D\r\n");
+    const ics = feedIcs({ path: "/calendar.ics", calendarName: "KC This Week", pagePath: "/explore?when=all", events: [shown] }, { ...feedOpts, venues }).replace(/\r\n[ \t]/g, "");
+    expect(ics).toContain("REFRESH-INTERVAL;VALUE=DURATION:P1D\r\nX-PUBLISHED-TTL:P1D\r\n");
     expect(ics).toContain("URL:https://www.kcthisweek.com/e/evt_000000000001\r\n");
     expect(ics).toContain("LOCATION:recordBar\\, 1520 Grand Blvd\\, Kansas City\\, MO 64108\r\n");
     // The notes still send a reader to the event's own page.
     expect(ics).toContain("details at https://www.therecordbar.com/shows/a-show.");
+  });
+
+  it("describes itself: its name, the tagline and the run's date, the page it came from, and a kind's colour (#190)", () => {
+    const head = (f: Parameters<typeof feedIcs>[0]) => feedIcs(f, feedOpts).replace(/\r\n[ \t]/g, "").split("BEGIN:VEVENT")[0]!;
+    expect(head({ path: "/calendar/music.ics", calendarName: "KC This Week · Music", pagePath: "/k/music", color: "darkorchid", events: [shown] })).toBe(
+      [
+        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//KC This Week//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
+        "NAME:KC This Week · Music", "X-WR-CALNAME:KC This Week · Music",
+        "DESCRIPTION:A weekly list. Last researched Monday\\, October 5\\, 2026.", "X-WR-CALDESC:A weekly list. Last researched Monday\\, October 5\\, 2026.",
+        "URL:https://www.kcthisweek.com/k/music", "COLOR:darkorchid",
+        "REFRESH-INTERVAL;VALUE=DURATION:P1D", "X-PUBLISHED-TTL:P1D", "",
+      ].join("\r\n"),
+    );
+    // The whole calendar and the picks' have no one kind's colour.
+    expect(head({ path: "/calendar/picks.ics", calendarName: "KC This Week · Picks", pagePath: "/", events: [] })).not.toContain("COLOR:");
+    expect(head({ path: "/calendar/picks.ics", calendarName: "KC This Week · Picks", pagePath: "/", events: [] })).toContain("\r\nURL:https://www.kcthisweek.com/\r\n");
   });
 
   it("leaves an export as it was: no refresh, and the event's own page as its URL", () => {
