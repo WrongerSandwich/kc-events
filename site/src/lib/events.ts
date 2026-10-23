@@ -1,4 +1,4 @@
-import { isDateOnly, localDate, weekday } from "./dates";
+import { formatDay, isDateOnly, localDate, weekday } from "./dates";
 import type { PublishedEvent } from "./types";
 
 export function isDated(e: PublishedEvent): boolean {
@@ -30,6 +30,18 @@ const DAY_MS = 24 * 3_600_000;
 function isOvernight(e: PublishedEvent): boolean {
   if (e.start === undefined || e.end === undefined || isDateOnly(e.start) || isDateOnly(e.end)) return false;
   return Date.parse(e.end) - Date.parse(e.start) < DAY_MS;
+}
+
+/**
+ * The event's days in words, for Save's accessible name, so the same title on several dates reads as several saves
+ * (#181): "Fri Oct 9", "Sun Sep 20 to Sun Oct 11", "through Sun Oct 11"; undefined for a recurring event.
+ */
+export function daysSaid(e: PublishedEvent): string | undefined {
+  const first = firstDay(e);
+  const last = lastDay(e);
+  if (last === undefined) return undefined;
+  if (first === undefined) return `through ${formatDay(last)}`;
+  return last > first ? `${formatDay(first)} to ${formatDay(last)}` : formatDay(first);
 }
 
 /** The job's rule: past when the last day is before today. An undated event cannot be past. */

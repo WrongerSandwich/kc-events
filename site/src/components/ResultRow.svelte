@@ -1,8 +1,8 @@
 <script lang="ts">
   import { formatShort, localDate } from "../lib/dates";
-  import { hostOf, detailsUrl, isPast, lastDay, venueLine } from "../lib/events";
+  import { daysSaid, hostOf, detailsUrl, isPast, lastDay, venueLine } from "../lib/events";
   import { rowDateLine } from "../lib/group";
-  import { slugify } from "../lib/slugs";
+  import { kindPath } from "../lib/landing";
   import { venuePath } from "../lib/venues";
   import type { PublishedEvent } from "../lib/types";
   import KindChip from "./KindChip.svelte";
@@ -15,6 +15,7 @@
   let verifiedOn = $derived(formatShort(localDate(event.lastVerified)));
   // Only a save is listed once it has passed (the saved view keeps it), and it says so.
   let passed = $derived(isPast(event, today));
+  let host = $derived(hostOf(detailsUrl(event)));
 </script>
 
 <article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} class:with-day={withDay} class:passed>
@@ -23,14 +24,15 @@
     <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if passed}<span class="passed-tag">Passed</span>{:else if event.dontMiss}<span class="dont-miss">Don't miss</span>{/if}
   </div>
   <!-- The venue's page (#137), out of the Tab order like the host, so a row stays two stops; the event page links it too.
-       On a venue page the link is to that page itself: a prop to drop it would cost the explorer's script. -->
-  <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><a class="venue" href={venuePath(event.venue)} tabindex="-1">{venueLine(event)}</a><span class="hood">{` · ${event.neighborhood}`}</span></span>
-  <!-- Its kind's page (#188, kindPath without importing the landing module), out of the Tab order like the venue: the way on from a row without JavaScript. -->
-  <KindChip kind={event.kind} href={`/k/${slugify(event.kind)}`} tabindex={-1} />
+       On a venue page the link is to that page itself: a prop to drop it would cost the explorer's script. Each link's
+       name says whose venue or source it is, so a list of links does not read "screenland.com" forty times (#181). -->
+  <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><a class="venue" href={venuePath(event.venue)} tabindex="-1" aria-label={`${venueLine(event)}, venue of ${event.title}`}>{venueLine(event)}</a><span class="hood">{` · ${event.neighborhood}`}</span></span>
+  <!-- The chip is the link it looks like, to the kind's page, out of the Tab order like the venue and host (#181). -->
+  <KindChip kind={event.kind} href={kindPath(event.kind)} tabindex={-1} />
   <!-- Out of the Tab order, so a row is two stops (title, Save); the event page links the source too. -->
-  <a class="host" href={detailsUrl(event)} title={hostOf(detailsUrl(event))} tabindex="-1">{hostOf(detailsUrl(event))}</a>
+  <a class="host" href={detailsUrl(event)} title={host} tabindex="-1" aria-label={`${host}, source for ${event.title}`}>{host}</a>
   <span class="verified"><span aria-hidden="true">✓ {verifiedOn}</span><span class="visually-hidden">Verified {verifiedOn}</span></span>
-  <SaveButton id={event.id} title={event.title} last={lastDay(event)} large />
+  <SaveButton id={event.id} title={event.title} last={lastDay(event)} when={daysSaid(event)} />
   {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
 </article>
 
@@ -95,7 +97,7 @@
     }
     .row.with-day { --when-width: 15.5rem; }
     .when { font-size: var(--text-sm); }
-    /* The save button is slimmer in a row than on a card; button.save outranks SaveButton's own .save and .large rules. */
+    /* The save button is the card's, slimmer in a row: button.save outranks base.css's .control and SaveButton's .save. */
     .row :global(button.save) { min-height: auto; min-width: auto; padding: 0 var(--space-2); font-size: var(--text-xs); }
     .why { padding-bottom: 2px; }
     /* An always-there schedule phrase may run longer than any dated line, so it wraps, and those rows are exempt from
@@ -112,14 +114,16 @@
      least 12rem, then the rest) share the room. The widest dated lines at this size are 149 px, and 206 px with the day
      first. The trailing columns have fixed widths, so the kind chips, hosts, stamps and Save buttons each make a column
      down the list, whatever a row's title or venue: the widest chip ("outdoors/community") is 154 px, the widest stamp
-     ("✓ Sep 30") about 50 px, and Save widens to 68 px once saved. */
+     ("✓ Sep 30") about 50 px, and Save, its bookmark and "Saved", within its 80 px column. A list that ships no script
+     (a venue, kind, region or changes page) has no Save, and its stylesheet sets --row-save-width to 0, so all that is
+     left where Save would be is one column gap (#181). */
   @media (min-width: 1280px) {
     .when { font-size: var(--text-xs); }
     .row :global(.chip) { justify-self: start; }
     .row :global(button.save) { justify-self: stretch; }
     .row {
       --when-width: 9.75rem;
-      --chip-width: 9.75rem; --host-width: 8rem; --verified-width: 3.5rem; --save-width: 4.25rem;
+      --chip-width: 9.75rem; --host-width: 8rem; --verified-width: 3.5rem; --save-width: var(--row-save-width, 5rem);
       padding: 2px 0;
       --title-max: 18rem;
       grid-template-columns: var(--when-width) fit-content(var(--title-max)) minmax(12rem, 1fr) var(--chip-width) var(--host-width) var(--verified-width) var(--save-width);

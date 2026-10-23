@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/svelte";
+import { tick } from "svelte";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/generated/meta", () => ({
@@ -17,5 +18,25 @@ describe("DontMissCard's price and age limit (#133)", () => {
   it("shows nothing for them when it gave neither", () => {
     const { container } = render(DontMissCard, { event: event({ dontMiss: true }), today: "2026-10-05" });
     expect(container.querySelector(".admission")).toBeNull();
+  });
+});
+
+describe("DontMissCard's actions (#181)", () => {
+  it("labels Add to calendar in words at every width, its name starting with them", () => {
+    render(DontMissCard, { event: event({ dontMiss: true }), today: "2026-10-05" });
+    const link = screen.getByRole("link", { name: "Add to calendar: A show" });
+    expect(link).toHaveAttribute("href", "/e/evt_000000000001.ics");
+    expect(link).toHaveTextContent(/^Add to calendar$/);
+  });
+
+  it("names Save with the event's day", async () => {
+    render(DontMissCard, { event: event({ dontMiss: true }), today: "2026-10-05" });
+    await tick();
+    expect(screen.getByRole("button", { name: "Save A show, Fri Oct 9" })).toBeInTheDocument();
+  });
+
+  it("makes the kind chip a link to the kind's page", () => {
+    render(DontMissCard, { event: event({ dontMiss: true }), today: "2026-10-05" });
+    expect(screen.getByRole("link", { name: "music" })).toHaveAttribute("href", "/k/music");
   });
 });

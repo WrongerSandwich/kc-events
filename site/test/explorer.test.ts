@@ -323,7 +323,7 @@ describe("Explorer", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(rows()).toHaveLength(3); // back to the week;
     await fireEvent.click(screen.getByRole("checkbox", { name: "Include always-there" }));
-    expect(screen.getByText("Trivia")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: "Trivia" })).toBeInTheDocument();
     expect(location.search).toBe("?recurring=1");
   });
 

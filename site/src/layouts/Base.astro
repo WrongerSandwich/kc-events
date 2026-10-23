@@ -58,11 +58,11 @@ const url = canonical ?? new URL(publicPath, origin).toString();
   </head>
   <body>
     <IconSprite />
-    <Header wide={wide}><StalenessBanner client:idle wide={wide} /></Header>
+    <Header><StalenessBanner client:idle /></Header>
     <main id="main" class={wide ? "wide" : "measure"}>
       <slot />
     </main>
-    <Footer wide={wide} />
+    <Footer />
     <!-- Vercel Web Analytics: cookieless page views; its script is served from the deployment, so local and e2e builds
          send nothing. In the body, not the head: its custom element would end the head early, and with it the CSP meta
          Astro appends there. -->

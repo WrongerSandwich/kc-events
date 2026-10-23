@@ -2,11 +2,10 @@
 import { about } from "../generated/about";
 import { siteConfig } from "../site.config";
 
-interface Props { wide?: boolean }
-const { wide = false } = Astro.props;
+// The header's width on every page (#181).
 ---
 <footer class="site-footer">
-  <div class:list={["inner", wide ? "wide" : "measure"]}>
+  <div class="inner wide">
     <div>
       <p>No ads, no accounts, no cookies.</p>
       <p>{about.geography.replace(/\.?$/, ".")}</p>

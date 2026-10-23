@@ -11,6 +11,8 @@ export const uiIcons = {
   "chevron-right": `<path d="m9 18 6-6-6-6"/>`, // lucide: chevron-right
   "x": `<path d="M18 6 6 18"/><path d="m6 6 12 12"/>`, // lucide: x
   "ticket": `<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>`, // lucide: ticket
+  "bookmark": `<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/>`, // lucide: bookmark
+  "bookmark-check": `<path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/><path d="m9 10 2 2 4-4"/>`, // lucide: bookmark-check
   "share": `<path d="M12 2v13"/><path d="m16 6-4-4-4 4"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>`, // lucide: share
 } as const;
 

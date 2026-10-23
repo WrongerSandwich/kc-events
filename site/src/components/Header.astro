@@ -5,14 +5,13 @@ import { siteConfig } from "../site.config";
 import Mark from "./Mark.astro";
 import SavedLink from "./SavedLink.svelte";
 
-// `wide` matches the header's width to the page's main column (the explorer is wide; everything else is the measure).
-interface Props { wide?: boolean }
-const { wide = false } = Astro.props;
+// One width on every page (#181): the explorer's wide column, so the name and nav sit in the same place wherever the
+// reader goes, and a measure page's text sits centred under them.
 const runDay = localDate(meta.lastSuccessfulRun);
 ---
 <header class="site-header">
   <a class="skip" href="#main">Skip to content</a>
-  <div class:list={["inner", wide ? "wide" : "measure"]}>
+  <div class="inner wide">
     <div class="top">
       <a class="name" href="/"><Mark class="mark" /><span class="words">{siteConfig.name}</span></a>
       <nav aria-label="Site">
@@ -60,7 +59,7 @@ const runDay = localDate(meta.lastSuccessfulRun);
     0%, 100% { transform: scaleY(1); }
     35% { transform: scaleY(1.35); }
   }
-  /* Links padded to a 44 px target; the negative margin keeps the row's right edge on the measure. */
+  /* Links padded to a 44 px target; the negative margin keeps the row's right edge on the column's. */
   nav { display: flex; margin-right: calc(-1 * var(--space-2)); }
   nav :global(a) { display: inline-flex; align-items: center; min-height: var(--tap); padding-inline: var(--space-2); font-size: var(--text-sm); color: var(--fg-muted); }
   nav :global(a:hover) { color: var(--fg); text-decoration: none; }

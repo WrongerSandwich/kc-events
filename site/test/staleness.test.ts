@@ -73,13 +73,9 @@ describe("StalenessBanner", () => {
     target.remove();
   });
 
-  it("takes the page's width: the measure by default, the wide layout when asked", async () => {
+  it("takes the header's one width on every page (#181)", async () => {
     vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") });
-    const narrow = render(StalenessBanner);
-    await tick();
-    expect(screen.getByRole("status").firstElementChild).toHaveClass("measure");
-    narrow.unmount();
-    render(StalenessBanner, { wide: true });
+    render(StalenessBanner);
     await tick();
     expect(screen.getByRole("status").firstElementChild).toHaveClass("wide");
   });

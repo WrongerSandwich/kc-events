@@ -1,10 +1,13 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { saves } from "../lib/saves";
+  import UiIcon from "./UiIcon.svelte";
 
-  // `large` gives the button a 44 px touch target, for cards and phone rows; a desktop row slims it back down.
-  // `last` is the event's last day, stored with the save so the header's count can leave it out once it has passed.
-  let { id, title, last, large = false }: { id: string; title: string; last?: string; large?: boolean } = $props();
+  // One Save everywhere (#181): base.css's .control, a bookmark and a word, on a card, a row and the event page; a
+  // desktop row slims the box itself. `last` is the event's last day, stored with the save so the header's count can
+  // leave it out once it has passed. `when` is the event's day, said in the name so the same title on two dates reads
+  // as two saves.
+  let { id, title, last, when }: { id: string; title: string; last?: string; when?: string } = $props();
   // Saving needs the browser's storage, so the button renders only once mounted: without JavaScript there is no
   // button that does nothing. The store is read on mount so the server never touches storage.
   let mounted = $state(false);
@@ -18,26 +21,15 @@
 </script>
 
 {#if mounted}
-  <!-- The name stays "Save <title>"; aria-pressed alone says whether it is saved, so it is announced once. -->
-  <button type="button" class="save" class:large aria-pressed={saved} aria-label={`Save ${title}`} onclick={() => saves().toggle(id, last)}>
-    {#if saved}<span class="tick" aria-hidden="true">✓</span>Saved{:else}Save{/if}
+  <!-- The name is the visible word, then the title and day out of sight: "Save A show, Fri Oct 9", and "Saved …" once
+       pressed, so what is said is what is shown (WCAG 2.5.3). -->
+  <button type="button" class="control save" aria-pressed={saved} onclick={() => saves().toggle(id, last)}>
+    <UiIcon name={saved ? "bookmark-check" : "bookmark"} />{saved ? "Saved " : "Save "}<span class="visually-hidden">{title}{when ? `, ${when}` : ""}</span>
   </button>
 {/if}
 
 <style>
-  .save {
-    font: inherit; font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--fg-muted);
-    background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: var(--radius);
-    padding: var(--space-1) var(--space-2); cursor: pointer;
-    transition: background-color 150ms var(--ease-out), color 150ms var(--ease-out), border-color 150ms var(--ease-out);
-  }
-  .save:hover { color: var(--fg); border-color: var(--fg-faint); }
-  .save:active { transform: translateY(1px); }
-  .save[aria-pressed="true"] { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); }
-  .large { min-height: var(--tap); min-width: 4.5rem; padding-inline: var(--space-3); font-size: var(--text-sm); }
-  .tick { margin-right: 0.3em; }
-  @media (prefers-reduced-motion: reduce) {
-    .save { transition: none; }
-    .save:active { transform: none; }
-  }
+  /* About as wide as "Saved" (89 px against 88 at 375 px wide), so pressing it moves what follows by a pixel at most.
+     A wider box shifts the explorer's phone rows when it hydrates. */
+  .save { min-width: 5.5rem; }
 </style>

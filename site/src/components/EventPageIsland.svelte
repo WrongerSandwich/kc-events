@@ -13,7 +13,7 @@
 {#if passed}
   <p class="notice" role="status">This has already happened. The page stays up until the next weekly run; <a href="/explore">see what's coming</a>.</p>
 {/if}
-<SaveButton {id} {title} last={lastDay} large />
+<SaveButton {id} {title} last={lastDay} />
 <!-- The page's own origin, so a preview deployment shares its own link. -->
 <ShareButton label="Share" large data={() => ({ title, text: shareText, url: `${location.origin}/e/${id}` })} />
 

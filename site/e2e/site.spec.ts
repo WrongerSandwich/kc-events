@@ -29,7 +29,7 @@ test("the front page buckets the fixture's don't-miss events", async ({ page }) 
   await week.getByRole("link", { name: "Tue 6: 1 pick" }).click();
   await expect(page).toHaveURL(/#pick-evt_e2e000000001$/);
   // Each card can go straight to a calendar.
-  await expect(page.getByRole("link", { name: "Add Fabio Frizzi plays Fulci to your calendar" })).toHaveAttribute("href", "/e/evt_e2e000000001.ics");
+  await expect(page.getByRole("link", { name: "Add to calendar: Fabio Frizzi plays Fulci" })).toHaveAttribute("href", "/e/evt_e2e000000001.ics");
 });
 
 test.describe("a visitor's browser in Tokyo", () => {
@@ -888,8 +888,8 @@ for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/v/recordbar", "/v/
 test("the changes page lists the run's new picks, moves, new events by kind, and what went, against the run before (#135)", async ({ page }) => {
   await on(page, BUILD_DAY, "/changes");
   const section = (name: string) => page.getByRole("region", { name });
-  await expect(section("New picks").getByRole("link", { name: "Fabio Frizzi plays Fulci" })).toHaveAttribute("href", "/e/evt_e2e000000001");
-  await expect(section("Moved").getByRole("link", { name: "Friday night jazz" })).toBeVisible();
+  await expect(section("New picks").getByRole("link", { name: "Fabio Frizzi plays Fulci", exact: true })).toHaveAttribute("href", "/e/evt_e2e000000001");
+  await expect(section("Moved").getByRole("link", { name: "Friday night jazz", exact: true })).toBeVisible();
   await expect(section("Moved")).toContainText("Was Thu Oct 8 · 8:00 pm");
   await expect(section("New this week")).toContainText("10 events first listed in the last seven days.");
   await expect(section("New this week").locator("summary").first()).toHaveText("music 2");
