@@ -74,6 +74,16 @@ jobs:
           if [[ "$NO_DISCOVERY" == "true" ]]; then args+=(--no-discovery); fi
           pnpm research "${args[@]}"
 
+      # As in scripts/weekly-run.sh (#191): the site built from the run's data, and the site's checks of what
+      # that build makes of it, so data the deploy would refuse is never committed. (The home run also waits
+      # on Vercel's status after its push; here, whoever started the run sees the deploy on the commit.)
+      - name: Build the site from the run's data
+        env:
+          SITE_TODAY: last-run
+        run: |
+          pnpm --filter kc-events-site build
+          pnpm --filter kc-events-site test:data
+
       - name: Commit the run
         env:
           TRIGGER: ${{ github.event_name }}

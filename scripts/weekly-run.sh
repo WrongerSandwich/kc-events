@@ -6,10 +6,13 @@
 # Runs in the clone this script lives in, which should be one dedicated to the job (set up by
 # scripts/home-run-setup.sh): it resets to origin/main, installs, runs `pnpm research`, and commits
 # data/events.json, the run's report, and any archive file under data/archive as "Weekly research
-# run <run date>", then pushes. A failed
-# run commits nothing, so the last committed dataset stands. It also installs the Chromium that
-# registry sources with `fetch: browser` are loaded in. Each run's output goes to a log under
-# $XDG_STATE_HOME/kc-this-week (default ~/.local/state/kc-this-week), kept for 90 days.
+# run <run date>", then pushes. Before committing it builds the site from the new data and runs the
+# site's committed-data checks (`pnpm test:data`), so data the site cannot publish is never pushed;
+# after pushing it waits up to 15 minutes for Vercel's status on the commit, so a deploy that fails
+# is a failed run (#191). A failed run before the push commits nothing, so the last committed dataset
+# stands. It also installs the Chromium that registry sources with `fetch: browser` are loaded in.
+# Each run's output goes to a log under $XDG_STATE_HOME/kc-this-week (default
+# ~/.local/state/kc-this-week), kept for 90 days.
 #
 # Nobody watches a cron job's terminal, so every run reports to one open GitHub issue labelled
 # weekly-run-health (created the first time it is needed): a line on success, the log's tail on a
@@ -18,18 +21,22 @@
 # so a run also pings a healthchecks.io check when the .env names one (HEALTHCHECKS_URL, #64): a start,
 # then a success or a failure carrying the issue comment's link. The check's period is a week, so a
 # run that never starts at all (the machine down, cron broken) alerts too; healthchecks.io's
-# integration does the notifying, and a success is silent.
+# integration does the notifying, and a success is silent. Every comment also lists the nights in the
+# past week that scripts/daily-deploy.sh could not start a rebuild, which it tells no one about itself.
 #
 #   scripts/weekly-run.sh [--no-discovery]
 #
 # Secrets come from the clone's gitignored .env (OPENROUTER_API_KEY, TAVILY_API_KEY, and GH_TOKEN, a
-# fine-grained token for this repository alone that the push and the health issue use: #105), and
+# fine-grained token for this repository alone that the push, the health issue, and the wait on
+# Vercel's commit status use, so it needs Contents, Issues, and Commit statuses: #105, #191), and
 # optionally HEALTHCHECKS_URL, the check's ping URL.
 
 # No errtrace (-E): the ERR trap would run inside every $(...) as well, and report one failure twice.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+# shellcheck source=scripts/deploy-checks.sh
+source "$ROOT/scripts/deploy-checks.sh"
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kc-this-week"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/run-$(date +%Y-%m-%dT%H-%M).log"
@@ -47,6 +54,8 @@ if [[ "$HC_URL" =~ ^\"(.*)\"$ || "$HC_URL" =~ ^\'(.*)\'$ ]]; then HC_URL="${BASH
 HC_URL=${HC_URL%/}
 # The link to this run's comment on the health issue, once report() has posted it.
 REPORT_URL=
+# The commit this run pushed, once it has: a failure after the push is a deploy's, not the data's.
+PUSHED=
 # The CLI dates a run in the config's timezone; the check for an earlier run today uses the same day.
 TODAY=$(TZ=America/Chicago date +%F)
 
@@ -88,6 +97,16 @@ ping_check() {
     echo "could not ping the healthchecks.io check (${1:-success})"
 }
 
+# The nights in the past week the daily rebuild could not start (scripts/daily-deploy.sh), as a
+# paragraph for the health issue's comment; nothing when there were none.
+deploy_note() {
+  local failures
+  failures=$(deploy_failures "$LOG_DIR/deploy.log" 7) || failures=
+  [[ -n "$failures" ]] || return 0
+  # shellcheck disable=SC2016 # the backticks are Markdown
+  printf '\n\nThe daily rebuild failed on these nights (`%s`):\n\n```\n%s\n```\n' "$LOG_DIR/deploy.log" "$failures"
+}
+
 # The issue is public: the home directory and anything shaped like an OpenRouter, Tavily, or GitHub
 # key are taken out of what goes there.
 redact() {
@@ -103,9 +122,13 @@ fail() {
   # tee is still writing the log; give it a moment so the tail holds the error.
   sleep 1
   sync
+  local committed="Nothing was committed unless the push itself failed; the next run starts from origin/main either way."
+  if [[ -n "$PUSHED" ]]; then
+    committed="The run's data was committed and pushed as $PUSHED, so the site still shows the last deploy that built until it is fixed and deployed."
+  fi
   # shellcheck disable=SC2016 # the backticks are Markdown
-  report "$(redact "$(printf '**%s: failed.** %s\n\nNothing was committed unless the push itself failed; the next run starts from origin/main either way. Last lines of `%s`:\n\n```\n%s\n```\n' \
-    "$TODAY" "$why" "$LOG" "$(tail -n 40 "$LOG")")")"
+  report "$(redact "$(printf '**%s: failed.** %s\n\n%s Last lines of `%s`:\n\n```\n%s\n```\n%s' \
+    "$TODAY" "$why" "$committed" "$LOG" "$(tail -n 40 "$LOG")" "$(deploy_note)")")"
   # The alert's body is what healthchecks.io shows: what failed, and the comment holding the log's tail.
   ping_check /fail "$(redact "$(printf 'KC This Week weekly run %s failed: %s\n%s\n' "$TODAY" "$why" \
     "${REPORT_URL:-The health issue comment could not be posted; the log is $LOG}")")"
@@ -163,6 +186,21 @@ if ((run_status != 0)); then
   fail "pnpm research exited $run_status"
 fi
 
+# The site, built from this run's data as Vercel will build it (as of the run's day), then the site's
+# checks of what that build makes of it (#191): a build the data breaks, or a projection or field
+# allow-list check that fails, stops the commit here instead of failing the deploy or turning main red.
+echo "building the site from this run's data"
+if ! SITE_TODAY=last-run pnpm --filter kc-events-site build 9>&-; then
+  fail "the site does not build from this run's data, so it was not committed"
+fi
+if ! pnpm --filter kc-events-site test:data 9>&-; then
+  fail "the site's committed-data checks (pnpm test:data) fail on this run's data, so it was not committed"
+fi
+# The Always there picks this week's data leaves off the front page: warnings for the report, never a
+# failure (they were a committed-data test that turned main red; edit site/src/always-there.ts).
+site_warnings=$(cd site && pnpm exec tsx scripts/always-there-check.ts 2>/dev/null 9>&-) ||
+  site_warnings="Always there: the check could not run (pnpm --filter kc-events-site always-there)"
+
 git add data/events.json data/runs
 # Expired records a run moves out of events.json go to data/archive (#82), which exists once one has.
 if [[ -d data/archive ]]; then git add data/archive; fi
@@ -175,6 +213,11 @@ run_date=$(git diff --cached --name-only -- data/runs | sed -n -E 's%^data/runs/
 if [[ -z "$run_date" ]]; then
   echo "the run finished but its report under data/runs did not change" >&2
   false
+fi
+if [[ -n "$site_warnings" ]]; then
+  echo "$site_warnings"
+  printf '\n## Site checks\n\n%s\n' "$(sed 's/^/- /' <<<"$site_warnings")" >>"data/runs/$run_date.md"
+  git add "data/runs/$run_date.md"
 fi
 message="Weekly research run $run_date"
 git commit --quiet -m "$message"
@@ -206,7 +249,26 @@ if ! git merge-base --is-ancestor origin/main HEAD; then
   false
 fi
 git push --quiet origin HEAD:main
-# The run is delivered; nothing after this can make it a failure.
+PUSHED=$(git rev-parse --short HEAD)
+
+# The data is delivered; what is left is whether the site deploys it. Vercel builds every push to main
+# and sets a "Vercel" status on the commit, which the run waits on: a failure or a build that never
+# finishes is a failed run, so it alerts, rather than leaving last week's site up without a word.
+echo "waiting up to 15 minutes for Vercel's build of $PUSHED"
+vercel=$(
+  if [[ -n "$GH_TOKEN_FROM_ENV" ]]; then export GH_TOKEN="$GH_TOKEN_FROM_ENV"; fi
+  vercel_state "$(git rev-parse HEAD)"
+)
+vercel_state=$(sed -n 1p <<<"$vercel")
+vercel_about=$(sed -n 2p <<<"$vercel")
+vercel_link=$(sed -n 3p <<<"$vercel")
+case $vercel_state in
+  success) echo "Vercel built $PUSHED: $vercel_about" ;;
+  timeout) fail "Vercel's build of $PUSHED did not finish within 15 minutes (last seen: $vercel_about)" ;;
+  unreadable) fail "could not read the Vercel status of $PUSHED: $vercel_about (does GH_TOKEN have Commit statuses: Read-only? re-run scripts/home-run-setup.sh)" ;;
+  *) fail "Vercel's build of $PUSHED ended $vercel_state: $vercel_about${vercel_link:+ ($vercel_link)}" ;;
+esac
+# The run is delivered and deployed; nothing after this can make it a failure.
 trap - ERR TERM HUP INT
 
 # shellcheck disable=SC2016 # the ${} are JavaScript's
@@ -218,6 +280,8 @@ summary=$(node -e '
     `spend $${r.spend.totalUsd.toFixed(2)} of $${r.spend.capUsd}${r.spend.capHit ? " (cap hit)" : ""}`);
 ' "data/runs/$run_date.json") || summary="(could not read the run report)"
 echo "weekly run $run_date committed and pushed $(date --iso-8601=seconds): $summary"
-report "$(redact "$(printf '%s: ok, %s (%s)' "$run_date" "$summary" "$(git rev-parse --short HEAD)")")"
+warning_note=
+if [[ -n "$site_warnings" ]]; then warning_note=$(printf '\n\n%s' "$(sed 's/^/- /' <<<"$site_warnings")"); fi
+report "$(redact "$(printf '%s: ok, %s (%s, deployed)%s%s' "$run_date" "$summary" "$PUSHED" "$warning_note" "$(deploy_note)")")"
 # Silent: the success ping only marks the check up for another week.
 ping_check "" "$run_date: ok"

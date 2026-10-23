@@ -10,8 +10,9 @@
 # installs the line), reading DEPLOY_HOOK_URL from the clone's gitignored .env. Anyone with the hook's URL
 # can start a deploy, so it is never printed. One line per day goes to
 # $XDG_STATE_HOME/kc-this-week/deploy.log (default ~/.local/state/kc-this-week); a missing hook or an
-# answer that is not 2xx exits 1 with a line on stderr and in the log, and nothing else is told: the
-# next weekly run deploys regardless, and the healthchecks.io check (#64) watches that run, not this.
+# answer that is not 2xx exits 1 with a line on stderr and in the log, and nothing else is told at the
+# time: the next weekly run deploys regardless, and its health-issue comment lists the week's failed
+# nights from this log (#191); the healthchecks.io check (#64) watches that run, not this.
 # ──────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 

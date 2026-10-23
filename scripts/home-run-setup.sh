@@ -305,7 +305,7 @@ say "The run pushes to main and comments on its health issue with a fine-grained
 say "$REPO and nothing else, kept in the clone's .env. Make one (or press Enter to keep the one there):"
 step "Token name: kc-this-week weekly run; Expiration: your choice (re-run this wizard when it expires)"
 step "Repository access: Only select repositories → $REPO"
-step "Permissions → Repository: Contents: Read and write; Issues: Read and write (Metadata comes with them)"
+step "Permissions → Repository: Contents: Read and write; Issues: Read and write; Commit statuses: Read-only (Metadata comes with them)"
 if [[ -z "$(_existing GH_TOKEN || true)" ]]; then open_url "https://github.com/settings/personal-access-tokens/new"; fi
 ask_secret GH_TOKEN "Fine-grained token:"
 GH_TOKEN=$(bare "${GH_TOKEN:-}")
@@ -334,6 +334,14 @@ if [[ -n "$GH_TOKEN" ]] && GH_TOKEN="$GH_TOKEN" gh issue list --repo "$REPO" --l
 elif [[ -n "$GH_TOKEN" ]]; then
   warn "the token cannot read $REPO's issues; the run's health reports will fall back to gh's sign-in"
   SKIPPED+=("give the token Issues: Read and write on $REPO, then re-run this wizard")
+fi
+
+# After the push the run waits on Vercel's commit status for its commit (#191), which needs Commit statuses.
+if [[ -n "$GH_TOKEN" ]] && GH_TOKEN="$GH_TOKEN" gh api "repos/$REPO/commits/main/status" >/dev/null 2>&1; then
+  say "The token can read $REPO's commit statuses, where the run sees whether Vercel built its commit."
+elif [[ -n "$GH_TOKEN" ]]; then
+  warn "the token cannot read $REPO's commit statuses; every run will report its deploy as failed"
+  SKIPPED+=("give the token Commit statuses: Read-only on $REPO, then re-run this wizard")
 fi
 
 # ── Stage 6: the alert ─────────────────────────────────────────────────────
