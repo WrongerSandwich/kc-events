@@ -68,9 +68,9 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // scroll padding that keeps a focused row clear of the sticky bar (audit 2026-10-21), and 750 for opening on the week with
   // day chips and Keep going (#183), and 100 for the no-script note's links to the kind and region pages, and 400 for the
   // calendar writer's notes, categories and free time, and the export named after its slice (#190), and 350 for each row's
-  // kind chip linking its kind's page, the footer's Venues link, and the head's colour-scheme, theme-color and locale tags (#188)
-  // (#181's component vocabulary fit inside #188's 350: both made each row's kind chip its kind's link)
-  { page: "explore.html", budget: 52_850, build: "fixture" },
+  // kind chip linking its kind's page, the footer's Venues link, and the head's colour-scheme, theme-color and locale tags (#188),
+  // and 300 for one component vocabulary: Save's bookmark and names, the bar's icons, chips as links, per-row link names (#181)
+  { page: "explore.html", budget: 53_150, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
 ];
