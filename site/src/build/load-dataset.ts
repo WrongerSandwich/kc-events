@@ -22,6 +22,12 @@ import { buildVenues, readVenueTable } from "./venues.ts";
 export const SITE_EXPECTS_SCHEMA_VERSION = 1;
 /** Raw bytes of the projected events; past this the explorer's one-page design needs rethinking. */
 export const MAX_PAYLOAD_BYTES = 400_000;
+/**
+ * Fewest published events a build will deploy (audit E14): a job bug that leaves everything unverified or expired
+ * would otherwise replace a good site with an empty one. A real week publishes hundreds (455 on the 10-19 run).
+ * SITE_ALLOW_SMALL=1 lifts it, for the fixture builds and the tests (vitest.config.ts sets it).
+ */
+export const MIN_PUBLISHED = 50;
 
 /** How far the build's today may be from the last successful run's day, either way, before it is taken for a wrong clock or SITE_TODAY. */
 export const MAX_DAYS_FROM_RUN = 14;
@@ -160,6 +166,9 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; v
     throw new Error(`the dataset has ${active.length} active events but none from ${today} on: no event to publish; check SITE_TODAY or the weekly run`);
   }
   const events = published.map(({ out }) => out);
+  if (events.length < MIN_PUBLISHED && process.env.SITE_ALLOW_SMALL !== "1") {
+    throw new Error(`only ${events.length} events to publish from ${today} on, fewer than ${MIN_PUBLISHED}: check the weekly run, or set SITE_ALLOW_SMALL=1 to build a small dataset anyway`);
+  }
   // Only the event page shows a description, so they stay out of the events every island carries.
   const descriptions: PublishedDescriptions = {};
   for (const { e } of published) if (e.description !== undefined) descriptions[e.id] = e.description;

@@ -12,7 +12,7 @@
     "build": "pnpm generate && astro build",
     "size": "tsx scripts/size-check.ts",
     "generate-and-build": "pnpm generate && astro build",
-    "build:e2e": "GITHUB_REPORT_TOKEN=e2e-report-token-sentinel SITE_TODAY=2026-10-05 SITE_DATASET=e2e/fixtures/events.json SITE_VENUES=e2e/fixtures/venues.yaml SITE_OUT_DIR=dist-e2e pnpm generate-and-build",
+    "build:e2e": "SITE_ALLOW_SMALL=1 GITHUB_REPORT_TOKEN=e2e-report-token-sentinel SITE_TODAY=2026-10-05 SITE_DATASET=e2e/fixtures/events.json SITE_VENUES=e2e/fixtures/venues.yaml SITE_OUT_DIR=dist-e2e pnpm generate-and-build",
     "preview": "astro preview",
     "preview:e2e": "SITE_OUT_DIR=dist-e2e astro preview --port 4321 --ignore-lock",
     "typecheck": "SITE_TODAY=last-run pnpm generate && astro check && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",

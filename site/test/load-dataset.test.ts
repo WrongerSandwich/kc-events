@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { parseConfig } from "../../src/config";
 import type { Event } from "../../src/dataset";
-import { checkSchemaVersion, LAST_RUN, loadPublished, MAX_PAYLOAD_BYTES, project, SITE_EXPECTS_SCHEMA_VERSION } from "../src/build/load-dataset";
+import { checkSchemaVersion, LAST_RUN, loadPublished, MAX_PAYLOAD_BYTES, MIN_PUBLISHED, project, SITE_EXPECTS_SCHEMA_VERSION } from "../src/build/load-dataset";
 import { activeEvent, configYaml, dataset, write } from "./fixtures/dataset";
 
 describe("loadPublished", () => {
@@ -186,6 +186,22 @@ venueAliases:
 
     it.each(["evt_1", "evt_00000000000G", "evt_0000000000001", "evt_00000000000a\"><x", "EVT_000000000001"])("refuses the id %j", (id) => {
       expect(() => loadPublished(write(dataset([activeEvent({ id })])))).toThrow(/id/);
+    });
+
+    it(`refuses fewer than ${MIN_PUBLISHED} published events unless SITE_ALLOW_SMALL=1, which the tests set (audit E14)`, () => {
+      const many = (n: number) => Array.from({ length: n }, (_, i) => activeEvent({ id: `evt_${String(i + 1).padStart(12, "0")}` }));
+      const small = write(dataset(many(MIN_PUBLISHED - 1)));
+      expect(loadPublished(small).events).toHaveLength(MIN_PUBLISHED - 1);
+      vi.stubEnv("SITE_ALLOW_SMALL", undefined);
+      try {
+        expect(() => loadPublished(small)).toThrow(new RegExp(`${MIN_PUBLISHED - 1} events.*fewer than ${MIN_PUBLISHED}.*SITE_ALLOW_SMALL=1`));
+        expect(() => loadPublished(write(dataset([activeEvent({ status: "unverified", lastVerified: undefined, evidence: {} })])))).toThrow(/ 0 events/);
+        expect(loadPublished(write(dataset(many(MIN_PUBLISHED)))).events).toHaveLength(MIN_PUBLISHED);
+        vi.stubEnv("SITE_ALLOW_SMALL", "1");
+        expect(loadPublished(small).events).toHaveLength(MIN_PUBLISHED - 1);
+      } finally {
+        vi.unstubAllEnvs();
+      }
     });
 
     it("refuses to publish nothing when the dataset has active events, and allows it when it has none", () => {
