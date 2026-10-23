@@ -19,7 +19,7 @@ const alwaysThere = pickAlwaysThere(events, alwaysTherePicks);
 const count = events.length;
 // The picks as the page renders them at build: each horizon's in turn.
 const buckets = bucketDontMiss(dontMiss, meta.buildToday);
-const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin);
+const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta.lastSuccessfulRun);
 ---
 <Base title="Kansas City events this week" description={siteConfig.tagline} jsonLd={jsonLd}>
   <h1>What's on in Kansas City</h1>

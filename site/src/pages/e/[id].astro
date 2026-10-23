@@ -13,7 +13,7 @@ import { venues } from "../../generated/venues";
 import { venueNamed, venuePath } from "../../lib/venues";
 import { meta } from "../../generated/meta";
 import { formatDay, formatShort, localDate } from "../../lib/dates";
-import { eventDescription, eventJsonLd } from "../../lib/event-meta";
+import { eventDescription, eventJsonLd, eventPageTitle } from "../../lib/event-meta";
 import { breadcrumbJsonLd, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
 import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, neighborhoodLine, venueLine } from "../../lib/events";
@@ -26,8 +26,8 @@ export function getStaticPaths() {
 const { event } = Astro.props as { event: PublishedEvent };
 
 const line = longDateLine(event, meta.buildToday);
-const metaDescription = eventDescription(event, meta.buildToday);
 const description = descriptions[event.id];
+const metaDescription = eventDescription(event, meta.buildToday, description);
 // The reader lands on the event's own page when the job found one; the verified line still names the list it was read from.
 const details = detailsUrl(event);
 const report = { title: event.title, event: `${origin}/e/${event.id}`, primaryUrl: event.primaryUrl, ...(event.eventUrl && { eventUrl: event.eventUrl }) };
@@ -37,10 +37,10 @@ const moreLikeThis = events
   .slice(0, 5);
 const admission = admissionLine(event);
 const venue = venueNamed(venues, event.venue);
-const eventLd = eventJsonLd(event, { description, image: shareImage.url, ...(venue !== undefined && { venue }) });
+const eventLd = eventJsonLd(event, { origin, today: meta.buildToday, description, image: shareImage.url, ...(venue !== undefined && { venue }) });
 const jsonLd = [...(eventLd === undefined ? [] : [eventLd]), breadcrumbJsonLd(event, origin)];
 ---
-<Base title={event.title} description={metaDescription} jsonLd={jsonLd}>
+<Base title={eventPageTitle(event, events)} description={metaDescription} jsonLd={jsonLd}>
   <article class={`event kind-${slugify(event.kind)}`}>
     <header class:list={["head", { dated: isDated(event) }]}>
       {/* The same tile as the front page's card, by the same view-transition name, so one glides into the other. */}

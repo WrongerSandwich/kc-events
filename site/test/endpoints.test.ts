@@ -73,6 +73,26 @@ describe("built output", () => {
       expect(html).toContain("explore?when=all&q={search_term_string}");
     });
 
+    it("dates the front page's site and picks list by the last run (#189)", () => {
+      const html = read("index.html");
+      expect(html.split(`"dateModified":"${meta.lastSuccessfulRun}"`).length - 1).toBe(2);
+    });
+
+    it("describes every event page in its own words, under 160 characters, its Event at the page's own URL (#189)", () => {
+      const descriptions = new Map<string, string>();
+      for (const e of events) {
+        const html = read(`e/${e.id}.html`);
+        const description = /<meta name="description" content="([^"]*)"/.exec(html)![1]!;
+        // Entities count as one character each, as a snippet shows them.
+        const length = description.replace(/&(?:#\d+|#x[\da-f]+|\w+);/gi, "x").length;
+        expect(length, e.id).toBeLessThan(160);
+        expect(descriptions.get(description), `${e.id} says what ${descriptions.get(description)} says`).toBeUndefined();
+        descriptions.set(description, e.id);
+        const canonical = /rel="canonical" href="([^"]+)"/.exec(html)![1]!;
+        if (html.includes('"@type":"Event"')) expect(html, e.id).toContain(`"@id":"${canonical}"`);
+      }
+    });
+
     it("titles the front page for the search it answers, and names the site in its JSON-LD (#168)", () => {
       const html = read("index.html");
       expect(html).toContain("<title>Kansas City events this week · KC This Week</title>");
