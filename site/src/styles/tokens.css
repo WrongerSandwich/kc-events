@@ -43,7 +43,7 @@
   /* Type: one sans, with tabular figures where numbers line up. The display face is for the site's name alone: a
      1920s geometric, for a skyline that is mostly Art Deco; it never sets a label, a button, or a heading. */
   --font: "Geist Variable", system-ui, sans-serif;
-  --font-display: "Josefin Sans", var(--font);
+  --font-display: "KC Wordmark", var(--font); /* Josefin Sans Bold, cut to the wordmark (fonts.css) */
   --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.125rem; --text-xl: 1.375rem; --text-2xl: 1.75rem; --text-3xl: 2.25rem;
   --weight-regular: 400; --weight-medium: 500; --weight-strong: 600;
   --tracking-display: -0.03em; --tracking-heading: -0.02em;
