@@ -862,6 +862,20 @@ describe("a same-end sighting keeps the stored start (#120)", () => {
     expect(byId(dataset).get(stored.id)).toMatchObject({ start: "2026-08-14", evidence: { date: "August 14 – December 6, 2026" } });
   });
 
+  it("stays a limited run when a calendar lists only its last days, which alone would read as a one-off", async () => {
+    // The Wizard of Oz at the 2026-10-23 hand run: the Kauffman list gave Oct 23–25 for the ballet's Oct 16–25 run.
+    const stored = opening();
+
+    const { dataset } = await runWith(WEEK_1, withEvents([stored]), {
+      sources: [artsjoco],
+      pages: { [ARTSJOCO]: PAGE },
+      completions: [reply(listing(artsjoco, "2026-12-04", "Dec 4 – 6"))],
+      config,
+    });
+
+    expect(byId(dataset).get(stored.id)).toMatchObject({ start: "2026-06-12", end: "2026-12-06", recurrence: "limited-run", evidence: { date: OPENING_QUOTE } });
+  });
+
   it("fills a stored run's missing start from a same-end sighting", async () => {
     const stored = exhibition("https://www.nermanmuseum.org/", undefined);
 

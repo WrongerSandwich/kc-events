@@ -59,6 +59,7 @@ import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResu
 import { plural } from "./markdown.js";
 import type { CandidateTally, EventRef, OwnPagesReport, RunReport, SourceReport } from "./report.js";
 import { awayGame, skipReason, type SkipReason } from "./skip.js";
+import { deriveRecurrence } from "./recurrence.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList, placeStored } from "./taxonomy.js";
 import { hasTime, horizonEnd, toLocalDate, toLocalIso } from "./time.js";
@@ -986,7 +987,9 @@ function firstMonthPair(events: Event[]): [Event, Event] | undefined {
 function refresh(known: Event, sighting: Event, rule?: MatchRule): Event {
   const refreshed = refreshReading(known, sighting);
   if (!keepsStart(known, sighting, rule)) return refreshed;
-  const { eventUrl: _eventUrl, price: _price, ages: _ages, days: _days, ownPageRead: _ownPageRead, ...rest } = refreshed;
+  const { eventUrl: _eventUrl, price: _price, ages: _ages, days: _days, ownPageRead: _ownPageRead, ...reading } = refreshed;
+  // The class follows the span the record keeps, not the reading's: a list giving only a run's last days reads as a one-off.
+  const rest = { ...reading, recurrence: deriveRecurrence({ start: known.start, end: reading.end, schedule: reading.schedule }) };
   // The own page's read (#133) belongs with the start and own page it was read on, and its quotes with the evidence.
   return {
     ...rest,
