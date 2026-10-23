@@ -1,4 +1,5 @@
 import { longDateLine } from "./date-line";
+import { addDays } from "./dates";
 import { venueLine } from "./events";
 import { ALL_EVENTS_FEED, kindFeedPath, PICKS_FEED } from "./feeds";
 import { bucketDontMiss, HORIZONS } from "./horizon";
@@ -67,7 +68,7 @@ const WHEN_WORDS: Record<WhenPreset, string> = {
 /**
  * /llms.txt (llmstxt.org's shape: an H1, a blockquote, then H2 sections of links), complete enough to use alone
  * (#188): the pages and lists with their counts, the calendar feeds, the explorer's query grammar, the dataset's
- * fields, this week's picks, and how to cite it.
+ * fields, the picks, and how to cite it.
  */
 export function llmsTxt(i: LlmsInput): string {
   const at = (path: string) => new URL(path, i.origin).toString();
@@ -126,7 +127,7 @@ The same addresses with webcal:// in place of https:// open the subscribe dialog
 
 ${at("/explore")}?<key>=<value>&..., read in the browser; a missing or unknown value is the default. Keys:
 
-- when: ${presets}, or a range YYYY-MM-DD..YYYY-MM-DD; e.g. when=2026-10-24..2026-10-25
+- when: ${presets}, or a range YYYY-MM-DD..YYYY-MM-DD; e.g. when=${i.today}..${addDays(i.today, 6)}
 - kind: a kind's slug, repeatable (any of them): ${kindSlugs.join(", ")}
 - region: a region's slug, repeatable (any of them): ${regionSlugs.join(", ")}
 - picks=1: the picks only
@@ -148,8 +149,10 @@ Example: ${at("/explore")}?${kind === undefined ? "" : `kind=${kind}&`}${region 
 
 ${Object.entries(EVENTS_JSON_FIELDS).map(([k, v]) => `- ${k}: ${v}`).join("\n")}
 
-## This week's picks
+## The picks
 
-${picks.length === 0 ? "None this week." : picks.map((e) => `- [${e.title}](${at(`/e/${e.id}`)}): ${longDateLine(e, i.today)} · ${venueLine(e)}${e.whyLine ? `. ${e.whyLine}` : ""}`).join("\n")}
+Every pick from today on, by when it can first be seen.
+
+${picks.length === 0 ? "None." : picks.map((e) => `- [${e.title}](${at(`/e/${e.id}`)}): ${longDateLine(e, i.today)} · ${venueLine(e)}${e.whyLine ? `. ${e.whyLine}` : ""}`).join("\n")}
 `;
 }

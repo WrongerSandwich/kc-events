@@ -76,7 +76,7 @@ describe("llmsTxt (#188)", () => {
   });
 
   it("lists the current picks with their event pages, and no event that is not one", () => {
-    const s = section("This week's picks");
+    const s = section("The picks");
     expect(s).toContain("[A rare show](https://www.kcthisweek.com/e/evt_pick00000001)");
     expect(s).toContain("Rare; see it.");
     expect(s).not.toContain("A play");

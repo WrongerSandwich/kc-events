@@ -165,7 +165,7 @@ describe("built output", () => {
 
     it("writes llms.txt's sections and its cite line (#188)", () => {
       const text = read("llms.txt");
-      for (const h of ["## Pages", "## Lists", "## Calendar feeds", "## Explorer links", "## The dataset", "## This week's picks"]) expect(text, h).toContain(`\n${h}\n`);
+      for (const h of ["## Pages", "## Lists", "## Calendar feeds", "## Explorer links", "## The dataset", "## The picks"]) expect(text, h).toContain(`\n${h}\n`);
       expect(text).toContain("Cite as: KC This Week, ");
       for (const k of meta.kinds) expect(text, k).toContain(`/k/${slugify(k)} : `);
     });
