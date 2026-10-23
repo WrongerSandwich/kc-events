@@ -14,9 +14,9 @@ import { venueNamed, venuePath } from "../../lib/venues";
 import { meta } from "../../generated/meta";
 import { formatDay, formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd, eventPageTitle } from "../../lib/event-meta";
-import { breadcrumbJsonLd, kindPath } from "../../lib/landing";
+import { breadcrumbJsonLd, kindName, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
-import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, neighborhoodLine, venueLine } from "../../lib/events";
+import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, neighborhoodLine, neighborhoodShown, venueLine, verifiedWhat } from "../../lib/events";
 import ReportForm from "../../components/ReportForm.astro";
 import { googleCalendarUrl, locatedForCalendar } from "../../lib/ics";
 import { siteConfig } from "../../site.config";
@@ -53,7 +53,7 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
         <p class="kind"><KindChip kind={event.kind} href={kindPath(event.kind)} />{event.dontMiss && <span class="dont-miss">Don't miss</span>}</p>
         <h1 style={`view-transition-name: title-${event.id}`}>{event.title}</h1>
         <p class="date">{line}</p>
-        <p class="where"><a href={venuePath(event.venue)}>{venueLine(event)}</a> · {neighborhoodLine(event.neighborhood, event.region)}</p>
+        <p class="where"><a href={venuePath(event.venue)}>{venueLine(event)}</a> · {neighborhoodLine(neighborhoodShown(event) ?? event.region, event.region)}</p>
         {admission && <p class="admission">{admission}</p>}
       </div>
     </header>
@@ -65,13 +65,13 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
       {isDated(event) && <a class="control" href={`/e/${event.id}.ics`} download><UiIcon name="calendar-plus" />Add to calendar</a>}
       {google !== undefined && <a class="control" href={google} rel="nofollow">Google Calendar</a>}
     </div>
-    <p class="verified">Date and venue verified {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.{(event.whyLine || description) && " The reason and description are written by a model."}</p>
+    <p class="verified">{verifiedWhat(event)} {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.{(event.whyLine || description) && " The reason and description are written by a model."}</p>
     <ReportForm context={report} summary="Wrong? Report it" />
   </article>
 
   {moreLikeThis.length > 0 && (
     <section aria-labelledby="more">
-      <h2 id="more" class="section-heading">More like this</h2>
+      <h2 id="more" class="section-heading">More {kindName(event.kind).toLowerCase()}</h2>
       <ul>
         {moreLikeThis.map((e) => (
           <li><a href={`/e/${e.id}`}>{e.title}</a> <span>{formatDay(firstDay(e)!)} · {venueLine(e)}</span></li>

@@ -99,7 +99,7 @@ a.chip:hover { text-decoration: underline; }
    own stylesheet stays under the 4 KB that Astro inlines (#184). */
 .passed-tag { flex: none; font-size: var(--text-xs); font-weight: var(--weight-medium); line-height: 1.6; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: 0 var(--space-2); white-space: nowrap; }
 
-/* A section's heading: the horizon buckets, Always there, More like this, the explorer's groups. */
+/* A section's heading: the horizon buckets, Always there, an event page's More <kind>, the explorer's groups. */
 .section-heading {
   font-size: var(--text-2xl);
   color: var(--fg);

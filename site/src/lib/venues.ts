@@ -21,7 +21,7 @@ export function venueNamed(venues: readonly PublishedVenue[], name: string): Pub
 }
 
 /** The heading of the venue directory's last group: the venues with a table row and nothing coming up. */
-export const NOTHING_LISTED = "Nothing listed at the moment";
+export const NOTHING_LISTED = "Nothing listed right now";
 
 export type DirectoryGroup = { heading: string; venues: { venue: PublishedVenue; events: number }[] };
 

@@ -103,12 +103,29 @@ export function admissionLine(e: PublishedEvent): string | undefined {
   return line === "" ? undefined : line;
 }
 
-/** Where an event is, as cards and lists say it: the venue, then the room when the page named one. */
 /** "Crossroads · Central KC"; a neighborhood that is its own region (Lawrence, Elsewhere in the metro) is named once. */
 export function neighborhoodLine(neighborhood: string, region: string): string {
   return region === neighborhood ? neighborhood : `${neighborhood} · ${region}`;
 }
 
+/** The catch-all region and neighborhood: src/config.ts's ELSEWHERE_IN_THE_METRO, which the browser cannot import. */
+const CATCH_ALL = "Elsewhere in the metro";
+
+/**
+ * The neighborhood beside a venue on a row or card, left out when it says nothing the venue does not (#186): when it is
+ * the venue's own name ("Crown Center · Crown Center") or the catch-all, which is no place.
+ */
+export function neighborhoodShown(e: PublishedEvent): string | undefined {
+  const n = e.neighborhood;
+  return n === CATCH_ALL || n.toLowerCase() === e.venue.toLowerCase() ? undefined : n;
+}
+
+/** What a check confirmed: a recurring event has a schedule rather than a date (#186). */
+export function verifiedWhat(e: PublishedEvent): string {
+  return e.recurrence === "recurring" ? "Schedule and venue verified" : "Date and venue verified";
+}
+
+/** Where an event is, as cards and lists say it: the venue, then the room when the page named one. */
 export function venueLine(e: PublishedEvent): string {
   return e.room === undefined ? e.venue : `${e.venue} · ${e.room}`;
 }

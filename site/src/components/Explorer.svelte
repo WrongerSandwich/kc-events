@@ -160,7 +160,12 @@
   // Named after the slice (#190): "KC This Week · Comedy" in kc-this-week-comedy.ics.
   let exportAs = $derived(exportName(filters, siteConfig.name));
 
+  // Above this many, the export asks first (#186): iOS adds a whole file's events in one tap, and the default view is
+  // hundreds.
+  const ASK_ABOVE = 50;
+
   function exportIcs(filename: string, list: typeof events, calendarName: string) {
+    if (list.length > ASK_ABOVE && !confirm(`Add ${list.length} events to your calendar? They come as one file, and most calendars add them all at once.`)) return;
     // new Date() is fine here: this is a component, not lib/ (the no-clock grep covers lib only).
     downloadText(filename, toIcs(list, { siteName: siteConfig.name, stamp: new Date().toISOString(), calendarName }), "text/calendar");
   }
@@ -183,7 +188,7 @@
      filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
 <div class="explorer" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
   <div class="bar" bind:this={bar} bind:offsetHeight={barHeight}>
-    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts="/" placeholder="Search title, venue, neighborhood, why" />{#if mounted}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
+    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts="/" placeholder="Search titles, venues, neighborhoods, reasons" />{#if mounted}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
     <a class="skip" href="#results">Skip to results</a>
     <div class="slice">
       <p class="count" aria-hidden="true">{countText}</p>
@@ -199,9 +204,9 @@
     <p role="status" class="visually-hidden">{announced}</p>
     {#if filters.saved}
       <ShareButton label="Share saved" data={shareSaved} disabled={upcomingSaves.length === 0} />
-      <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved</button>
+      <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved to calendar</button>
     {:else}
-      <button type="button" class="control small export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs(exportAs.filename, exportable, exportAs.calendarName)}><UiIcon name="calendar-plus" />Export this view</button>
+      <button type="button" class="control small export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs(exportAs.filename, exportable, exportAs.calendarName)}><UiIcon name="calendar-plus" />{exportable.length === 0 ? "Export to calendar" : `Export ${exportable.length} to calendar`}</button>
     {/if}
     <!-- The bar's buttons are one kind (#181): base.css's small control, an icon and words, like Share saved. -->
     {#if !isDefault(filters)}<button type="button" class="control small" onclick={() => change(DEFAULT_FILTERS)}><UiIcon name="x" />Clear filters</button>{/if}
@@ -222,9 +227,9 @@
         <!-- The header's Saved link lands here on a first visit: an empty list of one's own, not a filter that failed. -->
         <p class="empty">Nothing saved yet. Save any event and it appears here; saves stay in this browser, with no account. Start with <a href="/">the picks</a>.</p>
       {:else if pills.length > 0}
-        <p class="empty">No events match <strong>{pills.map((p) => p.label).join(" · ")}</strong>. <button type="button" class="link" onclick={() => change({ ...DEFAULT_FILTERS, when: EVERY_DATE })}>Clear them</button> to see everything.</p>
+        <p class="empty">No events match <strong>{pills.map((p) => p.label).join(" · ")}</strong>. <button type="button" class="link" onclick={() => change({ ...DEFAULT_FILTERS, when: EVERY_DATE })}>Clear filters</button> to see everything.</p>
       {:else}
-        <p class="empty">No events to show right now.</p>
+        <p class="empty">Nothing listed right now.</p>
       {/if}
     {/if}
     <!-- A row carries its day where no day heading does: the venue sort, and the saved view's passed saves. -->

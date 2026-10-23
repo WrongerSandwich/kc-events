@@ -92,7 +92,7 @@ test("the tab's icon is the fountain mark: an ICO for Safari, then the SVG for t
 
 test("the about page's coffee badge links to the support page and is served from the site", async ({ page }) => {
   await page.goto("/about");
-  const badge = page.getByRole("link", { name: "Buy me a coffee" });
+  const badge = page.getByRole("link", { name: "Support KC This Week on Buy Me a Coffee" });
   await expect(badge).toHaveAttribute("href", "https://buymeacoffee.com/EvanTrout");
   const img = badge.locator("img");
   await expect(img).toHaveAttribute("src", "/buy-me-a-coffee.png");
@@ -785,7 +785,7 @@ test("a venue page gives the venue's address, map, and site, then its events by 
 test("a venue with a row and nothing coming up still has its page (#137)", async ({ page }) => {
   await on(page, BUILD_DAY, "/v/kauffman-center-for-the-performing-arts");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Kauffman Center for the Performing Arts");
-  await expect(page.getByText("Nothing listed at the moment.")).toBeVisible();
+  await expect(page.getByText("Nothing listed right now.")).toBeVisible();
 });
 
 test("the venue directory lists every venue by region, a row's venue with nothing coming up last, from a venue page (#137)", async ({ page }) => {
@@ -793,7 +793,7 @@ test("the venue directory lists every venue by region, a row's venue with nothin
   await page.getByRole("link", { name: "All venues" }).click();
   await expect(page).toHaveURL(/\/venues$/);
   const headings = await page.getByRole("heading", { level: 2 }).allTextContents();
-  expect(headings.at(-1)).toBe("Nothing listed at the moment");
+  expect(headings.at(-1)).toBe("Nothing listed right now");
   expect(headings.slice(0, -1).length).toBeGreaterThan(1);
   const recordBar = page.getByRole("listitem").filter({ has: page.getByRole("link", { name: "recordBar", exact: true }) });
   await expect(recordBar).toContainText("1 event · Crossroads");
@@ -918,9 +918,9 @@ test("the changes page lists the run's new picks, moves, new events by kind, and
   await expect(section("New picks").getByRole("link", { name: "Fabio Frizzi plays Fulci", exact: true })).toHaveAttribute("href", "/e/evt_e2e000000001");
   await expect(section("Moved").getByRole("link", { name: "Friday night jazz", exact: true })).toBeVisible();
   await expect(section("Moved")).toContainText("Was Thu Oct 8 · 8:00 pm");
-  await expect(section("New this week")).toContainText("10 events first listed in the last seven days.");
+  await expect(section("New this week")).toContainText("10 events found for the first time in the seven days through this run.");
   await expect(section("New this week").locator("summary").first()).toHaveText("music 2");
-  await expect(section("Cancelled or gone").locator("li").first()).toHaveText(/Thursday songwriter night\s*Olathe Jazz Hall · Thu Oct 8 · 7:00 pm\s*No longer listed by the venue/);
+  await expect(section("Cancelled or gone").locator("li").first()).toHaveText(/Thursday songwriter night\s*Olathe Jazz Hall · Thu Oct 8 · 7:00 pm\s*No longer on the page it was listed on/);
   await expect(section("Cancelled or gone").getByRole("link").first()).toHaveAttribute("href", "https://example.com/olathe/songwriters");
   await expect(section("Cancelled or gone").locator("li").nth(1)).toHaveText(/Cancelled matinee\s*Cancelled/);
   await expect(page.getByText("Compared with the run of Monday, September 28.")).toBeVisible();

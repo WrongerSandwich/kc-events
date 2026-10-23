@@ -202,7 +202,7 @@ describe("DontMissList", () => {
       within(week!).getByRole("button", { name: "1 art/exhibitions" }).click();
       await tick();
       expect(titles(week!)).toEqual(["Closing run"]);
-      expect(within(next!).getAllByRole("link").map((a) => a.textContent)).toEqual(["Later show, music", "Art fair, art/exhibitions"]);
+      expect(within(next!).getAllByRole("link").map((a) => a.textContent)).toEqual(["Later show, music", "Art fair, art and exhibitions"]);
     });
 
     it("carries the kind on the section's explorer link exactly while one is on", async () => {
@@ -226,7 +226,7 @@ describe("DontMissList", () => {
       expect(status).toHaveTextContent("Showing 2 music picks");
       within(week!).getByRole("button", { name: "1 art/exhibitions" }).click();
       await tick();
-      expect(status).toHaveTextContent("Showing 1 art/exhibitions pick");
+      expect(status).toHaveTextContent("Showing 1 art and exhibitions pick");
       within(week!).getByRole("button", { name: "1 art/exhibitions" }).click();
       await tick();
       expect(status).toHaveTextContent("Showing all 3 picks");
@@ -278,14 +278,14 @@ describe("DontMissList", () => {
     const strip = screen.getByRole("navigation", { name: "This week by day" });
     const days = () => [...strip.querySelectorAll(".day")].map((d) => d.getAttribute("aria-label"));
     expect(days()).toEqual([
-      "Mon 5: nothing new, 1 running", "Tue 6: 1 pick, 1 running", "Wed 7: 1 pick, 1 running", "Thu 8: nothing new, 1 running",
-      "Fri 9: nothing new, 1 running", "Sat 10: nothing new, 1 running", "Sun 11: 1 pick, 1 running",
+      "Mon 5: no new picks, 1 run still on", "Tue 6: 1 pick, 1 run still on", "Wed 7: 1 pick, 1 run still on", "Thu 8: no new picks, 1 run still on",
+      "Fri 9: no new picks, 1 run still on", "Sat 10: no new picks, 1 run still on", "Sun 11: 1 pick, 1 run still on",
     ]);
     // Today is the inked day, named by its weekday: the card's tile is where "Today" is said (#184).
     expect(strip.querySelector(".day.today .name")).toHaveTextContent("Mon");
     expect(strip).not.toHaveTextContent("Today");
     // A day with only the run open jumps to the run's card, and draws its band.
-    expect(within(strip).getByRole("link", { name: "Mon 5: nothing new, 1 running" })).toHaveAttribute("href", "#pick-b");
+    expect(within(strip).getByRole("link", { name: "Mon 5: no new picks, 1 run still on" })).toHaveAttribute("href", "#pick-b");
     expect(strip.querySelectorAll(".day:first-child .lane.open")).toHaveLength(1);
     within(screen.getAllByRole("region")[0]!).getByRole("button", { name: "2 music" }).click();
     await tick();
@@ -298,7 +298,7 @@ describe("DontMissList", () => {
     vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") });
     render(DontMissList);
     await tick();
-    expect(screen.getByText(/Nothing is picked right now/)).toBeInTheDocument();
+    expect(screen.getByText(/Nothing picked right now/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Browse everything" })).toHaveAttribute("href", "/explore?when=all");
     expect(screen.queryAllByRole("region")).toEqual([]);
   });

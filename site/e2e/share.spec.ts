@@ -59,7 +59,7 @@ test.describe("the saved view", () => {
   test("Export saved downloads the saves still to come as a named calendar", async ({ page }) => {
     await on(page, "/explore?saved=1");
     const download = page.waitForEvent("download");
-    await page.getByRole("button", { name: "Export saved" }).click();
+    await page.getByRole("button", { name: "Export saved to calendar" }).click();
     const file = await download;
     expect(file.suggestedFilename()).toBe("kc-this-week-saved.ics");
     const ics = readFileSync((await file.path())!, "utf8");

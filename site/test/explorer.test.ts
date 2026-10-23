@@ -335,7 +335,7 @@ describe("Explorer", () => {
     expect(announced()).toHaveTextContent("0 events");
     const empty = screen.getByText(/No events match/);
     expect(empty).toHaveTextContent("No events match Through Sunday · film · “zzz”.");
-    await fireEvent.click(within(empty).getByRole("button", { name: "Clear them" }));
+    await fireEvent.click(within(empty).getByRole("button", { name: "Clear filters" }));
     expect(rows()).toHaveLength(4);
     expect(location.search).toBe("?when=all");
   });
@@ -369,7 +369,7 @@ describe("Explorer", () => {
     const row = screen.getByRole("article");
     expect(within(row).getByText("Passed")).toBeInTheDocument();
     expect(row.querySelector(".when")).toHaveTextContent("Fri Oct 9 · 7:00 pm"); // no day heading carries it
-    expect(screen.getByRole("button", { name: "Export saved" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Export saved to calendar" })).toBeDisabled();
   });
 
   it("brings saves' last days up to the dataset's on mount", () => {

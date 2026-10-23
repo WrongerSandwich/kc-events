@@ -11,9 +11,12 @@ export function wasLine(from: string): string {
   return `Was ${startLine(from)}`;
 }
 
-/** Why an event went, as the page says it: the job's two strikes are the venue's page no longer listing it. */
+/**
+ * Why an event went, as the page says it: the job's two strikes are the page it was read from (a venue's or an
+ * organizer's) no longer listing it, or saying it is not found.
+ */
 export function goneReason(reason: GoneEvent["reason"]): string {
-  return reason === "cancelled" ? "Cancelled" : "No longer listed by the venue";
+  return reason === "cancelled" ? "Cancelled" : "No longer on the page it was listed on";
 }
 
 /**

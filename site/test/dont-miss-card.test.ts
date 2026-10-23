@@ -21,6 +21,15 @@ describe("DontMissCard's price and age limit (#133)", () => {
   });
 });
 
+describe("DontMissCard's place (#186)", () => {
+  it("names the venue and neighborhood, the neighborhood dropped when it is the catch-all", () => {
+    render(DontMissCard, { event: event({ dontMiss: true }), today: "2026-10-05" });
+    expect(screen.getByText("recordBar, Crossroads")).toBeTruthy();
+    render(DontMissCard, { event: event({ id: "evt_000000000002", dontMiss: true, venue: "Powell Gardens", neighborhood: "Elsewhere in the metro", region: "Elsewhere in the metro" }), today: "2026-10-05" });
+    expect(screen.getByText("Powell Gardens")).toBeTruthy();
+  });
+});
+
 describe("DontMissCard's actions (#181)", () => {
   it("labels Add to calendar in words at every width, its name starting with them", () => {
     render(DontMissCard, { event: event({ dontMiss: true }), today: "2026-10-05" });

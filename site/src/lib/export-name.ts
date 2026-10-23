@@ -3,7 +3,7 @@ import type { Filters } from "./query";
 import { slugify } from "./slugs";
 
 /**
- * What the explorer's "Export this view" names its file and calendar (#190): after the slice, "KC This Week · Comedy"
+ * What the explorer's export ("Export 12 to calendar") names its file and calendar (#190): after the slice, "KC This Week · Comedy"
  * in `kc-this-week-comedy.ics`, in the order the filter pills come (shortlist, kinds, regions, picks, search). The dates
  * and the sort are left out: the dates narrow a view without being what it is about, and each event carries its own.
  */

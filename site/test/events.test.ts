@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { admissionLine, daysSaid, firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, venueLine } from "../src/lib/events";
+import { admissionLine, daysSaid, firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, neighborhoodShown, venueLine } from "../src/lib/events";
 import { event } from "./fixtures/event";
 
 describe("venueLine", () => {
@@ -94,5 +94,18 @@ describe("daysSaid (#181)", () => {
     expect(daysSaid(event({ recurrence: "limited-run", start: "2026-09-20", end: "2026-10-11" }))).toBe("Sun Sep 20 to Sun Oct 11");
     expect(daysSaid(event({ recurrence: "limited-run", start: undefined, end: "2026-10-11" }))).toBe("through Sun Oct 11");
     expect(daysSaid(event({ recurrence: "recurring", start: undefined, schedule: "Every Tuesday" }))).toBeUndefined();
+  });
+});
+
+describe("neighborhoodShown (#186)", () => {
+  it("is the neighborhood, unless it repeats the venue or is the catch-all", () => {
+    expect(neighborhoodShown(event())).toBe("Crossroads");
+    expect(neighborhoodShown(event({ venue: "Crown Center", neighborhood: "Crown Center" }))).toBeUndefined();
+    expect(neighborhoodShown(event({ venue: "crown center", neighborhood: "Crown Center" }))).toBeUndefined();
+  });
+
+  it("drops the catch-all, named as the job's config names it", async () => {
+    const { ELSEWHERE_IN_THE_METRO } = await import("../../src/config");
+    expect(neighborhoodShown(event({ venue: "Powell Gardens", neighborhood: ELSEWHERE_IN_THE_METRO, region: ELSEWHERE_IN_THE_METRO }))).toBeUndefined();
   });
 });

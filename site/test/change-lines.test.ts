@@ -15,7 +15,7 @@ describe("the changes page's lines (#135)", () => {
 
   it("a gone event says why in the page's words", () => {
     expect(goneReason("cancelled")).toBe("Cancelled");
-    expect(goneReason("two-strike")).toBe("No longer listed by the venue");
+    expect(goneReason("two-strike")).toBe("No longer on the page it was listed on");
   });
 
   it("an empty section says None, and a group the run's report did not record says so", () => {

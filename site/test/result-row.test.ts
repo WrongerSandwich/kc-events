@@ -69,6 +69,19 @@ describe("ResultRow's width (#182)", () => {
     expect(stamp).toHaveTextContent("Date and venue verified Oct 3");
   });
 
+  it("names a place once when the neighborhood is the venue's own name (#186)", () => {
+    const { container } = render(ResultRow, { event: event({ venue: "Crown Center", neighborhood: "Crown Center" }), today: "2026-10-05" });
+    const where = container.querySelector(".where")!;
+    expect(where).toHaveTextContent(/^Crown Center$/);
+    expect(where).toHaveAttribute("title", "Crown Center");
+  });
+
+  it("says schedule, not date, for a recurring event (#186)", () => {
+    const recurring = event({ recurrence: "recurring", start: undefined, schedule: "Tuesdays", lastVerified: "2026-10-03T21:47:36-05:00" });
+    const { container } = render(ResultRow, { event: recurring, today: "2026-10-05" });
+    expect(container.querySelector(".verified")).toHaveAttribute("title", "Schedule and venue verified Oct 3");
+  });
+
   it("hides the kind chip on the kind's own page", () => {
     render(ResultRow, { event: event({ kind: "film" }), today: "2026-10-05", hide: "kind" });
     expect(screen.queryByRole("link", { name: "film" })).toBeNull();
