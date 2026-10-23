@@ -16,13 +16,14 @@ const github = reportUrl(siteConfig.repoUrl, context);
   <summary>{summary}</summary>
   <form method="post" action="/api/report">
     <label for="report-what">What is wrong</label>
-    <textarea id="report-what" name="what" required maxlength="2000" rows="4" placeholder="What the listing says, and what is right if you know it"></textarea>
+    <p class="notice" id="report-notice">Posted publicly on GitHub, so leave out anything private. No name or contact needed.</p>
+    <textarea id="report-what" name="what" aria-describedby="report-notice" required maxlength="2000" rows="4" placeholder="What the listing says, and what is right if you know it"></textarea>
     <div class="trap" aria-hidden="true">
       <label for="report-website">Leave this empty</label>
       <input id="report-website" name="website" tabindex="-1" autocomplete="off">
     </div>
     {context && <input type="hidden" name="event" value={context.event}>}
-    <p class="send"><button type="submit">Send report</button> <span>Posted publicly on GitHub. No name or contact needed.</span></p>
+    <p class="send"><button type="submit">Send report</button></p>
   </form>
   <p class="status" role="status" tabindex="-1"></p>
   <p class="github">Or <a href={github}>report it on GitHub</a>.</p>
@@ -38,20 +39,25 @@ const github = reportUrl(siteConfig.repoUrl, context);
       status.textContent = "Sending…";
       let sent = false;
       let reason: string | undefined;
+      let url: string | undefined;
       try {
         const response = await fetch(form.action, { method: "POST", body: new URLSearchParams(new FormData(form) as unknown as Record<string, string>), headers: { Accept: "application/json" } });
-        ({ ok: sent, reason } = (await response.json()) as { ok: boolean; reason?: string });
+        ({ ok: sent, reason, url } = (await response.json()) as { ok: boolean; reason?: string; url?: string });
       } catch {
         sent = false;
       }
       button.disabled = false;
-      if (sent) {
-        form.reset();
-        form.hidden = true;
+      if (!sent) {
+        status.textContent = `Could not send.${reason ? ` ${reason}` : ""} Try again, or use the GitHub link below.`;
+        return;
       }
-      status.textContent = sent ? "Sent. Thanks." : `Could not send.${reason ? ` ${reason}` : ""} Try again, or report it on GitHub.`;
-      // The button hides with the form once sent, so focus moves to the answer rather than falling to the page's top.
-      if (sent) status.focus();
+      // Once sent the form goes, out of sight and out of the tab order, so it cannot be sent twice (#187).
+      form.reset();
+      form.hidden = true;
+      const issue = url?.startsWith("https://github.com/") ? Object.assign(document.createElement("a"), { href: url, textContent: "public issue on GitHub" }) : "public issue on GitHub";
+      status.replaceChildren("Sent. It is now a ", issue, ".");
+      // The button hides with the form, so focus moves to the answer rather than falling to the page's top.
+      status.focus();
     });
   }
 </script>
@@ -67,7 +73,9 @@ const github = reportUrl(siteConfig.repoUrl, context);
   }
   .trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
   .send { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; }
-  .send span { color: var(--fg-faint); font-size: var(--text-xs); }
+  /* display: grid above would otherwise override the hidden attribute the script sets once a report is sent. */
+  form[hidden] { display: none; }
+  .notice { margin: 0; color: var(--fg-muted); }
   button {
     min-height: var(--tap); padding-inline: var(--space-3); font: inherit; font-weight: var(--weight-medium); cursor: pointer;
     color: var(--fg); background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: var(--radius);
@@ -76,5 +84,5 @@ const github = reportUrl(siteConfig.repoUrl, context);
   .status:empty { display: none; }
   .status, .github { margin: var(--space-2) 0 0; }
   /* A link inside a sentence must not rely on colour alone (axe link-in-text-block). */
-  .github a { text-decoration: underline; }
+  .github a, .status a { text-decoration: underline; }
 </style>
