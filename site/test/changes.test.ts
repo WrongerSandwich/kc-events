@@ -60,6 +60,17 @@ describe("the changes page's groups (#135)", () => {
     ]);
   });
 
+  it("refuses a gone event whose page is not a plain http or https URL, as every other href is (#192)", () => {
+    const changes = () =>
+      publishedChanges({
+        events: [],
+        published: [],
+        changes: comparison({ gone: [{ id: "evt_0000000000ff", title: "Tampered", primaryUrl: "javascript:alert(1)", reason: "cancelled" }] }),
+        runDay: RUN_DAY,
+      });
+    expect(changes).toThrow(/evt_0000000000ff.*not a plain http or https URL/);
+  });
+
   it("a report that records no comparison leaves the run's groups out and keeps new this week", () => {
     const changes = publishedChanges({ events: [raw()], published: [event()], changes: undefined, runDay: "2026-10-03" });
     expect(changes).toEqual({ newThisWeek: [event()] });

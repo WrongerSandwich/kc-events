@@ -14,6 +14,7 @@ import { addDays, isDateOnly, isValidDate, localDate } from "../lib/dates";
 import { isPast } from "../lib/events";
 import type { Published, PublishedDescriptions, PublishedEvent } from "../lib/types";
 import { publishedChanges, readRunChanges } from "./changes.ts";
+import { href } from "./href.ts";
 import { isProductionBuild, knownOrigin } from "./origin.ts";
 import { buildVenues, readVenueTable } from "./venues.ts";
 
@@ -64,15 +65,6 @@ export function regionFor(neighborhood: string, config: RunConfig): string {
   return named ?? ELSEWHERE_IN_THE_METRO;
 }
 
-/**
- * A URL as an href the browser will follow: only http or https, with no control character. The job
- * schema already refuses anything else; this holds the line here if that ever loosens.
- */
-function href(url: string, e: Event): string {
-  if (!/^https?:[^\u0000-\u001f\u007f]*$/i.test(url)) throw new Error(`event ${e.id} has a link that is not a plain http or https URL: ${JSON.stringify(url)}`);
-  return url;
-}
-
 /** A house number, then a street-type word: a heuristic for a warning, which a "1600 Genessee" slips past. */
 const STREET_ADDRESS = /^\d+\s+(?:\S+\s+)*?(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|ct|court|ln|lane|pkwy|parkway|pl|place|ter|terrace|hwy|highway|cir|circle|way|trail)\b/i;
 
@@ -114,13 +106,13 @@ export function project(e: Event, config: RunConfig): PublishedEvent {
     ...(room !== undefined && { room }),
     neighborhood: e.neighborhood,
     region: regionFor(e.neighborhood, config),
-    primaryUrl: href(e.primaryUrl, e),
+    primaryUrl: href(e.primaryUrl, `event ${e.id}`),
     kind: e.kind,
     recurrence: e.recurrence,
     dontMiss: e.dontMiss,
     lastVerified: e.lastVerified!,
   };
-  if (e.eventUrl !== undefined) out.eventUrl = href(e.eventUrl, e);
+  if (e.eventUrl !== undefined) out.eventUrl = href(e.eventUrl, `event ${e.id}`);
   if (e.start !== undefined) out.start = e.start;
   if (e.end !== undefined) out.end = e.end;
   if (e.schedule !== undefined) out.schedule = e.schedule;

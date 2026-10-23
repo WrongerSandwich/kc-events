@@ -9,6 +9,7 @@ import { venueAndRoom, type VenueAliases } from "../../../src/identity.ts";
 import { parseRunReport, type RunChanges } from "../../../src/report.ts";
 import { addDays, localDate } from "../lib/dates";
 import type { GoneEvent, PublishedChanges, PublishedEvent } from "../lib/types";
+import { href } from "./href.ts";
 
 /** New this week: first seen in the days through the last run's, this many of them. */
 export const NEW_WITHIN_DAYS = 7;
@@ -52,7 +53,7 @@ export function publishedChanges(opts: { events: Event[]; published: PublishedEv
   const gone = changes.gone.map(({ id, title, primaryUrl, reason }): GoneEvent => {
     const record = records.get(id);
     const venue = record?.venue === undefined ? undefined : venueAndRoom(record.venue, opts.venueAliases ?? {}).venue;
-    return { title, ...(venue !== undefined && { venue }), ...(record?.start !== undefined && { start: record.start }), primaryUrl, reason };
+    return { title, ...(venue !== undefined && { venue }), ...(record?.start !== undefined && { start: record.start }), primaryUrl: href(primaryUrl, `gone event ${id} in the run report`), reason };
   });
   return {
     newThisWeek: newThisWeek.sort(byStart),
