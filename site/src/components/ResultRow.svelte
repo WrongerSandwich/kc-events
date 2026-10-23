@@ -114,9 +114,9 @@
      least 12rem, then the rest) share the room. The widest dated lines at this size are 149 px, and 206 px with the day
      first. The trailing columns have fixed widths, so the kind chips, hosts, stamps and Save buttons each make a column
      down the list, whatever a row's title or venue: the widest chip ("outdoors/community") is 154 px, the widest stamp
-     ("✓ Sep 30") about 50 px, and Save, its bookmark and "Saved", 70 px. A list that ships no script (a venue, kind,
-     region or changes page) has no Save, and its stylesheet sets --row-save-width to nothing, so no empty column is
-     left where Save would be (#181). */
+     ("✓ Sep 30") about 50 px, and Save, its bookmark and "Saved", within its 80 px column. A list that ships no script
+     (a venue, kind, region or changes page) has no Save, and its stylesheet sets --row-save-width to 0, so all that is
+     left where Save would be is one column gap (#181). */
   @media (min-width: 1280px) {
     .when { font-size: var(--text-xs); }
     .row :global(.chip) { justify-self: start; }

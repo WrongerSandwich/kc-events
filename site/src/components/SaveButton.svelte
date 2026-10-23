@@ -29,6 +29,7 @@
 {/if}
 
 <style>
-  /* Wide enough for "Saved", so pressing it does not move what follows. */
+  /* About as wide as "Saved" (89 px against 88 at 375 px wide), so pressing it moves what follows by a pixel at most.
+     A wider box shifts the explorer's phone rows when it hydrates. */
   .save { min-width: 5.5rem; }
 </style>
