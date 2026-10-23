@@ -45,6 +45,23 @@ export function rowDateLine(e: PublishedEvent, today: string, withDay = false): 
   return `${formatDay(firstDay(e)!)} · ${isDateOnly(start) ? "no time listed" : formatTime(start)}`;
 }
 
+/**
+ * The machine-readable date behind rowDateLine, for the row's <time datetime> (#194): the day the line leads with, the
+ * start (with its time when it has one), or the closing day where that is the only day the line names ("Closes Sat Oct
+ * 31", "Through Sat Oct 31", "Wednesdays, through Sat Oct 31"). None for a schedule, which names no date.
+ */
+export function rowDateTime(e: PublishedEvent, today: string, withDay = false): string | undefined {
+  if (!isDated(e)) return undefined;
+  if (isMultiDay(e)) {
+    const last = lastDay(e)!;
+    if (isOnNow(e, today) || e.start === undefined) return last;
+    if (withDay) return e.start;
+    if (e.recurrence === "limited-run" && e.daysLine !== undefined) return last;
+    return isDateOnly(e.start) ? last : e.start;
+  }
+  return e.start;
+}
+
 /** The full start (date-only before timed on one day); a start-less run sorts by its last day, a recurring event first. */
 function sortStart(e: PublishedEvent): string {
   return e.start ?? lastDay(e) ?? "";

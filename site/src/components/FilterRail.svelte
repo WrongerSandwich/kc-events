@@ -40,7 +40,7 @@
 <div class="rail">
   <fieldset>
     <legend>When</legend>
-    <div class="segments" role="group" aria-label="When">
+    <div class="segments">
       {#each WHEN_PRESETS as p (p)}
         <button type="button" aria-pressed={"preset" in filters.when && filters.when.preset === p} onclick={() => onchange({ ...filters, when: { preset: p } })}>{WHEN_LABELS[p]}</button>
         {#if p === "today"}
@@ -93,7 +93,9 @@
   /* Sentence case, as the front page sets its labels. */
   legend { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--fg); margin-bottom: var(--space-1); }
   .segments, .chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
-  button { font: inherit; font-size: var(--text-xs); background: none; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: var(--space-1) var(--space-2); cursor: pointer; }
+  button { font: inherit; font-size: var(--text-xs); background: none; color: var(--fg-muted); border: 1px solid var(--control-border); border-radius: 999px; padding: var(--space-1) var(--space-2); cursor: pointer; }
+  /* Phones: 32 px, over WCAG 2.5.8's 24 px with room to spare for a finger (audit 2026-10-21, A5). */
+  @media (max-width: 800px) { button { min-height: 2rem; } }
   /* One pressed look across the rail: a tint, an edge and words in a shade, and medium weight. Kind buttons take their
      kind's tint and shade from their .kind-<slug> class; every other button the grey pressed tint and ink, set here on
      the rail so a kind button's own class still wins. */
@@ -116,4 +118,10 @@
      :focus-within, so the field rings whenever focus is inside it, mouse clicks included. The inner parts are in a
      closed shadow tree, so :has(:focus-visible) cannot see them; no supported way to ring only for the keyboard. */
   input[type="date"]:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+  /* Forced colours (Windows High Contrast) paint every button alike, so pressed differed only by weight (audit A4):
+     pressed takes the system's selection colours, the icon with its words. */
+  @media (forced-colors: active) {
+    button[aria-pressed="true"] { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }
+    button[aria-pressed="true"] :global(.kind-icon) { color: HighlightText; }
+  }
 </style>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SHORTLIST_GROUP, groupResults, resultEvents, rowDateLine } from "../src/lib/group";
+import { SHORTLIST_GROUP, groupResults, resultEvents, rowDateLine, rowDateTime } from "../src/lib/group";
 import { DEFAULT_FILTERS, EVERY_DATE, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
 import { found } from "./fixtures/found";
@@ -164,6 +164,30 @@ describe("venue sort", () => {
     const lobby = event({ id: "lobby", title: "Open house", start: "2026-10-08T12:00:00-05:00", venue: kauffman });
     const groups = groupResults([hall, theatre, lobby], f({ sort: "venue" }), today, none);
     expect(groups.map((g) => [g.heading, g.events.map((e) => e.id)])).toEqual([[kauffman, ["lobby", "hall", "theatre"]]]);
+  });
+});
+
+describe("rowDateTime", () => {
+  it("dates a row's line by the day it leads with: the start, or the closing day where that is the only one it names (#194)", () => {
+    expect(rowDateTime(fri7, today)).toBe("2026-10-09T19:00:00-05:00");
+    expect(rowDateTime(friAll, today)).toBe("2026-10-09");
+    expect(rowDateTime(onNow, today)).toBe("2026-10-20");
+    expect(rowDateTime(onNowSooner, today)).toBe("2026-10-11");
+    expect(rowDateTime(festNow, today)).toBe("2026-10-07");
+    expect(rowDateTime(opensLater, today)).toBe("2026-11-14");
+    const timed = event({ id: "timed", title: "Festival", start: "2026-10-29T18:00:00-05:00", end: "2026-10-31T22:00:00-05:00" });
+    expect(rowDateTime(timed, today)).toBe("2026-10-29T18:00:00-05:00");
+    const timedRun = event({ id: "run", title: "Play", recurrence: "limited-run", start: "2026-10-20T19:30:00-05:00", end: "2026-11-14" });
+    expect(rowDateTime(timedRun, today)).toBe("2026-10-20T19:30:00-05:00");
+    const weekly = event({ id: "weekly", title: "Play", recurrence: "limited-run", start: "2026-10-20", end: "2026-11-14", daysLine: "Wednesdays" });
+    expect(rowDateTime(weekly, today)).toBe("2026-11-14");
+  });
+
+  it("takes the start for a span that leads with its first day (the venue sort), and gives a schedule none", () => {
+    expect(rowDateTime(festNow, today, true)).toBe("2026-10-03");
+    expect(rowDateTime(opensLater, today, true)).toBe("2026-10-20");
+    expect(rowDateTime(onNow, today, true)).toBe("2026-10-20");
+    expect(rowDateTime(trivia, today)).toBeUndefined();
   });
 });
 

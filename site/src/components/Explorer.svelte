@@ -90,7 +90,8 @@
     const heading = first === undefined ? null : results.querySelector<HTMLElement>(`[data-group="${first.key}"]`);
     if (heading === null) return;
     if (was !== undefined) window.scrollBy({ top: heading.getBoundingClientRect().top - was, behavior: "instant" });
-    heading.tabIndex = -1;
+    // A day's heading takes focus only from here; a collapsed group's summary is in the Tab order already.
+    if (heading.tabIndex < 0) heading.tabIndex = -1;
     heading.focus({ preventScroll: true });
   }
 
@@ -190,6 +191,9 @@
   <div class="bar" bind:this={bar} bind:offsetHeight={barHeight}>
     <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts="/" placeholder="Search titles, venues, neighborhoods, reasons" />{#if mounted}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
     <a class="skip" href="#results">Skip to results</a>
+    <!-- Rows are two Tab stops each, so a week is hundreds of stops from Keep going and the footer (audit 2026-10-21,
+         A8): this one lands after the last dated row. -->
+    {#if count > 0}<a class="skip" href="#past-results">Skip past results</a>{/if}
     <div class="slice">
       <p class="count" aria-hidden="true">{countText}</p>
       {#if pills.length > 0}
@@ -241,6 +245,8 @@
     <!-- Keep going (#183): the days after the range, or every date. Links, so they work without JavaScript; hydrated,
          they change the filter in place. -->
     {#snippet keep()}
+      <!-- Where Skip past results lands: after the dated rows, before Keep going and the trailing groups. -->
+      <span id="past-results" tabindex="-1"></span>
       {#if more !== undefined && (more.added > 0 || more.total > count)}
         {@const next = more.next}
         {@const everyDate = more.everyDate}
@@ -257,9 +263,12 @@
     {#each groups as g, i (g.key)}
       {#if i === moreAt}{@render keep()}{/if}
       {#if g.collapsed}
-        <!-- A native disclosure, so it opens without JS and announces its state; closed, it is one line. -->
+        <!-- A native disclosure, so it opens without JS and announces its state; closed, it is one line. The summary is
+             plain text, since some screen readers flatten a heading inside it (audit A15); the group's heading is inside
+             the group, for heading navigation once it is open. -->
         <details class="collapsed">
-          <summary><h2 class="heading" data-group={g.key}>{g.heading}</h2> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
+          <summary data-group={g.key}><span class="heading">{g.heading}</span> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
+          <h2 class="visually-hidden">{g.heading}</h2>
           {@render rows(g)}
         </details>
       {:else}
@@ -283,7 +292,7 @@
   /* A short viewport (a phone on its side, 400% zoom) would keep a third of itself under the sticky bars: they scroll away. */
   @media (max-height: 500px) { .bar, .collapsed[open] summary { position: static; } }
   /* The results take focus only from the skip link; the next Tab lands on the first row, which shows the ring. */
-  .results:focus { outline: none; }
+  .results:focus, #past-results:focus { outline: none; }
   /* Sticky beside the results, scrolling on its own when it is taller than the window (a 768 px laptop). */
   .rail { position: sticky; top: var(--space-4); max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto; padding: var(--space-1); margin: calc(-1 * var(--space-1)); }
   /* (The padding keeps focus rings on the rail's edge from being clipped by the scroll box.) */
@@ -302,7 +311,7 @@
   /* Off screen until focused, then just under the search field. */
   .skip {
     position: absolute; left: 0; top: 100%; z-index: var(--z-skip); transform: translateY(-200vh);
-    background: var(--bg-raised); color: var(--fg); border: 1px solid var(--rule); border-radius: var(--radius);
+    background: var(--bg-raised); color: var(--fg); border: 1px solid var(--control-border); border-radius: var(--radius);
     padding: var(--space-2) var(--space-3); font-size: var(--text-sm);
   }
   .skip:focus { transform: none; }
@@ -312,10 +321,10 @@
   .pills { display: flex; flex-wrap: wrap; gap: var(--space-1); list-style: none; margin: 0; padding: 0; }
   .pill {
     display: inline-flex; align-items: center; gap: 0.3em; min-height: 1.75rem; font: inherit; font-size: var(--text-xs);
-    color: var(--fg); background: var(--bg-raised); border: 1px solid var(--rule); border-radius: 999px;
+    color: var(--fg); background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: 999px;
     padding: 0 var(--space-2); cursor: pointer;
   }
-  .pill:hover { border-color: var(--rule-strong); }
+  .pill:hover { border-color: var(--fg-faint); }
   .pill.kind { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
   .pill :global(.ui-icon) { width: 0.95em; height: 0.95em; margin-right: -0.15em; }
   .link { font: inherit; font-size: var(--text-sm); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
@@ -325,9 +334,9 @@
   .keep-going {
     display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--tap); padding: 0 var(--space-4);
     color: var(--accent); font-weight: var(--weight-medium); text-decoration: none;
-    border: 1px solid var(--rule); border-radius: var(--radius); background: var(--bg-raised);
+    border: 1px solid var(--control-border); border-radius: var(--radius); background: var(--bg-raised);
   }
-  .keep-going:hover { border-color: var(--rule-strong); }
+  .keep-going:hover { border-color: var(--fg-faint); }
   .see-all { color: var(--fg-muted); }
   /* A collapsed group (On now with no when-filter): one raised line, a full tap target, with a chevron that turns
      when it opens. Open, its line sticks under the bar like a day heading, so it can be closed from anywhere. */
@@ -336,7 +345,7 @@
   .results :global(.section-heading.venue) { margin-top: var(--space-3); }
   .collapsed summary {
     display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0 var(--space-3);
-    background: var(--bg-raised); border: 1px solid var(--rule); border-radius: var(--radius);
+    background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: var(--radius);
     color: var(--fg-muted); font-size: var(--text-sm); cursor: pointer; list-style: none;
   }
   .collapsed summary::-webkit-details-marker { display: none; }
@@ -346,7 +355,7 @@
     border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
     transform: rotate(-45deg); transition: transform 150ms var(--ease-out);
   }
-  .collapsed summary:hover { border-color: var(--rule-strong); }
+  .collapsed summary:hover { border-color: var(--fg-faint); }
   .collapsed .heading { display: inline; font-size: inherit; font-weight: var(--weight-medium); color: var(--fg); margin: 0; }
   .collapsed[open] summary::before, .sheet-toggle[aria-expanded="true"]::before { transform: rotate(45deg); }
   .collapsed[open] summary { position: sticky; top: var(--bar-height, var(--tap)); z-index: var(--z-sticky); margin-bottom: var(--space-1); }

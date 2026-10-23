@@ -32,6 +32,8 @@ a:hover { text-decoration: underline; }
 p a, .prose a { text-decoration: underline; }
 
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* Main takes focus only from the skip link; the next Tab rings the first control in it. */
+main:focus { outline: none; }
 
 .measure { max-width: var(--measure); margin-inline: auto; padding-inline: var(--gutter); }
 /* The explorer's layout: a rail plus one-line result rows, which need the room (a 1280 px window fills it). */

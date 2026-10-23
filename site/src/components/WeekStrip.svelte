@@ -70,6 +70,9 @@
   .lanes { display: flex; flex-direction: column; gap: 2px; align-self: stretch; margin-top: var(--space-1); }
   .lane { height: 3px; border-radius: 2px; }
   .lane.open { background: var(--hue); }
+  /* Forced colours (Windows High Contrast) drop backgrounds, and with them every band (audit A4): the bands keep theirs,
+     in the text colour. */
+  @media (forced-colors: active) { .lane.open { forced-color-adjust: none; background: CanvasText; } }
   .empty { background: none; border-style: dashed; }
   .empty .num { color: var(--fg-faint); font-weight: var(--weight-regular); }
   /* Today: drawn in ink, so the eye starts there. It keeps its weekday: the card's tile is what says "Today" (#184). */

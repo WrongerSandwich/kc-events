@@ -28,6 +28,16 @@ describe("ResultRow's names (#181)", () => {
     expect(screen.getByRole("button", { name: "Save The Wizard of Oz, Sat Oct 10" })).toBeInTheDocument();
   });
 
+  it("wraps the date line in a <time> carrying the start, and a schedule in none (#194)", () => {
+    const { container } = render(ResultRow, { event: show, today: "2026-10-05" });
+    const time = container.querySelector(".when time");
+    expect(time).toHaveAttribute("datetime", show.start);
+    expect(time).toHaveTextContent("7:00 pm");
+    const always = render(ResultRow, { event: event({ title: "Weekly trivia", recurrence: "recurring", start: undefined, schedule: "Every Tuesday" }), today: "2026-10-05" });
+    expect(always.container.querySelector(".when time")).toBeNull();
+    expect(always.container.querySelector(".when")).toHaveTextContent("Every Tuesday");
+  });
+
   it("names Save with the title alone for an always-there event, which has no day", async () => {
     render(ResultRow, { event: event({ title: "Weekly trivia", recurrence: "recurring", start: undefined, schedule: "Every Tuesday" }), today: "2026-10-05" });
     await tick();

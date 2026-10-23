@@ -2,7 +2,7 @@
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
   import { daysSaid, isPast, lastDay, neighborhoodShown, venueLine, verifiedLabel } from "../lib/events";
-  import { rowDateLine } from "../lib/group";
+  import { rowDateLine, rowDateTime } from "../lib/group";
   import { kindPath } from "../lib/landing";
   import { venuePath } from "../lib/venues";
   import type { PublishedEvent } from "../lib/types";
@@ -13,6 +13,7 @@
   // the day. hide: what every row of the page would repeat, the kind on a kind's page, the venue on a venue's (#182).
   let { event, today, withDay = false, hide }: { event: PublishedEvent; today: string; withDay?: boolean; hide?: "kind" | "venue" } = $props();
   let dateLine = $derived(rowDateLine(event, today, withDay));
+  let dateTime = $derived(rowDateTime(event, today, withDay));
   // Every event the last run reached was verified that day, which the header already says; a row speaks up only when
   // its own check is older than that, like a pick's card (#182).
   const runDay = localDate(meta.lastSuccessfulRun);
@@ -27,7 +28,7 @@
   <!-- The don't-miss tag is in the markup twice, and CSS shows one: on the date line below 1024 px, where that line is
        its own and a wrapped title would throw a tag beside it to the row's edge, and beside the title from 1024 px,
        where the date is a narrow column (#184). The hidden one is display: none, so nothing reads it twice. -->
-  <span class="when-line"><span class="when">{dateLine}</span>{#if event.dontMiss && !passed}<span class="dont-miss on-date">Don't miss</span>{/if}</span>
+  <span class="when-line"><span class="when">{#if dateTime}<time datetime={dateTime}>{dateLine}</time>{:else}{dateLine}{/if}</span>{#if event.dontMiss && !passed}<span class="dont-miss on-date">Don't miss</span>{/if}</span>
   <div class="title">
     <h3><a href={`/e/${event.id}`} title={event.title}>{event.title}</a></h3>{#if passed}<span class="passed-tag">Passed</span>{:else if event.dontMiss}<span class="dont-miss on-title">Don't miss</span>{/if}
   </div>

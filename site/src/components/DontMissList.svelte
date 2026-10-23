@@ -243,6 +243,14 @@
   /* Pressed, the chip fills with the kind's strong shade, the words in the page's colour: the same pair, reversed, so
      it clears AA wherever the chip does. */
   .kinds :global(.chip[aria-pressed="true"]) { background: var(--hue); color: var(--bg-raised); }
+  /* Phones: 32 px, over WCAG 2.5.8's 24 px with room to spare for a finger (audit 2026-10-21, A5). */
+  @media (max-width: 800px) { .kinds :global(.chip) { min-height: 2rem; } }
+  /* Forced colours (Windows High Contrast) drop the tint, the chip's only edge, and the pressed fill (audit A4): an
+     edge in the button colour, and pressed in the system's selection colours, the icon with its words. */
+  @media (forced-colors: active) {
+    .kinds :global(.chip) { border: 1px solid ButtonText; }
+    .kinds :global(.chip[aria-pressed="true"]) { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }
+  }
   /* A kind's icon before a title in the one-line list, in the kind's colour. */
   .icon { flex: none; color: var(--hue); margin-right: var(--space-2); }
   @media (prefers-reduced-motion: reduce) { .kinds :global(.chip) { transition: none; } }
