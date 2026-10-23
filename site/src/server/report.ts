@@ -13,8 +13,17 @@ export const MAX_WHAT = 2000;
  * encoding comes to about 23 KB (#187).
  */
 export const MAX_BODY = 32_000;
-/** The most issues the token's user may have opened in the last hour before the function refuses to file another (#187). */
+/**
+ * The most issues the token's user may have opened in the last hour before the function refuses to file another (#187).
+ * The search is `author:@me`, the token's owner, so issues the owner (or an agent signed in as the owner) opens by hand
+ * count too: a burst of filing, like the 2026-10-21 audit's eighteen, refuses readers' reports until the hour has passed.
+ */
 export const MAX_PER_HOUR = 20;
+/**
+ * The most comments an open issue may have before a further report of its event is refused rather than added: the
+ * hourly cap counts only issues opened, so this bounds a script that reports one event over and over (#187 review).
+ */
+export const MAX_COMMENTS = 20;
 /**
  * The form's fields; any other name in a body refuses it. `website` is the honeypot, which a person never fills. `event`
  * is the event's page on this site, and all the issue says about the event (its title and pages) is looked up from the
@@ -182,14 +191,15 @@ async function gitHub<T>(deps: ReportDeps, path: string, body?: unknown): Promis
 /** The issue's link for the reader, only when it is an issue of this repository. */
 const issueLink = (url: string | undefined) => (url?.startsWith(`${siteConfig.repoUrl}/issues/`) ? { issueUrl: url } : {});
 
-interface Found { total_count: number; items: { number: number; html_url: string; body?: string | null }[] }
+interface Found { total_count: number; items: { number: number; html_url: string; body?: string | null; comments?: number }[] }
 
 const search = (deps: ReportDeps, q: string) => gitHub<Found>(deps, `/search/issues?${new URLSearchParams({ q, per_page: "100" })}`);
 
 /**
  * Files the report, or, when an open needs-triage issue already carries the same event, comments on that issue instead
- * (#187). Refuses with 429, filing nothing, once the token's user has opened MAX_PER_HOUR issues in the last hour: the
- * function's own bound on volume, beside the firewall's per-address rule.
+ * (#187). Refuses with 429, filing nothing, once the token's user has opened MAX_PER_HOUR issues in the last hour, or
+ * once that open issue has MAX_COMMENTS comments: the function's own bounds on volume, beside the firewall's
+ * per-address rule.
  */
 async function file(report: Report, deps: ReportDeps, now: Date): Promise<Outcome> {
   if (!deps.token) {
@@ -210,6 +220,10 @@ async function file(report: Report, deps: ReportDeps, now: Date): Promise<Outcom
       const open = await search(deps, `repo:${owner}/${repo} is:issue is:open label:needs-triage in:body "${event}"`);
       const same = open.items.find((issue) => (issue.body ?? "").split(/\r?\n/).some((line) => line.trim() === event));
       if (same) {
+        if ((same.comments ?? 0) >= MAX_COMMENTS) {
+          console.error(`report: issue #${same.number} already has ${same.comments} comments; refusing another`);
+          return { ok: false, status: 429, reason: "This listing has been reported many times already." };
+        }
         await gitHub(deps, `/repos/${owner}/${repo}/issues/${same.number}/comments`, { body: commentFor(report.what) });
         return { ok: true, ...issueLink(same.html_url) };
       }

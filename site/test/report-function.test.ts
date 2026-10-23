@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { REPORT_TEMPLATE } from "../src/lib/report";
-import { handleReport, issueFor, LABELS, MAX_BODY, MAX_PER_HOUR, MAX_WHAT, publishedEvents } from "../src/server/report";
+import { handleReport, issueFor, LABELS, MAX_BODY, MAX_COMMENTS, MAX_PER_HOUR, MAX_WHAT, publishedEvents } from "../src/server/report";
 
 const SITE = "https://www.kcthisweek.com";
 const form = readFileSync(fileURLToPath(new URL(`../../.github/ISSUE_TEMPLATE/${REPORT_TEMPLATE}`, import.meta.url)), "utf8");
@@ -11,7 +11,7 @@ const form = readFileSync(fileURLToPath(new URL(`../../.github/ISSUE_TEMPLATE/${
 const ISSUES = "https://api.github.com/repos/WrongerSandwich/kc-events/issues";
 const FILED = "https://github.com/WrongerSandwich/kc-events/issues/999";
 
-interface Open { number: number; html_url: string; body: string }
+interface Open { number: number; html_url: string; body: string; comments?: number }
 
 /**
  * A fake GitHub API. `calls` holds the issues filed (POST /issues), `comments` the comments posted, `searches` each
@@ -118,6 +118,19 @@ describe("the report function", () => {
     expect(comments[0]!.body).toContain("```text\nStill the wrong date.\n```");
     expect(comments[0]!.body).toMatch(/report form on the site/);
     expect(searches[1]).toBe(`repo:WrongerSandwich/kc-events is:issue is:open label:needs-triage in:body "${SITE}/e/evt_1"`);
+  });
+
+  it("adds no comment past MAX_COMMENTS on the open issue, so one event reported over and over stays bounded", async () => {
+    const body = `### Event on kcthisweek.com\n\n${SITE}/e/evt_1\n`;
+    const html_url = "https://github.com/WrongerSandwich/kc-events/issues/42";
+    const under = await send({ what: "Wrong date.", ...eventFields }, { open: [{ number: 42, html_url, body, comments: MAX_COMMENTS - 1 }] });
+    expect(under.response.status).toBe(200);
+    expect(under.comments).toHaveLength(1);
+    const full = await send({ what: "Wrong date.", ...eventFields }, { open: [{ number: 42, html_url, body, comments: MAX_COMMENTS }], json: true });
+    expect(full.response.status).toBe(429);
+    expect(await full.response.json()).toEqual({ ok: false, reason: "This listing has been reported many times already." });
+    expect(full.comments).toHaveLength(0);
+    expect(full.calls).toHaveLength(0);
   });
 
   it("opens a new issue when the open issues search found only carry another event's link", async () => {
