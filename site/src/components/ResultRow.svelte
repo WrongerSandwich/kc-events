@@ -55,6 +55,10 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas: "when when save" "title title save" "chip where save" "why why why";
     border-bottom: 1px solid var(--rule); font-size: var(--text-sm); line-height: var(--leading-tight);
+    /* A row off screen is not styled or laid out until it nears the viewport, so a list of hundreds costs what a
+       screenful does (#195; audit 2026-10-21, A9). Until a row has been drawn it holds the place of an unflagged one at
+       this width (measured on the 10-19 run: 78 px here, 48 from 1024 px, 26 from 1280 px); after, its own height. */
+    content-visibility: auto; contain-intrinsic-size: auto 78px;
   }
   .when-line { grid-area: when; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
   .when { min-width: 0; color: var(--fg-muted); font-size: var(--text-xs); }
@@ -112,6 +116,7 @@
       gap: 0 var(--space-2);
       grid-template-columns: var(--when-width) minmax(0, 1fr) auto auto auto;
       grid-template-areas: "when title title title title" ". where chip verified save" ". why why why why";
+      contain-intrinsic-size: auto 48px;
     }
     .row.with-day { --when-width: 15.5rem; }
     .when { font-size: var(--text-sm); }
@@ -153,6 +158,7 @@
       align-items: first baseline;
       grid-template-columns: var(--when-width) fit-content(var(--title-max)) minmax(12rem, 1fr) var(--chip-width) var(--verified-width) var(--save-width);
       grid-template-areas: "when title where chip verified save" ". why why why why why";
+      contain-intrinsic-size: auto 26px;
     }
     .row.no-chip { --chip-width: 0px; }
     .row.with-day { --when-width: 13.5rem; }
