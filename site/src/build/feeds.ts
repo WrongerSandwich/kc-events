@@ -15,5 +15,5 @@ export function calendarResponse(body: string): Response {
 }
 
 export function feedResponse(feed: CalendarFeed): Response {
-  return calendarResponse(feedIcs(feed, { siteName: siteConfig.name, stamp: meta.lastSuccessfulRun, origin, venues }));
+  return calendarResponse(feedIcs(feed, { siteName: siteConfig.name, tagline: siteConfig.tagline, stamp: meta.lastSuccessfulRun, origin, venues }));
 }

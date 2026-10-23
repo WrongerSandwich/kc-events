@@ -3,6 +3,7 @@
   import { events } from "../generated/events";
   import { meta } from "../generated/meta";
   import { downloadText } from "../lib/download";
+  import { exportName } from "../lib/export-name";
   import { isDated, isPast, lastDay } from "../lib/events";
   import { keepGoing } from "../lib/filter";
   import { formatDay } from "../lib/dates";
@@ -156,6 +157,8 @@
   let pills = $derived(filterPills(filters));
   // A passed save (the saved view lists them) has nothing left to put in a calendar.
   let exportable = $derived(listed.filter((e) => isDated(e) && !isPast(e, today)));
+  // Named after the slice (#190): "KC This Week · Comedy" in kc-this-week-comedy.ics.
+  let exportAs = $derived(exportName(filters, siteConfig.name));
 
   function exportIcs(filename: string, list: typeof events, calendarName: string) {
     // new Date() is fine here: this is a component, not lib/ (the no-clock grep covers lib only).
@@ -198,7 +201,7 @@
       <ShareButton label="Share saved" data={shareSaved} disabled={upcomingSaves.length === 0} />
       <button type="button" class="export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}>Export saved</button>
     {:else}
-      <button type="button" class="export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs("kc-this-week.ics", exportable, siteConfig.name)}>Export this view</button>
+      <button type="button" class="export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs(exportAs.filename, exportable, exportAs.calendarName)}>Export this view</button>
     {/if}
     {#if !isDefault(filters)}<button type="button" class="clear" onclick={() => change(DEFAULT_FILTERS)}>Clear filters</button>{/if}
   </div>
