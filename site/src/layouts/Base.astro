@@ -1,17 +1,18 @@
 ---
-import "@fontsource-variable/geist";
-import "@fontsource/josefin-sans/700.css";
+import "../styles/fonts.css";
 import "../styles/tokens.css";
 import "../styles/base.css";
 import { siteConfig } from "../site.config";
 import { origin, shareImage } from "../build/origin";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
-import StalenessBanner from "../components/StalenessBanner.svelte";
+import StalenessBanner from "../components/StalenessBanner.astro";
 import IconSprite from "../components/IconSprite.astro";
 import Analytics from "@vercel/analytics/astro";
-// The one face every page sets its text in, latin subset: preloaded so it is not found only once the CSS is parsed.
-import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
+// The one face every page sets its text in, latin subset, and the wordmark's: preloaded so they are not found only once
+// the CSS is parsed, and the name does not paint in the fallback first (#195).
+import geistLatin from "../fonts/geist-latin-wght-400-600.woff2?url";
+import wordmark from "../fonts/wordmark-700.woff2?url";
 
 /** noindex: a page no search engine should list (the 404), which then names no canonical URL either. */
 /** jsonLd: one object, or several, each in a script of its own (an event page's Event and its BreadcrumbList). */
@@ -35,6 +36,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f0f0f" />
     <title>{fullTitle}</title>
     <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={wordmark} as="font" type="font/woff2" crossorigin />
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={url} />}
     <!-- Safari draws no SVG icon and takes the ICO; the others take the SVG, listed after it. -->
@@ -58,7 +60,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
   </head>
   <body>
     <IconSprite />
-    <Header><StalenessBanner client:idle /></Header>
+    <Header><StalenessBanner /></Header>
     {/* Focusable, so the skip link moves focus here in every browser, not only where it moves the sequential start
         point (audit 2026-10-21, A13); base.css draws it no ring. */}
     <main id="main" class={wide ? "wide" : "measure"} tabindex="-1">

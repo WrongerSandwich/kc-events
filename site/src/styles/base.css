@@ -14,6 +14,8 @@ body {
 h1, h2, h3, h4, p, ul, ol, dl, dd, figure, blockquote { margin: 0; }
 h1, h2, h3, h4 { line-height: var(--leading-tight); text-wrap: balance; }
 h1, h2 { font-weight: var(--weight-strong); }
+/* The browser's bold is 700, past Geist's cut axis (fonts.css), so bold text asks for the weight it gets (#195). */
+b, strong { font-weight: var(--weight-strong); }
 h1 { font-size: var(--text-3xl); letter-spacing: var(--tracking-display); }
 h2 { font-size: var(--text-xl); letter-spacing: var(--tracking-heading); }
 h3 { font-size: var(--text-lg); font-weight: var(--weight-strong); }

@@ -3,7 +3,7 @@ import { meta } from "../generated/meta";
 import { formatDay, localDate } from "../lib/dates";
 import { siteConfig } from "../site.config";
 import Mark from "./Mark.astro";
-import SavedLink from "./SavedLink.svelte";
+import SavedLink from "./SavedLink.astro";
 
 // One width on every page (#181): the explorer's wide column, so the name and nav sit in the same place wherever the
 // reader goes, and a measure page's text sits centred under them.
@@ -16,7 +16,7 @@ const runDay = localDate(meta.lastSuccessfulRun);
       <a class="name" href="/"><Mark class="mark" /><span class="words">{siteConfig.name}</span></a>
       <nav aria-label="Site">
         <a href="/explore">Explore</a>
-        <SavedLink client:idle />
+        <SavedLink />
         <a href="/about">About</a>
       </nav>
     </div>
