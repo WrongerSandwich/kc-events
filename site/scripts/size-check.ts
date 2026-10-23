@@ -66,8 +66,9 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // writer's page link and extra properties, which the feeds use (#136), and 300 for the report form's two CSP hashes, which every
   // page's policy carries (#129), and the dependency bump of #152, and 200 each for the saved view's own empty state and for the
   // scroll padding that keeps a focused row clear of the sticky bar (audit 2026-10-21), and 750 for opening on the week with
-  // day chips and Keep going (#183), and 100 for the no-script note's links to the kind and region pages
-  { page: "explore.html", budget: 52_100, build: "fixture" },
+  // day chips and Keep going (#183), and 100 for the no-script note's links to the kind and region pages, and 400 for the
+  // calendar writer's notes, categories and free time, and the export named after its slice (#190)
+  { page: "explore.html", budget: 52_500, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
 ];

@@ -41,6 +41,15 @@ describe("export this view", () => {
     expect(text).toContain("X-WR-CALNAME:KC This Week\r\n");
   });
 
+  it("names the file and the calendar after the slice (#190)", async () => {
+    history.replaceState(null, "", "/explore?kind=music");
+    render(Explorer);
+    await fireEvent.click(screen.getByRole("button", { name: "Export this view" }));
+    const [name, text] = vi.mocked(downloadText).mock.calls[0]!;
+    expect(name).toBe("kc-this-week-music.ics");
+    expect(text).toContain("X-WR-CALNAME:KC This Week · Music\r\n");
+  });
+
   it("is disabled when the view holds only recurring events, though the count shows events", async () => {
     history.replaceState(null, "", "/explore?recurring=1&q=trivia");
     render(Explorer);
