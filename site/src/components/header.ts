@@ -7,15 +7,20 @@
 import { meta } from "../generated/meta";
 import { siteConfig } from "../site.config";
 import { addDays, localDate, nowIn } from "../lib/dates";
-import { type Saves, upcomingCount } from "../lib/saves";
+import { type SavedMap, type Saves, upcomingCount } from "../lib/saves";
 
 /** The first day the list counts as out of date: staleAfterDays after the last successful run. */
 export function staleFrom(): string {
   return addDays(localDate(meta.lastSuccessfulRun), siteConfig.staleAfterDays + 1);
 }
 
+/** The visitor's clock in the job's time zone: the one read of it, which the islands' clock (clock.svelte.ts) shares. */
+export function visitorNow(): string {
+  return nowIn(meta.timeZone, new Date());
+}
+
 function visitorToday(): string {
-  return localDate(nowIn(meta.timeZone, new Date()));
+  return localDate(visitorNow());
 }
 
 /** Calls fn now and whenever the tab comes back into view; returns a stop. */
@@ -40,7 +45,7 @@ export function showWhenStale(banner: HTMLElement): () => void {
  * rendered. The badge is inline-block, which browsers pad with a space when they compute the name, so the name is set.
  */
 export function showSavedCount(link: HTMLAnchorElement, saves: Saves): () => void {
-  let saved: Parameters<typeof upcomingCount>[0] | undefined;
+  let saved: SavedMap | undefined;
   const render = () => {
     if (saved === undefined) return;
     const count = upcomingCount(saved, visitorToday());

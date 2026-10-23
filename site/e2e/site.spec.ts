@@ -767,7 +767,16 @@ test("a past event has no page, and the 404 renders", async ({ page }) => {
 test("the staleness banner appears after nine days", async ({ page }) => {
   await on(page, new Date("2026-10-15T17:00:00Z"), "/");
   // Each pick section has its own (empty) status region too, for its kind filter.
-  await expect(page.getByRole("status").filter({ hasText: "last researched" })).toContainText("This list was last researched on Oct 5 and may have missed changes since.");
+  const banner = page.getByRole("status").filter({ hasText: "last researched" });
+  await expect(banner).toContainText("This list was last researched on Oct 5 and may have missed changes since.");
+  // The header's one width (#181), and a warning sign and a lead in words (#184), on a page with no island (#195).
+  await expect(banner.locator("p")).toHaveClass("wide");
+  await expect(banner.locator("svg use")).toHaveAttribute("href", "#ui-icon-alert");
+  await expect(banner.locator("strong")).toHaveText("Out of date.");
+  await on(page, new Date("2026-10-14T17:00:00Z"), "/venues");
+  await expect(page.locator("[data-staleness]")).toBeHidden();
+  await on(page, new Date("2026-10-15T17:00:00Z"), "/venues");
+  await expect(page.getByRole("status").filter({ hasText: "last researched" })).toBeVisible();
 });
 
 test("the dataset is published as the projection, and llms.txt and the sitemap point at the pages", async ({ request }) => {

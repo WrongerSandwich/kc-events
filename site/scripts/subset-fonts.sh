@@ -20,20 +20,20 @@ out=src/fonts
 
 mkdir -p "$out"
 for subset in latin latin-ext cyrillic cyrillic-ext vietnamese; do
-  python3 -I -m fontTools.varLib.instancer -q "$geist/files/geist-$subset-wght-normal.woff2" wght=400:600 \
+  python3 -I -m fontTools.varLib.instancer -q "$geist/files/geist-$subset-wght-normal.woff2" wght=400:600 --no-recalc-timestamp \
     -o "$out/geist-$subset-wght-400-600.woff2"
 done
 
 python3 -I -m fontTools.subset "$josefin/files/josefin-sans-latin-700-normal.woff2" --text="$WORDMARK" \
-  --flavor=woff2 --layout-features=kern --no-hinting --desubroutinize --output-file="$out/wordmark-700.woff2"
+  --flavor=woff2 --layout-features=kern --name-IDs="*" --no-hinting --desubroutinize --output-file="$out/wordmark-700.woff2"
 
 python3 -I - "$out/wordmark-700.woff2" <<'PY'
 import sys
 from fontTools.ttLib import TTFont
 
 path = sys.argv[1]
-font = TTFont(path)
-names = {1: "KC Wordmark", 2: "Bold", 3: "KC Wordmark Bold (Josefin Sans subset)", 4: "KC Wordmark Bold", 6: "KCWordmark-Bold", 16: "KC Wordmark", 17: "Bold"}
+font = TTFont(path, recalcTimestamp=False)
+names = {1: "KC Wordmark", 2: "Bold", 3: "KC Wordmark Bold 2.001", 4: "KC Wordmark Bold", 6: "KCWordmark-Bold", 16: "KC Wordmark", 17: "Bold"}
 name = font["name"]
 for record in list(name.names):
     if record.nameID in names:

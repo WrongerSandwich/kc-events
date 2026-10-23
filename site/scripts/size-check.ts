@@ -73,14 +73,14 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // and 300 for the front page's next pass: a row's Don't miss on its date line on phones, the staleness banner's warning sign
   // in every page's sprite, and the closing-date wording (#184; measured 284 on the fixture build), and 400 for the next
   // accessibility pass: a <time> on each row, Skip past results, forced colours, phone-sized chips and prefers-contrast (#194;
-  // measured 399), less 200 for the header's Saved link as plain script rather than a Svelte island (#195; measured 231)
-  { page: "explore.html", budget: 53_650, build: "fixture" },
+  // measured 399), less 500 for the header's Saved link and staleness banner as plain script rather than Svelte islands (#195; measured 551)
+  { page: "explore.html", budget: 53_350, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
   // A page with no island of its own loads no Svelte runtime: the header's Saved link and staleness banner are plain
-  // script (#195; audit 2026-10-21, A18). The 404 stands for those pages: 12.9 KB, against 32.8 KB with the runtime,
+  // script (#195; audit 2026-10-21, A18). The 404 stands for those pages: 12.6 KB, against 32.8 KB with the runtime,
   // so this trips if it comes back.
-  { page: "404.html", budget: 13_500, build: "fixture" },
+  { page: "404.html", budget: 13_000, build: "fixture" },
 ];
 
 function main(): void {
