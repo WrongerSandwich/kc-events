@@ -1,31 +1,29 @@
 import type { APIRoute } from "astro";
 import { origin } from "../build/origin";
+import { about } from "../generated/about";
 import { events } from "../generated/events";
 import { meta } from "../generated/meta";
+import { venues } from "../generated/venues";
+import { llmsTxt } from "../lib/llms";
+import { PUBLISHED_SCHEMA_VERSION } from "../lib/schema-version";
 import { siteConfig } from "../site.config";
 
 export const GET: APIRoute = () =>
   new Response(
-    `# ${siteConfig.name}
-
-> ${siteConfig.tagline}
-
-A weekly research job reads Kansas City venue and organizer pages directly, a language model writes each listing from the page, and an event is published only when its date and venue were read from the venue's or organizer's own page (cite-or-drop). Anything it cannot cite is held back. Every event shows when it was last verified. A pick, tagged Don't miss, is an editorial call, made by a model under written rules, that a one-off or limited run is worth going out of the way for; recurring events are never picks.
-
-Last run: ${meta.lastSuccessfulRun}. ${events.length} active events.
-
-## Pages
-
-- ${origin}/ : the picks by horizon, then recurring events
-- ${origin}/explore : active events, filterable by date, kind, region, picks, and search (filters are in the query string, applied in the browser); its HTML lists today through Sunday whatever the query, so read every event from /events.json below
-- ${origin}/e/<id> : one event; add .ics for a calendar file
-- ${origin}/about : how the site is made and where to report a wrong listing
-
-## Data
-
-- ${origin}/events.json : every active event as JSON, with the fields the site shows, free to reuse under CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/) with a link back
-- ${origin}/sitemap.xml : every page
-- ${siteConfig.repoUrl} : the code and the research rules
-`,
+    llmsTxt({
+      origin,
+      siteName: siteConfig.name,
+      tagline: siteConfig.tagline,
+      repoUrl: siteConfig.repoUrl,
+      lastSuccessfulRun: meta.lastSuccessfulRun,
+      today: meta.buildToday,
+      horizonWeeks: about.horizonWeeks,
+      kinds: meta.kinds,
+      regions: meta.regions,
+      neighborhoods: about.neighborhoods,
+      venueCount: venues.length,
+      schemaVersion: PUBLISHED_SCHEMA_VERSION,
+      events,
+    }),
     { headers: { "Content-Type": "text/plain; charset=utf-8" } },
   );
