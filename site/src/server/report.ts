@@ -7,8 +7,14 @@ import { siteConfig } from "../site.config.js";
 
 /** The longest "What is wrong" accepted, in characters. */
 export const MAX_WHAT = 2000;
-/** The longest request body read: the form's fields at their limits, URL-encoded, with room to spare. */
-const MAX_BODY = 16_000;
+/**
+ * The longest request body read: the form's fields at their limits, URL-encoded, with room to spare. A "what" of
+ * MAX_WHAT characters in a three-byte script URL-encodes to 18,000 characters, and every field at its limit in the worst
+ * encoding comes to about 23 KB (#187).
+ */
+export const MAX_BODY = 32_000;
+/** The most issues the token's user may have opened in the last hour before the function refuses to file another (#187). */
+export const MAX_PER_HOUR = 20;
 /**
  * The form's fields; any other name in a body refuses it. `website` is the honeypot, which a person never fills. `event`
  * is the event's page on this site, and all the issue says about the event (its title and pages) is looked up from the
@@ -32,7 +38,7 @@ export interface ReportDeps {
 }
 
 /** Why a report was not filed, for the reader; undefined for a refusal that says nothing (the honeypot, a forged body). */
-type Outcome = { ok: true; issueUrl: string } | { ok: false; status: number; reason?: string };
+type Outcome = { ok: true; issueUrl?: string } | { ok: false; status: number; reason?: string };
 
 /** The form's fields, read: what the reader wrote, and the event's page on this site when the form was on one. */
 interface Form {
@@ -59,7 +65,7 @@ const oneLine = (s: string) => s.replace(/\s+/g, " ").trim();
 
 /** The form's fields read and checked, or the refusal. A refusal files nothing. */
 export function parseReport(body: string, origins: string[]): Form | { status: number; reason?: string } {
-  if (body.length > MAX_BODY) return { status: 413 };
+  if (body.length > MAX_BODY) return { status: 413, reason: "The report is too long; keep it shorter." };
   const params = new URLSearchParams(body);
   const seen = new Set<string>();
   for (const key of params.keys()) {
@@ -132,41 +138,87 @@ export function issueFor(report: Report): { title: string; body: string } {
   const body = [
     field("What is wrong", fenced(what)),
     field("Event on kcthisweek.com", context?.event),
-    field("Primary page", context?.primaryUrl),
-    field("Event page", context?.eventUrl),
-    "---\n\n_Sent from the report form on the site, by a reader who may have no GitHub account._",
+    field("Page it was read from", context?.primaryUrl),
+    field("Event's own page", context?.eventUrl),
+    SENT_FROM,
   ].join("\n\n");
   return { title, body };
 }
 
-async function file(report: Report, deps: ReportDeps): Promise<Outcome> {
+const SENT_FROM = "---\n\n_Sent from the report form on the site, by a reader who may have no GitHub account._";
+
+/** A further report of an event that already has an open issue, as a comment on that issue. */
+export function commentFor(what: string): string {
+  return ["### Reported again", fenced(what), SENT_FROM].join("\n\n");
+}
+
+/** Thrown by a GitHub call that failed; the handler answers it as "could not send" and logs the message. */
+class GitHubError extends Error {}
+
+/** One GitHub API call with the token; its JSON answer, or a GitHubError. The token itself is never logged. */
+async function gitHub<T>(deps: ReportDeps, path: string, body?: unknown): Promise<T> {
+  let response: Response;
+  try {
+    response = await deps.fetch(`https://api.github.com${path}`, {
+      method: body === undefined ? "GET" : "POST",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${deps.token}`,
+        ...(body !== undefined && { "Content-Type": "application/json" }),
+        "User-Agent": "kc-this-week-report-form",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      ...(body !== undefined && { body: JSON.stringify(body) }),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (error) {
+    throw new GitHubError(`GitHub could not be reached: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  // An expired token or a lost permission shows here, in the function's logs.
+  if (!response.ok) throw new GitHubError(`GitHub answered ${response.status} to ${path.split("?")[0]}: ${(await response.text()).slice(0, 300)}`);
+  return (await response.json()) as T;
+}
+
+/** The issue's link for the reader, only when it is an issue of this repository. */
+const issueLink = (url: string | undefined) => (url?.startsWith(`${siteConfig.repoUrl}/issues/`) ? { issueUrl: url } : {});
+
+interface Found { total_count: number; items: { number: number; html_url: string; body?: string | null }[] }
+
+const search = (deps: ReportDeps, q: string) => gitHub<Found>(deps, `/search/issues?${new URLSearchParams({ q, per_page: "100" })}`);
+
+/**
+ * Files the report, or, when an open needs-triage issue already carries the same event, comments on that issue instead
+ * (#187). Refuses with 429, filing nothing, once the token's user has opened MAX_PER_HOUR issues in the last hour: the
+ * function's own bound on volume, beside the firewall's per-address rule.
+ */
+async function file(report: Report, deps: ReportDeps, now: Date): Promise<Outcome> {
   if (!deps.token) {
     console.error("report: no GITHUB_REPORT_TOKEN in the environment");
     return { ok: false, status: 503 };
   }
   const [owner, repo] = new URL(siteConfig.repoUrl).pathname.split("/").filter(Boolean);
   try {
-    const response = await deps.fetch(`https://api.github.com/repos/${owner}/${repo}/issues`, {
-      method: "POST",
-      headers: {
-        Accept: "application/vnd.github+json",
-        Authorization: `Bearer ${deps.token}`,
-        "Content-Type": "application/json",
-        "User-Agent": "kc-this-week-report-form",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-      body: JSON.stringify({ ...issueFor(report), labels: LABELS }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!response.ok) {
-      // An expired token or a lost permission shows here, in the function's logs; the token itself is never logged.
-      console.error(`report: GitHub answered ${response.status}: ${(await response.text()).slice(0, 300)}`);
-      return { ok: false, status: 502 };
+    const hourAgo = new Date(now.getTime() - 3_600_000).toISOString().replace(/\.\d{3}Z$/, "Z");
+    const recent = await search(deps, `repo:${owner}/${repo} is:issue author:@me created:>=${hourAgo}`);
+    if (recent.total_count >= MAX_PER_HOUR) {
+      console.error(`report: ${recent.total_count} issues opened in the last hour; refusing another`);
+      return { ok: false, status: 429, reason: "Too many reports in the last hour." };
     }
-    const issue = (await response.json()) as { html_url?: string };
-    return { ok: true, issueUrl: issue.html_url ?? "" };
+    const event = report.context?.event;
+    if (event) {
+      // Search matches words, not the exact link, so each hit's body is checked for the event's link on a line of its own.
+      const open = await search(deps, `repo:${owner}/${repo} is:issue is:open label:needs-triage in:body "${event}"`);
+      const same = open.items.find((issue) => (issue.body ?? "").split(/\r?\n/).some((line) => line.trim() === event));
+      if (same) {
+        await gitHub(deps, `/repos/${owner}/${repo}/issues/${same.number}/comments`, { body: commentFor(report.what) });
+        return { ok: true, ...issueLink(same.html_url) };
+      }
+    }
+    const issue = await gitHub<{ html_url?: string }>(deps, `/repos/${owner}/${repo}/issues`, { ...issueFor(report), labels: LABELS });
+    return { ok: true, ...issueLink(issue.html_url) };
   } catch (error) {
-    console.error(`report: GitHub could not be reached: ${error instanceof Error ? error.message : String(error)}`);
+    // A GitHub answer that is not JSON lands here too, as "could not send" rather than a crash.
+    console.error(`report: ${error instanceof GitHubError ? error.message : `GitHub's answer could not be read: ${String(error)}`}`);
     return { ok: false, status: 502 };
   }
 }
@@ -176,8 +228,9 @@ const escape = (s: string) => s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)}
 /** The plain page a form posted without JavaScript lands on. */
 function page(outcome: Outcome, back: string, github: string): string {
   const message = outcome.ok
-    ? "<p>Sent. Thanks.</p>"
-    : `<p>Could not send.${outcome.reason ? ` ${escape(outcome.reason)}` : ""} Try again, or <a href="${escape(github)}">report it on GitHub</a>.</p>`;
+    ? `<p>Sent. It is now a ${outcome.issueUrl ? `<a href="${escape(outcome.issueUrl)}">public issue on GitHub</a>` : "public issue on GitHub"}.</p>`
+    : `<p>Could not send.${outcome.reason ? ` ${escape(outcome.reason)}` : ""} Try again, or use the GitHub link below.</p>
+<p><a href="${escape(github)}">Report it on GitHub</a></p>`;
   return `<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Report a wrong listing · ${escape(siteConfig.name)}</title></head>
@@ -210,10 +263,10 @@ const HEADERS = {
 };
 
 /**
- * Answers a POST of the form: JSON ({ ok, reason? }) to the form's script, which asks for it in Accept, else the
+ * Answers a POST of the form: JSON ({ ok, url?, reason? }, url the issue's) to the form's script, which asks for it in Accept, else the
  * plain page. Nothing is filed unless every check passes.
  */
-export async function handleReport(request: Request, deps: ReportDeps): Promise<Response> {
+export async function handleReport(request: Request, deps: ReportDeps, now = new Date()): Promise<Response> {
   if (request.method !== "POST") return new Response("Method not allowed\n", { status: 405, headers: { ...HEADERS, Allow: "POST" } });
   // A browser says where a post came from: one from another site's page is refused, so no page elsewhere can make its
   // visitors file reports (each from their own address, past the firewall's per-IP limit).
@@ -225,10 +278,10 @@ export async function handleReport(request: Request, deps: ReportDeps): Promise<
   const form = parseReport(body, deps.origins);
   const parsed = "what" in form ? await resolve(form, deps) : form;
   const report = "what" in parsed ? parsed : undefined;
-  const outcome: Outcome = "what" in parsed ? await file(parsed, deps) : { ok: false, ...parsed };
+  const outcome: Outcome = "what" in parsed ? await file(parsed, deps, now) : { ok: false, ...parsed };
   const status = outcome.ok ? 200 : outcome.status;
   if (request.headers.get("Accept")?.includes("application/json")) {
-    const json = outcome.ok ? { ok: true } : { ok: false, ...(outcome.reason && { reason: outcome.reason }) };
+    const json = outcome.ok ? { ok: true, ...(outcome.issueUrl && { url: outcome.issueUrl }) } : { ok: false, ...(outcome.reason && { reason: outcome.reason }) };
     return Response.json(json, { status, headers: HEADERS });
   }
   const back = report?.context ? new URL(report.context.event).pathname : refererPath(request, deps.origins);
