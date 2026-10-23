@@ -1,6 +1,7 @@
 <script lang="ts">
+  import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { daysSaid, hostOf, detailsUrl, isPast, lastDay, venueLine } from "../lib/events";
+  import { daysSaid, isPast, lastDay, venueLine } from "../lib/events";
   import { rowDateLine } from "../lib/group";
   import { kindPath } from "../lib/landing";
   import { venuePath } from "../lib/venues";
@@ -9,29 +10,34 @@
   import SaveButton from "./SaveButton.svelte";
 
   // withDay: the list has no day headings (the venue sort, or the saved view's passed group), so the date line carries
-  // the day.
-  let { event, today, withDay = false }: { event: PublishedEvent; today: string; withDay?: boolean } = $props();
+  // the day. hide: what every row of the page would repeat, the kind on a kind's page, the venue on a venue's (#182).
+  let { event, today, withDay = false, hide }: { event: PublishedEvent; today: string; withDay?: boolean; hide?: "kind" | "venue" } = $props();
   let dateLine = $derived(rowDateLine(event, today, withDay));
-  let verifiedOn = $derived(formatShort(localDate(event.lastVerified)));
+  // Every event the last run reached was verified that day, which the header already says; a row speaks up only when
+  // its own check is older than that, like a pick's card (#182).
+  const runDay = localDate(meta.lastSuccessfulRun);
+  let checked = $derived(localDate(event.lastVerified));
+  let verified = $derived(`Date and venue verified ${formatShort(checked)}`);
   // Only a save is listed once it has passed (the saved view keeps it), and it says so.
   let passed = $derived(isPast(event, today));
-  let host = $derived(hostOf(detailsUrl(event)));
 </script>
 
-<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} class:with-day={withDay} class:passed>
+<article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} class:with-day={withDay} class:passed class:no-chip={hide === "kind"}>
   <span class="when">{dateLine}</span>
   <div class="title">
-    <h3><a href={`/e/${event.id}`}>{event.title}</a></h3>{#if passed}<span class="passed-tag">Passed</span>{:else if event.dontMiss}<span class="dont-miss">Don't miss</span>{/if}
+    <h3><a href={`/e/${event.id}`} title={event.title}>{event.title}</a></h3>{#if passed}<span class="passed-tag">Passed</span>{:else if event.dontMiss}<span class="dont-miss">Don't miss</span>{/if}
   </div>
-  <!-- The venue's page (#137), out of the Tab order like the host, so a row stays two stops; the event page links it too.
-       On a venue page the link is to that page itself: a prop to drop it would cost the explorer's script. Each link's
-       name says whose venue or source it is, so a list of links does not read "screenland.com" forty times (#181). -->
-  <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><a class="venue" href={venuePath(event.venue)} tabindex="-1" aria-label={`${venueLine(event)}, venue of ${event.title}`}>{venueLine(event)}</a><span class="hood">{` · ${event.neighborhood}`}</span></span>
-  <!-- The chip is the link it looks like, to the kind's page, out of the Tab order like the venue and host (#181). -->
-  <KindChip kind={event.kind} href={kindPath(event.kind)} tabindex={-1} />
-  <!-- Out of the Tab order, so a row is two stops (title, Save); the event page links the source too. -->
-  <a class="host" href={detailsUrl(event)} title={host} tabindex="-1" aria-label={`${host}, source for ${event.title}`}>{host}</a>
-  <span class="verified"><span aria-hidden="true">✓ {verifiedOn}</span><span class="visually-hidden">Verified {verifiedOn}</span></span>
+  <!-- The venue's page (#137), out of the Tab order, so a row stays two stops (title, Save); the event page links it
+       too, and the source, which the row leaves to it (#182). The link's name says whose venue it is, so a list of
+       links does not read "recordBar" forty times (#181). On the venue's own page only the room is left. -->
+  {#if hide !== "venue"}
+    <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><a class="venue" href={venuePath(event.venue)} tabindex="-1" aria-label={`${venueLine(event)}, venue of ${event.title}`}>{venueLine(event)}</a><span class="hood">{` · ${event.neighborhood}`}</span></span>
+  {:else if event.room}
+    <span class="where">{event.room}</span>
+  {/if}
+  <!-- The chip is the link it looks like, to the kind's page, out of the Tab order like the venue (#181). -->
+  {#if hide !== "kind"}<KindChip kind={event.kind} href={kindPath(event.kind)} tabindex={-1} />{/if}
+  {#if checked < runDay}<span class="verified" title={verified}><span aria-hidden="true">✓ {formatShort(checked)}</span><span class="visually-hidden">{verified}</span></span>{/if}
   <SaveButton id={event.id} title={event.title} last={lastDay(event)} when={daysSaid(event)} />
   {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
 </article>
@@ -50,37 +56,42 @@
   /* The title, then a don't-miss tag that never gives way to it. */
   .title { grid-area: title; min-width: 0; display: flex; align-items: baseline; gap: var(--space-2); }
   .title h3 { min-width: 0; font-size: var(--text-md); font-weight: var(--weight-medium); margin: 0; }
-  .title a { color: inherit; text-decoration: none; }
+  /* The link is the h3's block, so it is as tall as the title's lines; below 1024 px, where a finger taps it, the
+     padding makes even a one-line title 24 px, WCAG 2.5.8's size (#182). */
+  .title a { display: block; padding-block: 2px; color: inherit; text-decoration: none; }
   .title a:hover { text-decoration: underline; }
   /* The don't-miss tag is base.css's; in a row it never gives way to the title. */
   .title :global(.dont-miss) { flex: none; }
   /* A passed save: muted, with a quiet outlined tag where a pick has its red one. */
   .passed .title h3, .passed .when { color: var(--fg-muted); }
   .passed-tag { flex: none; font-size: var(--text-xs); font-weight: var(--weight-medium); line-height: 1.6; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: 0 var(--space-2); white-space: nowrap; }
-  .where, .host, .verified { font-size: var(--text-xs); color: var(--fg-faint); }
+  .where, .verified { font-size: var(--text-xs); color: var(--fg-faint); }
   .where { grid-area: where; }
-  /* The chip is KindChip's element, so the row reaches it with :global. */
-  .row :global(.chip) { grid-area: chip; }
-  .host { grid-area: host; }
+  /* The chip is KindChip's element, so the row reaches it with :global. Below 1024 px it and the venue are 24 px tall,
+     so a finger's target never crowds the title's (#182). */
+  .row :global(.chip) { grid-area: chip; min-height: 24px; }
   .verified { grid-area: verified; }
   .row :global(button.save) { grid-area: save; }
-  .why { grid-area: why; margin: 0; font-size: var(--text-sm); color: var(--fg); }
-  .where, .host { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  /* A sentence that wraps, so it has the page's leading, not the row's. */
+  .why { grid-area: why; margin: 0; font-size: var(--text-sm); line-height: var(--leading); color: var(--fg); }
+  .where { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   /* Venue and neighborhood give way together, in proportion to their length; from 1024 px only the venue does. */
-  .where { display: flex; }
-  .venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .where { display: flex; align-items: center; }
+  .venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-block: 4.5px; }
   /* The venue link reads as the detail it is, in the line's colour; base.css underlines it on hover. */
   a.venue { color: inherit; }
   .hood { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: pre; }
-  /* Below 800 px the host and the verified stamp leave the row; the event page keeps both. */
-  .host, .verified { display: none; }
+  /* A kind's page has no chip, so its venue line starts where the chip would (#182). */
+  @media (max-width: 1023px) {
+    .row.no-chip .where { grid-column-start: 1; }
+  }
+  /* Below 800 px the verified stamp leaves the row; the event page keeps it. */
+  .verified { display: none; }
   @media (min-width: 800px) {
-    .host, .verified { display: revert; }
-    /* A long host gives way, its full name in the title. */
-    .host { max-width: 8rem; }
+    .verified { display: revert; }
     .row {
-      grid-template-columns: auto minmax(0, 1fr) auto auto auto;
-      grid-template-areas: "when when when when save" "title title title title save" "chip where host verified save" "why why why why why";
+      grid-template-columns: auto minmax(0, 1fr) auto auto;
+      grid-template-areas: "when when when save" "title title title save" "chip where verified save" "why why why why";
     }
   }
 
@@ -92,51 +103,55 @@
     .row {
       --when-width: 11.25rem;
       gap: 0 var(--space-2);
-      grid-template-columns: var(--when-width) minmax(0, 1fr) auto auto auto auto;
-      grid-template-areas: "when title title title title title" ". where chip host verified save" ". why why why why why";
+      grid-template-columns: var(--when-width) minmax(0, 1fr) auto auto auto;
+      grid-template-areas: "when title title title title" ". where chip verified save" ". why why why why";
     }
     .row.with-day { --when-width: 15.5rem; }
     .when { font-size: var(--text-sm); }
     /* The save button is the card's, slimmer in a row: button.save outranks base.css's .control and SaveButton's .save. */
     .row :global(button.save) { min-height: auto; min-width: auto; padding: 0 var(--space-2); font-size: var(--text-xs); }
+    .row :global(.chip) { min-height: auto; }
+    .venue { padding-block: 0; }
     .why { padding-bottom: 2px; }
     /* An always-there schedule phrase may run longer than any dated line, so it wraps, and those rows are exempt from
        the one-line rule. */
     .row:not(.always) .when { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .hood { flex: none; overflow: visible; }
-    /* base.css gives headings text-wrap: balance, which would reset an inherited nowrap, so the h3 sets its own. The
-       padding, taken back by the margin, keeps the link's focus ring (2 px, 2 px out, from a link 1 px taller than the line) inside what the overflow clips. */
-    .title h3 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 5px; margin: -5px; }
+    /* A title past two lines is cut there, its whole in the link's title (#182). The clamp is on the link, so its
+       focus ring, drawn outside its box, is not clipped with the text. A wrapped title fills its first line rather
+       than base.css's balance, which leaves a gap between a short line and a don't-miss tag beside it. */
+    .title h3 { text-wrap: pretty; }
+    .title a { padding-block: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
   }
 
-  /* 1280 px and up: an unflagged row is a single line, 25 px tall (20 px title + 4 px padding + 1 px rule). The date is
-     set small, like the other details, so the title (natural width up to 18rem) and the venue and neighborhood (at
-     least 12rem, then the rest) share the room. The widest dated lines at this size are 149 px, and 206 px with the day
-     first. The trailing columns have fixed widths, so the kind chips, hosts, stamps and Save buttons each make a column
-     down the list, whatever a row's title or venue: the widest chip ("outdoors/community") is 154 px, the widest stamp
-     ("✓ Sep 30") about 50 px, and Save, its bookmark and "Saved", within its 80 px column. A list that ships no script
-     (a venue, kind, region or changes page) has no Save, and its stylesheet sets --row-save-width to 0, so all that is
-     left where Save would be is one column gap (#181). */
+  /* 1280 px and up: an unflagged row with a short title is a single line, 25 px tall (20 px title + 4 px padding + 1 px
+     rule), and a long title takes a second line rather than an ellipsis (#182). The date is set small, like the other
+     details, so the title (natural width up to --title-max) and the venue and neighborhood (at least 12rem, then the
+     rest) share the room. The widest dated lines at this size are 149 px, and 206 px with the day first. The trailing
+     columns have fixed widths, so the kind chips, stamps and Save buttons each make a column down the list, whatever a
+     row's title or venue: the widest chip ("outdoors/community") is 154 px, the widest stamp ("✓ Sep 30") about 50 px,
+     and Save, its bookmark and "Saved", within its 80 px column. A list that ships no script (a venue, kind, region or
+     changes page) has no Save, and its stylesheet sets --row-save-width to 0, so all that is left where Save would be
+     is one column gap (#181); a kind's page has no chip, so no column for it either. */
   @media (min-width: 1280px) {
     .when { font-size: var(--text-xs); }
     .row :global(.chip) { justify-self: start; }
     .row :global(button.save) { justify-self: stretch; }
     .row {
       --when-width: 9.75rem;
-      --chip-width: 9.75rem; --host-width: 8rem; --verified-width: 3.5rem; --save-width: var(--row-save-width, 5rem);
+      --chip-width: 9.75rem; --verified-width: 3.5rem; --save-width: var(--row-save-width, 5rem);
       padding: 2px 0;
-      --title-max: 18rem;
-      grid-template-columns: var(--when-width) fit-content(var(--title-max)) minmax(12rem, 1fr) var(--chip-width) var(--host-width) var(--verified-width) var(--save-width);
-      grid-template-areas: "when title where chip host verified save" ". why why why why why why";
+      --title-max: 21rem;
+      /* Each detail sits on the title's first line when it wraps. */
+      align-items: first baseline;
+      grid-template-columns: var(--when-width) fit-content(var(--title-max)) minmax(12rem, 1fr) var(--chip-width) var(--verified-width) var(--save-width);
+      grid-template-areas: "when title where chip verified save" ". why why why why why";
     }
+    .row.no-chip { --chip-width: 0px; }
     .row.with-day { --when-width: 13.5rem; }
   }
   /* 1440 px and up the container is wider (base.css), so the title can take more. */
   @media (min-width: 1440px) {
-    .row { --title-max: 22rem; }
-  }
-  /* The tightest one-line width: the host gives up the most so the title and the venue keep theirs. */
-  @media (min-width: 1280px) and (max-width: 1439px) {
-    .row { --host-width: 6rem; }
+    .row { --title-max: 26rem; }
   }
 </style>

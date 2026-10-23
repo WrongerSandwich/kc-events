@@ -6,6 +6,7 @@ vi.mock("../src/generated/meta", () => ({
   meta: { kinds: ["music"], regions: ["Central KC"], lastSuccessfulRun: "2026-10-05T06:30:00-05:00", buildToday: "2026-10-05", timeZone: "America/Chicago" },
 }));
 
+import LandingEvents from "../src/components/LandingEvents.svelte";
 import ResultRow from "../src/components/ResultRow.svelte";
 import { event } from "./fixtures/event";
 
@@ -14,9 +15,8 @@ import { event } from "./fixtures/event";
 describe("ResultRow's names (#181)", () => {
   const show = event({ title: "The Wizard of Oz", venue: "Screenland Armour", primaryUrl: "https://www.screenland.com/armour", kind: "film" });
 
-  it("names the host as the title's source and the venue as the title's venue", () => {
+  it("names the venue as the title's venue", () => {
     render(ResultRow, { event: show, today: "2026-10-05" });
-    expect(screen.getByRole("link", { name: "screenland.com, source for The Wizard of Oz" })).toHaveAttribute("href", "https://www.screenland.com/armour");
     expect(screen.getByRole("link", { name: "Screenland Armour, venue of The Wizard of Oz" })).toHaveAttribute("href", "/v/screenland-armour");
   });
 
@@ -39,5 +39,60 @@ describe("ResultRow's names (#181)", () => {
     const chip = screen.getByRole("link", { name: "film" });
     expect(chip).toHaveAttribute("href", "/k/film");
     expect(chip).toHaveAttribute("tabindex", "-1");
+  });
+});
+
+// The scarce width goes to what differs between rows (audit 2026-10-21, B5, A7).
+describe("ResultRow's width (#182)", () => {
+  it("leaves the host to the event page", () => {
+    const { container } = render(ResultRow, { event: event(), today: "2026-10-05" });
+    expect(container.querySelector('a[href="https://www.therecordbar.com/shows"]')).toBeNull();
+  });
+
+  it("gives the title link the full title, for a title cut at two lines", () => {
+    render(ResultRow, { event: event({ title: "Body Forth: incarnation, embodiment, and the Christian imagination" }), today: "2026-10-05" });
+    expect(screen.getByRole("link", { name: "Body Forth: incarnation, embodiment, and the Christian imagination" })).toHaveAttribute(
+      "title",
+      "Body Forth: incarnation, embodiment, and the Christian imagination",
+    );
+  });
+
+  it("leaves out the verified stamp when the last run checked the event, as the header already says", () => {
+    const { container } = render(ResultRow, { event: event({ lastVerified: "2026-10-05T06:40:00-05:00" }), today: "2026-10-05" });
+    expect(container.querySelector(".verified")).toBeNull();
+  });
+
+  it("shows the stamp, with what it means, when the check is older than the last run", () => {
+    const { container } = render(ResultRow, { event: event({ lastVerified: "2026-10-03T21:47:36-05:00" }), today: "2026-10-05" });
+    const stamp = container.querySelector(".verified")!;
+    expect(stamp).toHaveAttribute("title", "Date and venue verified Oct 3");
+    expect(stamp).toHaveTextContent("Date and venue verified Oct 3");
+  });
+
+  it("hides the kind chip on the kind's own page", () => {
+    render(ResultRow, { event: event({ kind: "film" }), today: "2026-10-05", hide: "kind" });
+    expect(screen.queryByRole("link", { name: "film" })).toBeNull();
+    expect(screen.getByRole("link", { name: "recordBar, venue of A show" })).toBeInTheDocument();
+  });
+
+  it("hides the venue and its neighborhood on the venue's own page, keeping the room", () => {
+    const { container } = render(ResultRow, { event: event({ room: "Back room" }), today: "2026-10-05", hide: "venue" });
+    expect(container.querySelector("a.venue")).toBeNull();
+    expect(container.querySelector(".where")).toHaveTextContent(/^Back room$/);
+    expect(screen.getByRole("link", { name: "music" })).toBeInTheDocument();
+  });
+});
+
+describe("LandingEvents (#182)", () => {
+  const groups = [{ key: "2026-10-09", heading: "Fri Oct 9", events: [event()], collapsed: false }];
+
+  it("passes a kind page's hide on to its rows", () => {
+    render(LandingEvents, { groups, hide: "kind" });
+    expect(screen.queryByRole("link", { name: "music" })).toBeNull();
+  });
+
+  it("keeps the chip on a region page", () => {
+    render(LandingEvents, { groups });
+    expect(screen.getByRole("link", { name: "music" })).toBeInTheDocument();
   });
 });

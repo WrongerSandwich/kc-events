@@ -19,7 +19,7 @@
   {#each groups as g (g.key)}
     <h2 class="section-heading group">{g.heading}</h2>
     {#each g.events as event (event.id)}
-      <ResultRow {event} today={meta.buildToday} />
+      <ResultRow {event} today={meta.buildToday} hide="venue" />
     {/each}
   {/each}
 {/if}

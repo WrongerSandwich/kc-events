@@ -24,9 +24,10 @@ describe("VenueEvents (#137)", () => {
     expect(container.querySelector("details")).toBeNull();
   });
 
-  it("shows the room each event was in", () => {
-    const { container } = render(VenueEvents, { props: { events: [event({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall" })] } });
-    expect(container.querySelector(".venue")!.textContent).toBe("Kauffman Center for the Performing Arts · Helzberg Hall");
+  it("shows the room each event was in, and not the venue the page is about (#182)", () => {
+    const { container } = render(VenueEvents, { props: { events: [event({ venue: "Kauffman Center for the Performing Arts", room: "Helzberg Hall" }), event({ id: "evt_b" })] } });
+    expect(container.querySelector("a.venue")).toBeNull();
+    expect([...container.querySelectorAll(".where")].map((w) => w.textContent)).toEqual(["Helzberg Hall"]);
   });
 
   it("says so when the venue has nothing coming up", () => {
