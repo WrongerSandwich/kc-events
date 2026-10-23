@@ -23,5 +23,7 @@ describe("longDateLine", () => {
     expect(longDateLine(over, "2026-11-15")).toBe("Closed Saturday, October 31");
     const overWithStart = event({ recurrence: "limited-run", start: "2026-09-20", end: "2026-10-31" });
     expect(longDateLine(overWithStart, "2026-11-15")).toBe("Closed Saturday, October 31");
+    // A one-off read with only its end keeps the plain span wording rather than throwing on its missing start.
+    expect(longDateLine(event({ start: undefined, end: "2026-10-31" }), today)).toBe("Through Saturday, October 31");
   });
 });

@@ -6,8 +6,9 @@ import type { PublishedEvent } from "./types";
  * The event page's date line, in full (spec section 7): "Friday, October 9, 7:00 pm"; a run on now "Closes Saturday,
  * November 14", one not yet open "Opens Tuesday, October 20, closes Saturday, November 14", one gone "Closed Saturday,
  * October 31"; a multi-day one-off "Friday, October 9 through Sunday, October 11", its time after its first day when it
- * has one; a run that plays only some weekdays with them first, "Fri–Sun each week, through Sunday, November 1" (#143,
- * #184); a recurring event's schedule phrase.
+ * has one; a run that plays only some weekdays with them first, "Fri–Sun each week, through Sunday, November 1", or
+ * not yet open "Fri–Sun each week, Wednesday, October 14 through Sunday, November 1" (#143, #184); a recurring event's
+ * schedule phrase.
  */
 export function longDateLine(e: PublishedEvent, today: string): string {
   if (!isDated(e)) return e.schedule ?? "";
@@ -26,9 +27,10 @@ export function longDateLine(e: PublishedEvent, today: string): string {
       if (first === undefined || isOnNow(e, today)) return `Closes ${formatLong(last)}`;
       return `Opens ${formatLong(first)}, closes ${formatLong(last)}`;
     }
+    if (first === undefined) return `Through ${formatLong(last)}`;
     // A one-off keeps its first day and time while underway (#90): it is three days at most, and the time matters.
     const time = isDateOnly(e.start!) ? "" : `, ${formatTime(e.start!)}`;
-    return `${formatLong(first!)}${time} through ${formatLong(last)}`;
+    return `${formatLong(first)}${time} through ${formatLong(last)}`;
   }
   const day = formatLong(first!);
   return isDateOnly(e.start!) ? day : `${day}, ${formatTime(e.start!)}`;

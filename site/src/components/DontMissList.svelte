@@ -4,7 +4,7 @@
   import { dontMiss } from "../generated/dont-miss";
   import { addDays, formatDay, formatShort, formatTime } from "../lib/dates";
   import { firstDay, isMultiDay, lastDay, venueLine } from "../lib/events";
-  import { bucketDontMiss, horizonBounds, horizonHeading, HORIZONS, type Horizon } from "../lib/horizon";
+  import { bucketDontMiss, horizonBounds, horizonHeading, HORIZONS } from "../lib/horizon";
   import { hashId, slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
@@ -41,27 +41,26 @@
     tick().then(unfold); // arriving with the hash: the fold exists once the visitor's clock has rendered
     return () => window.removeEventListener("hashchange", unfold);
   });
-  // A new day can take every pick of a section's chosen kind away. The filter goes with them, so it cannot come back on
-  // unpressed when a later pick of that kind moves into the section.
+  // A new day can take every pick of the chosen kind out of this week. The filter goes with them, so it cannot come
+  // back on unpressed when a later pick of that kind moves into the week.
   $effect(() => {
-    for (const h of HORIZONS) {
-      if (chosen[h] !== undefined && picksOf(h, chosen[h]).length === 0) {
-        chosen[h] = undefined;
-        announced[h] = undefined;
-      }
+    if (chosen !== undefined && picksOf(chosen).length === 0) {
+      chosen = undefined;
+      announced = undefined;
     }
   });
   let buckets = $derived(bucketDontMiss(dontMiss, today));
   let total = $derived(HORIZONS.reduce((n, h) => n + buckets[h].length, 0));
 
-  // Each section's kind filter, one kind at a time, and what its live region last announced. Per visit: not in the
-  // URL, not stored. Only this week's section has one: the sections after it are one-line rows (#184).
-  let chosen = $state<Partial<Record<Horizon, string>>>({});
-  let announced = $state<Partial<Record<Horizon, string>>>({});
+  // This week's kind filter, one kind at a time, and what its live region last announced. Per visit: not in the URL,
+  // not stored. Only this week has one: the sections after it are one-line rows (#184).
+  let chosen = $state<string | undefined>();
+  let announced = $state<string | undefined>();
 
-  /** A section's picks, or just one kind of them. */
-  function picksOf(h: Horizon, kind: string | undefined): PublishedEvent[] {
-    return kind === undefined ? buckets[h] : buckets[h].filter((e) => e.kind === kind);
+  /** This week's picks, or just one kind of them. */
+  function picksOf(kind: string | undefined): PublishedEvent[] {
+    const week = buckets["through-sunday"];
+    return kind === undefined ? week : week.filter((e) => e.kind === kind);
   }
 
   /** The explorer showing this week's picks, or just one kind of them: the page's one link to the explorer's picks (#184). */
@@ -69,7 +68,7 @@
     return `/explore?when=weekend${kind === undefined ? "" : `&kind=${slugify(kind)}`}&picks=1`;
   }
 
-  /** A section's picks counted by kind, most first, each with the explorer link the chip is before hydration. */
+  /** This week's picks counted by kind, most first, each with the explorer link the chip is before hydration. */
   function kindCounts(events: PublishedEvent[]): { kind: string; n: number; href: string }[] {
     const counts = new Map<string, number>();
     for (const e of events) counts.set(e.kind, (counts.get(e.kind) ?? 0) + 1);
@@ -81,13 +80,13 @@
   /** A kind filter's view transition is running: the cards carry their names. */
   let moving = $state(false);
 
-  function toggle(h: Horizon, kind: string) {
-    const next = chosen[h] === kind ? undefined : kind;
+  function toggle(kind: string) {
+    const next = chosen === kind ? undefined : kind;
     const update = () => {
-      chosen[h] = next;
-      const n = picksOf(h, next).length;
+      chosen = next;
+      const n = picksOf(next).length;
       const picks = n === 1 ? "pick" : "picks";
-      announced[h] = next === undefined ? `Showing all ${n} ${picks}` : `Showing ${n} ${next} ${picks}`;
+      announced = next === undefined ? `Showing all ${n} ${picks}` : `Showing ${n} ${next} ${picks}`;
       return tick();
     };
     // The kept cards slide into place and the others fade: the browser's view transition, by each card's name (its
@@ -138,20 +137,20 @@
           {/each}
         </ul>
       {:else}
-        {@const kind = chosen[h]}
+        {@const kind = chosen}
         <ul class="kinds" aria-label="Picks by kind">
           {#each kindCounts(buckets[h]) as k (k.kind)}
             <li>
               {#if hydrated}
-                <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} pressed={k.kind === kind} onclick={() => toggle(h, k.kind)} />
+                <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} pressed={k.kind === kind} onclick={() => toggle(k.kind)} />
               {:else}
                 <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} href={k.href} />
               {/if}
             </li>
           {/each}
         </ul>
-        <p role="status" class="visually-hidden">{announced[h] ?? ""}</p>
-        {@const shown = picksOf(h, kind)}
+        <p role="status" class="visually-hidden">{announced ?? ""}</p>
+        {@const shown = picksOf(kind)}
         {@const upcoming = shown.filter((e) => !hasStarted(e))}
         {@const started = shown.filter(hasStarted)}
         {#if horizonBounds(today).sunday >= addDays(today, 2)}
@@ -190,7 +189,8 @@
      component's scoped styles cannot see its own siblings. */
   .pick + .pick { border-top: 1px solid var(--rule); margin-top: var(--space-6); padding-top: var(--space-6); }
   .empty { color: var(--fg-muted); margin-top: var(--space-3); }
-  /* The later picks: one line each, date in a fixed column so titles align; the venue drops under on a phone. */
+  /* The one-line rows, after this week and in the started fold (the class is the Later list's, which had them first):
+     date in a fixed column so titles align; the venue drops under on a phone. */
   .later { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
   /* The venue column takes only what it needs up to 18rem, then wraps, so a long hall name never squeezes the title;
      ranged left, so a wrapped one reads as one block rather than three ragged lines (#184). */
