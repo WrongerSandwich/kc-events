@@ -1,11 +1,14 @@
-# Guards the site on pull requests and pushes to main. The weekly research commit is pushed with the
-# default GITHUB_TOKEN, which does not trigger workflows, so on that commit the build assertions run
-# only inside Vercel's build; that build is the one that would publish bad data, so it is enough.
+# Guards the site on pull requests and pushes to main. It runs on the home cron's weekly commit too
+# (pushed with a fine-grained token, which triggers workflows), but beside Vercel's build and gating
+# nothing; the manual fallback workflow's commit, pushed with the default GITHUB_TOKEN, runs none.
+# What guards a data commit is scripts/weekly-run.sh: it builds the site and runs `pnpm test:data` on
+# the new data before committing, and after the push waits on Vercel's status for the commit.
 #
 # Order matters: the real build and its size check run before the tests, because the built-output
 # tests read dist/ and fail in CI when it is missing. The end-to-end build (dist-e2e/) also runs before
-# the size check, which measures the explorer and the front page on its fixed fixture data so those
-# budgets track code, not the week's events and picks; Playwright rebuilds it for the end-to-end tests.
+# the size check, which budgets the explorer and the front page on its fixed fixture data so those
+# budgets track code, not the week's events and picks (the real explorer gets only a generous
+# ceiling); Playwright rebuilds it for the end-to-end tests.
 # The size check runs here and not in `pnpm build`, which is Vercel's build command: a page going over
 # budget should fail CI, not stop the weekly data commit from deploying.
 name: Site

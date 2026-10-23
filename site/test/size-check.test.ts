@@ -41,6 +41,12 @@ describe("budgets", () => {
     expect(BUDGETS.find((b) => b.page === "index.html")?.build).toBe("fixture");
   });
 
+  it("also holds the real explorer, the week's data and all, under a generous ceiling, so a jump in the data is noticed (audit E9)", () => {
+    const real = BUDGETS.filter((b) => b.page === "explore.html" && b.build === "real");
+    expect(real).toHaveLength(1);
+    expect(real[0]!.budget).toBe(200_000);
+  });
+
   it("leaves the front page room for a week at the pick ceiling, counting the picks the fixture build publishes", () => {
     const site = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url));
     const fixture = loadPublished({ datasetPath: site("e2e/fixtures/events.json"), configPath: site("../research.config.yaml"), today: "2026-10-05" });

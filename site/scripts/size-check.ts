@@ -5,11 +5,14 @@
  * already compressed; the budget is about markup, styles, and script.
  *
  * The explorer carries every published event, in its rows and in its script, and the front page every don't-miss
- * pick, so on the real build their sizes track the week's data and not the code (and the weekly data commit runs no
- * CI, so a breach would show on the next unrelated pull request). Both are measured on the end-to-end build instead,
+ * pick, so on the real build their sizes track the week's data and not the code. CI does run on the home cron's weekly
+ * commit, but beside Vercel's build and gating nothing (the manual fallback workflow's commit runs none), so a breach
+ * there would only show, red, on the next unrelated pull request. Both are budgeted on the end-to-end build instead,
  * whose fixture dataset and date never change, so their budgets are budgets for code. The data is bounded at build:
  * the explorer's by the 400 KB raw-payload guard (MAX_PAYLOAD_BYTES in src/build/load-dataset.ts), the front page's by
- * a warning past MAX_PICKS (src/build/write-generated.ts). Event pages carry one event each and stay on the real build.
+ * a warning past MAX_PICKS (src/build/write-generated.ts). The real explorer is printed too, under a ceiling generous
+ * enough for any week the guard lets through (audit E9: 117 KB on the 10-19 run), so a jump in the data is seen.
+ * Event pages carry one event each and stay on the real build.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, posix } from "node:path";
@@ -65,6 +68,8 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // scroll padding that keeps a focused row clear of the sticky bar (audit 2026-10-21), and 750 for opening on the week with
   // day chips and Keep going (#183), and 100 for the no-script note's links to the kind and region pages
   { page: "explore.html", budget: 52_100, build: "fixture" },
+  // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
+  { page: "explore.html", budget: 200_000, build: "real" },
 ];
 
 function main(): void {
@@ -87,7 +92,7 @@ function main(): void {
   };
   for (const { page, budget, build } of BUDGETS) {
     const { bytes, assets } = measure(dirs[build], page);
-    check(build === "fixture" ? `${page} (fixture data)` : page, budget, bytes, assets);
+    check(`${page} (${build === "fixture" ? "fixture" : "real"} data)`, budget, bytes, assets);
   }
   // Event pages share their scripts and differ only in markup, so the largest one is the one that could go over; venue
   // pages (#137) likewise, their markup growing with the venue's events. A kind or region page (#138) lists a whole
