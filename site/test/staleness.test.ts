@@ -80,6 +80,15 @@ describe("StalenessBanner", () => {
     expect(screen.getByRole("status").firstElementChild).toHaveClass("wide");
   });
 
+  it("marks itself a warning, with an icon and a lead in words, so it does not read as one more grey panel (#184)", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") });
+    render(StalenessBanner);
+    await tick();
+    const banner = screen.getByRole("status");
+    expect(banner.querySelector("svg use")).toHaveAttribute("href", "#ui-icon-alert");
+    expect(banner.querySelector("strong")).toHaveTextContent("Out of date.");
+  });
+
   it("says when it was last researched once stale, with the run date in it", async () => {
     vi.useFakeTimers({ now: new Date("2026-10-15T12:00:00Z") }); // 10 days
     render(StalenessBanner);

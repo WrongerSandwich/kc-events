@@ -48,7 +48,7 @@ describe("DontMissList", () => {
     target.remove();
   });
 
-  it("renders every bucket with its heading, cards in order, and the empty line", async () => {
+  it("renders every bucket with its heading, cards for this week and one-line rows after it, and the empty line", async () => {
     vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") });
     render(DontMissList);
     await tick();
@@ -60,8 +60,14 @@ describe("DontMissList", () => {
     // The tile is visual; the full date is in words for screen readers.
     expect(within(sections[0]!).getByText("On now, closes Sun Oct 11.")).toBeInTheDocument();
     expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("2 music1 art/exhibitions");
-    expect(within(sections[1]!).getByText("Later show")).toBeInTheDocument();
+    // The next two weeks are the later list's one-line rows (#184): no cards, no kind chips.
+    expect(within(sections[1]!).queryAllByRole("article")).toEqual([]);
+    expect(within(sections[1]!).queryByRole("list", { name: "Picks by kind" })).toBeNull();
+    expect(within(sections[1]!).getByRole("link", { name: "Later show, music" })).toHaveAttribute("href", "/e/c");
+    expect(within(sections[1]!).getByText("Sat Oct 17")).toBeInTheDocument();
     expect(within(sections[2]!).getByText("Nothing picked further out yet.")).toBeInTheDocument();
+    // One link to the explorer's picks on the page, under this week's (#184).
+    expect(screen.getAllByRole("link", { name: /in the explorer/ }).map((a) => a.textContent)).toEqual(["This week's picks in the explorer"]);
     expect(screen.queryByText("Plain show")).toBeNull();
   });
 
@@ -142,7 +148,7 @@ describe("DontMissList", () => {
     }
 
     it("narrows only its own section, switches kinds, and clears on a second press", async () => {
-      const [week, next] = await front();
+      const [week] = await front();
       const music = within(week!).getByRole("button", { name: "2 music" });
       const art = within(week!).getByRole("button", { name: "1 art/exhibitions" });
       expect(music).toHaveAttribute("aria-pressed", "false");
@@ -151,7 +157,6 @@ describe("DontMissList", () => {
       await tick();
       expect(music).toHaveAttribute("aria-pressed", "true");
       expect(titles(week!)).toEqual(["Tuesday show", "Wednesday show"]);
-      expect(titles(next!)).toEqual(["Later show", "Art fair"]);
 
       art.click();
       await tick();
@@ -191,18 +196,17 @@ describe("DontMissList", () => {
       }
     });
 
-    it("leaves the other sections' filters alone", async () => {
+    it("is this week's alone, and leaves the rows after it whole", async () => {
       const [week, next] = await front();
-      within(next!).getByRole("button", { name: "1 music" }).click();
+      expect(within(next!).queryAllByRole("button")).toEqual([]);
       within(week!).getByRole("button", { name: "1 art/exhibitions" }).click();
       await tick();
       expect(titles(week!)).toEqual(["Closing run"]);
-      expect(titles(next!)).toEqual(["Later show"]);
-      expect(within(next!).getByRole("button", { name: "1 music" })).toHaveAttribute("aria-pressed", "true");
+      expect(within(next!).getAllByRole("link").map((a) => a.textContent)).toEqual(["Later show, music", "Art fair, art/exhibitions"]);
     });
 
     it("carries the kind on the section's explorer link exactly while one is on", async () => {
-      const [week, next] = await front();
+      const [week] = await front();
       const link = () => within(week!).getByRole("link", { name: /in the explorer/ });
       expect(link()).toHaveAttribute("href", "/explore?when=weekend&picks=1");
       within(week!).getByRole("button", { name: "2 music" }).click();
@@ -211,7 +215,6 @@ describe("DontMissList", () => {
       within(week!).getByRole("button", { name: "2 music" }).click();
       await tick();
       expect(link()).toHaveAttribute("href", "/explore?when=weekend&picks=1");
-      expect(within(next!).getByRole("link", { name: /in the explorer/ })).toHaveAttribute("href", "/explore?when=2026-10-12..2026-10-19&picks=1");
     });
 
     it("announces what the section now shows", async () => {
@@ -265,7 +268,7 @@ describe("DontMissList", () => {
     document.dispatchEvent(new Event("visibilitychange"));
     await tick();
     expect(within(week()).getByRole("button", { name: "1 art/exhibitions" })).toHaveAttribute("aria-pressed", "false");
-    expect(within(week()).getByRole("link", { name: "These picks in the explorer" })).not.toHaveAttribute("href", expect.stringContaining("kind="));
+    expect(within(week()).getByRole("link", { name: "This week's picks in the explorer" })).not.toHaveAttribute("href", expect.stringContaining("kind="));
   });
 
   it("never calls a day empty while a run is open, and follows the kind filter", async () => {
@@ -278,6 +281,9 @@ describe("DontMissList", () => {
       "Mon 5: nothing new, 1 running", "Tue 6: 1 pick, 1 running", "Wed 7: 1 pick, 1 running", "Thu 8: nothing new, 1 running",
       "Fri 9: nothing new, 1 running", "Sat 10: nothing new, 1 running", "Sun 11: 1 pick, 1 running",
     ]);
+    // Today is the inked day, named by its weekday: the card's tile is where "Today" is said (#184).
+    expect(strip.querySelector(".day.today .name")).toHaveTextContent("Mon");
+    expect(strip).not.toHaveTextContent("Today");
     // A day with only the run open jumps to the run's card, and draws its band.
     expect(within(strip).getByRole("link", { name: "Mon 5: nothing new, 1 running" })).toHaveAttribute("href", "#pick-b");
     expect(strip.querySelectorAll(".day:first-child .lane.open")).toHaveLength(1);

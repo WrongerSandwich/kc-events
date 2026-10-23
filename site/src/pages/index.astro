@@ -55,7 +55,8 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
 
 <style>
   h1 { margin-top: var(--space-8); }
-  /* Phones: the heading steps down a size and sits closer, so the first section starts on the first screen. */
+  /* Phones: the heading steps down a size and sits closer, so the first section starts on the first screen; the
+     section headings step down with it (base.css), so it stays one above them (#184). */
   @media (max-width: 30rem) {
     h1 { font-size: var(--text-2xl); margin-top: var(--space-6); }
     .lede { font-size: var(--text-sm); }

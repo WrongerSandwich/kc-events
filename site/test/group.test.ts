@@ -184,7 +184,7 @@ describe("rowDateLine", () => {
     expect(rowDateLine(onNow, today)).toBe("Closes Tue Oct 20");
     expect(rowDateLine(onNowSooner, today)).toBe("Closes Sun Oct 11");
     expect(rowDateLine(festNow, today)).toBe("Through Wed Oct 7");
-    expect(rowDateLine(opensLater, today)).toBe("Runs through Sat Nov 14");
+    expect(rowDateLine(opensLater, today)).toBe("Closes Sat Nov 14");
     expect(rowDateLine(festLater, today)).toBe("Through Sat Oct 31");
     expect(rowDateLine(trivia, today)).toBe("Tuesdays");
   });

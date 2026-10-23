@@ -95,6 +95,9 @@ a.chip:hover { text-decoration: underline; }
   padding: 0 var(--space-2);
   white-space: nowrap;
 }
+/* A passed save's tag, where a pick has its red one: muted and outlined. Here beside it rather than in the row, whose
+   own stylesheet stays under the 4 KB that Astro inlines (#184). */
+.passed-tag { flex: none; font-size: var(--text-xs); font-weight: var(--weight-medium); line-height: 1.6; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: 0 var(--space-2); white-space: nowrap; }
 
 /* A section's heading: the horizon buckets, Always there, More like this, the explorer's groups. */
 .section-heading {
@@ -103,8 +106,9 @@ a.chip:hover { text-decoration: underline; }
   /* Sections sit twice as far apart as the cards inside them, so a heading reads as the start of a group. */
   margin: var(--space-16) 0 0;
 }
-/* Phones: a screen holds less, so the gap between sections closes a step. */
-@media (max-width: 30rem) { .section-heading { margin-top: var(--space-12); } }
+/* Phones: a screen holds less, so the gap between sections closes a step, and the heading a size, so it stays a step
+   under the page's h1, which phones set at --text-2xl (#184). */
+@media (max-width: 30rem) { .section-heading { font-size: var(--text-xl); margin-top: var(--space-12); } }
 
 /* The explorer's group, a day or a venue: smaller, and stuck just under the result bar (the explorer measures the bar
    into --bar-height; --tap is the one-line bar: the export button's 28 px plus its padding). */
