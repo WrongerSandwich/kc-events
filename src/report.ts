@@ -2,7 +2,7 @@ import { z } from "zod";
 import { EXPIRY_REASONS, type ExpiryReason } from "./dataset.js";
 import { ARCHIVE_AFTER_WEEKS } from "./archive.js";
 import { markdownList, plural, tableCell } from "./markdown.js";
-import type { SkipReason } from "./skip.js";
+import { SKIP_REASONS, type SkipReason } from "./skip.js";
 import type { ModelCall } from "./spend.js";
 
 export type SourceResult = "fetched" | "failed" | "blocked" | "excluded";
@@ -314,7 +314,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   uncitableReadings: listSince(eventRef),
   keptOnStoredCitation: listSince(eventRef.extend({ failedQuote: z.string() })),
   cancellationsFromElsewhere: listSince(eventRef.extend({ reportedBy: z.string() })),
-  skippedAsExpired: listSince(eventRef.extend({ reason: z.enum(["promotion", "not-public"]) })),
+  skippedAsExpired: listSince(eventRef.extend({ reason: z.enum(SKIP_REASONS) })),
   identityChurn: listSince(eventRef.extend({ was: eventRef })),
   changes: z
     .strictObject({

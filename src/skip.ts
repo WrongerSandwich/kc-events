@@ -9,7 +9,8 @@
  */
 import { normalizeName } from "./identity.js";
 
-export type SkipReason = "promotion" | "not-public";
+export const SKIP_REASONS = ["promotion", "not-public"] as const;
+export type SkipReason = (typeof SKIP_REASONS)[number];
 
 /**
  * Patterns on the normalised title (lower case, punctuation as spaces), each a whole-word match. A

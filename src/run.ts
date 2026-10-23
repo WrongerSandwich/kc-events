@@ -58,7 +58,7 @@ import type { ExcludedSource, Registry, Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
 import type { CandidateTally, EventRef, OwnPagesReport, RunReport, SourceReport } from "./report.js";
-import { awayGame, skipReason, type SkipReason } from "./skip.js";
+import { awayGame, SKIP_REASONS, skipReason, type SkipReason } from "./skip.js";
 import { deriveRecurrence } from "./recurrence.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList, placeStored } from "./taxonomy.js";
@@ -816,8 +816,8 @@ function listsNear(known: Event, sighting: Sighting, sightings: Sighting[]): boo
 
 /** The skip a known event was expired under, when it was expired as a promotion or as not public (#216); else nothing. */
 function expiredAsSkip(event: Event): SkipReason | undefined {
-  if (event.status !== "expired") return undefined;
-  return event.expiryReason === "promotion" || event.expiryReason === "not-public" ? event.expiryReason : undefined;
+  const reason = event.status === "expired" ? event.expiryReason : undefined;
+  return SKIP_REASONS.find((skip) => skip === reason);
 }
 
 /**
