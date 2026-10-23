@@ -160,6 +160,12 @@ describe("Explorer", () => {
     expect(keep.compareDocumentPosition(screen.getByRole("heading", { level: 2, name: "Always there" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(keep).toHaveAttribute("href", "/explore?when=2026-10-15..2026-10-25&recurring=1");
     expect(screen.getByRole("link", { name: "or see all 3" })).toHaveAttribute("href", "/explore?when=all&recurring=1");
+    // Skip past results lands after the last dated row, just before Keep going (#194).
+    expect(screen.getByRole("link", { name: "Skip past results" })).toHaveAttribute("href", "#past-results");
+    const target = document.getElementById("past-results")!;
+    const rowsBefore = [...document.querySelectorAll("article.row")].filter((r) => r.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(rowsBefore.map((r) => within(r as HTMLElement).getByRole("heading").textContent)).toEqual(["Exhibition"]);
+    expect(target.compareDocumentPosition(keep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await fireEvent.click(keep, { ctrlKey: true });
     expect(location.search).toBe("?recurring=1");
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SHORTLIST_GROUP, groupResults, resultEvents, rowDateLine, rowDateTime } from "../src/lib/group";
+import { SHORTLIST_GROUP, groupResults, resultEvents, rowDate } from "../src/lib/group";
 import { DEFAULT_FILTERS, EVERY_DATE, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
 import { found } from "./fixtures/found";
@@ -92,7 +92,7 @@ describe("groupResults", () => {
     const late = event({ id: "late", title: "Late set", start: "2026-10-09T21:00:00-05:00", end: "2026-10-10T01:00:00-05:00" });
     const groups = groupResults([late], f(), today, none);
     expect(groups.map((g) => g.key)).toEqual(["2026-10-09"]);
-    expect(rowDateLine(late, today)).toBe("9:00 pm");
+    expect(rowDate(late, today).line).toBe("9:00 pm");
     expect(groupResults([late], f(), "2026-10-10", none)).toEqual([]); // the next morning it is past, not under yesterday
   });
 
@@ -167,61 +167,61 @@ describe("venue sort", () => {
   });
 });
 
-describe("rowDateTime", () => {
+describe("rowDate's datetime", () => {
   it("dates a row's line by the day it leads with: the start, or the closing day where that is the only one it names (#194)", () => {
-    expect(rowDateTime(fri7, today)).toBe("2026-10-09T19:00:00-05:00");
-    expect(rowDateTime(friAll, today)).toBe("2026-10-09");
-    expect(rowDateTime(onNow, today)).toBe("2026-10-20");
-    expect(rowDateTime(onNowSooner, today)).toBe("2026-10-11");
-    expect(rowDateTime(festNow, today)).toBe("2026-10-07");
-    expect(rowDateTime(opensLater, today)).toBe("2026-11-14");
+    expect(rowDate(fri7, today).datetime).toBe("2026-10-09T19:00:00-05:00");
+    expect(rowDate(friAll, today).datetime).toBe("2026-10-09");
+    expect(rowDate(onNow, today).datetime).toBe("2026-10-20");
+    expect(rowDate(onNowSooner, today).datetime).toBe("2026-10-11");
+    expect(rowDate(festNow, today).datetime).toBe("2026-10-07");
+    expect(rowDate(opensLater, today).datetime).toBe("2026-11-14");
     const timed = event({ id: "timed", title: "Festival", start: "2026-10-29T18:00:00-05:00", end: "2026-10-31T22:00:00-05:00" });
-    expect(rowDateTime(timed, today)).toBe("2026-10-29T18:00:00-05:00");
+    expect(rowDate(timed, today).datetime).toBe("2026-10-29T18:00:00-05:00");
     const timedRun = event({ id: "run", title: "Play", recurrence: "limited-run", start: "2026-10-20T19:30:00-05:00", end: "2026-11-14" });
-    expect(rowDateTime(timedRun, today)).toBe("2026-10-20T19:30:00-05:00");
+    expect(rowDate(timedRun, today).datetime).toBe("2026-10-20T19:30:00-05:00");
     const weekly = event({ id: "weekly", title: "Play", recurrence: "limited-run", start: "2026-10-20", end: "2026-11-14", daysLine: "Wednesdays" });
-    expect(rowDateTime(weekly, today)).toBe("2026-11-14");
+    expect(rowDate(weekly, today).datetime).toBe("2026-11-14");
   });
 
   it("takes the start for a span that leads with its first day (the venue sort), and gives a schedule none", () => {
-    expect(rowDateTime(festNow, today, true)).toBe("2026-10-03");
-    expect(rowDateTime(opensLater, today, true)).toBe("2026-10-20");
-    expect(rowDateTime(onNow, today, true)).toBe("2026-10-20");
-    expect(rowDateTime(trivia, today)).toBeUndefined();
+    expect(rowDate(festNow, today, true).datetime).toBe("2026-10-03");
+    expect(rowDate(opensLater, today, true).datetime).toBe("2026-10-20");
+    expect(rowDate(onNow, today, true).datetime).toBe("2026-10-20");
+    expect(rowDate(trivia, today).datetime).toBeUndefined();
   });
 });
 
-describe("rowDateLine", () => {
+describe("rowDate's line", () => {
   it("gives a multi-day one-off its time and its last day on every day it is listed, underway or not (#90)", () => {
     const timed = event({ id: "timed", title: "Festival", start: "2026-10-29T18:00:00-05:00", end: "2026-10-31T22:00:00-05:00" });
-    expect(rowDateLine(timed, today)).toBe("6:00 pm · through Sat Oct 31");
-    expect(rowDateLine(timed, "2026-10-30")).toBe("6:00 pm · through Sat Oct 31");
-    expect(rowDateLine(timed, today, true)).toBe("Thu Oct 29, 6:00 pm–Sat Oct 31");
-    expect(rowDateLine(timed, "2026-10-30", true)).toBe("Thu Oct 29, 6:00 pm–Sat Oct 31");
+    expect(rowDate(timed, today).line).toBe("6:00 pm · through Sat Oct 31");
+    expect(rowDate(timed, "2026-10-30").line).toBe("6:00 pm · through Sat Oct 31");
+    expect(rowDate(timed, today, true).line).toBe("Thu Oct 29, 6:00 pm–Sat Oct 31");
+    expect(rowDate(timed, "2026-10-30", true).line).toBe("Thu Oct 29, 6:00 pm–Sat Oct 31");
     const comedy = event({ id: "comedy", title: "Stand-up", start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" });
-    expect(rowDateLine(comedy, "2026-10-10")).toBe("8:30 pm · through Sat Oct 10");
+    expect(rowDate(comedy, "2026-10-10").line).toBe("8:30 pm · through Sat Oct 10");
   });
 
   it("writes the time, no time listed for a date-only start, a span, or a schedule", () => {
-    expect(rowDateLine(fri7, today)).toBe("7:00 pm");
-    expect(rowDateLine(friAll, today)).toBe("No time listed");
-    expect(rowDateLine(onNow, today)).toBe("Closes Tue Oct 20");
-    expect(rowDateLine(onNowSooner, today)).toBe("Closes Sun Oct 11");
-    expect(rowDateLine(festNow, today)).toBe("Through Wed Oct 7");
-    expect(rowDateLine(opensLater, today)).toBe("Closes Sat Nov 14");
-    expect(rowDateLine(festLater, today)).toBe("Through Sat Oct 31");
-    expect(rowDateLine(trivia, today)).toBe("Tuesdays");
+    expect(rowDate(fri7, today).line).toBe("7:00 pm");
+    expect(rowDate(friAll, today).line).toBe("No time listed");
+    expect(rowDate(onNow, today).line).toBe("Closes Tue Oct 20");
+    expect(rowDate(onNowSooner, today).line).toBe("Closes Sun Oct 11");
+    expect(rowDate(festNow, today).line).toBe("Through Wed Oct 7");
+    expect(rowDate(opensLater, today).line).toBe("Closes Sat Nov 14");
+    expect(rowDate(festLater, today).line).toBe("Through Sat Oct 31");
+    expect(rowDate(trivia, today).line).toBe("Tuesdays");
   });
 
   it("puts the day first when there are no day headings (the venue sort)", () => {
-    expect(rowDateLine(fri7, today, true)).toBe("Fri Oct 9 · 7:00 pm");
-    expect(rowDateLine(friAll, today, true)).toBe("Fri Oct 9 · no time listed");
-    expect(rowDateLine(onNow, today, true)).toBe("Closes Tue Oct 20");
-    expect(rowDateLine(onNowSooner, today, true)).toBe("Closes Sun Oct 11");
-    expect(rowDateLine(festNow, today, true)).toBe("Sat Oct 3–Wed Oct 7");
-    expect(rowDateLine(opensLater, today, true)).toBe("Tue Oct 20–Sat Nov 14");
-    expect(rowDateLine(festLater, today, true)).toBe("Thu Oct 29–Sat Oct 31");
-    expect(rowDateLine(trivia, today, true)).toBe("Tuesdays");
+    expect(rowDate(fri7, today, true).line).toBe("Fri Oct 9 · 7:00 pm");
+    expect(rowDate(friAll, today, true).line).toBe("Fri Oct 9 · no time listed");
+    expect(rowDate(onNow, today, true).line).toBe("Closes Tue Oct 20");
+    expect(rowDate(onNowSooner, today, true).line).toBe("Closes Sun Oct 11");
+    expect(rowDate(festNow, today, true).line).toBe("Sat Oct 3–Wed Oct 7");
+    expect(rowDate(opensLater, today, true).line).toBe("Tue Oct 20–Sat Nov 14");
+    expect(rowDate(festLater, today, true).line).toBe("Thu Oct 29–Sat Oct 31");
+    expect(rowDate(trivia, today, true).line).toBe("Tuesdays");
   });
 });
 

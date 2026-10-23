@@ -83,7 +83,7 @@
 /* A reader who asks for more contrast (macOS Increase Contrast, Windows' contrast themes in a browser that reports
    them without forcing colours): rules, control edges and the quieter text each move one step toward the text. */
 @media (prefers-contrast: more) {
-  :root { --fg-muted: oklch(0.36 0 0); --fg-faint: oklch(0.42 0 0); --rule: oklch(0.7 0 0); --rule-strong: oklch(0.55 0 0); --control-border: oklch(0.42 0 0); }
+  :root { --fg-muted: oklch(0.36 0 0); --fg-faint: oklch(0.42 0 0); --rule: oklch(0.7 0 0); --rule-strong: oklch(0.55 0 0); --control-border: oklch(0.5 0 0); }
 }
 @media (prefers-contrast: more) and (prefers-color-scheme: dark) {
   :root { --fg-muted: oklch(0.86 0 0); --fg-faint: oklch(0.8 0 0); --rule: oklch(0.5 0 0); --rule-strong: oklch(0.62 0 0); --control-border: oklch(0.72 0 0); }

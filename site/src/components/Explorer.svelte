@@ -91,7 +91,7 @@
     if (heading === null) return;
     if (was !== undefined) window.scrollBy({ top: heading.getBoundingClientRect().top - was, behavior: "instant" });
     // A day's heading takes focus only from here; a collapsed group's summary is in the Tab order already.
-    if (heading.tabIndex < 0) heading.tabIndex = -1;
+    if (heading.tagName !== "SUMMARY") heading.tabIndex = -1;
     heading.focus({ preventScroll: true });
   }
 
