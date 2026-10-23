@@ -87,6 +87,8 @@
       chosen = next;
       const n = picksOf(next).length;
       const picks = n === 1 ? "pick" : "picks";
+      // The kind in words before "picks": "2 theater and dance picks", "2 other picks" (kindName's "other events" would
+      // read "other events picks").
       announced = next === undefined ? `Showing all ${n} ${picks}` : `Showing ${n} ${kindWords(next)} ${picks}`;
       return tick();
     };

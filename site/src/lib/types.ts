@@ -81,7 +81,7 @@ export type GoneEvent = {
   venue?: string;
   start?: string;
   primaryUrl: string;
-  /** "two-strike": twice not found on its page, which the page calls no longer listed by the venue. */
+  /** "two-strike": twice not found on its page; the changes page says "No longer on the page it was listed on". */
   reason: "cancelled" | "two-strike";
 };
 

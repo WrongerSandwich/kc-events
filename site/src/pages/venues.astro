@@ -4,6 +4,7 @@ import { events } from "../generated/events";
 import { meta } from "../generated/meta";
 import { venues } from "../generated/venues";
 import { addressLine, venueDirectory } from "../lib/venues";
+import { samePlace } from "../lib/events";
 import { slugify } from "../lib/slugs";
 import "../styles/venues.css";
 
@@ -22,7 +23,7 @@ const groups = venueDirectory(venues, events, meta.regions);
           {g.venues.map(({ venue, events: count }) => (
             <li>
               <a href={`/v/${venue.slug}`}>{venue.name}</a>
-              <span class="detail">{[count > 0 ? `${count} ${count === 1 ? "event" : "events"}` : undefined, venue.neighborhood !== venue.name && venue.neighborhood].filter(Boolean).join(" · ")}</span>
+              <span class="detail">{[count > 0 ? `${count} ${count === 1 ? "event" : "events"}` : undefined, venue.neighborhood !== undefined && !samePlace(venue.neighborhood, venue.name) && venue.neighborhood].filter(Boolean).join(" · ")}</span>
               {venue.address !== undefined && <span class="detail">{addressLine(venue.address)}</span>}
             </li>
           ))}

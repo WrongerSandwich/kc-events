@@ -117,11 +117,16 @@ const CATCH_ALL = "Elsewhere in the metro";
  */
 export function neighborhoodShown(e: PublishedEvent): string | undefined {
   const n = e.neighborhood;
-  return n === CATCH_ALL || n.toLowerCase() === e.venue.toLowerCase() ? undefined : n;
+  return n === CATCH_ALL || samePlace(n, e.venue) ? undefined : n;
+}
+
+/** A neighborhood and a venue of one name, whatever the casing ("Crown Center" in Crown Center). */
+export function samePlace(neighborhood: string, venue: string): boolean {
+  return neighborhood.toLowerCase() === venue.toLowerCase();
 }
 
 /** What a check confirmed: a recurring event has a schedule rather than a date (#186). */
-export function verifiedWhat(e: PublishedEvent): string {
+export function verifiedLabel(e: PublishedEvent): string {
   return e.recurrence === "recurring" ? "Schedule and venue verified" : "Date and venue verified";
 }
 

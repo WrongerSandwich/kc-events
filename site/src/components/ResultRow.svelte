@@ -1,7 +1,7 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { daysSaid, isPast, lastDay, neighborhoodShown, venueLine, verifiedWhat } from "../lib/events";
+  import { daysSaid, isPast, lastDay, neighborhoodShown, venueLine, verifiedLabel } from "../lib/events";
   import { rowDateLine } from "../lib/group";
   import { kindPath } from "../lib/landing";
   import { venuePath } from "../lib/venues";
@@ -18,7 +18,7 @@
   const runDay = localDate(meta.lastSuccessfulRun);
   let checked = $derived(localDate(event.lastVerified));
   let hood = $derived(neighborhoodShown(event));
-  let verifiedLine =$derived(`${verifiedWhat(event)} ${formatShort(checked)}`);
+  let verifiedLine = $derived(`${verifiedLabel(event)} ${formatShort(checked)}`);
   // Only a save is listed once it has passed (the saved view keeps it), and it says so.
   let passed = $derived(isPast(event, today));
 </script>

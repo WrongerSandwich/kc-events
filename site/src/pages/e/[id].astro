@@ -16,7 +16,7 @@ import { formatDay, formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd, eventPageTitle } from "../../lib/event-meta";
 import { breadcrumbJsonLd, kindName, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
-import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, neighborhoodLine, neighborhoodShown, venueLine, verifiedWhat } from "../../lib/events";
+import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, neighborhoodLine, neighborhoodShown, venueLine, verifiedLabel } from "../../lib/events";
 import ReportForm from "../../components/ReportForm.astro";
 import { googleCalendarUrl, locatedForCalendar } from "../../lib/ics";
 import { siteConfig } from "../../site.config";
@@ -53,6 +53,8 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
         <p class="kind"><KindChip kind={event.kind} href={kindPath(event.kind)} />{event.dontMiss && <span class="dont-miss">Don't miss</span>}</p>
         <h1 style={`view-transition-name: title-${event.id}`}>{event.title}</h1>
         <p class="date">{line}</p>
+        <!-- A neighborhood of the venue's name, or the catch-all, gives way to the region, which neighborhoodLine then
+             names once (#186). -->
         <p class="where"><a href={venuePath(event.venue)}>{venueLine(event)}</a> · {neighborhoodLine(neighborhoodShown(event) ?? event.region, event.region)}</p>
         {admission && <p class="admission">{admission}</p>}
       </div>
@@ -65,7 +67,7 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
       {isDated(event) && <a class="control" href={`/e/${event.id}.ics`} download><UiIcon name="calendar-plus" />Add to calendar</a>}
       {google !== undefined && <a class="control" href={google} rel="nofollow">Google Calendar</a>}
     </div>
-    <p class="verified">{verifiedWhat(event)} {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.{(event.whyLine || description) && " The reason and description are written by a model."}</p>
+    <p class="verified">{verifiedLabel(event)} {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.{(event.whyLine || description) && " The reason and description are written by a model."}</p>
     <ReportForm context={report} summary="Wrong? Report it" />
   </article>
 
