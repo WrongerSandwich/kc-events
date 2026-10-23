@@ -111,7 +111,9 @@ describe("vercel.json", () => {
     for (const path of ["/calendar.ics", "/calendar/picks.ics", "/calendar/music.ics", "/e/evt_0123456789ab.ics"]) expect(matches(path), path).toBe(true);
   });
 
-  it("leaves an .ics path the site does not make to the HTML 404's own type (#192)", () => {
+  // An unknown path under /calendar/ or /e/ (say /calendar/nope.ics) still gets the calendar type on its 404:
+  // the rule is scoped to the two folders that hold feeds, not to the files the build makes.
+  it("leaves an .ics path outside /calendar/ and /e/ to the HTML 404's own type (#192)", () => {
     for (const path of ["/nope.ics", "/v/recordbar.ics", "/k/music.ics"]) expect(matches(path), path).toBe(false);
   });
 });
