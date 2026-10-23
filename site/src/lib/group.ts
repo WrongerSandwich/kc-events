@@ -21,6 +21,13 @@ export const ON_NOW_OPEN_MAX = 6;
 export type ResultGroup = { key: string; heading: string; events: PublishedEvent[]; collapsed: boolean };
 
 /**
+ * A row's date line and the machine-readable date behind it, for the row's <time datetime> (#194): the day the line
+ * leads with, the start (with its time when it has one), or the closing day where that is the only day the line names
+ * ("Closes Sat Oct 31", "Through Sat Oct 31", "Wednesdays, through Sat Oct 31"). No datetime for a schedule.
+ */
+export type RowDate = { line: string; datetime?: string };
+
+/**
  * A row's date line under its group heading: a start time or "No time listed"; for a run on now, "Closes Tue Oct 20", under
  * "On now"; for a run not yet open, "Closes Sat Nov 14" under its opening day, or "Fri–Sun, through Sun Nov 1"; for a
  * multi-day one-off, under each of its days, "8:30 pm · through Sat Oct 10" or "Through Sun Oct 11" (throughLine); a recurring event's
@@ -28,21 +35,23 @@ export type ResultGroup = { key: string; heading: string; events: PublishedEvent
  * With `withDay` (the venue sort, which has no day headings), the day comes first: "Fri Oct 9 · 7:00 pm",
  * "Fri Oct 9 · no time listed", "Tue Oct 20–Sat Nov 14", "Thu Oct 29, 6:00 pm–Sat Oct 31".
  */
-export function rowDateLine(e: PublishedEvent, today: string, withDay = false): string {
-  if (!isDated(e)) return e.schedule ?? "";
+export function rowDate(e: PublishedEvent, today: string, withDay = false): RowDate {
+  if (!isDated(e)) return { line: e.schedule ?? "" };
+  const start = e.start!;
   if (isMultiDay(e)) {
-    const last = formatDay(lastDay(e)!);
-    if (isOnNow(e, today)) return `Closes ${last}`;
-    const time = isDateOnly(e.start!) ? undefined : formatTime(e.start!);
-    if (withDay) return `${formatDay(firstDay(e)!)}${time ? `, ${time}` : ""}–${last}`;
-    if (e.recurrence !== "limited-run") return throughLine(e);
-    if (e.daysLine !== undefined) return `${e.daysLine}, through ${last}`;
-    return time ? `${time}–${last}` : `Closes ${last}`;
+    const lastIso = lastDay(e)!;
+    const last = formatDay(lastIso);
+    const closes = (line: string): RowDate => ({ line, datetime: lastIso });
+    if (isOnNow(e, today)) return closes(`Closes ${last}`);
+    const time = isDateOnly(start) ? undefined : formatTime(start);
+    if (withDay) return { line: `${formatDay(firstDay(e)!)}${time ? `, ${time}` : ""}–${last}`, datetime: start };
+    if (e.recurrence !== "limited-run") return time ? { line: throughLine(e), datetime: start } : closes(throughLine(e));
+    if (e.daysLine !== undefined) return closes(`${e.daysLine}, through ${last}`);
+    return time ? { line: `${time}–${last}`, datetime: start } : closes(`Closes ${last}`);
   }
   // A date-only start means the page gave no time (a concert, a screening), not that the event runs all day.
-  const start = e.start!;
-  if (!withDay) return isDateOnly(start) ? "No time listed" : formatTime(start);
-  return `${formatDay(firstDay(e)!)} · ${isDateOnly(start) ? "no time listed" : formatTime(start)}`;
+  if (!withDay) return { line: isDateOnly(start) ? "No time listed" : formatTime(start), datetime: start };
+  return { line: `${formatDay(firstDay(e)!)} · ${isDateOnly(start) ? "no time listed" : formatTime(start)}`, datetime: start };
 }
 
 /** The full start (date-only before timed on one day); a start-less run sorts by its last day, a recurring event first. */

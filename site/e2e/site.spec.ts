@@ -656,6 +656,21 @@ for (const width of [1280, 390]) {
       await expect(stop).toBeFocused();
     }
   });
+
+  // Rows are two stops each, so a week is hundreds of stops from the footer (#194; audit 2026-10-21, A8).
+  test(`the explorer's keyboard path at ${width} px: skip past results to Keep going`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await on(page, BUILD_DAY, "/explore");
+    await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+    await page.getByRole("link", { name: "Skip to results" }).focus();
+    await page.keyboard.press("Tab");
+    const skip = page.getByRole("link", { name: "Skip past results" });
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeInViewport();
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: /^Keep going/ })).toBeFocused();
+  });
 }
 
 // The search shortcut: / from the page, Esc to clear and then leave; a hint where there is a keyboard to press it.

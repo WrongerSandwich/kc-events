@@ -82,6 +82,8 @@ describe("Explorer", () => {
       expect(onNow).not.toHaveAttribute("open");
       const summary = onNow.querySelector("summary")!;
       expect(summary).toHaveTextContent("On now · 7 events");
+      // Plain text: some screen readers flatten a heading inside a summary; the heading is in the group (#194).
+      expect(summary.querySelector("h1, h2, h3, h4, h5, h6")).toBeNull();
       expect(within(onNow).getAllByRole("article")[0]).toHaveTextContent("Exhibition");
       // Nothing but the disclosure comes before the first day's heading.
       expect(onNow.compareDocumentPosition(screen.getByRole("heading", { level: 2, name: "Fri Oct 9" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -105,7 +107,8 @@ describe("Explorer", () => {
     cleanup();
     vi.setSystemTime(new Date("2026-10-09T17:00:00Z")); // Friday: Today covers Friday
     render(Explorer);
-    const when = document.querySelector<HTMLElement>("[role=group][aria-label=When]")!;
+    // One group named When, the fieldset; its buttons were once in a second, so "When" was said twice (#194).
+    const when = screen.getByRole("group", { name: "When" });
     expect(within(when).getAllByRole("button").map((b) => b.textContent)).toEqual(["Today", "Sat", "Sun", "This weekend", "Through Sunday", "Next 7 days", "Next 30 days", "All"]);
     await fireEvent.click(within(when).getByRole("button", { name: "Sat" }));
     expect(location.search).toBe("?when=2026-10-10..2026-10-10");
@@ -157,6 +160,12 @@ describe("Explorer", () => {
     expect(keep.compareDocumentPosition(screen.getByRole("heading", { level: 2, name: "Always there" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(keep).toHaveAttribute("href", "/explore?when=2026-10-15..2026-10-25&recurring=1");
     expect(screen.getByRole("link", { name: "or see all 3" })).toHaveAttribute("href", "/explore?when=all&recurring=1");
+    // Skip past results lands after the last dated row, just before Keep going (#194).
+    expect(screen.getByRole("link", { name: "Skip past results" })).toHaveAttribute("href", "#past-results");
+    const target = document.getElementById("past-results")!;
+    const rowsBefore = [...document.querySelectorAll("article.row")].filter((r) => r.compareDocumentPosition(target) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(rowsBefore.map((r) => within(r as HTMLElement).getByRole("heading").textContent)).toEqual(["Exhibition"]);
+    expect(target.compareDocumentPosition(keep) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     await fireEvent.click(keep, { ctrlKey: true });
     expect(location.search).toBe("?recurring=1");
   });

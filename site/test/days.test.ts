@@ -4,7 +4,7 @@ import { longDateLine } from "../src/lib/date-line";
 import { daysPhrase } from "../src/build/load-dataset";
 import { isOnNow, playsOn } from "../src/lib/events";
 import { matches } from "../src/lib/filter";
-import { groupResults, rowDateLine } from "../src/lib/group";
+import { groupResults, rowDate } from "../src/lib/group";
 import { closingLine } from "../src/lib/horizon";
 import { toIcs } from "../src/lib/ics";
 import { DEFAULT_FILTERS, EVERY_DATE } from "../src/lib/query";
@@ -63,7 +63,7 @@ describe("a limited run that plays only some weekdays (#143)", () => {
     expect(groups(THU)).toEqual([[FRI, ["poe"]]]);
     expect(groups(FRI)).toEqual([["on-now", ["poe"]]]);
     expect(groups("2026-10-05")).toEqual([["2026-10-14", ["poe"]]]);
-    expect(rowDateLine(poe, THU)).toBe("Fri–Sun, through Sun Nov 1");
+    expect(rowDate(poe, THU).line).toBe("Fri–Sun, through Sun Nov 1");
   });
 
   it("matches a when-filter only when it plays within it", () => {

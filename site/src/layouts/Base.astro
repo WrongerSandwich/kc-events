@@ -59,7 +59,9 @@ const url = canonical ?? new URL(publicPath, origin).toString();
   <body>
     <IconSprite />
     <Header><StalenessBanner client:idle /></Header>
-    <main id="main" class={wide ? "wide" : "measure"}>
+    {/* Focusable, so the skip link moves focus here in every browser, not only where it moves the sequential start
+        point (audit 2026-10-21, A13); base.css draws it no ring. */}
+    <main id="main" class={wide ? "wide" : "measure"} tabindex="-1">
       <slot />
     </main>
     <Footer />

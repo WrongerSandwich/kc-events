@@ -53,7 +53,9 @@
   --measure: 42rem;
   --gutter: 1rem;
   --radius: 6px;
-  --tap: 2.75rem;               /* the 44 px minimum touch target */
+  /* 44 px: the primary actions' height (Save, Share, Add to calendar, the header's links, Keep going). The filter chips
+     (the explorer's rail, the front page's kinds) are 32 px on phones, over WCAG 2.5.8's 24 px (#194). */
+  --tap: 2.75rem;
   /* Motion and stacking */
   --ease-out: cubic-bezier(0.25, 1, 0.5, 1); /* ease-out-quart */
   --z-sticky: 1; --z-bar: 2; --z-skip: 10;
@@ -77,6 +79,14 @@
     --kind-theater-dance: oklch(0.82 0.11 345); --kind-theater-dance-tint: oklch(0.31 0.06 345);
     --kind-other: oklch(0.80 0 0); --kind-other-tint: oklch(0.30 0 0);
   }
+}
+/* A reader who asks for more contrast (macOS Increase Contrast, Windows' contrast themes in a browser that reports
+   them without forcing colours): rules, control edges and the quieter text each move one step toward the text. */
+@media (prefers-contrast: more) {
+  :root { --fg-muted: oklch(0.36 0 0); --fg-faint: oklch(0.42 0 0); --rule: oklch(0.7 0 0); --rule-strong: oklch(0.55 0 0); --control-border: oklch(0.5 0 0); }
+}
+@media (prefers-contrast: more) and (prefers-color-scheme: dark) {
+  :root { --fg-muted: oklch(0.86 0 0); --fg-faint: oklch(0.8 0 0); --rule: oklch(0.5 0 0); --rule-strong: oklch(0.62 0 0); --control-border: oklch(0.72 0 0); }
 }
 .kind-talks-readings { --hue: var(--kind-talks-readings); --hue-tint: var(--kind-talks-readings-tint); }
 .kind-food-drink { --hue: var(--kind-food-drink); --hue-tint: var(--kind-food-drink-tint); }

@@ -71,8 +71,10 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // kind chip linking its kind's page, the footer's Venues link, and the head's colour-scheme, theme-color and locale tags (#188),
   // and 300 for one component vocabulary: Save's bookmark and names, the bar's icons, chips as links, per-row link names (#181),
   // and 300 for the front page's next pass: a row's Don't miss on its date line on phones, the staleness banner's warning sign
-  // in every page's sprite, and the closing-date wording (#184; measured 284 on the fixture build)
-  { page: "explore.html", budget: 53_450, build: "fixture" },
+  // in every page's sprite, and the closing-date wording (#184; measured 284 on the fixture build), and 400 for the next
+  // accessibility pass: a <time> on each row, Skip past results, forced colours, phone-sized chips and prefers-contrast (#194;
+  // measured 399)
+  { page: "explore.html", budget: 53_850, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
 ];
