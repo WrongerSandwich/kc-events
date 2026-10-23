@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
@@ -116,6 +116,60 @@ describe("built output", () => {
       expect(canonical("index.html")).toMatch(/\/$/);
       expect(canonical("about.html")).toMatch(/\/about$/);
     });
+    it("reaches every page type from the front page within two clicks (#188)", () => {
+      // The audit's links.mjs method: follow same-site links from / breadth-first, two levels deep.
+      const file = (href: string) => {
+        const path = href.split(/[?#]/)[0]!.replace(/^\//, "");
+        return path === "" ? "index.html" : /\.[a-z]+$/.test(path) ? path : `${path}.html`;
+      };
+      const links = (page: string) => [...read(page).matchAll(/href="(\/[^"/][^"]*|\/)"/g)].map((m) => m[1]!);
+      const reached = new Set<string>(["/"]);
+      let frontier = ["/"];
+      for (let depth = 0; depth < 2; depth++) {
+        const next: string[] = [];
+        for (const href of frontier) {
+          if (!file(href).endsWith(".html") || !has(file(href))) continue;
+          for (const l of links(file(href))) if (!reached.has(l.split(/[?#]/)[0]!)) { reached.add(l.split(/[?#]/)[0]!); next.push(l); }
+        }
+        frontier = next;
+      }
+      const paths = [...reached];
+      for (const prefix of ["/explore", "/about", "/changes", "/venues", "/e/", "/v/", "/k/", "/r/"]) expect(paths.some((p) => p.startsWith(prefix)), prefix).toBe(true);
+      // Every kind and region page is one click away, from the front page itself.
+      const front = links("index.html");
+      for (const k of meta.kinds) expect(front, k).toContain(`/k/${slugify(k)}`);
+      for (const r of meta.regions) expect(front, r).toContain(`/r/${slugify(r)}`);
+    });
+
+    it("links the venues from every page's footer, and For venues from a venue page (#188)", () => {
+      for (const page of ["index.html", "explore.html", "about.html"]) expect(read(page), page).toMatch(/<footer[\s\S]*href="\/venues"/);
+      const venuePage = readdirSync(new URL("v/", dist)).find((f) => f.endsWith(".html"))!;
+      expect(read(`v/${venuePage}`)).toContain('<a href="/about#for-venues">Is this your venue? How to correct a listing</a>');
+    });
+
+    it("declares both colour schemes, a theme colour for each, and the locale on every page (#188)", () => {
+      for (const page of ["index.html", "explore.html", "about.html", `e/${events[0]!.id}.html`]) {
+        const html = read(page);
+        expect(html, page).toContain('<meta name="color-scheme" content="light dark">');
+        expect(html, page).toMatch(/<meta name="theme-color" media="\(prefers-color-scheme: light\)" content="#[0-9a-f]{6}">/);
+        expect(html, page).toMatch(/<meta name="theme-color" media="\(prefers-color-scheme: dark\)" content="#[0-9a-f]{6}">/);
+        expect(html, page).toContain('<meta property="og:locale" content="en_US">');
+      }
+    });
+
+    it("offers the picks' feed by https address beside webcal, and Google Calendar beside Add to calendar (#188)", () => {
+      for (const page of ["index.html", "about.html"]) expect(read(page), page).toContain("Google Calendar: Other calendars, From URL.");
+      const dated = events.find(isDated)!;
+      expect(read(`e/${dated.id}.html`)).toMatch(/<a class="ics[^"]*" href="https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&amp;[^"]+" rel="nofollow"[^>]*>Google Calendar<\/a>/);
+    });
+
+    it("writes llms.txt's sections and its cite line (#188)", () => {
+      const text = read("llms.txt");
+      for (const h of ["## Pages", "## Lists", "## Calendar feeds", "## Explorer links", "## The dataset", "## This week's picks"]) expect(text, h).toContain(`\n${h}\n`);
+      expect(text).toContain("Cite as: KC This Week, ");
+      for (const k of meta.kinds) expect(text, k).toContain(`/k/${slugify(k)} : `);
+    });
+
     it("links the ICO, the SVG, and the apple-touch-icon from every page, and serves the mark as /favicon.svg", () => {
       expect(read("favicon.svg")).toBe(faviconSvg());
       expect(has("apple-touch-icon.png")).toBe(true);

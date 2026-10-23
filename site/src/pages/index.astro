@@ -13,6 +13,7 @@ import { siteConfig } from "../site.config";
 import { alwaysTherePicks } from "../always-there";
 import { alwaysThereDetail, pickAlwaysThere } from "../lib/always-there";
 import { slugify } from "../lib/slugs";
+import { kindName, kindPath, regionPath } from "../lib/landing";
 
 const alwaysThere = pickAlwaysThere(events, alwaysTherePicks);
 // Everything the explorer holds, recurring included, since the link turns recurring on.
@@ -45,6 +46,11 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
   </section>}
 
   <p class="explore"><a href="/explore?when=all&recurring=1">Browse all {count} events</a></p>
+  {/* Every kind and region page, one click from here (#188), text only, as the landing pages' own rows; the venues are in the footer. */}
+  <nav class="lists" aria-label="More lists">
+    <p>By kind: {meta.kinds.map((k, i) => <>{i > 0 && " · "}<a href={kindPath(k)}>{kindName(k)}</a></>)}</p>
+    <p>By region: {meta.regions.map((r, i) => <>{i > 0 && " · "}<a href={regionPath(r)}>{r}</a></>)}</p>
+  </nav>
 </Base>
 
 <style>
@@ -67,5 +73,8 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
   .always a { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
   .always .detail { grid-column: 2; font-size: var(--text-sm); color: var(--fg-muted); }
   .icon { color: var(--hue); }
-  .explore { margin-block: var(--space-12); font-size: var(--text-lg); font-weight: var(--weight-strong); }
+  .explore { margin-block: var(--space-12) var(--space-6); font-size: var(--text-lg); font-weight: var(--weight-strong); }
+  .lists { font-size: var(--text-sm); color: var(--fg-muted); }
+  .lists p + p { margin-top: var(--space-2); }
+  .lists a { color: var(--fg); text-decoration: underline; text-decoration-color: var(--fg-faint); }
 </style>

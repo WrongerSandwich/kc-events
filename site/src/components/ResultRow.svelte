@@ -2,6 +2,7 @@
   import { formatShort, localDate } from "../lib/dates";
   import { hostOf, detailsUrl, isPast, lastDay, venueLine } from "../lib/events";
   import { rowDateLine } from "../lib/group";
+  import { slugify } from "../lib/slugs";
   import { venuePath } from "../lib/venues";
   import type { PublishedEvent } from "../lib/types";
   import KindChip from "./KindChip.svelte";
@@ -24,7 +25,8 @@
   <!-- The venue's page (#137), out of the Tab order like the host, so a row stays two stops; the event page links it too.
        On a venue page the link is to that page itself: a prop to drop it would cost the explorer's script. -->
   <span class="where" title={`${venueLine(event)} · ${event.neighborhood}`}><a class="venue" href={venuePath(event.venue)} tabindex="-1">{venueLine(event)}</a><span class="hood">{` · ${event.neighborhood}`}</span></span>
-  <KindChip kind={event.kind} />
+  <!-- Its kind's page (#188, kindPath without importing the landing module), out of the Tab order like the venue: the way on from a row without JavaScript. -->
+  <KindChip kind={event.kind} href={`/k/${slugify(event.kind)}`} tabindex={-1} />
   <!-- Out of the Tab order, so a row is two stops (title, Save); the event page links the source too. -->
   <a class="host" href={detailsUrl(event)} title={hostOf(detailsUrl(event))} tabindex="-1">{hostOf(detailsUrl(event))}</a>
   <span class="verified"><span aria-hidden="true">✓ {verifiedOn}</span><span class="visually-hidden">Verified {verifiedOn}</span></span>
