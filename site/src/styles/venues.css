@@ -25,3 +25,6 @@
 .landing-more p { margin: 0 0 var(--space-2); }
 /* Links in a run of text must not rely on colour alone (axe link-in-text-block). */
 .landing-more a { text-decoration: underline; }
+
+/* The rows here ship no script, so they have no Save (VenueEvents.svelte says why): no column is kept for it (#181). */
+.row { --row-save-width: 0px; }

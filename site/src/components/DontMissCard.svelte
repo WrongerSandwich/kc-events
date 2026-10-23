@@ -1,7 +1,8 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { admissionLine, hostOf, detailsUrl, lastDay, venueLine } from "../lib/events";
+  import { admissionLine, daysSaid, hostOf, detailsUrl, lastDay, venueLine } from "../lib/events";
+  import { kindPath } from "../lib/landing";
   import { slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
@@ -33,15 +34,17 @@
     </p>
     {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
     <p class="tags">
-      <KindChip kind={event.kind} />
+      <!-- The link it looks like, to the kind's page (#181). -->
+      <KindChip kind={event.kind} href={kindPath(event.kind)} />
       <a class="fact primary" href={detailsUrl(event)}><UiIcon name="link" />{hostOf(detailsUrl(event))}</a>
       {#if checked < runDay}<span class="fact verified"><UiIcon name="check" />Verified {formatShort(checked)}</span>{/if}
     </p>
   </div>
+  <!-- Save, then Add to calendar: the event page's controls, worded the same at every width (#181). -->
   <div class="actions">
-    <SaveButton id={event.id} title={event.title} last={lastDay(event)} large />
+    <SaveButton id={event.id} title={event.title} last={lastDay(event)} when={daysSaid(event)} />
     <!-- A plain link to the event's .ics file: it works with or without JavaScript. -->
-    <a class="ics" href={`/e/${event.id}.ics`} download aria-label={`Add ${event.title} to your calendar`} title="Add to calendar"><UiIcon name="calendar-plus" /><span class="ics-label" aria-hidden="true">Calendar</span></a>
+    <a class="control" href={`/e/${event.id}.ics`} download aria-label={`Add to calendar: ${event.title}`}><UiIcon name="calendar-plus" />Add to calendar</a>
   </div>
 </article>
 
@@ -63,25 +66,12 @@
   .primary { color: var(--fg-muted); text-decoration: none; }
   .primary:hover { color: var(--fg); text-decoration: underline; }
   .verified { color: var(--fg-faint); }
-  /* Save, then add to calendar; the slot keeps its width before Save mounts, so nothing re-wraps when it appears. */
-  .actions { display: flex; gap: var(--space-2); min-width: calc(4.5rem + var(--tap) + var(--space-2)); justify-content: flex-end; }
-  .ics {
-    display: inline-flex; align-items: center; justify-content: center; width: var(--tap); height: var(--tap);
-    border: 1px solid var(--control-border); border-radius: var(--radius); background: var(--bg-raised); color: var(--fg-muted);
-    font-size: var(--text-lg);
-    transition: color 150ms var(--ease-out), border-color 150ms var(--ease-out);
-  }
-  .ics:hover { color: var(--fg); border-color: var(--fg-faint); text-decoration: none; }
-  @media (prefers-reduced-motion: reduce) { .ics { transition: none; } }
-  .ics-label { display: none; }
-  /* Phones: the title gets the width beside the tile, and Save and the calendar link sit in a row under the words,
-     each labelled, since a phone shows no tooltip. */
+  /* Save over Add to calendar, in a column beside the words, both the column's width. The column keeps Save's room
+     and stacks from its foot, so Add to calendar stays put when Save mounts above it. */
+  .actions { display: flex; flex-direction: column; justify-content: flex-end; gap: var(--space-2); min-height: calc(2 * var(--tap) + var(--space-2)); }
+  /* Phones: the title gets the width beside the tile, and Save and Add to calendar sit in a row under the words. */
   @media (max-width: 30rem) {
     .card { grid-template-columns: 3.5rem minmax(0, 1fr); column-gap: var(--space-3); }
-    .actions { grid-column: 2; min-width: 0; justify-content: flex-start; margin-top: var(--space-3); }
-    .actions :global(.save) { white-space: nowrap; }
-    .ics { width: auto; gap: 0.4em; padding-inline: var(--space-3); font-size: var(--text-sm); font-weight: var(--weight-medium); }
-    .ics :global(.ui-icon) { font-size: var(--text-lg); }
-    .ics-label { display: inline; }
+    .actions { grid-column: 2; flex-direction: row; flex-wrap: wrap; justify-content: flex-start; min-height: var(--tap); margin-top: var(--space-3); }
   }
 </style>

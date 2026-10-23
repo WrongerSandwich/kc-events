@@ -4,7 +4,7 @@
   import UiIcon from "./UiIcon.svelte";
 
   // `data` is read at the click, so a list that changes after mount (the saved set) shares as it is then. `large` is
-  // the event page's look, a 44 px button beside Add to calendar; without it, the explorer bar's small one.
+  // the event page's base.css .control beside Save and Add to calendar; without it, the explorer bar's .control.small.
   let { label, data, disabled = false, large = false }: { label: string; data: () => ShareData; disabled?: boolean; large?: boolean } = $props();
   // Sharing needs the browser, so the button renders only once mounted: without JavaScript there is no button that
   // does nothing.
@@ -32,27 +32,19 @@
 </script>
 
 {#if mounted}
+  <!-- The button and its note are the row's own items (the wrapper is display: contents): the note, once it says
+       something, takes a line of its own under the row, so the buttons keep their gaps and their line (#181). -->
   <span class="share-wrap">
-    <button type="button" class="share" class:large {disabled} onclick={share}>{#if large}<UiIcon name="share" />{/if}{label}</button>
+    <button type="button" class="control share" class:small={!large} {disabled} onclick={share}><UiIcon name="share" />{label}</button>
     <!-- A live region that is there before anything is said in it, so the confirmation is announced. -->
     <span class="note" aria-live="polite">{#if note !== undefined}{#if "copied" in note}Link copied{:else}Copy this link: <span class="url">{note.failed}</span>{/if}{/if}</span>
   </span>
 {/if}
 
 <style>
-  .share-wrap { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-  .share {
-    display: inline-flex; align-items: center; gap: var(--space-2);
-    font: inherit; font-size: var(--text-xs); color: var(--accent); background: none;
-    border: 1px solid var(--rule); border-radius: var(--radius); padding: var(--space-1) var(--space-2); cursor: pointer;
-  }
-  .share[disabled] { opacity: 0.5; cursor: default; }
-  /* The event page's pair: the same button as Add to calendar beside it. */
-  .large {
-    min-height: var(--tap); padding-inline: var(--space-3); border-color: var(--control-border); background: var(--bg-raised);
-    color: var(--fg); font-size: var(--text-sm); font-weight: var(--weight-medium);
-  }
-  .large:hover { border-color: var(--fg-faint); }
-  .note { font-size: var(--text-xs); color: var(--fg-muted); }
+  .share-wrap { display: contents; }
+  /* Empty, the live region is out of the flow, so it adds no gap; once it speaks, it is the row's last line. */
+  .note { order: 1; flex: 1 0 100%; font-size: var(--text-xs); color: var(--fg-muted); }
+  .note:empty { position: absolute; }
   .url { user-select: all; overflow-wrap: anywhere; color: var(--fg); }
 </style>

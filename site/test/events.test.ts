@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { admissionLine, firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, venueLine } from "../src/lib/events";
+import { admissionLine, daysSaid, firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, venueLine } from "../src/lib/events";
 import { event } from "./fixtures/event";
 
 describe("venueLine", () => {
@@ -85,5 +85,14 @@ describe("admissionLine (#133)", () => {
     expect(admissionLine(event({ price: "$25–$45" }))).toBe("$25–$45");
     expect(admissionLine(event({ ages: "21+" }))).toBe("21+");
     expect(admissionLine(event())).toBeUndefined();
+  });
+});
+
+describe("daysSaid (#181)", () => {
+  it("says a one-off's day, a span's first and last, a start-less run's last, and nothing for an always-there event", () => {
+    expect(daysSaid(event({ start: "2026-10-09T19:00:00-05:00" }))).toBe("Fri Oct 9");
+    expect(daysSaid(event({ recurrence: "limited-run", start: "2026-09-20", end: "2026-10-11" }))).toBe("Sun Sep 20 to Sun Oct 11");
+    expect(daysSaid(event({ recurrence: "limited-run", start: undefined, end: "2026-10-11" }))).toBe("through Sun Oct 11");
+    expect(daysSaid(event({ recurrence: "recurring", start: undefined, schedule: "Every Tuesday" }))).toBeUndefined();
   });
 });

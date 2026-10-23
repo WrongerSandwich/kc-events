@@ -199,11 +199,12 @@
     <p role="status" class="visually-hidden">{announced}</p>
     {#if filters.saved}
       <ShareButton label="Share saved" data={shareSaved} disabled={upcomingSaves.length === 0} />
-      <button type="button" class="export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}>Export saved</button>
+      <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved</button>
     {:else}
-      <button type="button" class="export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs(exportAs.filename, exportable, exportAs.calendarName)}>Export this view</button>
+      <button type="button" class="control small export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs(exportAs.filename, exportable, exportAs.calendarName)}><UiIcon name="calendar-plus" />Export this view</button>
     {/if}
-    {#if !isDefault(filters)}<button type="button" class="clear" onclick={() => change(DEFAULT_FILTERS)}>Clear filters</button>{/if}
+    <!-- The bar's buttons are one kind (#181): base.css's small control, an icon and words, like Share saved. -->
+    {#if !isDefault(filters)}<button type="button" class="control small" onclick={() => change(DEFAULT_FILTERS)}><UiIcon name="x" />Clear filters</button>{/if}
   </div>
 
   <aside class="rail" aria-label="Filters">
@@ -312,9 +313,7 @@
   .pill:hover { border-color: var(--rule-strong); }
   .pill.kind { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
   .pill :global(.ui-icon) { width: 0.95em; height: 0.95em; margin-right: -0.15em; }
-  .clear, .link { font: inherit; font-size: var(--text-sm); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
-  .export { font: inherit; font-size: var(--text-xs); color: var(--accent); background: none; border: 1px solid var(--rule); border-radius: var(--radius); padding: var(--space-1) var(--space-2); cursor: pointer; }
-  .export[disabled] { opacity: 0.5; cursor: default; }
+  .link { font: inherit; font-size: var(--text-sm); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
   .empty { color: var(--fg-muted); }
   /* Keep going: a full-width tap target after the last day, the see-all link quieter beside it. */
   .keep { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); margin: var(--space-6) 0; font-size: var(--text-sm); }

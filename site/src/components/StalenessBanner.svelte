@@ -4,9 +4,6 @@
   import { siteConfig } from "../site.config";
   import { islandClock } from "./clock.svelte";
 
-  // `wide` matches the banner to the header and page below it (the explorer is wide; everything else is the measure).
-  let { wide = false }: { wide?: boolean } = $props();
-
   const runDay = localDate(meta.lastSuccessfulRun);
   const staleFrom = addDays(runDay, siteConfig.staleAfterDays + 1);
   // The build's date as rendered; the visitor's, kept current, once mounted.
@@ -16,7 +13,8 @@
 
 {#if stale}
   <div class="banner" role="status">
-    <p class={wide ? "wide" : "measure"}>This list was last researched on {formatShort(runDay)} and may have missed changes since. Check the event's own page before you go.</p>
+    <!-- The header's width, on every page (#181). -->
+    <p class="wide">This list was last researched on {formatShort(runDay)} and may have missed changes since. Check the event's own page before you go.</p>
   </div>
 {/if}
 

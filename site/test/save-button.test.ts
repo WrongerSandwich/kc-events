@@ -5,18 +5,24 @@ import SaveButton from "../src/components/SaveButton.svelte";
 import { STORAGE_KEY } from "../src/lib/saves";
 
 describe("SaveButton", () => {
-  it("toggles its pressed state and visible label under a stable name, and persists", async () => {
+  it("toggles its pressed state, and its name says what its label says (#181, WCAG 2.5.3), and persists", async () => {
     localStorage.removeItem(STORAGE_KEY);
     render(SaveButton, { id: "evt_1", title: "A show", last: "2026-10-09" });
     await tick(); // the button renders once mounted
     const button = screen.getByRole("button", { name: "Save A show" });
     expect(button).toHaveAttribute("aria-pressed", "false");
-    expect(button).toHaveTextContent("Save");
+    expect(button).not.toHaveAttribute("aria-label");
     await fireEvent.click(button);
     expect(button).toHaveAttribute("aria-pressed", "true");
-    expect(button).toHaveTextContent("Saved");
-    expect(screen.getByRole("button", { name: "Save A show" })).toBe(button);
+    expect(screen.getByRole("button", { name: "Saved A show" })).toBe(button);
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!)).toEqual([{ id: "evt_1", last: "2026-10-09" }]);
+  });
+
+  it("names the date when it is given, so a title on several dates is told apart (#181)", async () => {
+    localStorage.removeItem(STORAGE_KEY);
+    render(SaveButton, { id: "evt_5", title: "The Wizard of Oz", when: "Fri Oct 9" });
+    await tick();
+    expect(screen.getByRole("button", { name: "Save The Wizard of Oz, Fri Oct 9" })).toBeInTheDocument();
   });
 
   it("gives a save made before last days were stored this page's last day (#93)", async () => {

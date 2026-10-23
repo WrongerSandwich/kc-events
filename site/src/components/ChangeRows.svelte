@@ -20,7 +20,8 @@
 </ul>
 
 <style>
-  .rows { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
+  /* No Save in these rows, and no column kept for it (#181). */
+  .rows { list-style: none; padding: 0; margin: var(--space-2) 0 0; --row-save-width: 0px; }
   /* Under the row's own rule, in the row's muted detail type, lined up with its title where the date has a column. */
   .was { margin: 0; padding: 2px 0 var(--space-1); font-size: var(--text-xs); color: var(--fg-muted); border-bottom: 1px solid var(--rule); }
   li:has(.was) :global(.row) { border-bottom: 0; }
