@@ -624,7 +624,7 @@ for (const width of [1280, 390]) {
     await expect(skip).toBeInViewport();
     await page.keyboard.press("Enter");
     await expect(page.getByRole("region", { name: "Events" })).toBeFocused();
-    // From the results (On now, short, is open like a day): each row's title and Save, with the host left out.
+    // From the results (On now, short, is open like a day): each row's title and Save, its venue and chip left out.
     const first = page.locator(".results > article.row").first();
     for (const stop of [first.locator("h3 a"), first.locator("button.save"), page.locator(".results > article.row").nth(1).locator("h3 a")]) {
       await page.keyboard.press("Tab");

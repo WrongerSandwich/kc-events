@@ -17,7 +17,7 @@
   // its own check is older than that, like a pick's card (#182).
   const runDay = localDate(meta.lastSuccessfulRun);
   let checked = $derived(localDate(event.lastVerified));
-  let verified = $derived(`Date and venue verified ${formatShort(checked)}`);
+  let verifiedLine = $derived(`Date and venue verified ${formatShort(checked)}`);
   // Only a save is listed once it has passed (the saved view keeps it), and it says so.
   let passed = $derived(isPast(event, today));
 </script>
@@ -37,7 +37,7 @@
   {/if}
   <!-- The chip is the link it looks like, to the kind's page, out of the Tab order like the venue (#181). -->
   {#if hide !== "kind"}<KindChip kind={event.kind} href={kindPath(event.kind)} tabindex={-1} />{/if}
-  {#if checked < runDay}<span class="verified" title={verified}><span aria-hidden="true">✓ {formatShort(checked)}</span><span class="visually-hidden">{verified}</span></span>{/if}
+  {#if checked < runDay}<span class="verified" title={verifiedLine}><span aria-hidden="true">✓ {formatShort(checked)}</span><span class="visually-hidden">{verifiedLine}</span></span>{/if}
   <SaveButton id={event.id} title={event.title} last={lastDay(event)} when={daysSaid(event)} />
   {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
 </article>
@@ -77,6 +77,7 @@
   .where { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   /* Venue and neighborhood give way together, in proportion to their length; from 1024 px only the venue does. */
   .where { display: flex; align-items: center; }
+  /* A 12 px line at the row's 1.25 leading is 15 px, so 4.5 px above and below make 24. */
   .venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-block: 4.5px; }
   /* The venue link reads as the detail it is, in the line's colour; base.css underlines it on hover. */
   a.venue { color: inherit; }
@@ -132,7 +133,7 @@
      row's title or venue: the widest chip ("outdoors/community") is 154 px, the widest stamp ("✓ Sep 30") about 50 px,
      and Save, its bookmark and "Saved", within its 80 px column. A list that ships no script (a venue, kind, region or
      changes page) has no Save, and its stylesheet sets --row-save-width to 0, so all that is left where Save would be
-     is one column gap (#181); a kind's page has no chip, so no column for it either. */
+     is one column gap (#181); a kind's page has no chip, so its column is 0 px, likewise one gap. */
   @media (min-width: 1280px) {
     .when { font-size: var(--text-xs); }
     .row :global(.chip) { justify-self: start; }
