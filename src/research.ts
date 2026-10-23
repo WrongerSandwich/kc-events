@@ -2,8 +2,9 @@
  * The research command's work, apart from the process: reads config, prompts, registry, and
  * dataset under a root directory, runs once through the given adapters, and writes the dataset, the
  * run report (Markdown plus JSON twin), and the archive files the run's archived records go to: only a
- * dataset that validates, and none of the files truncated; for one that does not, only the report and the refused records, beside the reports. `cli.ts` calls it with the real adapters and the working directory; tests, with fakes
- * and a temporary one.
+ * dataset that validates, and none of the files truncated; for one that does not, only the report and
+ * the refused records, beside the reports. `cli.ts` calls it with the real adapters and the working
+ * directory; tests, with fakes and a temporary one.
  */
 import { existsSync } from "node:fs";
 import { mkdir, readFile } from "node:fs/promises";
@@ -103,7 +104,7 @@ async function archiveFiles(dataDir: string, archived: Event[], config: RunConfi
 interface Refused {
   index?: number;
   messages: string[];
-  event?: unknown;
+  event?: Event;
 }
 
 /** The schema's issues grouped by the event they are about, in the dataset's order, each message with the path below the event it names. */
@@ -121,10 +122,9 @@ function refusedEvents(error: z.ZodError, dataset: Dataset): Refused[] {
     .map(([index, messages]) => (index === undefined ? { messages } : { index, messages, event: dataset.events[index] }));
 }
 
-/** One line naming a refused record: its id, title, status, class, start and end. */
-function describe(event: unknown): string {
-  if (event === undefined) return "the dataset as a whole:";
-  const e = event as Partial<Event>;
+/** The heading of a refused record's messages: its id, title, status, class, start and end. */
+function refusedHeading(e: Event | undefined): string {
+  if (e === undefined) return "the dataset as a whole:";
   return `${e.id} "${e.title}" (${e.status}, ${e.recurrence}, start ${e.start ?? "none"}, end ${e.end ?? "none"}):`;
 }
 
@@ -157,18 +157,20 @@ export async function research({ root, args, env, adapters = realAdapters }: Res
   try {
     checked = parseDataset(result.dataset, config);
   } catch (error) {
-    if (!(error instanceof z.ZodError)) throw new Error("the run produced a dataset that does not validate; nothing was written", { cause: error });
+    const refusal = "the run produced a dataset that does not validate; nothing was written";
+    if (!(error instanceof z.ZodError)) throw new Error(refusal, { cause: error });
     const refused = refusedEvents(error, result.dataset);
     const sidePath = `${reportBase}.failed.json`;
-    let kept = `the run's report and the refused records are in data/runs/${result.report.runDate}.failed.json`;
+    let sideNote = `the run's report and the refused records are in data/runs/${result.report.runDate}.failed.json`;
     try {
       await mkdir(runsDir, { recursive: true });
       await writeAllOrNothing([{ path: sidePath, content: JSON.stringify({ refused, report: result.report }, null, 2) + "\n" }]);
     } catch (writeError) {
-      kept = `the run's report could not be kept either (${String(writeError)})`;
+      sideNote = `the run's report could not be kept either (${String(writeError)})`;
     }
-    const lines = refused.map(({ event, messages }) => `  ${describe(event)}\n${messages.map((m) => `    - ${m}`).join("\n")}`);
-    throw new Error(`the run produced a dataset that does not validate; nothing was written, and ${kept}.\n${lines.join("\n")}`, { cause: error });
+    const lines = refused.map(({ event, messages }) => `  ${refusedHeading(event)}\n${messages.map((m) => `    - ${m}`).join("\n")}`);
+    // No cause: the lines carry every issue, and Zod's JSON of them would push them out of the health comment's 40-line log tail.
+    throw new Error(`${refusal}, and ${sideNote}.\n${lines.join("\n")}`);
   }
 
   const archives = await archiveFiles(dataDir, result.archived, config);

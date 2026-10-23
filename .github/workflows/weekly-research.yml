@@ -111,6 +111,14 @@ jobs:
           git push origin "HEAD:$GITHUB_REF_NAME"
           cat "data/runs/$run_date.md" >> "$GITHUB_STEP_SUMMARY"
 
+      # A run whose dataset does not validate keeps its report and the refused records here (#219).
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: refused-run
+          path: data/runs/*.failed.json
+          if-no-files-found: ignore
+
       - name: Say what a failure leaves behind
         if: failure()
         run: |

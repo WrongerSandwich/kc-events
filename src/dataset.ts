@@ -249,10 +249,11 @@ export const discoveryHostStateSchema = z.strictObject({
 const uniqueEvents = (platformHosts: readonly string[]) =>
   z.array(eventSchemaFor(platformHosts)).superRefine((events, ctx) => {
     const seen = new Set<string>();
-    for (const { id } of events) {
-      if (seen.has(id)) ctx.addIssue({ code: "custom", message: `event ids must be unique; ${id} appears more than once` });
+    // At the later record's index, so a refused run names it (#219).
+    events.forEach(({ id }, i) => {
+      if (seen.has(id)) ctx.addIssue({ code: "custom", path: [i], message: `event ids must be unique; ${id} appears more than once` });
       seen.add(id);
-    }
+    });
   });
 
 export const datasetSchemaFor = (platformHosts: readonly string[]) =>

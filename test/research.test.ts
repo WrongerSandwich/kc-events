@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stringify } from "yaml";
-import type { Event } from "../src/dataset.js";
+import { configFromArgs, research } from "../src/research.js";
+import { emptyDataset, parseDataset, type Event } from "../src/dataset.js";
+import { fakePorts, type FakePortOptions } from "./fakes/ports.js";
+import { testConfig, TEST_MODELS } from "./fakes/config.js";
+import { candidateAt, knuckleheads, PAGE, reply, WEEK_1 } from "./fakes/fixtures.js";
 
 // The run guards every invariant the schema holds, so the test of a refused dataset bends one record of
 // the real run's output: `corrupt.event`, when a test sets it, is applied to each event the run returns.
@@ -19,11 +23,6 @@ vi.mock("../src/run.js", async (importOriginal) => {
     },
   };
 });
-import { configFromArgs, research } from "../src/research.js";
-import { emptyDataset, parseDataset } from "../src/dataset.js";
-import { fakePorts, type FakePortOptions } from "./fakes/ports.js";
-import { testConfig, TEST_MODELS } from "./fakes/config.js";
-import { candidateAt, knuckleheads, PAGE, reply, WEEK_1 } from "./fakes/fixtures.js";
 
 const CALENDAR_URL = knuckleheads.urls[0]!;
 const withDiscovery = () => {
@@ -201,6 +200,20 @@ describe("a research run's files", () => {
     ]);
     expect(side.report.runDate).toBe("2026-10-02");
     expect(side.report.spend.totalUsd).toBeGreaterThan(0);
+    expect(error.cause).toBeUndefined();
     expect(closed()).toBe(true);
+  });
+
+  it("names the later of two records sharing an id when the run's dataset is refused (#219)", async () => {
+    corrupt.event = (e) => ({ ...e, id: "evt_same" });
+    const { done } = researchWith({
+      pages: { [CALENDAR_URL]: PAGE },
+      completions: [reply(candidateAt(knuckleheads), candidateAt(knuckleheads, { title: "Other Show", startDate: "2026-11-01", dateEvidence: "Sun, Nov 1" }))],
+    });
+
+    await expect(done).rejects.toThrow(/evt_same "Other Show" \(active, one-off, start 2026-11-01T20:00:00-06:00, end none\):\n {4}- event ids must be unique; evt_same appears more than once/);
+
+    const side = await readJson("runs/2026-10-02.failed.json");
+    expect(side.refused.map((r: { index: number; event: { title: string } }) => [r.index, r.event.title])).toEqual([[1, "Other Show"]]);
   });
 });
