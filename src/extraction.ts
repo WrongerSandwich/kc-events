@@ -405,7 +405,7 @@ export interface Sighting {
   /** Why the weekdays the model named for a run were not taken (#196); the event stands without them. */
   daysProblem?: string;
   /** That a reading given a schedule was read as the span its date quote gives instead (#218), for the source's line. */
-  spanRead?: string;
+  spanNote?: string;
 }
 
 /**
@@ -437,10 +437,10 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const end = endsFirst ? undefined : endAt.iso;
   const dateProblem = startAt.problem ?? endAt.problem ?? (endsFirst ? `an end (${endAt.iso!.slice(0, 10)}) before its start` : undefined);
   const dateEvidence = unmarked(candidate.dateEvidence);
-  const span = spanOverSchedule({ start, end, schedule: nonEmpty(candidate.schedule) }, dateEvidence, context);
-  const schedule = span === undefined ? nonEmpty(candidate.schedule) : undefined;
-  const recurrence = deriveRecurrence(span ?? { start, end, schedule });
-  const when = recurrence === "recurring" ? { schedule } : (span ?? { start, end });
+  const read = { start, end, schedule: nonEmpty(candidate.schedule) };
+  const span = deriveRecurrence(read) === "recurring" ? spanOverSchedule(dateEvidence, context) : undefined;
+  const recurrence = deriveRecurrence(span ?? read);
+  const when = recurrence === "recurring" ? { schedule: read.schedule } : (span ?? { start, end });
   const venueEvidence = unmarked(candidate.venueEvidence);
   const venue = unmarked(candidate.venue);
   const description = unmarked(candidate.description);
@@ -454,7 +454,9 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     venueEvidence !== undefined;
   const quoteProblem = cited ? quoteNotOnPage({ date: dateEvidence, venue: venueEvidence }, origin.quotableText) : undefined;
   const verified = cited && quoteProblem === undefined;
-  const days = verified && recurrence === "limited-run" ? listDays(span === undefined ? candidate.days : (candidate.days ?? statedDays(dateEvidence!)), dateEvidence!) : {};
+  // A reading held to its quoted span (#218) was given as recurring, so the model named no days for it: it takes those its quote states.
+  const namedDays = span === undefined ? candidate.days : (candidate.days ?? statedDays(dateEvidence!));
+  const days = verified && recurrence === "limited-run" ? listDays(namedDays, dateEvidence!) : {};
 
   const event: Event = {
     id: newEventId(primaryUrl, title, context.nowIso, when.start),
@@ -489,22 +491,18 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     ...(dateProblem !== undefined ? { dateProblem } : {}),
     ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText: origin.quotableText } } : {}),
     ...(days.problem !== undefined ? { daysProblem: days.problem } : {}),
-    ...(span !== undefined ? { spanRead: `was given a schedule, but its date quote gives the span ${span.start.slice(0, 10)} to ${span.end.slice(0, 10)}; read as that span` } : {}),
+    ...(span !== undefined ? { spanNote: `was given a schedule, but its date quote gives the span ${span.start.slice(0, 10)} to ${span.end.slice(0, 10)}; read as that span` } : {}),
   };
 }
 
 /**
- * The span a reading the model gave a schedule and no end is held to (#218): the one month-day span
+ * The span a reading the model gave a schedule and no end, so recurring, is held to (#218): the one month-day span
  * its date quote gives ("SATURDAYS & SUNDAYS / Nov 28th – Dec 20th"), as local dates. A season named
  * by months alone ("Every Sunday, April thru October") gives none and stays recurring, and so does a
  * quote with two spans or none.
  */
-function spanOverSchedule(
-  reading: { start?: string; end?: string; schedule?: string },
-  dateQuote: string | undefined,
-  context: ExtractionContext,
-): { start: string; end: string } | undefined {
-  if (deriveRecurrence(reading) !== "recurring" || dateQuote === undefined) return undefined;
+function spanOverSchedule(dateQuote: string | undefined, context: ExtractionContext): { start: string; end: string } | undefined {
+  if (dateQuote === undefined) return undefined;
   const span = quotedSpan(dateQuote, context.today);
   if (span === undefined) return undefined;
   const { timezone } = context.config;

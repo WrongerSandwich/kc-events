@@ -24,9 +24,10 @@ export interface QuotedSpan {
 
 /**
  * The one month-day span a quote gives, as dates, or none. A year the quote leaves out is the one that
- * puts the span's end nearest on or after today (a run already underway, or the next one); a span that
- * crosses New Year ends in the year after it starts. Two spans, a date that does not exist, or an end
- * before the start give none.
+ * puts the span's end on or after today and its start no more than nine months ahead (a run already
+ * underway, or the next one), so a past season is not moved to next year; a span that crosses New Year
+ * ends in the year after it starts. Two spans, a date that does not exist, or an end before the start
+ * ("Dec 28 – 3") give none.
  */
 export function quotedSpan(quote: string, today: string): QuotedSpan | undefined {
   const matches = [...quote.matchAll(SPAN)];
@@ -35,22 +36,25 @@ export function quotedSpan(quote: string, today: string): QuotedSpan | undefined
   const startMonth = monthNumber(startMonthName!);
   const endMonth = endMonthName === undefined ? startMonth : monthNumber(endMonthName);
   const [startDay, endDay] = [Number(startDayText), Number(endDayText)];
-  const crossesYear = endMonth * 100 + endDay < startMonth * 100 + startDay;
-  const thisYear = Number(today.slice(0, 4));
-  const startYears =
-    startYearText !== undefined
-      ? [Number(startYearText)]
-      : endYearText !== undefined
-        ? [Number(endYearText) - (crossesYear ? 1 : 0)]
-        : [thisYear - 1, thisYear, thisYear + 1];
-  for (const startYear of startYears) {
-    const endYear = endYearText !== undefined ? Number(endYearText) : startYear + (crossesYear ? 1 : 0);
+  const crossesYear = endMonthName !== undefined && endMonth * 100 + endDay < startMonth * 100 + startDay;
+  const spanFrom = (startYear: number, endYear = startYear + (crossesYear ? 1 : 0)): QuotedSpan | undefined => {
     const start = isoDate(startYear, startMonth, startDay);
     const end = isoDate(endYear, endMonth, endDay);
-    if (start === undefined || end === undefined || end < start) return undefined;
-    if (startYears.length === 1 || end >= today) return { start, end };
-  }
-  return undefined;
+    return start !== undefined && end !== undefined && end >= start ? { start, end } : undefined;
+  };
+  if (startYearText !== undefined) return spanFrom(Number(startYearText), endYearText === undefined ? undefined : Number(endYearText));
+  if (endYearText !== undefined) return spanFrom(Number(endYearText) - (crossesYear ? 1 : 0), Number(endYearText));
+  const thisYear = Number(today.slice(0, 4));
+  const latestStart = monthsAhead(today, 9);
+  return [thisYear - 1, thisYear, thisYear + 1]
+    .map((year) => spanFrom(year))
+    .find((span) => span !== undefined && span.end >= today && span.start <= latestStart);
+}
+
+/** The `YYYY-MM-DD` date some months after another. */
+function monthsAhead(date: string, months: number): string {
+  const [year, month, day] = date.split("-").map(Number) as [number, number, number];
+  return new Date(Date.UTC(year, month - 1 + months, day)).toISOString().slice(0, 10);
 }
 
 function monthNumber(name: string): number {

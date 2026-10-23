@@ -322,12 +322,18 @@ describe("quotedSpan", () => {
     expect(quotedSpan(quote, today)).toEqual(span);
   });
 
+  it("a leap day the year before lacks is read in its own year", () => {
+    expect(quotedSpan("Feb 29 – Mar 5", "2028-02-01")).toEqual({ start: "2028-02-29", end: "2028-03-05" });
+  });
+
   it.each([
     "EVERY SUNDAY | 8AM - 3PM - April thru October!",
     "SATURDAYS & SUNDAYS, APRIL – OCTOBER 9:00 A.M. – 3:00 P.M.",
     "Every Second Friday, 5 to 8 PM",
     "Saturdays, Nov 7 – Nov 21 and Dec 5 – Dec 19",
     "Nov 30 – Nov 31",
+    "Dec 28 – 3",
+    "Sept 1 – Sept 30",
   ])("%s gives no span", (quote) => {
     expect(quotedSpan(quote, today)).toBeUndefined();
   });
