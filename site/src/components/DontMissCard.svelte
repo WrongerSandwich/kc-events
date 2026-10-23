@@ -60,7 +60,8 @@
   /* A fact with its icon: the icon a shade quieter than the words. */
   .fact { display: inline-flex; align-items: baseline; gap: 0.35em; }
   .fact :global(.ui-icon) { color: var(--fg-faint); align-self: center; }
-  .why { margin-top: var(--space-2); color: var(--fg-muted); max-width: 38rem; }
+  /* The why line is the pick's reason, so it is in ink, as on an explorer row and the event page (#184). */
+  .why { margin-top: var(--space-2); max-width: 38rem; }
   .tags { margin-top: var(--space-2); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); font-size: var(--text-sm); }
   /* Like the always-there host links: plain until hovered (base.css underlines links in a <p>). */
   .primary { color: var(--fg-muted); text-decoration: none; }

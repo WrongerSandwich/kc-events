@@ -30,11 +30,11 @@ describe("dateTile", () => {
 
   it("shows a run on now by its close, and a run not yet open by its opening", () => {
     expect(dateTile(event({ recurrence: "limited-run", start: "2026-09-01", end: "2026-12-13" }), today)).toEqual({
-      top: "Until", day: "13", month: "Dec", detail: "On now", label: "On now, closes Sun Dec 13",
+      top: "Closes", day: "13", month: "Dec", detail: "On now", label: "On now, closes Sun Dec 13",
     });
-    expect(dateTile(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }), today)).toMatchObject({ top: "Until", day: "31" });
+    expect(dateTile(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }), today)).toMatchObject({ top: "Closes", day: "31" });
     expect(dateTile(event({ recurrence: "limited-run", start: "2026-10-08", end: "2026-10-25" }), today)).toEqual({
-      top: "Opens", day: "8", month: "Oct", detail: "Through Sun Oct 25", label: "Opens Thu Oct 8, runs through Sun Oct 25",
+      top: "Opens", day: "8", month: "Oct", detail: "Closes Sun Oct 25", label: "Opens Thu Oct 8, closes Sun Oct 25",
     });
   });
 

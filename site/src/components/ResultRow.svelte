@@ -23,9 +23,12 @@
 </script>
 
 <article class="row" class:flagged={event.dontMiss} class:always={event.recurrence === "recurring"} class:with-day={withDay} class:passed class:no-chip={hide === "kind"}>
-  <span class="when">{dateLine}</span>
+  <!-- The don't-miss tag is in the markup twice, and CSS shows one: on the date line below 1024 px, where that line is
+       its own and a wrapped title would throw a tag beside it to the row's edge, and beside the title from 1024 px,
+       where the date is a narrow column (#184). The hidden one is display: none, so nothing reads it twice. -->
+  <span class="when-line"><span class="when">{dateLine}</span>{#if event.dontMiss && !passed}<span class="dont-miss on-date">Don't miss</span>{/if}</span>
   <div class="title">
-    <h3><a href={`/e/${event.id}`} title={event.title}>{event.title}</a></h3>{#if passed}<span class="passed-tag">Passed</span>{:else if event.dontMiss}<span class="dont-miss">Don't miss</span>{/if}
+    <h3><a href={`/e/${event.id}`} title={event.title}>{event.title}</a></h3>{#if passed}<span class="passed-tag">Passed</span>{:else if event.dontMiss}<span class="dont-miss on-title">Don't miss</span>{/if}
   </div>
   <!-- The venue's page (#137), out of the Tab order, so a row stays two stops (title, Save); the event page links it
        too, and the source, which the row leaves to it (#182). The link's name says whose venue it is, so a list of
@@ -52,7 +55,8 @@
     grid-template-areas: "when when save" "title title save" "chip where save" "why why why";
     border-bottom: 1px solid var(--rule); font-size: var(--text-sm); line-height: var(--leading-tight);
   }
-  .when { grid-area: when; color: var(--fg-muted); font-size: var(--text-xs); }
+  .when-line { grid-area: when; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
+  .when { min-width: 0; color: var(--fg-muted); font-size: var(--text-xs); }
   /* The title, then a don't-miss tag that never gives way to it. */
   .title { grid-area: title; min-width: 0; display: flex; align-items: baseline; gap: var(--space-2); }
   .title h3 { min-width: 0; font-size: var(--text-md); font-weight: var(--weight-medium); margin: 0; }
@@ -60,23 +64,24 @@
      padding makes even a one-line title 24 px, WCAG 2.5.8's size (#182). */
   .title a { display: block; padding-block: 2px; color: inherit; text-decoration: none; }
   .title a:hover { text-decoration: underline; }
-  /* The don't-miss tag is base.css's; in a row it never gives way to the title. */
+  /* The don't-miss tag is base.css's; in a row it never gives way to the title. Below 1024 px it rides the date line. */
   .title :global(.dont-miss) { flex: none; }
-  /* A passed save: muted, with a quiet outlined tag where a pick has its red one. */
-  .passed .title h3, .passed .when { color: var(--fg-muted); }
-  .passed-tag { flex: none; font-size: var(--text-xs); font-weight: var(--weight-medium); line-height: 1.6; color: var(--fg-muted); border: 1px solid var(--rule); border-radius: 999px; padding: 0 var(--space-2); white-space: nowrap; }
+  .on-title { display: none; }
+  @media (min-width: 1024px) {
+    .on-date { display: none; }
+    .title .on-title { display: inline-flex; }
+  }
+  /* A passed save: muted, with base.css's quiet outlined tag where a pick has its red one. */
+  .passed h3, .passed .when { color: var(--fg-muted); }
   .where, .verified { font-size: var(--text-xs); color: var(--fg-faint); }
-  .where { grid-area: where; }
   /* The chip is KindChip's element, so the row reaches it with :global. Below 1024 px it and the venue are 24 px tall,
      so a finger's target never crowds the title's (#182). */
   .row :global(.chip) { grid-area: chip; min-height: 24px; }
-  .verified { grid-area: verified; }
   .row :global(button.save) { grid-area: save; }
   /* A sentence that wraps, so it has the page's leading, not the row's. */
   .why { grid-area: why; margin: 0; font-size: var(--text-sm); line-height: var(--leading); color: var(--fg); }
-  .where { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   /* Venue and neighborhood give way together, in proportion to their length; from 1024 px only the venue does. */
-  .where { display: flex; align-items: center; }
+  .where { grid-area: where; display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   /* A 12 px line at the row's 1.25 leading is 15 px, so 4.5 px above and below make 24. */
   .venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-block: 4.5px; }
   /* The venue link reads as the detail it is, in the line's colour; base.css underlines it on hover. */
@@ -87,7 +92,7 @@
     .row.no-chip .where { grid-column-start: 1; }
   }
   /* Below 800 px the verified stamp leaves the row; the event page keeps it. */
-  .verified { display: none; }
+  .verified { grid-area: verified; display: none; }
   @media (min-width: 800px) {
     .verified { display: revert; }
     .row {
@@ -97,7 +102,7 @@
   }
 
   /* 1024-1279 px: two lines, the date and the title on the first, the details under the title. */
-  /* The date column holds the widest dated line on one line: "Runs through Mon May 20", 171 px at this size; with the
+  /* The date column holds the widest dated line on one line: "Fri–Sun, through Mon May 20", about 175 px at this size; with the
      day first (the venue sort), "Mon May 20, 10:00 am–Mon May 20", 239 px. Every row of a list has the same flag, so
      the column stays aligned. */
   @media (min-width: 1024px) {

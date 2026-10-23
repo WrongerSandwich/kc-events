@@ -44,17 +44,17 @@ describe("a limited run that plays only some weekdays (#143)", () => {
   });
 
   it("says its days on the date line", () => {
-    expect(longDateLine(poe, THU)).toBe("Fri–Sun through Sunday, November 1");
-    expect(longDateLine(poe, FRI)).toBe("Fri–Sun through Sunday, November 1");
-    expect(longDateLine(poe, "2026-10-05")).toBe("Fri–Sun, Wednesday, October 14 through Sunday, November 1");
-    expect(longDateLine(everyDay, THU)).toBe("Through Sunday, November 1");
+    expect(longDateLine(poe, THU)).toBe("Fri–Sun each week, through Sunday, November 1");
+    expect(longDateLine(poe, FRI)).toBe("Fri–Sun each week, through Sunday, November 1");
+    expect(longDateLine(poe, "2026-10-05")).toBe("Fri–Sun each week, Wednesday, October 14 through Sunday, November 1");
+    expect(longDateLine(everyDay, THU)).toBe("Closes Sunday, November 1");
   });
 
   it("says its days on the tile and its closing line", () => {
-    expect(dateTile(poe, FRI)).toEqual({ top: "Until", day: "1", month: "Nov", detail: "Fri–Sun", label: "Fri–Sun, closes Sun Nov 1" });
-    expect(dateTile(poe, THU)).toMatchObject({ top: "Until", detail: "Fri–Sun" });
-    expect(dateTile(poe, "2026-10-05")).toEqual({ top: "Opens", day: "14", month: "Oct", detail: "Fri–Sun through Sun Nov 1", label: "Opens Wed Oct 14, runs Fri–Sun through Sun Nov 1" });
-    expect(closingLine(poe, THU)).toBe("Fri–Sun, closes Sun Nov 1");
+    expect(dateTile(poe, FRI)).toEqual({ top: "Closes", day: "1", month: "Nov", detail: "Fri–Sun", label: "Fri–Sun each week, closes Sun Nov 1" });
+    expect(dateTile(poe, THU)).toMatchObject({ top: "Closes", detail: "Fri–Sun" });
+    expect(dateTile(poe, "2026-10-05")).toEqual({ top: "Opens", day: "14", month: "Oct", detail: "Fri–Sun, through Sun Nov 1", label: "Opens Wed Oct 14, Fri–Sun each week, through Sun Nov 1" });
+    expect(closingLine(poe, THU)).toBe("Fri–Sun each week, closes Sun Nov 1");
     expect(dateTile(everyDay, THU)).toMatchObject({ detail: "On now", label: "On now, closes Sun Nov 1" });
   });
 
@@ -63,7 +63,7 @@ describe("a limited run that plays only some weekdays (#143)", () => {
     expect(groups(THU)).toEqual([[FRI, ["poe"]]]);
     expect(groups(FRI)).toEqual([["on-now", ["poe"]]]);
     expect(groups("2026-10-05")).toEqual([["2026-10-14", ["poe"]]]);
-    expect(rowDateLine(poe, THU)).toBe("Fri–Sun through Sun Nov 1");
+    expect(rowDateLine(poe, THU)).toBe("Fri–Sun, through Sun Nov 1");
   });
 
   it("matches a when-filter only when it plays within it", () => {

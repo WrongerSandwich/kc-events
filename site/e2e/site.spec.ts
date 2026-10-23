@@ -16,10 +16,13 @@ test("the front page buckets the fixture's don't-miss events", async ({ page }) 
   await expect(sections.nth(0)).toHaveAccessibleName("This week, Oct 5–11");
   // The exhibition is on now, so it sorts as today, ahead of Tuesday's show.
   await expect(sections.nth(0).getByRole("heading", { level: 3 })).toHaveText(["Closing exhibition", "Fabio Frizzi plays Fulci"]);
-  await expect(sections.nth(1).getByRole("heading", { level: 3 })).toHaveText(["Mid-month reading"]);
-  // Later picks are one line each, not cards.
+  // After this week, picks are one line each, not cards (#184).
+  await expect(sections.nth(1).locator("article")).toHaveCount(0);
+  await expect(sections.nth(1).getByRole("listitem")).toHaveText([/Mid-month reading/]);
   await expect(sections.nth(2)).toHaveAccessibleName("Later, after Oct 19");
   await expect(sections.nth(2).getByRole("listitem")).toHaveText([/November festival/]);
+  // One link to the explorer's picks on the page, under this week's (#184).
+  await expect(page.getByRole("link", { name: /in the explorer/ })).toHaveText(["This week's picks in the explorer"]);
   // No hand-kept Always there pick matches the fixture, so the section is left out rather than shown empty.
   await expect(page.getByRole("heading", { name: "Always there" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Browse all 10 events" })).toHaveAttribute("href", "/explore?when=all&recurring=1");
@@ -30,6 +33,22 @@ test("the front page buckets the fixture's don't-miss events", async ({ page }) 
   await expect(page).toHaveURL(/#pick-evt_e2e000000001$/);
   // Each card can go straight to a calendar.
   await expect(page.getByRole("link", { name: "Add to calendar: Fabio Frizzi plays Fulci" })).toHaveAttribute("href", "/e/evt_e2e000000001.ics");
+});
+
+test("on a phone the front page's h1 stays a step above its section headings (#184)", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await on(page, BUILD_DAY, "/");
+  const size = (selector: string) => page.locator(selector).first().evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  expect(await size("h1")).toBeGreaterThan(await size("h2.section-heading"));
+});
+
+test("at 320 px the event page sets its tile above the title, which gets the whole width (#184)", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await on(page, BUILD_DAY, "/e/evt_e2e000000001");
+  const tile = (await page.locator(".head .tile").boundingBox())!;
+  const title = (await page.getByRole("heading", { level: 1 }).boundingBox())!;
+  expect(title.y).toBeGreaterThanOrEqual(tile.y + tile.height);
+  expect(title.x).toBeLessThanOrEqual(tile.x + 1);
 });
 
 test.describe("a visitor's browser in Tokyo", () => {
@@ -101,11 +120,11 @@ test.describe("a section's kind filter", () => {
     await expect(music).toHaveAttribute("aria-pressed", "true");
     await expect(week.getByRole("heading", { level: 3 })).toHaveText(["Fabio Frizzi plays Fulci"]);
     await expect(week.getByRole("status")).toHaveText("Showing 1 music pick");
-    await expect(week.getByRole("link", { name: "These picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&kind=music&picks=1");
-    await expect(page.getByRole("region").nth(1).getByRole("heading", { level: 3 })).toHaveText(["Mid-month reading"]);
+    await expect(week.getByRole("link", { name: "This week's picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&kind=music&picks=1");
+    await expect(page.getByRole("region").nth(1).getByRole("listitem")).toHaveText([/Mid-month reading/]);
     await music.click();
     await expect(week.getByRole("heading", { level: 3 })).toHaveText(["Closing exhibition", "Fabio Frizzi plays Fulci"]);
-    await expect(week.getByRole("link", { name: "These picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&picks=1");
+    await expect(week.getByRole("link", { name: "This week's picks in the explorer" })).toHaveAttribute("href", "/explore?when=weekend&picks=1");
   });
 
   /**
@@ -483,7 +502,13 @@ for (const width of [390, 1440]) {
     await openOnNow(page);
     const flagged = page.locator("article.row.flagged");
     await expect(flagged.first()).toBeVisible();
-    for (const row of await flagged.all()) await expect(row.getByText("Don't miss", { exact: true })).toBeVisible();
+    // Once each: on the date line on a phone, so a wrapped title cannot throw it to the edge, beside the title wide (#184).
+    const where = width < 1024 ? ".when-line" : ".title";
+    for (const row of await flagged.all()) {
+      const shown = row.getByText("Don't miss", { exact: true }).filter({ visible: true });
+      await expect(shown).toHaveCount(1);
+      await expect(row.locator(where).getByText("Don't miss", { exact: true })).toBeVisible();
+    }
     await expect(page.locator("article.row:not(.flagged)").getByText("Don't miss")).toHaveCount(0);
   });
 }

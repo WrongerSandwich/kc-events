@@ -85,10 +85,14 @@ export function kindLanding(kind: string, events: PublishedEvent[], today: strin
   return landing(kindPath(kind), `${kindName(kind)} in Kansas City`, noun, "in Kansas City", { kinds: [kind] }, events, today, range);
 }
 
-/** /r/<region>: "Things to do in Johnson County", with the region's neighborhoods from the config. */
+/**
+ * /r/<region>: "Things to do in Johnson County", with the region's neighborhoods from the config, less one that is only
+ * the region's own name (Lawrence's is "Lawrence"), which the heading already says (#184).
+ */
 export function regionLanding(region: string, events: PublishedEvent[], today: string, range: { from: string; to: string }, neighborhoods: readonly string[]): Landing & { neighborhoods: readonly string[] } {
   const where = inRegion(region);
-  return { ...landing(regionPath(region), `Things to do ${where}`, "event", where, { regions: [region] }, events, today, range), neighborhoods };
+  const others = neighborhoods.filter((n) => n.toLowerCase() !== region.toLowerCase());
+  return { ...landing(regionPath(region), `Things to do ${where}`, "event", where, { regions: [region] }, events, today, range), neighborhoods: others };
 }
 
 /**

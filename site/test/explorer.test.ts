@@ -205,7 +205,8 @@ describe("Explorer", () => {
     history.replaceState(null, "", "/explore?when=30d"); // On now open, so its rows show
     render(Explorer);
     const row = (title: string) => found(screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === title), `the ${title} row`);
-    expect(within(row("Exhibition")).getByText("Don't miss")).toBeVisible();
+    // Twice in the markup, one shown by width (#184); jsdom has no media queries, so both are there.
+    expect(within(row("Exhibition")).getAllByText("Don't miss")).toHaveLength(2);
     expect(within(row("Friday jazz")).queryByText("Don't miss")).toBeNull();
   });
 

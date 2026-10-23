@@ -7,11 +7,13 @@ import { PICKS_FEED, webcalUrl } from "../lib/feeds";
 // that asks for a URL (Google Calendar, Outlook). Phones put the address first (first in the source too, so Tab order matches). The page passes the build's origin.
 interface Props { origin: string }
 const { origin } = Astro.props;
-const address = new URL(PICKS_FEED, origin).toString();
+const address = new URL(PICKS_FEED, origin);
+// The address may break after a slash, and only there, so a phone wraps it between its parts rather than mid-word (#184).
+const parts = [`${address.origin}/`, ...address.pathname.slice(1).split(/(?<=\/)/)];
 ---
 <div class="subscribe-ways">
   <p class="by-address">
-    For Google Calendar or Outlook, add it by address: <code>{address}</code> <CopyButton client:load label="Copy address" url={address} />
+    For Google Calendar or Outlook, add it by address: <code>{parts.map((p, i) => <>{i > 0 && <wbr />}{p}</>)}</code> <CopyButton client:load label="Copy address" url={address.toString()} />
     Google Calendar: Other calendars, From URL.
   </p>
   <p class="apple">
@@ -27,5 +29,6 @@ const address = new URL(PICKS_FEED, origin).toString();
   @media (min-width: 30.0625rem) {
     .apple { order: -1; }
   }
-  code { overflow-wrap: anywhere; user-select: all; }
+  /* Breaks inside a part only when that part alone is wider than the line. */
+  code { overflow-wrap: break-word; user-select: all; }
 </style>

@@ -22,8 +22,8 @@ export type ResultGroup = { key: string; heading: string; events: PublishedEvent
 
 /**
  * A row's date line under its group heading: a start time or "No time listed"; for a run on now, "Closes Tue Oct 20", under
- * "On now"; for a run not yet open, "Runs through Sat Nov 14" under its opening day; for a multi-day one-off, under
- * each of its days, "8:30 pm · through Sat Oct 10" or "Through Sun Oct 11" (throughLine); a recurring event's
+ * "On now"; for a run not yet open, "Closes Sat Nov 14" under its opening day, or "Fri–Sun, through Sun Nov 1"; for a
+ * multi-day one-off, under each of its days, "8:30 pm · through Sat Oct 10" or "Through Sun Oct 11" (throughLine); a recurring event's
  * schedule phrase. Kept short so the explorer's date column stays narrow; the front page's cards say more (closingLine).
  * With `withDay` (the venue sort, which has no day headings), the day comes first: "Fri Oct 9 · 7:00 pm",
  * "Fri Oct 9 · no time listed", "Tue Oct 20–Sat Nov 14", "Thu Oct 29, 6:00 pm–Sat Oct 31".
@@ -36,8 +36,8 @@ export function rowDateLine(e: PublishedEvent, today: string, withDay = false): 
     const time = isDateOnly(e.start!) ? undefined : formatTime(e.start!);
     if (withDay) return `${formatDay(firstDay(e)!)}${time ? `, ${time}` : ""}–${last}`;
     if (e.recurrence !== "limited-run") return throughLine(e);
-    if (e.daysLine !== undefined) return `${e.daysLine} through ${last}`;
-    return time ? `${time}–${last}` : `Runs through ${last}`;
+    if (e.daysLine !== undefined) return `${e.daysLine}, through ${last}`;
+    return time ? `${time}–${last}` : `Closes ${last}`;
   }
   // A date-only start means the page gave no time (a concert, a screening), not that the event runs all day.
   const start = e.start!;

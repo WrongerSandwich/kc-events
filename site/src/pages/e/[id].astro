@@ -85,6 +85,10 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   .event { margin-top: var(--space-8); }
   .head { margin-bottom: var(--space-4); }
   .head.dated { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-4); align-items: start; }
+  /* The narrowest phones: the tile above the title, which beside it took eight lines at 320 px (audit 2026-10-21, A16). */
+  @media (max-width: 26rem) {
+    .head.dated { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-3); }
+  }
   /* Wraps: beside the tile at 320 px, "outdoors/community" and the Don't miss tag together are wider than the column (audit 2026-10-21, A2). */
   .kind { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0; }
   h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: var(--space-2) 0; }
@@ -92,7 +96,8 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   .where, .admission { color: var(--fg-muted); margin: 0; }
   /* The venue's page; underlined, since the neighborhood follows it on the line (axe link-in-text-block). */
   .where a { color: inherit; text-decoration: underline; }
-  .why { margin: 0 0 var(--space-4); font-size: var(--text-lg); color: var(--fg-muted); max-width: 38rem; }
+  /* In ink, as on a pick's card and an explorer row: the reason is what the site adds (#184). */
+  .why { margin: 0 0 var(--space-4); font-size: var(--text-lg); max-width: 38rem; }
   .about { margin: 0 0 var(--space-4); max-width: 38rem; }
   .primary { font-size: var(--text-lg); margin: 0 0 var(--space-4); }
   .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-bottom: var(--space-6); }

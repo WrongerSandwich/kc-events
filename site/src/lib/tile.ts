@@ -21,13 +21,14 @@ export function dateTile(e: PublishedEvent, today: string, now?: string): Tile {
   const first = firstDay(e);
   const last = lastDay(e)!;
   if (e.recurrence === "limited-run") {
-    // A run that plays only some weekdays shows them where another says "On now" or "Through" (#143).
+    // A run that plays only some weekdays shows them where another says "On now" or "Closes" (#143). A run's close is
+    // "Closes", pairing with "Opens"; "through" is a one-off's span, or the end of a run's weekdays (#184).
     const days = e.daysLine;
     if (isUnderway(e, today) || first === undefined) {
-      return { top: "Until", ...parts(last), detail: days ?? "On now", label: closingLine(e, today) };
+      return { top: "Closes", ...parts(last), detail: days ?? "On now", label: closingLine(e, today) };
     }
-    const through = days === undefined ? `Through ${formatDay(last)}` : `${days} through ${formatDay(last)}`;
-    return { top: "Opens", ...parts(first), detail: through, label: closingLine(e, today) };
+    const close = days === undefined ? `Closes ${formatDay(last)}` : `${days}, through ${formatDay(last)}`;
+    return { top: "Opens", ...parts(first), detail: close, label: closingLine(e, today) };
   }
   // A multi-day one-off underway shows today, the day the explorer lists it under (#90), not its first day gone by.
   const day = isUnderway(e, today) && first! < today ? today : first!;

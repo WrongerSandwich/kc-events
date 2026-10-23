@@ -26,7 +26,7 @@
   {#each days as d (d.date)}
     {@const first = dayTarget(d)}
     {#snippet inside()}
-      <span class="name">{d.date === today ? "Today" : d.weekday}</span>
+      <span class="name">{d.weekday}</span>
       <span class="num">{d.day}</span>
       <span class="icons" aria-hidden="true">
         {#each d.picks.slice(0, SHOWN) as e (e.id)}<span class={`kind-${slugify(e.kind)}`}><KindIcon kind={e.kind} /></span>{/each}
@@ -72,7 +72,7 @@
   .lane.open { background: var(--hue); }
   .empty { background: none; border-style: dashed; }
   .empty .num { color: var(--fg-faint); font-weight: var(--weight-regular); }
-  /* Today: drawn in ink, so the eye starts there. */
+  /* Today: drawn in ink, so the eye starts there. It keeps its weekday: the card's tile is what says "Today" (#184). */
   .today { border: 1px solid var(--fg); }
   .today .name, .today .num { color: var(--fg); font-weight: var(--weight-strong); }
   @media (prefers-reduced-motion: reduce) { .day { transition: none; } a.day:active { transform: none; } }
