@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { dayTarget, weekDays } from "../src/lib/week";
 import { event } from "./fixtures/event";
+import { found } from "./fixtures/found";
 
 describe("dayTarget", () => {
   it("is the first pick that starts that day, ahead of a one-off that opened earlier and is still on", () => {
@@ -8,7 +9,7 @@ describe("dayTarget", () => {
     const span = event({ id: "span", title: "Dark Forest", start: "2026-10-22T19:00:00-05:00", end: "2026-10-24" });
     const sat = event({ id: "sat", title: "Graveyard 5K", start: "2026-10-24T08:00:00-05:00" });
     const days = weekDays([span, sat], "2026-10-21", "2026-10-25");
-    const on = (date: string) => days.find((d) => d.date === date)!;
+    const on = (date: string) => found(days.find((d) => d.date === date), `the day ${date}`);
     expect(dayTarget(on("2026-10-24"))?.id).toBe("sat");
     // Nothing starts on Friday; the span's card is the only one to go to.
     expect(dayTarget(on("2026-10-23"))?.id).toBe("span");

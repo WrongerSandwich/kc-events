@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { alwaysTherePicks } from "../src/always-there";
-import { alwaysThereDetail, pickAlwaysThere } from "../src/lib/always-there";
-import { events } from "../src/generated/events";
+import { alwaysThereDetail, alwaysThereWarnings, pickAlwaysThere } from "../src/lib/always-there";
 import { event } from "./fixtures/event";
 
 const recurring = (over: Parameters<typeof event>[0]) => event({ recurrence: "recurring", start: undefined, schedule: "Weekly", ...over });
@@ -65,19 +64,33 @@ describe("alwaysThereDetail", () => {
   });
 });
 
-describe("committed data", () => {
-  it("finds all but one of the hand-kept picks whose source is up, in the committed dataset", () => {
-    // A guard against the list rotting silently: venues retitle and sources change. A pick whose host has no published
-    // event at all is a source that is down (the run report flags that; the registry fixes it), not a rotten pick, so
-    // it is left out of the count; one miss among the rest is a retitle to catch at leisure, two is rot.
-    const hosts = new Set(events.map((e) => new URL(e.primaryUrl).host.replace(/^www\./, "")));
-    const up = alwaysTherePicks.filter((p) => hosts.has(p.host));
-    expect(up.length, "picks whose source is up").toBeGreaterThanOrEqual(3);
-    expect(pickAlwaysThere(events, alwaysTherePicks).length).toBeGreaterThanOrEqual(up.length - 1);
+describe("alwaysThereWarnings", () => {
+  const picks = [
+    { title: "First Friday", host: "kccrossroads.org", venue: "Crossroads Arts District" },
+    { title: "Farmers Market", host: "thecitymarketkc.org" },
+    { title: "Main Gallery Tours", host: "theworldwar.org" },
+  ];
+  const firstFriday = recurring({ id: "f", title: "First Friday", venue: "Crossroads Arts District", primaryUrl: "https://kccrossroads.org/" });
+  const market = recurring({ id: "m", title: "Farmers Market", primaryUrl: "https://thecitymarketkc.org/" });
+  const tours = recurring({ id: "t", title: "Main Gallery Tours", primaryUrl: "https://www.theworldwar.org/events" });
+
+  it("says nothing when every pick finds its event", () => {
+    expect(alwaysThereWarnings([firstFriday, market, tours], picks)).toEqual([]);
   });
 
-  it("puts the Crossroads' own First Friday on the front page, never a night at The Bird (#197)", () => {
-    const rows = pickAlwaysThere(events, alwaysTherePicks).filter((e) => /first friday/i.test(e.title));
-    for (const e of rows) expect(e.venue, e.title).toBe("Crossroads Arts District");
+  it("names a pick whose source publishes events but none it matches, and one whose source publishes nothing (#191)", () => {
+    const retitled = recurring({ id: "m2", title: "The Market", primaryUrl: "https://thecitymarketkc.org/" });
+    const bird = recurring({ id: "b", title: "Free First Friday Comedy", venue: "The Bird Comedy Theater", primaryUrl: "https://kccrossroads.org/" });
+    expect(alwaysThereWarnings([bird, retitled], picks)).toEqual([
+      'Always there: "First Friday" (kccrossroads.org, at Crossroads Arts District) matches no published recurring event, though its source publishes some: retitled? Edit site/src/always-there.ts.',
+      'Always there: "Farmers Market" (thecitymarketkc.org) matches no published recurring event, though its source publishes some: retitled? Edit site/src/always-there.ts.',
+      'Always there: "Main Gallery Tours" (theworldwar.org) is left off the front page: its source publishes no event this week (down? see Failing sources).',
+    ]);
+  });
+});
+
+describe("alwaysTherePicks", () => {
+  it("names the Crossroads' own First Friday by its venue, so a night at The Bird is never taken (#197)", () => {
+    expect(alwaysTherePicks.find((p) => p.title === "First Friday")?.venue).toBe("Crossroads Arts District");
   });
 });

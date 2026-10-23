@@ -16,8 +16,10 @@
     "preview": "astro preview",
     "preview:e2e": "SITE_OUT_DIR=dist-e2e astro preview --port 4321 --ignore-lock",
     "typecheck": "SITE_TODAY=last-run pnpm generate && astro check && svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
-    "test": "SITE_TODAY=last-run pnpm generate && vitest run",
-    "test:coverage": "SITE_TODAY=last-run pnpm generate && vitest run --coverage",
+    "test": "SITE_TODAY=last-run pnpm generate && vitest run --project unit",
+    "test:coverage": "SITE_TODAY=last-run pnpm generate && vitest run --project unit --coverage",
+    "test:data": "SITE_TODAY=last-run pnpm generate && vitest run --project data",
+    "always-there": "tsx scripts/always-there-check.ts",
     "test:e2e": "playwright test"
   },
   "dependencies": {

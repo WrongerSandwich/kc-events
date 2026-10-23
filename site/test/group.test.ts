@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SHORTLIST_GROUP, groupResults, resultEvents, rowDateLine } from "../src/lib/group";
 import { DEFAULT_FILTERS, EVERY_DATE, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
+import { found } from "./fixtures/found";
 
 const today = "2026-10-05";
 // Every date unless a test says otherwise; the explorer's default is the week (#183).
@@ -84,7 +85,7 @@ describe("groupResults", () => {
     const sat = event({ id: "sat", title: "Matinee", start: "2026-10-10T14:00:00-05:00" });
     const satAll = event({ id: "satAll", title: "Market", start: "2026-10-10" });
     const groups = groupResults([comedy, sat, satAll], f(), today, none);
-    expect(groups.find((g) => g.key === "2026-10-10")!.events.map((e) => e.id)).toEqual(["satAll", "sat", "comedy"]);
+    expect(found(groups.find((g) => g.key === "2026-10-10"), "the Saturday group").events.map((e) => e.id)).toEqual(["satAll", "sat", "comedy"]);
   });
 
   it("lists a show that runs past midnight under its night only", () => {

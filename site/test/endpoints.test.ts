@@ -3,9 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
-import { alwaysTherePicks } from "../src/always-there";
-import { pickAlwaysThere } from "../src/lib/always-there";
-import { isDated, venueLine } from "../src/lib/events";
+import { isDated } from "../src/lib/events";
 import { faviconSvg } from "../src/lib/mark";
 import { slugify } from "../src/lib/slugs";
 
@@ -21,17 +19,10 @@ it.runIf(process.env.CI !== undefined && !matchesGenerated)("has a build of the 
   expect.fail("dist/ is missing or was built from another dataset; CI must run `SITE_TODAY=last-run pnpm build` before `pnpm test`");
 });
 
-// What the build makes of the committed dataset: it needs a recurring event, a Lawrence one and a flag in it.
-describe("committed data", () => {
-  describe.skipIf(!matchesGenerated)("built output", () => {
-    it("emits a page and a calendar file per dated event, and none for anything else", () => {
-      const sample = events.find((e) => e.recurrence === "one-off")!;
-      expect(has(`e/${sample.id}.html`)).toBe(true);
-      expect(has(`e/${sample.id}.ics`)).toBe(true);
-      const recurring = events.find((e) => e.recurrence === "recurring");
-      if (recurring) expect(has(`e/${recurring.id}.ics`)).toBe(false);
-    });
-
+// What the build makes of any week's data: the pages, feeds and files every build writes. The checks that need the week
+// to hold a pick, a recurring event, a Lawrence one, or Always there rows are in endpoints.data.test.ts (#191).
+describe("built output", () => {
+  describe.skipIf(!matchesGenerated)("of the generated dataset", () => {
     it("writes the calendar feeds: the picks, every dated event, and each kind's (#136)", () => {
       const unfolded = (p: string) => read(p).replace(/\r\n[ \t]/g, "");
       const vevents = (p: string) => unfolded(p).split("BEGIN:VEVENT").length - 1;
@@ -40,7 +31,9 @@ describe("committed data", () => {
       expect(unfolded("calendar.ics")).toContain("X-WR-CALNAME:KC This Week\r\n");
       expect(vevents("calendar.ics")).toBe(events.filter(isDated).length);
       for (const kind of meta.kinds) expect(vevents(`calendar/${slugify(kind)}.ics`), kind).toBe(events.filter((e) => isDated(e) && e.kind === kind).length);
-      expect(unfolded("calendar.ics")).toMatch(new RegExp(`\r\nURL:[^\r]*/e/${events.find(isDated)!.id}\r\n`));
+      const dated = events.find(isDated);
+      expect(dated, "the generated dataset has a dated event").toBeDefined();
+      expect(unfolded("calendar.ics")).toMatch(new RegExp(`\r\nURL:[^\r]*/e/${dated!.id}\r\n`));
     });
 
     it("links the picks' feed by webcal from the front page and the about page (#136)", () => {
@@ -73,18 +66,6 @@ describe("committed data", () => {
       expect(notFound).not.toContain('rel="canonical"');
     });
 
-    it("carries Event JSON-LD and the share image on an event page", () => {
-      const sample = events.find((e) => e.dontMiss)!;
-      const html = read(`e/${sample.id}.html`);
-      expect(html).toContain('"@type":"Event"');
-      expect(html).toContain('"eventStatus":"https://schema.org/EventScheduled"');
-      expect(html).toContain('"addressCountry":"US"');
-      expect(html).toContain("/og.png");
-      expect(html).toContain('<meta property="og:image:width" content="1200">');
-      // Verified from the page linked above when the list is the event's own page, else from the list it was read from (#53).
-      expect(html).toMatch(/Date and venue verified .* from (the page linked above|<a [^>]*>the list at [^<]+<\/a>)\./);
-    });
-
     it("declares the site, its search action, and the picks on the front page", () => {
       const html = read("index.html");
       expect(html).toContain('"@type":"WebSite"');
@@ -102,37 +83,6 @@ describe("committed data", () => {
     it("names the dataset's license on the about page and in llms.txt (#167)", () => {
       expect(read("about.html")).toMatch(/<a href="https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/"[^>]*>CC BY 4\.0<\/a>/);
       expect(read("llms.txt")).toContain("CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/)");
-    });
-
-    it("leaves a schedule that only repeats its title out of an Always there row", () => {
-      const html = read("index.html");
-      const detail = (id: string) => html.match(new RegExp(`href="/e/${id}"[^>]*>.*?</a><span class="detail"[^>]*>(.*?)</span>`))?.[1]?.replaceAll("&#39;", "'").replaceAll("&quot;", "\"").replaceAll("&amp;", "&");
-      const rows = pickAlwaysThere(events, alwaysTherePicks);
-      expect(rows.length, "the committed dataset has Always there rows").toBeGreaterThan(0);
-      for (const e of rows) {
-        // Every row ends on its venue line, and none opens by repeating its own title.
-        expect(detail(e.id), e.title).toMatch(new RegExp(`${RegExp.escape(venueLine(e))}$`));
-        expect(detail(e.id), e.title).not.toMatch(new RegExp(`^${RegExp.escape(e.title)} ·`, "i"));
-      }
-      // While First Friday's record holds the schedule "First Friday" (since the 2026-10-12 run), its row is the venue alone.
-      const firstFriday = rows.find((e) => e.title === "First Friday" && e.schedule === "First Friday");
-      if (firstFriday) expect(detail(firstFriday.id)).toBe("Crossroads Arts District");
-    });
-
-    it("gives a recurring event's page no Add to calendar link, and a dated one's page has it", () => {
-      const recurring = events.find((e) => e.recurrence === "recurring");
-      expect(recurring, "the committed dataset has a recurring event").toBeDefined();
-      expect(read(`e/${recurring!.id}.html`)).not.toContain("Add to calendar");
-      const dated = events.find((e) => e.recurrence === "one-off")!;
-      expect(read(`e/${dated.id}.html`)).toContain(`href="/e/${dated.id}.ics"`);
-    });
-
-    it("names Lawrence once in a Lawrence event's location line", () => {
-      const lawrence = events.find((e) => e.region === "Lawrence" && e.neighborhood === "Lawrence");
-      expect(lawrence, "the committed dataset has an event whose neighborhood is Lawrence").toBeDefined();
-      // The venue is a link to its page (#137); the line's text is what is read.
-      const where = /<p class="where"[^>]*>(.*?)<\/p>/.exec(read(`e/${lawrence!.id}.html`))![1]!.replace(/<[^>]*>/g, "");
-      expect(where).toBe(`${lawrence!.venue} · Lawrence`);
     });
 
     it("gives pages extensionless canonical URLs that match the sitemap", () => {

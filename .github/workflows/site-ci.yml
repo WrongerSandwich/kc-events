@@ -48,6 +48,10 @@ jobs:
       - run: pnpm --filter kc-events-site size
       # The tests, with coverage: reported for reading, with no threshold to fail on.
       - run: pnpm -r test:coverage
+      # The committed-data checks (#191) gate the weekly run's commit in scripts/weekly-run.sh, not a pull request:
+      # shown here so a code change that breaks them is seen before Monday, but never failing the job.
+      - run: pnpm --filter kc-events-site test:data
+        continue-on-error: true
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ !cancelled() }}
         with:

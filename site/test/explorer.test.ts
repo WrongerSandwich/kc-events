@@ -22,6 +22,7 @@ vi.mock("../src/generated/meta", () => ({
 import Explorer from "../src/components/Explorer.svelte";
 import { events } from "../src/generated/events";
 import { event } from "./fixtures/event";
+import { found } from "./fixtures/found";
 
 const rows = () => screen.getAllByRole("article").map((a) => within(a).getByRole("heading").textContent);
 // The live count is announced once input settles (Explorer's SETTLE_MS, 500 ms), so read it after the wait.
@@ -188,9 +189,9 @@ describe("Explorer", () => {
     history.replaceState(null, "", "/explore?sort=venue");
     render(Explorer);
     expect(screen.queryByRole("heading", { level: 2, name: "Fri Oct 9" })).toBeNull();
-    const jazz = screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Friday jazz")!;
+    const jazz = found(screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Friday jazz"), "the Friday jazz row");
     expect(jazz).toHaveTextContent("Fri Oct 9 · 7:00 pm");
-    const film = screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Saturday film")!;
+    const film = found(screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === "Saturday film"), "the Saturday film row");
     expect(film).toHaveTextContent("Sat Oct 10 · no time listed");
   });
 
@@ -203,7 +204,7 @@ describe("Explorer", () => {
   it("labels a don't-miss row in words, not by colour alone", () => {
     history.replaceState(null, "", "/explore?when=30d"); // On now open, so its rows show
     render(Explorer);
-    const row = (title: string) => screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === title)!;
+    const row = (title: string) => found(screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === title), `the ${title} row`);
     expect(within(row("Exhibition")).getByText("Don't miss")).toBeVisible();
     expect(within(row("Friday jazz")).queryByText("Don't miss")).toBeNull();
   });

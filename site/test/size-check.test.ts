@@ -8,6 +8,7 @@ import { BUDGETS, FIXTURE_PICKS, measure, PICK_BYTES } from "../scripts/size-che
 import { loadPublished } from "../src/build/load-dataset";
 import { FRONT_PAGE_BYTES, MAX_PICKS } from "../src/build/write-generated";
 import { tempDir } from "./fixtures/temp-dir";
+import { found } from "./fixtures/found";
 
 describe("measure", () => {
   it("counts the page and every script and stylesheet it loads, following static chunk imports but not dynamic ones", () => {
@@ -52,7 +53,7 @@ describe("budgets", () => {
     const fixture = loadPublished({ datasetPath: site("e2e/fixtures/events.json"), configPath: site("../research.config.yaml"), today: "2026-10-05" });
     expect(fixture.events.filter((e) => e.dontMiss)).toHaveLength(FIXTURE_PICKS);
     expect(readFileSync(site("package.json"), "utf8")).toContain("SITE_TODAY=2026-10-05 SITE_DATASET=e2e/fixtures/events.json");
-    const front = BUDGETS.find((b) => b.page === "index.html")!.budget;
+    const front = found(BUDGETS.find((b) => b.page === "index.html"), "the front page's budget").budget;
     expect(front + (MAX_PICKS - FIXTURE_PICKS) * PICK_BYTES).toBe(FRONT_PAGE_BYTES);
   });
 });

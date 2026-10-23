@@ -5,6 +5,7 @@ import { calendarFeeds, feedIcs, webcalUrl } from "../src/lib/feeds";
 import { toIcs } from "../src/lib/ics";
 import type { PublishedVenue } from "../src/lib/types";
 import { event } from "./fixtures/event";
+import { found } from "./fixtures/found";
 
 const TODAY = "2026-10-05";
 const kinds = ["music", "theater/dance", "other"];
@@ -12,7 +13,7 @@ const feeds = (events: Parameters<typeof calendarFeeds>[0]) => {
   const { allEvents, bySlug } = calendarFeeds(events, { kinds, today: TODAY, horizonWeeks: 3, siteName: "KC This Week" });
   return [allEvents, ...bySlug];
 };
-const feed = (events: Parameters<typeof calendarFeeds>[0], path: string) => feeds(events).find((f) => f.path === path)!;
+const feed = (events: Parameters<typeof calendarFeeds>[0], path: string) => found(feeds(events).find((f) => f.path === path), `the feed ${path}`);
 const feedOpts = { siteName: "KC This Week", stamp: "2026-10-05T11:30:00Z", origin: "https://www.kcthisweek.com", venues: [] };
 const ids = (events: Parameters<typeof calendarFeeds>[0], path: string) => feed(events, path).events.map((e) => e.id);
 
