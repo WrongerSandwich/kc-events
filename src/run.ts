@@ -626,6 +626,7 @@ async function extractPage(
       problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.quoteProblem.phrase}, which is not on the page, and was held unverified`);
     }
     if (sighting.daysProblem !== undefined) problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.daysProblem}`);
+    if (sighting.spanRead !== undefined) problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.spanRead}`);
     sightings.push(sighting);
   }
   return { sightings, extracted: parsed.data.events.length, tally, problems };

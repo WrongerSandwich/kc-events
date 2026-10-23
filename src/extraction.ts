@@ -15,7 +15,8 @@ import type { Source } from "./registry.js";
 import { deriveRecurrence } from "./recurrence.js";
 import { toKind, toNeighborhood } from "./taxonomy.js";
 import { fromLocal, toLocalIso } from "./time.js";
-import { orderedDays, statesDays } from "./weekdays.js";
+import { quotedSpan } from "./date-span.js";
+import { orderedDays, statedDays, statesDays } from "./weekdays.js";
 
 /** A page body longer than this is cut before it reaches the model; venue calendars rarely need more, link markers included. */
 export const MAX_PAGE_CHARS = 70_000;
@@ -403,6 +404,8 @@ export interface Sighting {
   quoteProblem?: { phrase: string; pageText: string };
   /** Why the weekdays the model named for a run were not taken (#196); the event stands without them. */
   daysProblem?: string;
+  /** That a reading given a schedule was read as the span its date quote gives instead (#218), for the source's line. */
+  spanRead?: string;
 }
 
 /**
@@ -433,10 +436,11 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const endsFirst = start !== undefined && endAt.iso !== undefined && endAt.iso.slice(0, 10) < start.slice(0, 10);
   const end = endsFirst ? undefined : endAt.iso;
   const dateProblem = startAt.problem ?? endAt.problem ?? (endsFirst ? `an end (${endAt.iso!.slice(0, 10)}) before its start` : undefined);
-  const schedule = nonEmpty(candidate.schedule);
-  const recurrence = deriveRecurrence({ start, end, schedule });
-  const when = recurrence === "recurring" ? { schedule } : { start, end };
   const dateEvidence = unmarked(candidate.dateEvidence);
+  const span = spanOverSchedule({ start, end, schedule: nonEmpty(candidate.schedule) }, dateEvidence, context);
+  const schedule = span === undefined ? nonEmpty(candidate.schedule) : undefined;
+  const recurrence = deriveRecurrence(span ?? { start, end, schedule });
+  const when = recurrence === "recurring" ? { schedule } : (span ?? { start, end });
   const venueEvidence = unmarked(candidate.venueEvidence);
   const venue = unmarked(candidate.venue);
   const description = unmarked(candidate.description);
@@ -450,7 +454,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     venueEvidence !== undefined;
   const quoteProblem = cited ? quoteNotOnPage({ date: dateEvidence, venue: venueEvidence }, origin.quotableText) : undefined;
   const verified = cited && quoteProblem === undefined;
-  const days = verified && recurrence === "limited-run" ? listDays(candidate.days, dateEvidence!) : {};
+  const days = verified && recurrence === "limited-run" ? listDays(span === undefined ? candidate.days : (candidate.days ?? statedDays(dateEvidence!)), dateEvidence!) : {};
 
   const event: Event = {
     id: newEventId(primaryUrl, title, context.nowIso, when.start),
@@ -485,7 +489,26 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     ...(dateProblem !== undefined ? { dateProblem } : {}),
     ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText: origin.quotableText } } : {}),
     ...(days.problem !== undefined ? { daysProblem: days.problem } : {}),
+    ...(span !== undefined ? { spanRead: `was given a schedule, but its date quote gives the span ${span.start.slice(0, 10)} to ${span.end.slice(0, 10)}; read as that span` } : {}),
   };
+}
+
+/**
+ * The span a reading the model gave a schedule and no end is held to (#218): the one month-day span
+ * its date quote gives ("SATURDAYS & SUNDAYS / Nov 28th – Dec 20th"), as local dates. A season named
+ * by months alone ("Every Sunday, April thru October") gives none and stays recurring, and so does a
+ * quote with two spans or none.
+ */
+function spanOverSchedule(
+  reading: { start?: string; end?: string; schedule?: string },
+  dateQuote: string | undefined,
+  context: ExtractionContext,
+): { start: string; end: string } | undefined {
+  if (deriveRecurrence(reading) !== "recurring" || dateQuote === undefined) return undefined;
+  const span = quotedSpan(dateQuote, context.today);
+  if (span === undefined) return undefined;
+  const { timezone } = context.config;
+  return { start: localIso(span.start, null, timezone).iso!, end: localIso(span.end, null, timezone).iso! };
 }
 
 /**

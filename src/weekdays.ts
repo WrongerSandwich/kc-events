@@ -24,8 +24,8 @@ const DAY_NAME = new RegExp(`\\b(?:${WEEKDAYS.map((d) => `(${DAY_NAMES[d]})`).jo
 const SPAN_JOIN = /^\s*(?:[-–—]|to|through|thru)\s*$/i;
 /** "Weekends", "(Weekend)": Saturday and Sunday. */
 const WEEKEND = /\bweekends?\b/i;
-/** What follows a weekday that is a date's ("Fri, October 2", "Friday, Sept. 25", "Sat 24"): a month or a day number, after any comma. */
-const DATED = /^[\s,]*(?:\d|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
+/** What follows a weekday that is a date's ("Fri, October 2", "Friday, Sept. 25", "Sat 24"): a month or a day number, after any comma; a clock time ("Sun, 9 a.m.", "Sat 7:30pm") is no date (#218). */
+const DATED = /^[\s,]*(?:\d(?!\d?\s*(?:[ap]\.?m\b|:\d))|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i;
 
 /** A weekday named in a quote: which, where, whether in the plural ("Fridays"), and whether a date follows it. */
 interface NamedDay {
@@ -88,4 +88,9 @@ export function givesDays(quote: string, days: readonly Weekday[]): boolean {
 export function statesDays(quote: string, days: readonly Weekday[]): boolean {
   const covered = coveredDays(quote, namedDays(quote), (n) => n.plural || !n.dated);
   return days.every((d) => covered.has(d));
+}
+
+/** The days a list's date line states as the days a run plays (statesDays), in week order. */
+export function statedDays(quote: string): Weekday[] {
+  return WEEKDAYS.filter((d) => statesDays(quote, [d]));
 }

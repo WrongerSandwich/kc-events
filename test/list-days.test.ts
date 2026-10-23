@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyDataset } from "../src/dataset.js";
+import { quotedSpan } from "../src/date-span.js";
 import { statesDays } from "../src/weekdays.js";
 import { candidateAt, judging, source, WEEK_1, WEEK_2 } from "./fakes/fixtures.js";
 import { testConfig } from "./fakes/config.js";
@@ -234,6 +235,8 @@ describe("statesDays", () => {
     ["Thursday–Sunday, Oct 14–Nov 1", ["Thu", "Fri", "Sat", "Sun"], true],
     ["Oct. 9 – Nov. 1 (Weekends) | 7:30 p.m.", ["Sat", "Sun"], true],
     ["Fri & Sat through Nov 1", ["Fri", "Sat"], true],
+    ["Nov. 1 – Nov. 22: Sat & Sun, 9 a.m. – 3 p.m.", ["Sat", "Sun"], true],
+    ["Fri & Sat 7:30pm, Oct 9 – Oct 31", ["Fri", "Sat"], true],
     ["Fri, October 2, 2026 – Fri, February 5, 2027", ["Fri"], false],
     ["Friday, Sept. 25 - Wednesday, Nov. 11", ["Fri", "Wed"], false],
     ["Sat 24 Oct – Sun 1 Nov", ["Sat", "Sun"], false],
@@ -241,5 +244,91 @@ describe("statesDays", () => {
     ["Wednesdays, Oct. 7-28", ["Wed", "Thu"], false],
   ])("%s states %s: %s", (quote, days, expected) => {
     expect(statesDays(quote, days as never)).toBe(expected);
+  });
+});
+
+/** A season's market read as recurring though its date quote gives the span it runs (#218). */
+describe("a recurring reading whose date quote gives a month-day span is that span (#218)", () => {
+  const MERRY_QUOTE = "SATURDAYS & SUNDAYS\nNov 28th – Dec 20th | 10AM – 4PM";
+  const pageWith = (quote: string): CannedPage => ({
+    status: 200,
+    body: `<html><body><div><a href="/events/tower-after-hours/">Tower After Hours</a> ${quote.replace("\n", "<br>")} · Powell Gardens</div></body></html>`,
+  });
+  const scheduled = (schedule: string, dateEvidence: string, overrides: Record<string, unknown> = {}) =>
+    listed({ startDate: null, startTime: null, endDate: null, endTime: null, days: null, schedule, dateEvidence, ...overrides });
+
+  it("a weekend market over a dated span is a limited run with its days, and the source's line says so", async () => {
+    const { dataset, report } = await runAt(WEEK_1, {
+      pages: { [LIST_URL]: pageWith(MERRY_QUOTE) },
+      completions: [scheduled("Saturdays & Sundays, 10AM – 4PM", MERRY_QUOTE)],
+    });
+    expect(dataset.events[0]).toMatchObject({
+      status: "active",
+      recurrence: "limited-run",
+      start: "2026-11-28",
+      end: "2026-12-20",
+      days: ["Sat", "Sun"],
+      evidence: { date: MERRY_QUOTE, days: { page: LIST_URL, quote: MERRY_QUOTE } },
+    });
+    expect(dataset.events[0]).not.toHaveProperty("schedule");
+    expect(report.sources[0]!.detail).toContain(
+      `"Tower After Hours" on ${LIST_URL} was given a schedule, but its date quote gives the span 2026-11-28 to 2026-12-20; read as that span`,
+    );
+  });
+
+  it("a season named by months alone stays recurring", async () => {
+    const quote = "EVERY SUNDAY | 8AM - 3PM: Curated, outdoor street fair - April thru October!";
+    const { dataset, report } = await runAt(WEEK_1, {
+      pages: { [LIST_URL]: pageWith(quote) },
+      completions: [scheduled("Every Sunday, 8AM - 3PM, April thru October", quote)],
+    });
+    expect(dataset.events[0]).toMatchObject({ recurrence: "recurring", schedule: "Every Sunday, 8AM - 3PM, April thru October" });
+    expect(dataset.events[0]).not.toHaveProperty("start");
+    expect(report.sources[0]!.detail ?? "").not.toContain("read as that span");
+  });
+
+  it("a monthly show billed over dated years is a run between them, with no days", async () => {
+    const quote = "Fri , October 2, 2026 – Fri , February 5, 2027";
+    const { dataset } = await runAt(WEEK_1, {
+      pages: { [LIST_URL]: pageWith(quote) },
+      completions: [scheduled("First Friday of the month", quote)],
+    });
+    expect(dataset.events[0]).toMatchObject({ recurrence: "limited-run", start: "2026-10-02", end: "2027-02-05" });
+    expect(dataset.events[0]).not.toHaveProperty("days");
+  });
+
+  it("a quote with two spans is left as the model read it", async () => {
+    const quote = "Saturdays, Nov 7 – Nov 21 and Dec 5 – Dec 19";
+    const { dataset } = await runAt(WEEK_1, {
+      pages: { [LIST_URL]: pageWith(quote) },
+      completions: [scheduled("Saturdays", quote)],
+    });
+    expect(dataset.events[0]).toMatchObject({ recurrence: "recurring", schedule: "Saturdays" });
+  });
+});
+
+describe("quotedSpan", () => {
+  const today = "2026-10-23";
+  it.each([
+    ["SATURDAYS & SUNDAYS Nov 28th – Dec 20th | 10AM – 4PM", { start: "2026-11-28", end: "2026-12-20" }],
+    ["Nov. 1 – Nov. 22: Sat & Sun, 9 a.m. – 3 p.m.", { start: "2026-11-01", end: "2026-11-22" }],
+    ["Wednesdays, Oct. 7-28 | 5:30-8 p.m.", { start: "2026-10-07", end: "2026-10-28" }],
+    ["Saturdays, December 5 through January 9", { start: "2026-12-05", end: "2027-01-09" }],
+    ["Fri , October 2, 2026 – Fri , February 5, 2027", { start: "2026-10-02", end: "2027-02-05" }],
+    ["Sundays, Oct 18 to Nov 1, 2026", { start: "2026-10-18", end: "2026-11-01" }],
+    ["Weekends, Jan 9 – Feb 28", { start: "2027-01-09", end: "2027-02-28" }],
+    ["Weekends, Sept 19 – Oct 25", { start: "2026-09-19", end: "2026-10-25" }],
+  ])("%s is %o", (quote, span) => {
+    expect(quotedSpan(quote, today)).toEqual(span);
+  });
+
+  it.each([
+    "EVERY SUNDAY | 8AM - 3PM - April thru October!",
+    "SATURDAYS & SUNDAYS, APRIL – OCTOBER 9:00 A.M. – 3:00 P.M.",
+    "Every Second Friday, 5 to 8 PM",
+    "Saturdays, Nov 7 – Nov 21 and Dec 5 – Dec 19",
+    "Nov 30 – Nov 31",
+  ])("%s gives no span", (quote) => {
+    expect(quotedSpan(quote, today)).toBeUndefined();
   });
 });

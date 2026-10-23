@@ -42089,13 +42089,18 @@
       "id": "evt_44e13d0ef17a",
       "title": "City Market’s 9th Annual Merry Market!",
       "description": "An open-air holiday market featuring local artisans and makers, seasonal food and drinks, festive performances, and handmade goods.",
-      "schedule": "Saturdays & Sundays, 10AM – 4PM",
+      "start": "2026-11-28T10:00:00-06:00",
+      "end": "2026-12-20T16:00:00-06:00",
       "venue": "City Market",
       "neighborhood": "River Market",
       "primaryUrl": "https://www.artgardenkc.org/events",
       "eventUrl": "https://www.artgardenkc.org/events/merry-market-at-city-market-2026",
+      "days": [
+        "Sat",
+        "Sun"
+      ],
       "kind": "festivals/markets",
-      "recurrence": "recurring",
+      "recurrence": "limited-run",
       "dontMiss": false,
       "firstSeen": "2026-10-23T12:32:11-05:00",
       "lastVerified": "2026-10-23T12:32:11-05:00",
@@ -42109,7 +42114,11 @@
       },
       "evidence": {
         "date": "SATURDAYS & SUNDAYS\nNov 28th – Dec 20th | 10AM – 4PM",
-        "venue": "City Market"
+        "venue": "City Market",
+        "days": {
+          "page": "https://www.artgardenkc.org/events",
+          "quote": "SATURDAYS & SUNDAYS\nNov 28th – Dec 20th | 10AM – 4PM"
+        }
       }
     },
     {
