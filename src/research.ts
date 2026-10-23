@@ -2,7 +2,7 @@
  * The research command's work, apart from the process: reads config, prompts, registry, and
  * dataset under a root directory, runs once through the given adapters, and writes the dataset, the
  * run report (Markdown plus JSON twin), and the archive files the run's archived records go to: only a
- * dataset that validates, and none of the files truncated. `cli.ts` calls it with the real adapters and the working directory; tests, with fakes
+ * dataset that validates, and none of the files truncated; for one that does not, only the report and the refused records, beside the reports. `cli.ts` calls it with the real adapters and the working directory; tests, with fakes
  * and a temporary one.
  */
 import { existsSync } from "node:fs";
@@ -10,6 +10,7 @@ import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { parse as parseYaml } from "yaml";
+import { z } from "zod";
 import { addToArchive, byArchiveYear } from "./archive.js";
 import { parseConfig, type RunConfig } from "./config.js";
 import { DATASET_SCHEMA_VERSION, emptyDataset, parseArchive, parseDataset, type Archive, type Dataset, type Event } from "./dataset.js";
@@ -98,6 +99,35 @@ async function archiveFiles(dataDir: string, archived: Event[], config: RunConfi
   return files;
 }
 
+/** A record the dataset's schema refused, in full, with what the schema said of it; `event` is absent for an issue with the dataset as a whole. */
+interface Refused {
+  index?: number;
+  messages: string[];
+  event?: unknown;
+}
+
+/** The schema's issues grouped by the event they are about, in the dataset's order, each message with the path below the event it names. */
+function refusedEvents(error: z.ZodError, dataset: Dataset): Refused[] {
+  const byIndex = new Map<number | undefined, string[]>();
+  for (const issue of error.issues) {
+    const [top, index, ...below] = issue.path;
+    const at = top === "events" && typeof index === "number" ? index : undefined;
+    const where = at === undefined ? issue.path : below;
+    const message = where.length > 0 ? `${issue.message} (at ${where.join(".")})` : issue.message;
+    byIndex.set(at, [...(byIndex.get(at) ?? []), message]);
+  }
+  return [...byIndex]
+    .sort(([a], [b]) => (a ?? -1) - (b ?? -1))
+    .map(([index, messages]) => (index === undefined ? { messages } : { index, messages, event: dataset.events[index] }));
+}
+
+/** One line naming a refused record: its id, title, status, class, start and end. */
+function describe(event: unknown): string {
+  if (event === undefined) return "the dataset as a whole:";
+  const e = event as Partial<Event>;
+  return `${e.id} "${e.title}" (${e.status}, ${e.recurrence}, start ${e.start ?? "none"}, end ${e.end ?? "none"}):`;
+}
+
 /** One research run under `root`; resolves to its report and the paths it wrote: the archive files first, then the dataset and the report's two. */
 export async function research({ root, args, env, adapters = realAdapters }: ResearchOptions): Promise<{ report: RunReport; written: string[] }> {
   const dataDir = join(root, "data");
@@ -118,18 +148,32 @@ export async function research({ root, args, env, adapters = realAdapters }: Res
   const { ports, close } = adapters(config, env);
   const result = await run({ config, prompts, dataset, registry, ports }).finally(close);
 
-  // A dataset the next run could not load is not written, and neither is its report.
+  const reportBase = join(runsDir, result.report.runDate);
+
+  // A dataset the next run could not load is not written, and neither is its report: the report goes
+  // to a gitignored side file instead, with the records it refused, so the run's spend and readings
+  // can still be looked at (#219).
   let checked: Dataset;
   try {
     checked = parseDataset(result.dataset, config);
   } catch (error) {
-    throw new Error("the run produced a dataset that does not validate; nothing was written", { cause: error });
+    if (!(error instanceof z.ZodError)) throw new Error("the run produced a dataset that does not validate; nothing was written", { cause: error });
+    const refused = refusedEvents(error, result.dataset);
+    const sidePath = `${reportBase}.failed.json`;
+    let kept = `the run's report and the refused records are in data/runs/${result.report.runDate}.failed.json`;
+    try {
+      await mkdir(runsDir, { recursive: true });
+      await writeAllOrNothing([{ path: sidePath, content: JSON.stringify({ refused, report: result.report }, null, 2) + "\n" }]);
+    } catch (writeError) {
+      kept = `the run's report could not be kept either (${String(writeError)})`;
+    }
+    const lines = refused.map(({ event, messages }) => `  ${describe(event)}\n${messages.map((m) => `    - ${m}`).join("\n")}`);
+    throw new Error(`the run produced a dataset that does not validate; nothing was written, and ${kept}.\n${lines.join("\n")}`, { cause: error });
   }
 
   const archives = await archiveFiles(dataDir, result.archived, config);
   await mkdir(runsDir, { recursive: true });
   if (archives.length > 0) await mkdir(join(dataDir, "archive"), { recursive: true });
-  const reportBase = join(runsDir, result.report.runDate);
   // The archive goes first: a run cut short between renames leaves a record in both files, never in neither.
   const files = [
     ...archives,

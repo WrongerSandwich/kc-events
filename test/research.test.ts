@@ -1,8 +1,24 @@
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stringify } from "yaml";
+import type { Event } from "../src/dataset.js";
+
+// The run guards every invariant the schema holds, so the test of a refused dataset bends one record of
+// the real run's output: `corrupt.event`, when a test sets it, is applied to each event the run returns.
+const corrupt = vi.hoisted(() => ({ event: undefined as ((e: Event) => Event) | undefined }));
+vi.mock("../src/run.js", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../src/run.js")>();
+  return {
+    ...original,
+    run: async (...args: Parameters<typeof original.run>) => {
+      const result = await original.run(...args);
+      const bend = corrupt.event;
+      return bend ? { ...result, dataset: { ...result.dataset, events: result.dataset.events.map(bend) } } : result;
+    },
+  };
+});
 import { configFromArgs, research } from "../src/research.js";
 import { emptyDataset, parseDataset } from "../src/dataset.js";
 import { fakePorts, type FakePortOptions } from "./fakes/ports.js";
@@ -63,7 +79,10 @@ describe("a research run's files", () => {
     await writeFile(join(root, "prompts", "event-page-rules.md"), "EVENT PAGE RULES");
     await writeFile(join(root, "data", "registry.yaml"), stringify({ sources: [knuckleheads] }));
   });
-  afterEach(() => rm(root, { recursive: true, force: true }));
+  afterEach(async () => {
+    corrupt.event = undefined;
+    await rm(root, { recursive: true, force: true });
+  });
 
   /** Every file under the data directory, relative to it. */
   const dataFiles = async () => {
@@ -154,6 +173,34 @@ describe("a research run's files", () => {
 
     expect(await dataFiles()).toEqual(["events.json", "registry.yaml"]);
     expect(await readFile(join(root, "data", "events.json"), "utf8")).toBe(before);
+    expect(closed()).toBe(true);
+  });
+
+  it("writes nothing to the dataset when the run's does not validate, names the refused record, and keeps the report beside it (#219)", async () => {
+    await writeFile(join(root, "data", "events.json"), JSON.stringify(emptyDataset()));
+    const before = await readFile(join(root, "data", "events.json"), "utf8");
+    // As the 2026-10-23 hand run's Wizard of Oz: a one-off left spanning ten days.
+    corrupt.event = (e) => ({ ...e, end: "2026-11-09T20:00:00-06:00" });
+    const { done, closed } = researchWith({ pages: { [CALENDAR_URL]: PAGE }, completions: [reply(candidateAt(knuckleheads))] });
+
+    const error: Error = await done.then(
+      () => expect.fail("the run should have been refused"),
+      (e: unknown) => e as Error,
+    );
+
+    const id = (JSON.parse(await readFile(join(root, "data", "runs", "2026-10-02.failed.json"), "utf8")) as { refused: { event: { id: string } }[] }).refused[0]!.event.id;
+    expect(error.message).toContain("the run produced a dataset that does not validate; nothing was written");
+    expect(error.message).toContain("data/runs/2026-10-02.failed.json");
+    expect(error.message).toContain(`${id} "Big Show" (active, one-off, start 2026-10-31T20:00:00-05:00, end 2026-11-09T20:00:00-06:00):`);
+    expect(error.message).toContain("- a one-off spans a few days at most; a longer span is a limited run");
+    expect(await dataFiles()).toEqual(["events.json", "registry.yaml", "runs/2026-10-02.failed.json"]);
+    expect(await readFile(join(root, "data", "events.json"), "utf8")).toBe(before);
+    const side = await readJson("runs/2026-10-02.failed.json");
+    expect(side.refused).toEqual([
+      { index: 0, messages: ["a one-off spans a few days at most; a longer span is a limited run"], event: expect.objectContaining({ id, title: "Big Show", end: "2026-11-09T20:00:00-06:00" }) },
+    ]);
+    expect(side.report.runDate).toBe("2026-10-02");
+    expect(side.report.spend.totalUsd).toBeGreaterThan(0);
     expect(closed()).toBe(true);
   });
 });

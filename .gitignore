@@ -6,3 +6,5 @@ node_modules/
 *.tmp
 # `pnpm test:coverage` writes its report here.
 coverage/
+# A run whose dataset does not validate keeps its report here instead (#219); it is never committed.
+data/runs/*.failed.json
