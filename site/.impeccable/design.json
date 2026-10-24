@@ -1,0 +1,568 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T19:46:05.225Z",
+  "title": "Design System: KC This Week",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "primary",
+        "displayName": "Ink",
+        "canonical": "oklch(0.21 0 0)",
+        "dark": "oklch(0.94 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0.000 0)",
+          "oklch(0.27 0.000 0)",
+          "oklch(0.39 0.000 0)",
+          "oklch(0.51 0.000 0)",
+          "oklch(0.63 0.000 0)",
+          "oklch(0.75 0.000 0)",
+          "oklch(0.86 0.000 0)",
+          "oklch(0.95 0.000 0)"
+        ]
+      },
+      "flag-carmine": {
+        "role": "secondary",
+        "displayName": "Flag Carmine",
+        "canonical": "oklch(0.55 0.2 27)",
+        "dark": "oklch(0.68 0.19 27)",
+        "tonalRamp": [
+          "oklch(0.15 0.080 27)",
+          "oklch(0.27 0.200 27)",
+          "oklch(0.39 0.200 27)",
+          "oklch(0.51 0.200 27)",
+          "oklch(0.63 0.200 27)",
+          "oklch(0.75 0.200 27)",
+          "oklch(0.86 0.080 27)",
+          "oklch(0.95 0.080 27)"
+        ]
+      },
+      "fountain-blue-focus": {
+        "role": "secondary",
+        "displayName": "Fountain Blue",
+        "canonical": "oklch(0.56 0.15 238)",
+        "dark": "oklch(0.75 0.13 235)",
+        "tonalRamp": [
+          "oklch(0.15 0.060 238)",
+          "oklch(0.27 0.150 238)",
+          "oklch(0.39 0.150 238)",
+          "oklch(0.51 0.150 238)",
+          "oklch(0.63 0.150 238)",
+          "oklch(0.75 0.150 238)",
+          "oklch(0.86 0.060 238)",
+          "oklch(0.95 0.060 238)"
+        ]
+      },
+      "kind-talks-readings": {
+        "role": "tertiary",
+        "displayName": "Brick (Talks & readings)",
+        "canonical": "oklch(0.47 0.14 20)",
+        "dark": "oklch(0.82 0.11 20)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 20)",
+          "oklch(0.27 0.140 20)",
+          "oklch(0.39 0.140 20)",
+          "oklch(0.51 0.140 20)",
+          "oklch(0.63 0.140 20)",
+          "oklch(0.75 0.140 20)",
+          "oklch(0.86 0.056 20)",
+          "oklch(0.95 0.056 20)"
+        ]
+      },
+      "kind-talks-readings-tint": {
+        "role": "tertiary",
+        "displayName": "Brick Tint",
+        "canonical": "oklch(0.945 0.045 20)",
+        "dark": "oklch(0.31 0.06 20)"
+      },
+      "kind-food-drink": {
+        "role": "tertiary",
+        "displayName": "Amber (Food & drink)",
+        "canonical": "oklch(0.47 0.14 56)",
+        "dark": "oklch(0.82 0.11 56)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 56)",
+          "oklch(0.27 0.140 56)",
+          "oklch(0.39 0.140 56)",
+          "oklch(0.51 0.140 56)",
+          "oklch(0.63 0.140 56)",
+          "oklch(0.75 0.140 56)",
+          "oklch(0.86 0.056 56)",
+          "oklch(0.95 0.056 56)"
+        ]
+      },
+      "kind-food-drink-tint": {
+        "role": "tertiary",
+        "displayName": "Amber Tint",
+        "canonical": "oklch(0.945 0.045 56)",
+        "dark": "oklch(0.31 0.06 56)"
+      },
+      "kind-comedy": {
+        "role": "tertiary",
+        "displayName": "Mustard (Comedy)",
+        "canonical": "oklch(0.47 0.14 88)",
+        "dark": "oklch(0.82 0.11 88)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 88)",
+          "oklch(0.27 0.140 88)",
+          "oklch(0.39 0.140 88)",
+          "oklch(0.51 0.140 88)",
+          "oklch(0.63 0.140 88)",
+          "oklch(0.75 0.140 88)",
+          "oklch(0.86 0.056 88)",
+          "oklch(0.95 0.056 88)"
+        ]
+      },
+      "kind-comedy-tint": {
+        "role": "tertiary",
+        "displayName": "Mustard Tint",
+        "canonical": "oklch(0.945 0.045 88)",
+        "dark": "oklch(0.31 0.06 88)"
+      },
+      "kind-festivals-markets": {
+        "role": "tertiary",
+        "displayName": "Leaf (Festivals & markets)",
+        "canonical": "oklch(0.47 0.14 130)",
+        "dark": "oklch(0.82 0.11 130)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 130)",
+          "oklch(0.27 0.140 130)",
+          "oklch(0.39 0.140 130)",
+          "oklch(0.51 0.140 130)",
+          "oklch(0.63 0.140 130)",
+          "oklch(0.75 0.140 130)",
+          "oklch(0.86 0.056 130)",
+          "oklch(0.95 0.056 130)"
+        ]
+      },
+      "kind-festivals-markets-tint": {
+        "role": "tertiary",
+        "displayName": "Leaf Tint",
+        "canonical": "oklch(0.945 0.045 130)",
+        "dark": "oklch(0.31 0.06 130)"
+      },
+      "kind-outdoors-community": {
+        "role": "tertiary",
+        "displayName": "Pine (Outdoors & community)",
+        "canonical": "oklch(0.47 0.14 165)",
+        "dark": "oklch(0.82 0.11 165)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 165)",
+          "oklch(0.27 0.140 165)",
+          "oklch(0.39 0.140 165)",
+          "oklch(0.51 0.140 165)",
+          "oklch(0.63 0.140 165)",
+          "oklch(0.75 0.140 165)",
+          "oklch(0.86 0.056 165)",
+          "oklch(0.95 0.056 165)"
+        ]
+      },
+      "kind-outdoors-community-tint": {
+        "role": "tertiary",
+        "displayName": "Pine Tint",
+        "canonical": "oklch(0.945 0.045 165)",
+        "dark": "oklch(0.31 0.06 165)"
+      },
+      "kind-art-exhibitions": {
+        "role": "tertiary",
+        "displayName": "Teal (Art & exhibitions)",
+        "canonical": "oklch(0.47 0.14 205)",
+        "dark": "oklch(0.82 0.11 205)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 205)",
+          "oklch(0.27 0.140 205)",
+          "oklch(0.39 0.140 205)",
+          "oklch(0.51 0.140 205)",
+          "oklch(0.63 0.140 205)",
+          "oklch(0.75 0.140 205)",
+          "oklch(0.86 0.056 205)",
+          "oklch(0.95 0.056 205)"
+        ]
+      },
+      "kind-art-exhibitions-tint": {
+        "role": "tertiary",
+        "displayName": "Teal Tint",
+        "canonical": "oklch(0.945 0.045 205)",
+        "dark": "oklch(0.31 0.06 205)"
+      },
+      "kind-sports": {
+        "role": "tertiary",
+        "displayName": "Royal Blue (Sports)",
+        "canonical": "oklch(0.47 0.14 245)",
+        "dark": "oklch(0.82 0.11 245)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 245)",
+          "oklch(0.27 0.140 245)",
+          "oklch(0.39 0.140 245)",
+          "oklch(0.51 0.140 245)",
+          "oklch(0.63 0.140 245)",
+          "oklch(0.75 0.140 245)",
+          "oklch(0.86 0.056 245)",
+          "oklch(0.95 0.056 245)"
+        ]
+      },
+      "kind-sports-tint": {
+        "role": "tertiary",
+        "displayName": "Royal Blue Tint",
+        "canonical": "oklch(0.945 0.045 245)",
+        "dark": "oklch(0.31 0.06 245)"
+      },
+      "kind-film": {
+        "role": "tertiary",
+        "displayName": "Indigo (Film)",
+        "canonical": "oklch(0.47 0.14 278)",
+        "dark": "oklch(0.82 0.11 278)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 278)",
+          "oklch(0.27 0.140 278)",
+          "oklch(0.39 0.140 278)",
+          "oklch(0.51 0.140 278)",
+          "oklch(0.63 0.140 278)",
+          "oklch(0.75 0.140 278)",
+          "oklch(0.86 0.056 278)",
+          "oklch(0.95 0.056 278)"
+        ]
+      },
+      "kind-film-tint": {
+        "role": "tertiary",
+        "displayName": "Indigo Tint",
+        "canonical": "oklch(0.945 0.045 278)",
+        "dark": "oklch(0.31 0.06 278)"
+      },
+      "kind-music": {
+        "role": "tertiary",
+        "displayName": "Violet (Music)",
+        "canonical": "oklch(0.47 0.14 308)",
+        "dark": "oklch(0.82 0.11 308)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 308)",
+          "oklch(0.27 0.140 308)",
+          "oklch(0.39 0.140 308)",
+          "oklch(0.51 0.140 308)",
+          "oklch(0.63 0.140 308)",
+          "oklch(0.75 0.140 308)",
+          "oklch(0.86 0.056 308)",
+          "oklch(0.95 0.056 308)"
+        ]
+      },
+      "kind-music-tint": {
+        "role": "tertiary",
+        "displayName": "Violet Tint",
+        "canonical": "oklch(0.945 0.045 308)",
+        "dark": "oklch(0.31 0.06 308)"
+      },
+      "kind-theater-dance": {
+        "role": "tertiary",
+        "displayName": "Magenta (Theater & dance)",
+        "canonical": "oklch(0.47 0.14 345)",
+        "dark": "oklch(0.82 0.11 345)",
+        "tonalRamp": [
+          "oklch(0.15 0.056 345)",
+          "oklch(0.27 0.140 345)",
+          "oklch(0.39 0.140 345)",
+          "oklch(0.51 0.140 345)",
+          "oklch(0.63 0.140 345)",
+          "oklch(0.75 0.140 345)",
+          "oklch(0.86 0.056 345)",
+          "oklch(0.95 0.056 345)"
+        ]
+      },
+      "kind-theater-dance-tint": {
+        "role": "tertiary",
+        "displayName": "Magenta Tint",
+        "canonical": "oklch(0.945 0.045 345)",
+        "dark": "oklch(0.31 0.06 345)"
+      },
+      "kind-other": {
+        "role": "tertiary",
+        "displayName": "Grey (Other)",
+        "canonical": "oklch(0.48 0 0)",
+        "dark": "oklch(0.80 0 0)"
+      },
+      "kind-other-tint": {
+        "role": "tertiary",
+        "displayName": "Grey Tint",
+        "canonical": "oklch(0.94 0 0)",
+        "dark": "oklch(0.30 0 0)"
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Ground",
+        "canonical": "oklch(0.985 0 0)",
+        "dark": "oklch(0.17 0 0)"
+      },
+      "raised-surface": {
+        "role": "neutral",
+        "displayName": "Raised Surface",
+        "canonical": "oklch(1 0 0)",
+        "dark": "oklch(0.205 0 0)"
+      },
+      "muted-ink": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "oklch(0.46 0 0)",
+        "dark": "oklch(0.76 0 0)"
+      },
+      "faint-ink": {
+        "role": "neutral",
+        "displayName": "Faint Ink",
+        "canonical": "oklch(0.53 0 0)",
+        "dark": "oklch(0.67 0 0)"
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.915 0 0)",
+        "dark": "oklch(0.28 0 0)"
+      },
+      "strong-rule": {
+        "role": "neutral",
+        "displayName": "Strong Rule",
+        "canonical": "oklch(0.78 0 0)",
+        "dark": "oklch(0.43 0 0)"
+      },
+      "control-edge": {
+        "role": "neutral",
+        "displayName": "Control Edge",
+        "canonical": "oklch(0.62 0 0)",
+        "dark": "oklch(0.53 0 0)"
+      },
+      "pressed-tint": {
+        "role": "neutral",
+        "displayName": "Pressed Tint",
+        "canonical": "oklch(0.94 0 0)",
+        "dark": "oklch(0.30 0 0)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Wordmark",
+        "purpose": "The site's name in the header, uppercase, and nowhere else."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "A page's one h1; 1.75rem on phones."
+      },
+      "section": {
+        "displayName": "Section",
+        "purpose": "Horizon buckets, Always there, More <kind>; 1.375rem on phones."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "An event's name on a card."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Why lines, descriptions, prose."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Dates, times, venue lines, nav links; tabular figures on dates and counts only."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Chips, tags, counts, the date tile's weekday and month."
+      }
+    },
+    "shadows": [
+      {
+        "name": "menu-lift",
+        "value": "0 4px 16px oklch(0 0 0 / 0.12)",
+        "purpose": "The Add to calendar menu, the one element that floats over content."
+      },
+      {
+        "name": "hairline-cut",
+        "value": "0 1px 0 var(--rule)",
+        "purpose": "Under a sticky group heading, so rows scrolling beneath are cut by a rule."
+      },
+      {
+        "name": "today-ring",
+        "value": "inset 0 0 0 1.5px var(--hue)",
+        "purpose": "Today's date tile, ringed in its kind's shade."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "Ease-out-quart, the one curve."
+      },
+      {
+        "name": "control-state",
+        "value": "150ms",
+        "purpose": "Background, colour and edge changes on controls and chips."
+      },
+      {
+        "name": "view-transition",
+        "value": "260ms groups, 180ms root cross-fade",
+        "purpose": "A card's date tile and title glide into the event page's."
+      },
+      {
+        "name": "fountain",
+        "value": "jet 420ms; drops 900ms, staggered 0/60/120ms",
+        "purpose": "The header mark plays once on hover or focus."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "phone-narrow",
+        "value": "26rem"
+      },
+      {
+        "name": "phone",
+        "value": "30rem"
+      },
+      {
+        "name": "tablet",
+        "value": "800px"
+      },
+      {
+        "name": "desktop",
+        "value": "1024px"
+      },
+      {
+        "name": "wide",
+        "value": "1280px"
+      },
+      {
+        "name": "widest",
+        "value": "1440px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Control",
+      "kind": "button",
+      "refersTo": "control",
+      "description": "Save, Share, Add to calendar: icon then word, 44 px, ink on the raised surface.",
+      "html": "<button class=\"ds-control\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M4 2.5h8v11l-4-3-4 3z\"/></svg>Save</button>",
+      "css": ".ds-control { display: inline-flex; align-items: center; gap: 0.4em; min-height: 2.75rem; padding: 0 0.75rem; font-family: var(--font); font-size: 0.875rem; font-weight: 500; color: var(--fg); background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: 6px; cursor: pointer; transition: background-color 150ms cubic-bezier(0.25,1,0.5,1), color 150ms cubic-bezier(0.25,1,0.5,1), border-color 150ms cubic-bezier(0.25,1,0.5,1); } .ds-control:hover { border-color: var(--fg-faint); } .ds-control:active { transform: translateY(1px); } .ds-control:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
+    },
+    {
+      "name": "Control, pressed",
+      "kind": "button",
+      "refersTo": "control-pressed",
+      "description": "A saved Save: filled with ink.",
+      "html": "<button class=\"ds-control-pressed\" aria-pressed=\"true\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"currentColor\" stroke=\"currentColor\" stroke-width=\"1.5\"><path d=\"M4 2.5h8v11l-4-3-4 3z\"/></svg>Saved</button>",
+      "css": ".ds-control-pressed { display: inline-flex; align-items: center; gap: 0.4em; min-height: 2.75rem; padding: 0 0.75rem; font-family: var(--font); font-size: 0.875rem; font-weight: 500; color: var(--accent-fg); background: var(--accent); border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; } .ds-control-pressed:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
+    },
+    {
+      "name": "Kind chip",
+      "kind": "chip",
+      "refersTo": "kind-chip",
+      "description": "A kind's shade on its tint, as a pill. Never colour alone: the word is always there.",
+      "html": "<span class=\"ds-chip ds-kind\">Music</span>",
+      "css": ".ds-kind { --hue: var(--kind-music); --hue-tint: var(--kind-music-tint); } .ds-chip { display: inline-flex; align-items: center; gap: 0.3em; font-family: var(--font); font-size: 0.75rem; font-weight: 500; line-height: 1.6; color: var(--hue); background: var(--hue-tint); border-radius: 999px; padding: 0 0.5rem; white-space: nowrap; }"
+    },
+    {
+      "name": "Filter chip",
+      "kind": "chip",
+      "refersTo": "filter-chip",
+      "description": "The explorer rail: outlined in muted ink, pressed in its kind's tint, shade and edge, with a count.",
+      "html": "<span style=\"display:flex;gap:4px\"><button class=\"ds-filter\">Film <span class=\"ds-n\">12</span></button><button class=\"ds-filter ds-kind\" aria-pressed=\"true\">Music <span class=\"ds-n\">31</span></button></span>",
+      "css": ".ds-kind { --hue: var(--kind-music); --hue-tint: var(--kind-music-tint); } .ds-filter { font-family: var(--font); font-size: 0.75rem; background: none; color: var(--fg-muted); border: 1px solid var(--control-border); border-radius: 999px; padding: 0.25rem 0.5rem; cursor: pointer; } .ds-filter[aria-pressed=\"true\"] { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: 500; } .ds-n { margin-left: 0.35em; color: var(--fg-faint); font-variant-numeric: tabular-nums; font-weight: 400; } .ds-filter[aria-pressed=\"true\"] .ds-n { color: inherit; } .ds-filter:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
+    },
+    {
+      "name": "Don't-miss tag",
+      "kind": "chip",
+      "refersTo": "dont-miss-tag",
+      "description": "The one state that is not a kind: solid flag carmine, in words.",
+      "html": "<span class=\"ds-dont-miss\">Don’t miss</span>",
+      "css": ".ds-dont-miss { display: inline-flex; align-items: center; font-family: var(--font); font-size: 0.75rem; font-weight: 500; line-height: 1.6; color: var(--flag-red-fg); background: var(--flag-red); border: 1px solid var(--flag-red); border-radius: 999px; padding: 0 0.5rem; white-space: nowrap; }"
+    },
+    {
+      "name": "Date tile",
+      "kind": "custom",
+      "refersTo": "date-tile",
+      "description": "A card's date in its kind's tint and shade; today is ringed.",
+      "html": "<div class=\"ds-tile ds-kind\"><span class=\"ds-top\">Sat</span><span class=\"ds-day\">25</span><span class=\"ds-top\">Oct</span></div>",
+      "css": ".ds-kind { --hue: var(--kind-music); --hue-tint: var(--kind-music-tint); } .ds-tile { display: inline-flex; flex-direction: column; align-items: center; width: 4rem; padding-block: 0.5rem; border-radius: 6px; background: var(--hue-tint); color: var(--hue); font-family: var(--font); font-variant-numeric: tabular-nums; line-height: 1.1; box-shadow: inset 0 0 0 1.5px var(--hue); } .ds-top { font-size: 0.75rem; font-weight: 500; } .ds-day { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; }"
+    },
+    {
+      "name": "Search field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "The explorer's search, sort and date fields: raised surface, faint-ink edge, 4 px radius.",
+      "html": "<input class=\"ds-field\" type=\"search\" placeholder=\"Search events\">",
+      "css": ".ds-field { font-family: var(--font); font-size: 0.875rem; padding: 0.25rem 0.5rem; background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; } .ds-field:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
+    },
+    {
+      "name": "Header nav",
+      "kind": "nav",
+      "refersTo": "control",
+      "description": "Muted ink, 44 px tall, ink on hover, no underline.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\">Explore</a><a href=\"#\">Saved</a><a href=\"#\">About</a></nav>",
+      "css": ".ds-nav { display: flex; font-family: var(--font); } .ds-nav a { display: inline-flex; align-items: center; min-height: 2.75rem; padding-inline: 0.5rem; font-size: 0.875rem; color: var(--fg-muted); text-decoration: none; } .ds-nav a:hover { color: var(--fg); } .ds-nav a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Color-Coded Almanac",
+    "overview": "A reference you scan, not a feed you scroll. The interface is set in true greys, ink on an off-white ground, and the only colour on most screens comes from the eleven kinds of event: talks, food, comedy, festivals, outdoors, art, sports, film, music, theater, other. Each kind is a filing tab in a strong shade and a tint, so a glance down a column of events sorts it before a word is read. The page is calm and dense at once: many events fit a screen, separated by space and the odd hairline, with nothing competing for attention.\n\nThe system serves PRODUCT.md's \"sleek, colorful, honest tool\": the delight of a well-made instrument, closer to Fantastical's colour-coded calendar and Linear's exact chrome than to any magazine. Its one nod to the city is the header's fountain mark (five drops in kind colours, which play once on hover) and the flag's carmine, kept for the single state that is not a kind: don't miss. It rejects, by name, ad-laden local aggregators (thumbnails, sponsored slots, undifferentiated volume), ticketing marketplaces (big event images, countdowns, scarcity pressure, buy buttons), social feeds (infinite scroll, engagement bait), and the hand-written newsletter (serif voice type, a curator persona).\n\nLayout is two widths: a reading measure (42rem) for the front page, event pages and prose, and a wide frame (80rem, 86rem from 1440px) for the explorer's rail and one-line rows. Sections sit twice as far apart as the cards inside them (4rem between sections, 1rem between cards; 3rem between sections on phones). Motion is state feedback only: 150ms ease-out-quart transitions on controls, a 260ms cross-document view transition that glides a card's date tile and title into the event page's, and the fountain. All of it switches off under `prefers-reduced-motion`.",
+    "keyCharacteristics": [
+      "Monochrome chrome; colour arrives only with a kind or a state.",
+      "Eleven kind hues at matched lightness and chroma, about evenly spaced around the wheel.",
+      "One sans (Geist, 400 to 600) for everything; the wordmark is the only display type.",
+      "Flat surfaces, hairline rules, one shadow in the whole system.",
+      "Light and dark schemes follow the reader's system, both WCAG AA for every pairing.",
+      "44px tap targets for actions, 32px filter chips on phones."
+    ],
+    "rules": [
+      {
+        "name": "The Only-Kinds-Bring-Colour Rule",
+        "body": "Chrome, links, selection, saved state and hover are ink or grey. A new hue anywhere in the interface is forbidden unless it names a kind; it would be read as one.",
+        "section": "colors"
+      },
+      {
+        "name": "The Solid-Means-State Rule",
+        "body": "A kind is always a tint with its shade on it. A state that is not a kind (don't miss) is a solid fill, so it can never be mistaken for a kind, and it says its name in words so it reads in greyscale and to a screen reader.",
+        "section": "colors"
+      },
+      {
+        "name": "The Matched-Pair Rule",
+        "body": "A new kind gets the same lightness and chroma as the others and a hue in the widest gap on the wheel. Every shade must clear 4.5:1 on its own tint and on both grounds, in both schemes.",
+        "section": "colors"
+      },
+      {
+        "name": "The One-Display-Line Rule",
+        "body": "The wordmark face sets \"KC THIS WEEK\" and nothing else: never a heading, a label or a button. Headings are Geist at 600.",
+        "section": "typography"
+      },
+      {
+        "name": "The Figures-Only-Where-They-Line-Up Rule",
+        "body": "Tabular figures go on dates, times and counts, never on running text, where tnum widens the hyphen in \"ad-free\".",
+        "section": "typography"
+      },
+      {
+        "name": "The 600 Ceiling",
+        "body": "Bold asks for 600, the heaviest weight the font carries. Never 700 on Geist.",
+        "section": "typography"
+      },
+      {
+        "name": "The One-Shadow Rule",
+        "body": "Only an element that genuinely floats over content casts a shadow. Cards, rows, chips and buttons never do. If a surface needs separating, use a hairline or space.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep every neutral a true grey (chroma 0) and let only the kinds and the flag's two colours carry hue.",
+      "Do pair a kind's shade with its own tint, and check 4.5:1 for every new pairing in both the light and dark scheme.",
+      "Do say a state in words as well as colour: \"Don't miss\" is written on its red pill; kind is never conveyed by colour alone.",
+      "Do separate with space first, hairlines second: 4rem between sections, 1rem between cards.",
+      "Do give every action a 44px target and every filter chip at least 32px on phones.",
+      "Do use tabular figures for dates, times and counts.",
+      "Do honour `prefers-reduced-motion`, `prefers-contrast: more` and forced colours."
+    ],
+    "donts": [
+      "Don't add anything from ad-laden local aggregators: thumbnails, sponsored slots, undifferentiated volume.",
+      "Don't borrow from ticketing marketplaces (Eventbrite, Ticketmaster): big event images, countdowns, scarcity pressure, buy buttons.",
+      "Don't build social-feed mechanics: infinite scroll, engagement bait, algorithmic ordering.",
+      "Don't dress it as a hand-written newsletter or editorial magazine: no serif \"voice\" type, no chatty personal copy, no curator persona.",
+      "Don't colour a link, a selection, a hover or the saved state with a hue; it would read as one more kind.",
+      "Don't set anything but the site's name in the wordmark face, and never set Geist at 700.",
+      "Don't put a shadow on a card, row, chip or button; the calendar menu is the only thing that floats.",
+      "Don't use a `border-left` or `border-right` over 1px as a coloured stripe; a card's kind lives in its date tile.",
+      "Don't use gradient text, glassmorphism, or a hero-metric block.",
+      "Don't write exclamation marks, slogans, or \"we\" into the interface; headings are nouns."
+    ]
+  }
+}
