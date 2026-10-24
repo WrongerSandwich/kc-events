@@ -18,7 +18,7 @@
     "compare-models": "tsx src/model-compare-cli.ts"
   },
   "dependencies": {
-    "openai": "^7.33.0",
+    "openai": "^7.36.0",
     "playwright": "^1.64.1",
     "robots-parser": "^3.0.1",
     "yaml": "^2.9.1",
@@ -26,10 +26,10 @@
   },
   "devDependencies": {
     "@types/node": "^24.19.1",
-    "@vitest/coverage-v8": "^5.0.4",
+    "@vitest/coverage-v8": "^5.0.5",
     "fast-check": "^4.10.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.5"
   }
 }
