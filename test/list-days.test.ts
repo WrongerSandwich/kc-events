@@ -347,6 +347,8 @@ describe("quotedSpan", () => {
     "Sept 1 – Sept 30",
     "April–November: Sat & Sun, 8:00 a.m. – 3:00 p.m. Nov. 1 – Nov. 22: Sat & Sun, 9:00 a.m. – 3:00 p.m.",
     "Nov. 1 – Nov. 22: Sat & Sun, 9 a.m. – 3 p.m. Jan–Feb: Saturdays only",
+    // A months-only season anywhere in the quote turns the backstop off, even beside a real run: it stays as the model read it.
+    "Holiday Market, Nov–Dec: Saturdays, Nov 28 – Dec 20",
   ])("%s gives no span", (quote) => {
     expect(quotedSpan(quote, today)).toBeUndefined();
   });

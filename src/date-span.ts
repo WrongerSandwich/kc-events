@@ -1,7 +1,8 @@
 /**
  * A span of dates a date quote gives in words ("Nov 28th – Dec 20th", "Oct. 7-28", "October 2, 2026 –
  * February 5, 2027"), read back so a run the model gave a schedule is held to the dates its own quote
- * states (#218). Month first only, and only one span to a quote: anything else is left as the model read it.
+ * states (#218). Month first only, and only one span to a quote, with no season named by its months alone
+ * beside it (#221): anything else is left as the model read it.
  */
 
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
