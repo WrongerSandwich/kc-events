@@ -41,14 +41,14 @@ Started 2026-10-09T22:15:00-05:00, finished 2026-10-09T22:15:00-05:00. Horizon 8
 
 ## Spend
 
-0.0200 USD of a 5 USD cap.
+0.0400 USD of a 5 USD cap.
 
 ## Sources
 
 | Source | Result | Extracted | Detail |
 | --- | --- | ---: | --- |
-| Knuckleheads | fetched | 2 |  |
-| Recordbar | fetched | 1 |  |
+| Knuckleheads | fetched | 1 | the second read added 1 |
+| Recordbar | fetched | 1 | the second read added 0 |
 | Midland | failed | 0 | https://midland.test/calendar: connect ECONNREFUSED |
 
 ## Own pages

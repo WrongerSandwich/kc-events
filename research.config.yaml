@@ -13,6 +13,13 @@ geography: Kansas City metro on both sides of the state line, plus Lawrence
 # second is a monthly limit set by hand on the OpenRouter key itself (the milestone hand-run
 # wizard, #11, walks setting it), so a bug in this cap cannot cost more than that ceiling.
 spendCapUsd: 5
+# How many times each registry page is read with the extraction model: 2 or 1. At 2 both reads of a
+# page start together, the first's sightings merge ahead of the second's, so the second confirms
+# what the first verified or covers what it missed (#223 measured 94.4% to 96.3% of stored records
+# verified, about $0.10 and 2 minutes more a week). A page is not extracted only when both reads
+# fail; its counts come from the first read that worked, and the source's report line says how many
+# sightings the second read added. Discovery leads, re-verification and own pages are read once.
+extractionReads: 2
 
 models:
   extraction: openai/gpt-6-luna

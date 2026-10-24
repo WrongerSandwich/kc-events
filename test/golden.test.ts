@@ -17,7 +17,8 @@ import { candidateAt, PAGE, reply, source, WEEK_1, WEEK_2, WEEK_3 } from "./fake
  * week 3); Recordbar's calendar redirects to its events page; the Midland's page is down in week 2 and back
  * in week 3. Discovery finds a promoter's page in week 1 (held for promotion; `promoter` is not in the
  * registry, only what candidateAt cites), and curation flags one show, whose own page is read for its price
- * and age limit in week 1 and kept from that read after (#133).
+ * and age limit in week 1 and kept from that read after (#133). Each registry page is read twice (#224), the
+ * two reads alike but in week 2, when Knuckleheads' first read misses Season Closer and its second covers it.
  */
 const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms" });
 const recordbar = source("Recordbar", { neighborhood: "Crossroads" });
@@ -56,7 +57,7 @@ const arenaNight = candidateAt(midland, { title: "Arena Night", startDate: "2026
 const promoterNight = candidateAt(promoter, { title: "Promoter Night", startDate: "2026-11-01", venue: "The Truman", venueEvidence: "The Truman, 801 Westport Rd" });
 
 const config = (() => {
-  const base = testConfig();
+  const base = testConfig({ extractionReads: 2 });
   return { ...base, discovery: { ...base.discovery, enabled: true } };
 })();
 const registry = { sources: [knuckleheads, recordbar, midland] };
@@ -108,19 +109,19 @@ describe("golden three-week scenario", () => {
     const week1 = await weekly(WEEK_1, emptyDataset(), {
       pages: calendars(PAGE),
       searches: { [queryAt(WEEK_1)]: [{ url: PROMOTER_PAGE, title: "Promoter Night", snippet: "Live at The Truman" }] },
-      completions: [reply(bigShow, goneShow, closer), reply(lateSet), reply(arenaNight), reply(promoterNight), bigShowPage],
+      completions: [reply(bigShow, goneShow, closer), reply(bigShow, goneShow, closer), reply(lateSet), reply(lateSet), reply(arenaNight), reply(arenaNight), reply(promoterNight), bigShowPage],
     });
     await pin(1, week1);
 
     const week2 = await weekly(WEEK_2, week1.dataset, {
       pages: calendars(new Error("connect ECONNREFUSED")),
-      completions: [reply(bigShow, closer), reply(lateSet)],
+      completions: [reply(bigShow), reply(bigShow, closer), reply(lateSet), reply(lateSet)],
     });
     await pin(2, week2);
 
     const week3 = await weekly(WEEK_3, week2.dataset, {
       pages: calendars(PAGE),
-      completions: [reply(bigShow, closer), reply(lateSet), reply(arenaNight)],
+      completions: [reply(bigShow, closer), reply(bigShow, closer), reply(lateSet), reply(lateSet), reply(arenaNight), reply(arenaNight)],
     });
     await pin(3, week3);
 

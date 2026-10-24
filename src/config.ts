@@ -116,6 +116,12 @@ export const configSchema = z.strictObject({
     .min(1)
     .default("Kansas City metro on both sides of the state line, plus Lawrence"),
   spendCapUsd: z.number().positive().default(5),
+  /**
+   * How many times each registry page is read with the extraction model (#224): at 2, both reads start
+   * together and the first's sightings merge ahead of the second's. Discovery, re-verification and own
+   * pages are read once either way.
+   */
+  extractionReads: z.union([z.literal(1), z.literal(2)]).default(2),
   models: z
     .strictObject({
       extraction: z.string().min(1).default(DEFAULT_MODELS.extraction),

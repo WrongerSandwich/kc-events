@@ -41,15 +41,15 @@ Started 2026-10-16T22:15:00-05:00, finished 2026-10-16T22:15:00-05:00. Horizon 8
 
 ## Spend
 
-0.0300 USD of a 5 USD cap.
+0.0600 USD of a 5 USD cap.
 
 ## Sources
 
 | Source | Result | Extracted | Detail |
 | --- | --- | ---: | --- |
-| Knuckleheads | fetched | 2 |  |
-| Recordbar | fetched | 1 |  |
-| Midland | fetched | 1 |  |
+| Knuckleheads | fetched | 2 | the second read added 0 |
+| Recordbar | fetched | 1 | the second read added 0 |
+| Midland | fetched | 1 | the second read added 0 |
 
 ## Own pages
 

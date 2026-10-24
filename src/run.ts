@@ -7,6 +7,7 @@ import { ageUnsighted, expire, expireIndexCited, expirePast, expireSkipped, hidd
 import {
   buildExtractionRequest,
   candidateToSighting,
+  comparable,
   extractionReplySchema,
   normalizeUrl,
   overCap,
@@ -475,6 +476,8 @@ export async function checkSource(source: Source, ports: Ports): Promise<{ repor
 interface SourceExtraction {
   extracted: number;
   problems: string[];
+  /** Sightings a page's second read had that its first did not, summed over the pages both of whose reads came back (#224). */
+  secondReadAdded?: number;
 }
 
 /**
@@ -484,6 +487,13 @@ interface SourceExtraction {
  * as not extracted; like an unreadable reply, that tells nothing about the events on it. A page whose
  * redirects ended on an index page is not extracted at all. The attempts returned add to the
  * registry lane's: the pages not read (in full), each page's yield, and the outages.
+ *
+ * At `extractionReads: 2` each page is read twice, both calls started together (#224). The first
+ * read's sightings go ahead of the second's, so the first verified sighting stands and the second
+ * confirms it or covers what the first missed. A page is not extracted only when both calls fail. Its
+ * candidate count and tally come from one read, the first that came back readable, so they do not
+ * double; the other read adds only problems that one did not have. It is read in full when either
+ * read was, and its yield is the larger listing and the later latest start of the two.
  */
 async function extractFromPages(pages: SourcePage[], model: ModelPort, context: ExtractionContext) {
   const sightings: Sighting[] = [];
@@ -505,26 +515,52 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
       outcome.problems.push(`${page.finalUrl} is an index page and was not extracted`);
       continue;
     }
-    let read: Awaited<ReturnType<typeof extractPage>>;
-    try {
-      read = await extractPage(page, { lane: "registry", source }, model, context);
-    } catch (error) {
+    const settled = await Promise.allSettled(
+      Array.from({ length: context.config.extractionReads }, () => extractPage(page, { lane: "registry", source }, model, context)),
+    );
+    const reads = settled.flatMap((s) => (s.status === "fulfilled" ? [s.value] : []));
+    const failures = settled.flatMap((s, i) => (s.status === "rejected" ? [{ read: i, error: s.reason as unknown }] : []));
+    // The reading the page's counts come from: the first that was read, else the first that came back.
+    const counted = reads.find((r) => r.sightings !== undefined) ?? reads[0];
+    if (counted === undefined) {
+      const { error } = failures[0]!;
       markUnread(page);
       if (error instanceof SpendCapReached) pagesNotExtracted++;
-      outcome.problems.push(`${page.finalUrl} not extracted: ${error instanceof SpendCapReached ? "spend cap reached" : modelFailed(error)}`);
+      outcome.problems.push(`${page.finalUrl} not extracted: ${failedBecause(error)}`);
       continue;
     }
-    addTally(tally, read.tally);
-    if (read.sightings) {
-      sightings.push(...read.sightings);
-      for (const url of [page.url, page.finalUrl]) attempts.yields.set(pageKey(url), yieldOf(read.sightings, read.tally));
-    }
-    if (!readInFull(read)) markUnread(page);
-    outcome.extracted += read.extracted;
-    outcome.problems.push(...read.problems);
+    addTally(tally, counted.tally);
+    for (const read of reads) if (read.sightings) sightings.push(...read.sightings);
+    const yields = reads.flatMap((read) => (read.sightings ? [yieldOf(read.sightings, read.tally)] : []));
+    if (yields.length > 0) for (const url of [page.url, page.finalUrl]) attempts.yields.set(pageKey(url), widestYield(yields));
+    if (!reads.some(readInFull)) markUnread(page);
+    outcome.extracted += counted.extracted;
+    outcome.problems.push(...counted.problems);
+    for (const read of reads) if (read !== counted) outcome.problems.push(...read.problems.filter((p) => !counted.problems.includes(p)));
+    for (const { read, error } of failures) outcome.problems.push(`the ${read === 0 ? "first" : "second"} read of ${page.finalUrl} failed: ${failedBecause(error)}`);
+    const [first, second] = reads;
+    if (first?.sightings && second?.sightings) outcome.secondReadAdded = (outcome.secondReadAdded ?? 0) + addedBy(second.sightings, first.sightings);
   }
 
   return { sightings, tally, pagesNotExtracted, bySource, attempts };
+}
+
+const failedBecause = (error: unknown) => (error instanceof SpendCapReached ? "spend cap reached" : modelFailed(error));
+
+/** A sighting's identity within one page, as the model comparison counts it: its title and first day, or "recurring". */
+const pageIdentity = (s: Sighting) => `${comparable(s.event.title)}|${s.event.recurrence === "recurring" ? "recurring" : (calendarDate(s.event.start) ?? "")}`;
+
+/** How many identities the later read of a page has that the earlier does not. */
+function addedBy(later: Sighting[], earlier: Sighting[]): number {
+  const seen = new Set(earlier.map(pageIdentity));
+  return new Set(later.map(pageIdentity).filter((id) => !seen.has(id))).size;
+}
+
+/** Two reads' yields of one page as one: the larger listing and the later latest start. */
+function widestYield(yields: PageYield[]): PageYield {
+  const listed = Math.max(...yields.map((y) => y.listed));
+  const latestStart = yields.flatMap((y) => (y.latestStart !== undefined ? [y.latestStart] : [])).sort().at(-1);
+  return { listed, ...(latestStart !== undefined ? { latestStart } : {}) };
 }
 
 const noTally = (): CandidateTally => ({ outsideGeography: 0, skippedPromotion: 0, skippedNotPublic: 0, overCap: 0, unusableDates: 0, quoteNotOnPage: 0 });
@@ -634,7 +670,8 @@ export async function extractPage(
 
 function withExtraction(report: SourceReport, extraction: SourceExtraction | undefined): SourceReport {
   if (!extraction) return report;
-  const detail = [report.detail, ...extraction.problems].filter(Boolean).join("; ");
+  const added = extraction.secondReadAdded !== undefined ? `the second read added ${extraction.secondReadAdded}` : undefined;
+  const detail = [report.detail, added, ...extraction.problems].filter(Boolean).join("; ");
   return { ...report, extracted: extraction.extracted, ...(detail ? { detail } : {}) };
 }
 

@@ -10,6 +10,8 @@ export function testConfig(overrides: Partial<RunConfig> = {}): RunConfig {
       timezone: "America/Chicago",
       geography: "Kansas City metro on both sides of the state line, plus Lawrence",
       spendCapUsd: 5,
+      // One read of each page, so a test scripts one reply per page; the two-read tests set 2 (#224).
+      extractionReads: 1,
       models: { ...TEST_MODELS },
       kinds: ["music", "other"],
       neighborhoods: { "Central KC": ["Westport", "East Bottoms", "Crossroads"], Lawrence: ["Lawrence"] },
