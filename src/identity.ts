@@ -91,9 +91,9 @@ const NONE = { kind: "none" } as const;
  * first (among several such records, the one whose date is nearest, see compareOnPage), then the
  * match on own page and calendar date (#66), then the fuzzy match on title, venue, and nearby
  * date, then the match on title, venue, and end date (#68), then the game match on kind, matchup,
- * venue and date (#227), then for a recurring sighting the
- * recurring event with its title at its venue (#119), then for a sighting with no venue the known
- * event with its title on its date, then a recurring event the sighting is one month of. A record
+ * venue and date (#227), then for a recurring sighting the recurring event with its title at its
+ * venue (#119), then for a sighting with no venue the known event with its title on its date, then
+ * a recurring event the sighting is one month of. A record
  * folded as a duplicate stands for the record it was folded into, as far as that chain goes within
  * `known`: the match is that record, and its date is the one compared. The later pair rules take
  * the first match in `known` order.
@@ -439,8 +439,8 @@ function sameEndDate(a: EventIdentity, b: EventIdentity, aliases: VenueAliases):
   return sameEnd(a, b) && sameOrShortenedTitle(a.title, b.title) && sameVenue(a.venue, b.venue, aliases);
 }
 
-/** Two sides joined by vs, v, @ or at, with or without a period, in any case: a game's title. */
-const MATCHUP = /^\S.*?(?:\s(?:vs?\.?|at)\s|\s*@\s*)\S/iu;
+/** Two sides joined by vs, v, @ or at, with or without a period, in any case: a game's title. The second side is captured. */
+const MATCHUP = /^\S.*?(?:\s(?:vs?\.?|at)\s|\s*@\s*)(\S.*)$/iu;
 
 /**
  * Two one-off sports records on one calendar date at the same venue, both titled as a matchup
@@ -451,12 +451,18 @@ const MATCHUP = /^\S.*?(?:\s(?:vs?\.?|at)\s|\s*@\s*)\S/iu;
  * limited run is never a game.
  */
 function sameGame(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
-  if (!isGame(a) || !isGame(b) || a.venue === undefined || b.venue === undefined) return false;
-  return calendarDate(a.start) !== undefined && sameMoment(a.start, b.start) && sameVenue(a.venue, b.venue, aliases);
+  if (!isGame(a, aliases) || !isGame(b, aliases)) return false;
+  return calendarDate(a.start) !== undefined && sameMoment(a.start, b.start) && sameVenue(a.venue!, b.venue!, aliases);
 }
 
-function isGame(event: EventIdentity): boolean {
-  return event.recurrence === "one-off" && event.kind !== undefined && normalizeName(event.kind) === "sports" && MATCHUP.test(event.title.trim());
+/**
+ * A one-off sports record at a venue titled as a matchup. A title whose second side is the venue
+ * ("Fan Fest at Children's Mercy Park") names a thing at the ground, not an opponent, so it is no game.
+ */
+function isGame(event: EventIdentity, aliases: VenueAliases): boolean {
+  if (event.recurrence !== "one-off" || event.kind === undefined || normalizeName(event.kind) !== "sports" || event.venue === undefined) return false;
+  const secondSide = MATCHUP.exec(event.title.trim())?.[1];
+  return secondSide !== undefined && !sameVenue(secondSide, event.venue, aliases);
 }
 
 /**

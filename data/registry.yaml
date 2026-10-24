@@ -433,7 +433,7 @@ sources:
     urls: [https://www.arrowheadstadiumkc.com/events]
     kind: sports
     neighborhood: Truman Sports Complex
-    checkHints: Chiefs home games, each its own one-off ("<Opponent> vs. Kansas City Chiefs"), plus concerts and other stadium events, which are one-offs too.
+    checkHints: Chiefs home games, each its own one-off, titled "Kansas City Chiefs vs <Opponent>" however the page orders the teams, plus concerts and other stadium events, which are one-offs too.
     status: active
     notes: Answers HTTP 406 on some runs (10-10, 10-12, 10-19) and 200 on others, through Fastly, to a stock Chrome user agent as well as ours, so it is the site's screening, not the job's identity (#161). The listings are in the plain HTML, so the browser fetcher is not the fix. Stays active because it usually gets through; the ask to let `kc-this-week` through is in #58 (added 2026-10-19).
 

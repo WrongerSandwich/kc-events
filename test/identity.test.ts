@@ -619,6 +619,12 @@ describe("one game under two forms of its title (#227)", () => {
     expect(findMatch({ ...studio, title: "Pottery vs Painting" }, [{ ...studio, title: "Painting vs Pottery" }], {})).toBeUndefined();
   });
 
+  it("does not take a sports record titled as a thing at the venue for a game, even with no time", () => {
+    const stored = game("Sporting Kansas City vs. Austin FC");
+    expect(findMatch(game("Fan Fest at Children's Mercy Park", "2026-10-24"), [stored], {})).toBeUndefined();
+    expect(findMatch(game("Youth Clinic @ Sporting Park", "2026-10-24"), [stored], { "Children's Mercy Park": ["Sporting Park"] })).toBeUndefined();
+  });
+
   it("never matches a recurring record or a limited run", () => {
     expect(findMatch(game("Sporting KC vs Austin"), [game("Sporting Kansas City vs. Austin FC", undefined, { recurrence: "limited-run" })], {})).toBeUndefined();
     expect(findMatch(game("Sporting KC vs Austin", undefined, { recurrence: "recurring" }), [game("Sporting Kansas City vs. Austin FC")], {})).toBeUndefined();
