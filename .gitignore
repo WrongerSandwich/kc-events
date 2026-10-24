@@ -8,3 +8,5 @@ node_modules/
 coverage/
 # A run whose dataset does not validate keeps its report here instead (#219); it is never committed.
 data/runs/*.failed.json
+# The model comparison (#222) keeps its saved pages and trials here.
+.cache/

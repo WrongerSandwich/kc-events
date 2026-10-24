@@ -1,0 +1,157 @@
+import { describe, expect, it } from "vitest";
+import type { Event } from "../src/dataset.js";
+import { eventKey, HARD_CASES, renderComparison, scoreModels, trialEvent, type HardCase, type Trial, type TrialEvent } from "../src/model-compare.js";
+
+const PAGE = "https://example.org/events/";
+
+function ev(title: string, overrides: Partial<TrialEvent> = {}): TrialEvent {
+  return { title, start: "2026-11-01T20:00:00-05:00", venue: "The Hall", recurrence: "one-off", kind: "music", status: "active", primaryUrl: PAGE, ...overrides };
+}
+
+function trial(model: string, repeat: number, events: TrialEvent[] | undefined, overrides: Partial<Trial> = {}): Trial {
+  return { model, page: `Hall ${PAGE}`, source: "Hall", repeat, costUsd: 0.002, ms: 1000, ...(events ? { events, extracted: events.length } : {}), ...overrides };
+}
+
+function stored(title: string, overrides: Partial<Event> = {}): Event {
+  return {
+    id: `evt_${title}`,
+    title,
+    start: "2026-11-01T20:00:00-05:00",
+    venue: "The Hall",
+    neighborhood: "Crossroads",
+    primaryUrl: PAGE,
+    kind: "music",
+    recurrence: "one-off",
+    dontMiss: false,
+    firstSeen: "2026-10-01T00:00:00-05:00",
+    status: "active",
+    verificationFailures: 0,
+    consecutiveOutages: 0,
+    lead: { lane: "registry", source: "Hall" },
+    evidence: { date: "Nov 1", venue: "The Hall" },
+    ...overrides,
+  } as Event;
+}
+
+const score = (trials: Trial[], dataset: Event[] = [], cases: HardCase[] = []) => scoreModels(["m"], trials, dataset, cases)[0]!;
+
+describe("scoreModels", () => {
+  it("rates quotes on the page among the citable candidates only", () => {
+    const s = score([trial("m", 0, [ev("A"), ev("B", { status: "unverified", quoteProblem: 'quoted "x" for its venue' }), ev("C", { status: "unverified" })])]);
+    expect(s).toMatchObject({ verified: 1, quoteMisses: 1, uncited: 1, quotePassRate: 0.5 });
+  });
+
+  it("scores failed calls for cost and count but nothing else", () => {
+    const s = score([trial("m", 0, [ev("A")]), trial("m", 1, undefined, { error: "Request timed out.", costUsd: 0.001 })]);
+    expect(s).toMatchObject({ calls: 2, failed: 1, failures: { "Request timed out.": 1 }, eventsPerPage: 1, costPerPage: 0.002 });
+    expect(s.costUsd).toBeCloseTo(0.003);
+  });
+
+  it("measures how far repeats of one page find the same events, and read them alike", () => {
+    const s = score([
+      trial("m", 0, [ev("A"), ev("B")]),
+      trial("m", 1, [ev("A"), ev("B", { venue: "Elsewhere" })]),
+      trial("m", 2, [ev("A")]),
+    ]);
+    // Pairs: {A,B}-{A,B} 1, {A,B}-{A} 0.5, {A,B}-{A} 0.5.
+    expect(s.setStability).toBeCloseTo(2 / 3);
+    // A read alike three times; B read twice, with two venues.
+    expect(s.fieldStability).toBe(0.5);
+  });
+
+  it("compares repeats with each other, not a page that lists one event twice with itself", () => {
+    const s = score([trial("m", 0, [ev("A"), ev("A", { start: "2026-11-01" })])]);
+    expect(s.fieldStability).toBeNaN();
+    expect(score([trial("m", 0, [ev("A"), ev("A", { venue: "X" })]), trial("m", 1, [ev("A")])]).fieldStability).toBe(1);
+  });
+
+  it("keys an event by title and first date, so a moved date is another event", () => {
+    expect(eventKey(ev("The Show"))).toBe(eventKey(ev("the show", { start: "2026-11-01" })));
+    expect(eventKey(ev("The Show"))).not.toBe(eventKey(ev("The Show", { start: "2026-11-02T20:00:00-06:00" })));
+    expect(eventKey(ev("Market", { start: undefined, recurrence: "recurring" }))).toBe("market|recurring");
+  });
+
+  it("compares verified readings with the stored record of the same page and title, and lists each disagreement", () => {
+    const s = score(
+      [trial("m", 0, [ev("Lecture", { start: "2026-11-01T18:00:00-05:00" }), ev("Unknown"), ev("Lecture2", { status: "unverified" })]), trial("m", 1, [ev("Lecture", { start: "2026-11-01T18:00:00-05:00" })])],
+      [stored("Lecture", { start: "2026-11-01T19:00:00-05:00" }), stored("Lecture2")],
+    );
+    expect(s.storedMatched).toBe(2);
+    expect(s.storedAgreement).toEqual({ date: 1, time: 0, venue: 1, recurrence: 1 });
+    expect(s.storedDisagreements).toEqual([{ title: "Lecture", field: "time", stored: "19:00", read: "18:00", times: 2 }]);
+  });
+
+  it("scores a hard case on every page any model found it on, so a model that never finds it misses there", () => {
+    const market: HardCase = {
+      label: "Market",
+      matches: (e) => e.title === "Market",
+      problem: (e) => (e.recurrence === "limited-run" ? undefined : `read as ${e.recurrence}`),
+    };
+    const trials = [
+      trial("good", 0, [ev("Market", { recurrence: "limited-run" })]),
+      trial("good", 1, [ev("Market", { status: "unverified", quoteProblem: 'quoted "x" for its venue' })]),
+      trial("bad", 0, [ev("Other")]),
+      trial("bad", 1, [ev("Market", { recurrence: "recurring" })]),
+    ];
+    const [good, bad] = scoreModels(["good", "bad"], trials, [], [market]);
+    expect(good!.hardCases[0]).toEqual({ label: "Market", read: 2, right: 1, misses: { 'unverified (quoted "x" for its venue)': 1 } });
+    expect(bad!.hardCases[0]).toEqual({ label: "Market", read: 2, right: 0, misses: { "not found": 1, "read as recurring": 1 } });
+  });
+});
+
+describe("HARD_CASES", () => {
+  const find = (label: string) => HARD_CASES.find((c) => c.label.startsWith(label))!;
+  const crossroads = "https://kccrossroads.org/";
+
+  it("wants the Secret Show as its dated run with no days", () => {
+    const secret = find("Secret Show");
+    const right = ev("The Secret Show", { primaryUrl: crossroads, recurrence: "limited-run", start: "2026-10-02", end: "2027-02-05" });
+    expect(secret.matches(right)).toBe(true);
+    expect(secret.problem(right)).toBeUndefined();
+    expect(secret.problem({ ...right, recurrence: "recurring", start: undefined, end: undefined, schedule: "First Friday" })).toMatch(/read as recurring/);
+    expect(secret.problem({ ...right, days: ["Fri"] })).toBe("days Fri");
+    expect(secret.matches({ ...right, primaryUrl: "https://example.org/" })).toBe(false);
+  });
+
+  it("wants Kenneth Spencer's start, not its doors", () => {
+    const lecture = find("Kenneth Spencer");
+    const at = (start: string) => ev("Kenneth Spencer Lecture: Tao Leigh Goffe", { primaryUrl: "https://www.liberty-hall.com/upcoming-events", start });
+    expect(lecture.problem(at("2026-11-09T19:00:00-06:00"))).toBeUndefined();
+    expect(lecture.problem(at("2026-11-09T18:00:00-06:00"))).toBe("start 18:00");
+    expect(lecture.problem(at("2026-11-09"))).toBe("start no time");
+  });
+});
+
+describe("trialEvent", () => {
+  it("keeps the scored fields and the quote problem's phrase", () => {
+    const event = stored("A", { evidence: { date: "Nov 1", venue: "Hall" }, days: ["Sat"] });
+    const t = trialEvent({ event, cancelled: false, quoteProblem: { phrase: 'quoted "Hall" for its venue', pageText: "long" } });
+    expect(t).toEqual({
+      title: "A",
+      start: "2026-11-01T20:00:00-05:00",
+      venue: "The Hall",
+      recurrence: "one-off",
+      days: ["Sat"],
+      kind: "music",
+      status: "active",
+      primaryUrl: PAGE,
+      quoteProblem: 'quoted "Hall" for its venue',
+      dateEvidence: "Nov 1",
+      venueEvidence: "Hall",
+    });
+  });
+});
+
+describe("renderComparison", () => {
+  it("writes the summary, the hard cases and each model's disagreements, and says when the cap cut it short", () => {
+    const scores = scoreModels(["a/one", "b/two"], [trial("a/one", 0, [ev("A")]), trial("b/two", 0, [ev("A", { venue: "Elsewhere" })])], [stored("A")], HARD_CASES);
+    const md = renderComparison(scores, { date: "2026-10-23", pages: 1, sources: 1, repeats: 1, capUsd: 6, spentUsd: 0.004, capHit: true, unfetched: ["X (failed)"] });
+    expect(md).toContain("# Extraction model comparison 2026-10-23");
+    expect(md).toContain("**cap hit**");
+    expect(md).toContain("cost $0.00 in all (each invocation capped at $6.00)");
+    expect(md).toContain("Not fetched: X (failed).");
+    expect(md).toMatch(/\| `a\/one` \| 100\.0% \|/);
+    expect(md).toContain('- A: venue stored "the hall", read "elsewhere"');
+    expect(md).toContain("Secret Show: dated monthly run, no days");
+  });
+});

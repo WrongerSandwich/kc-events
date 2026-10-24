@@ -14,7 +14,8 @@
     "research": "tsx src/cli.ts",
     "grade": "tsx src/grade-cli.ts",
     "test:all": "pnpm -r test",
-    "typecheck:all": "pnpm -r typecheck"
+    "typecheck:all": "pnpm -r typecheck",
+    "compare-models": "tsx src/model-compare-cli.ts"
   },
   "dependencies": {
     "openai": "^7.33.0",

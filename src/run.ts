@@ -444,9 +444,9 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
  * The detail names every failed and blocked URL either way. Pages that did come back are
  * returned for extraction whatever the source's overall result. URLs that failed as an outage
  * are returned so re-verification does not strike the events on them, and URLs gone or disallowed
- * so it strikes every event on them, whatever its date.
+ * so it strikes every event on them, whatever its date. Also how the model comparison (#222) saves its pages.
  */
-async function checkSource(source: Source, ports: Ports): Promise<{ report: SourceReport; pages: FetchResult[]; outages: string[]; gone: string[] }> {
+export async function checkSource(source: Source, ports: Ports): Promise<{ report: SourceReport; pages: FetchResult[]; outages: string[]; gone: string[] }> {
   const blocked: string[] = [];
   const failed: string[] = [];
   const outages: string[] = [];
@@ -574,9 +574,9 @@ function sumTallies(...tallies: CandidateTally[]): CandidateTally {
  * One extraction call over one page. Sightings are absent when the reply could not be read. A
  * candidate with no title cannot be an event; one outside the geography, or with a field past its
  * length cap, is dropped and counted. One with a date or time that cannot be used is kept, held
- * uncitable, counted, and reported.
+ * uncitable, counted, and reported. The model comparison (#222) reads its saved pages through this too.
  */
-async function extractPage(
+export async function extractPage(
   page: FetchResult,
   origin: PageOrigin,
   model: ModelPort,
