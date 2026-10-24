@@ -629,7 +629,7 @@ export async function extractPage(
     return {
       extracted: 0,
       tally: noTally(),
-      problems: [...cut, `extraction reply for ${page.finalUrl} was not in the expected shape`],
+      problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`, ...cut],
     };
   }
   const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl), links: reading.links, quotableText: quotableText(reading) };
