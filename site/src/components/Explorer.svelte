@@ -11,6 +11,7 @@
   import { toIcs } from "../lib/ics";
   import { DEFAULT_FILTERS, EVERY_DATE, filterPills, isDefault, isImpliedWhen, parseQuery, shortlistQuery, toQuery, WHEN_LABELS, type Filters } from "../lib/query";
   import { saves } from "../lib/saves";
+  import { shortcutsOn } from "../lib/shortcuts";
   import { slugify } from "../lib/slugs";
   import { siteConfig } from "../site.config";
   import FilterRail from "./FilterRail.svelte";
@@ -32,6 +33,8 @@
   let sheetOpen = $state(false);
   // Export needs the browser; the server-rendered button stays disabled until mount.
   let mounted = $state(false);
+  // The `/` shortcut, unless the reader turned it off on the About page; read on mount, so the server HTML has it on.
+  let shortcut = $state(true);
   // The bar's height, so the sticky group headings sit just under it however it wraps (search takes a line on phones).
   let barHeight = $state(0);
   // The bar is sticky, and a sticky day heading (about 2.5rem) sits under it, so a row the browser scrolls to the
@@ -59,6 +62,7 @@
     // The explorer has every event, so it brings each save's last day up to this build's (a migrated save has none).
     saves().refresh(new Map(events.map((e) => [e.id, lastDay(e)])));
     const unsubscribe = saves().subscribe((s) => { saved = new Set(s.keys()); });
+    shortcut = shortcutsOn();
     mounted = true;
     // The explore page hides a filtered link's explorer until its own slice is on screen; show it once this render lands.
     void tick().then(() => { delete document.documentElement.dataset.slice; });
@@ -127,9 +131,19 @@
 
   // `/` jumps to search from anywhere but a text field; with Ctrl, Cmd or Alt it is someone else's.
   function focusSearch(e: KeyboardEvent) {
-    if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.defaultPrevented || isTextEntry(e.target)) return;
+    if (!shortcut || e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.defaultPrevented || isTextEntry(e.target)) return;
     e.preventDefault();
     search.focus();
+  }
+
+  // A chip or box tabbed to at the screen's foot sits under the sheet's sticky Show button, and the browser, which
+  // counts it as on screen, does not scroll (WCAG 2.4.11; the 2026-10-24 audit): scroll it clear, a space above. A
+  // click on a chip half under the button nudges the page the same few px.
+  function clearShowResults(e: FocusEvent) {
+    const button = (e.currentTarget as HTMLElement).querySelector<HTMLElement>(".show-results");
+    if (!(e.target instanceof HTMLElement) || button === null || e.target === button || getComputedStyle(button).position !== "sticky") return;
+    const under = e.target.getBoundingClientRect().bottom - button.getBoundingClientRect().top;
+    if (under > 0) window.scrollBy({ top: under + 8, behavior: "instant" });
   }
 
   // Esc clears a search, then leaves it. Prevented, so the field's own Esc clear does not run alongside; an Esc that
@@ -218,7 +232,7 @@
      filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
 <div class="explorer" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
   <div class="bar" bind:this={bar} bind:offsetHeight={barHeight}>
-    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts="/" placeholder="Search events, venues, places" />{#if mounted}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
+    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts={shortcut ? "/" : undefined} placeholder="Search events, venues, places" />{#if mounted && shortcut}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
     <a class="skip" href="#results">Skip to results</a>
     <!-- Rows are two Tab stops each, so a week is hundreds of stops from Keep going and the footer (audit 2026-10-21,
          A8): this one lands after the last dated row. -->
@@ -249,7 +263,7 @@
 
   <aside class="rail" aria-label="Filters">
     <button type="button" class="sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={() => { sheetOpen = !sheetOpen; }}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
-    <div class="sheet" class:open={sheetOpen} id="filter-sheet">
+    <div class="sheet" class:open={sheetOpen} id="filter-sheet" onfocusin={clearShowResults}>
       <FilterRail {filters} {today} onchange={change} kinds={meta.kinds} regions={meta.regions} {counts} />
       <!-- Phones: the sheet pushes the results a screen down, so a chip changes nothing in view; this stays at the
            screen's foot while the sheet is open, says what the filters list, and closes it onto the results. -->

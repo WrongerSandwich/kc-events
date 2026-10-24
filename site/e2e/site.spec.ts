@@ -217,6 +217,28 @@ test.describe("the explorer's active slice at 390 px", () => {
     await expect(page.getByRole("button", { name: /^Filters/ })).toHaveText("Filters (1)");
   });
 
+  test("never leaves a control tabbed to under the sheet's Show button (WCAG 2.4.11)", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 500 }); // short, so the sheet runs past the screen's foot
+    await on(page, BUILD_DAY, "/explore");
+    await page.getByRole("button", { name: /^Filters/ }).click();
+    const sheet = page.locator("#filter-sheet");
+    await sheet.locator("button, input").first().focus();
+    let checked = 0;
+    for (let i = 0; i < 60; i++) {
+      const under = await page.evaluate(() => {
+        const el = document.activeElement as HTMLElement;
+        const button = document.querySelector<HTMLElement>("#filter-sheet .show-results")!;
+        if (!document.getElementById("filter-sheet")!.contains(el) || el === button) return undefined;
+        return el.getBoundingClientRect().bottom > button.getBoundingClientRect().top + 1;
+      });
+      if (under === undefined) break;
+      expect(under).toBe(false);
+      checked++;
+      await page.keyboard.press("Tab");
+    }
+    expect(checked).toBeGreaterThan(5);
+  });
+
   test("opens no sheet and shifts nothing when the page hydrates", async ({ page }) => {
     // The page's cumulative layout shift, summed as the browser reports it.
     type Shifts = { shifts: number };
@@ -992,6 +1014,25 @@ test("tabbing backwards through the explorer never leaves the focused row under 
     });
     expect(covered, `stop ${stop}`).toMatch(/^(no|none)$/);
   }
+});
+
+test("the About page turns the explorer's / shortcut off, and back on (WCAG 2.1.4)", async ({ page }) => {
+  await on(page, BUILD_DAY, "/about");
+  const box = page.getByRole("checkbox", { name: "Jump to search with /" });
+  await expect(box).toBeChecked();
+  await box.uncheck();
+  await page.goto("/explore");
+  await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+  await page.keyboard.press("/");
+  await expect(page.getByRole("searchbox", { name: "Search" })).not.toBeFocused();
+  await expect(page.locator("kbd.hint")).toHaveCount(0);
+  await page.goto("/about");
+  await expect(box).not.toBeChecked();
+  await box.check();
+  await page.goto("/explore");
+  await expect(page.locator("kbd.hint")).toHaveCount(1);
+  await page.keyboard.press("/");
+  await expect(page.getByRole("searchbox", { name: "Search" })).toBeFocused();
 });
 
 test("the header's Saved count follows a Save on the explorer, and a page with no island shows it without the Svelte runtime (#195)", async ({ page }) => {

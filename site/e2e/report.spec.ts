@@ -69,6 +69,30 @@ test.describe("with JavaScript off", () => {
   });
 });
 
+test("a report that fails to send keeps focus on its button, and a second press while sending sends nothing more", async ({ page }) => {
+  let posts = 0;
+  let answer!: () => void;
+  const answered = new Promise<void>((resolve) => { answer = resolve; });
+  await page.route("**/api/report", async (route) => {
+    posts++;
+    await answered;
+    await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ ok: false, reason: "GitHub did not answer." }) });
+  });
+  await page.goto("/e/evt_e2e000000001");
+  await page.getByText("Wrong? Report it").click();
+  await page.getByLabel("What is wrong").fill("It starts at 8, not 7.");
+  const button = page.getByRole("button", { name: "Send report" });
+  await button.click();
+  await expect(button).toHaveAttribute("aria-disabled", "true");
+  await page.keyboard.press("Enter"); // on the focused button, while the first is still out
+  answer();
+  const status = page.locator(".report").getByRole("status");
+  await expect(status).toHaveText("Could not send. GitHub did not answer. Try again, or use the GitHub link below.");
+  await expect(button).toBeFocused();
+  await expect(button).not.toHaveAttribute("aria-disabled");
+  expect(posts).toBe(1);
+});
+
 test("the report token is in no built file", () => {
   // build:e2e runs with GITHUB_REPORT_TOKEN set to this sentinel, as Vercel's build has the real one in its environment.
   const dist = fileURLToPath(new URL("../dist-e2e/", import.meta.url));

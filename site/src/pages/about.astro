@@ -41,6 +41,8 @@ const allEvents = feeds.allEvents.events.length;
 
     <h2>Keyboard shortcuts</h2>
     <p>In the <a href="/explore">explorer</a>, press <kbd>/</kbd> to jump to search, and <kbd>Esc</kbd> to clear it, then again to leave it.</p>
+    {/* Shown by the script below, which is what reads and keeps the choice; without JavaScript there is no shortcut. */}
+    <p class="shortcut-setting" hidden><label><input type="checkbox" id="shortcut-on" checked> Jump to search with <kbd>/</kbd></label> <span class="note">Kept in this browser.</span></p>
 
     <h2>The data</h2>
     <p>Every active event is at <a href="/events.json">/events.json</a>, with the fields this site shows. It is free to reuse under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>: credit KC This Week with a link, and say if you changed it. Prices and age limits are quoted from venues' pages and stay theirs. For language models and other readers, <a href="/llms.txt">/llms.txt</a> describes the site, the dataset, and how to cite it.</p>
@@ -58,11 +60,31 @@ const allEvents = feeds.allEvents.events.length;
   </article>
 </Base>
 
+<script>
+  // lib/shortcuts.ts's setting, written out rather than imported: an import would put the module in a chunk of its
+  // own, one more request for the explorer (shortcuts.test.ts holds the key and values to the module's).
+  const KEY = "kc-events.shortcuts";
+  const box = document.querySelector<HTMLInputElement>("#shortcut-on")!;
+  try {
+    box.checked = localStorage.getItem(KEY) !== "off";
+    box.addEventListener("change", () => {
+      try { if (box.checked) localStorage.removeItem(KEY); else localStorage.setItem(KEY, "off"); } catch { /* blocked storage */ }
+    });
+    box.closest<HTMLElement>(".shortcut-setting")!.hidden = false;
+  } catch {
+    // blocked storage: the setting could not be kept, so it stays out of sight
+  }
+</script>
+
 <style>
   h1 { margin: var(--space-8) 0 var(--space-4); }
   h2 { font-size: var(--text-lg); margin: var(--space-8) 0 var(--space-2); }
   p + p { margin-top: var(--space-3); }
   .support-row { text-align: center; }
+  /* The checkbox and its words fill a 44 px target, the design's size for an action. */
+  .shortcut-setting label { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--tap); cursor: pointer; }
+  .shortcut-setting input { margin: 0; accent-color: var(--accent); }
+  .shortcut-setting .note { color: var(--fg-muted); font-size: var(--text-sm); }
   .support { display: inline-block; border-radius: 10px; }
   .support img { display: block; }
 </style>

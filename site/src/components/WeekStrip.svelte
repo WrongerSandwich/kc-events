@@ -15,10 +15,12 @@
   let lanes = $derived([...new Set(days.flatMap((d) => d.running))].slice(0, LANES));
 
   const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  // Today is said in words too (the 2026-10-24 audit): the ink edge alone reaches neither a screen reader nor forced
+  // colours, where every edge is the same colour.
   function label(d: WeekDay): string {
     const parts = [d.picks.length === 0 ? (d.running.length === 0 ? "no picks" : "no new picks") : count(d.picks.length, "pick", "picks")];
     if (d.running.length > 0) parts.push(`${count(d.running.length, "run", "runs")} still on`);
-    return `${d.weekday} ${d.day}: ${parts.join(", ")}`;
+    return `${d.weekday} ${d.day}${d.date === today ? ", today" : ""}: ${parts.join(", ")}`;
   }
 </script>
 
@@ -78,6 +80,7 @@
   /* Today: drawn in ink, so the eye starts there. It keeps its weekday: the card's tile is what says "Today" (#184). */
   .today { border: 1px solid var(--fg); }
   .today .name, .today .num { color: var(--fg); font-weight: var(--weight-strong); }
+  @media (forced-colors: active) { .today:not(:focus-visible) { outline: 2px solid CanvasText; outline-offset: -1px; } }
   @media (prefers-reduced-motion: reduce) { .day { transition: none; } a.day:active { transform: none; } }
   /* Phones: a week of columns at 320 px leaves ~40 px each, and even five columns at 390 px leave 66 px, less than
      three icons and "+n" need (~84 px); the icons drop to one and "+n" counts the rest, up to where a tile is ~92 px. */

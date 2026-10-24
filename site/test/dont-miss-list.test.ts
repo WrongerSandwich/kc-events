@@ -291,18 +291,18 @@ describe("DontMissList", () => {
     const strip = screen.getByRole("navigation", { name: "This week by day" });
     const days = () => [...strip.querySelectorAll(".day")].map((d) => d.getAttribute("aria-label"));
     expect(days()).toEqual([
-      "Mon 5: no new picks, 1 run still on", "Tue 6: 1 pick, 1 run still on", "Wed 7: 1 pick, 1 run still on", "Thu 8: no new picks, 1 run still on",
+      "Mon 5, today: no new picks, 1 run still on", "Tue 6: 1 pick, 1 run still on", "Wed 7: 1 pick, 1 run still on", "Thu 8: no new picks, 1 run still on",
       "Fri 9: no new picks, 1 run still on", "Sat 10: no new picks, 1 run still on", "Sun 11: 1 pick, 1 run still on",
     ]);
     // Today is the inked day, named by its weekday: the card's tile is where "Today" is said (#184).
     expect(strip.querySelector(".day.today .name")).toHaveTextContent("Mon");
     expect(strip).not.toHaveTextContent("Today");
     // A day with only the run open jumps to the run's card, and draws its band.
-    expect(within(strip).getByRole("link", { name: "Mon 5: no new picks, 1 run still on" })).toHaveAttribute("href", "#pick-b");
+    expect(within(strip).getByRole("link", { name: "Mon 5, today: no new picks, 1 run still on" })).toHaveAttribute("href", "#pick-b");
     expect(strip.querySelectorAll(".day:first-child .lane.open")).toHaveLength(1);
     within(screen.getAllByRole("region")[0]!).getByRole("button", { name: "2 music" }).click();
     await tick();
-    expect(days()[0]).toBe("Mon 5: no picks");
+    expect(days()[0]).toBe("Mon 5, today: no picks");
     expect(days()[1]).toBe("Tue 6: 1 pick");
   });
 

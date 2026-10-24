@@ -57,7 +57,7 @@
     border-bottom: 1px solid var(--rule); font-size: var(--text-sm); line-height: var(--leading-tight);
     /* A row off screen is not styled or laid out until it nears the viewport, so a list of hundreds costs what a
        screenful does (#195; audit 2026-10-21, A9). Until a row has been drawn it holds the place of an unflagged one at
-       this width (measured on the 10-19 run: 78 px here, 48 from 1024 px, 26 from 1280 px); after, its own height. */
+       this width (measured on the 10-19 run: 78 px here, 26 from 1280 px; 66 from 1024 px on the 10-23 run, with its 24 px targets (57 without)); after, its own height. */
     content-visibility: auto; contain-intrinsic-size: auto 78px;
   }
   .when-line { grid-area: when; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
@@ -116,14 +116,14 @@
       gap: 0 var(--space-2);
       grid-template-columns: var(--when-width) minmax(0, 1fr) auto auto auto;
       grid-template-areas: "when title title title title" ". where chip verified save" ". why why why why";
-      contain-intrinsic-size: auto 48px;
+      contain-intrinsic-size: auto 66px;
     }
     .row.with-day { --when-width: 15.5rem; }
     .when { font-size: var(--text-sm); }
-    /* The save button is the card's, slimmer in a row: button.save outranks base.css's .control and SaveButton's .save. */
-    .row :global(button.save) { min-height: auto; min-width: auto; padding: 0 var(--space-2); font-size: var(--text-xs); }
-    .row :global(.chip) { min-height: auto; }
-    .venue { padding-block: 0; }
+    /* The save button is the card's, slimmer in a row: button.save outranks base.css's .control and SaveButton's .save.
+       Here it sits right under the title, so it keeps WCAG 2.5.8's 24 px, as the chip, the venue and the title do (the
+       2026-10-24 audit); from 1280 px a row is one line and they shed it (below). */
+    .row :global(button.save) { min-height: 24px; min-width: auto; padding: 0 var(--space-2); font-size: var(--text-xs); }
     .why { padding-bottom: 2px; }
     /* An always-there schedule phrase may run longer than any dated line, so it wraps, and those rows are exempt from
        the one-line rule. */
@@ -133,7 +133,9 @@
        focus ring, drawn outside its box, is not clipped with the text. A wrapped title fills its first line rather
        than base.css's balance, which leaves a gap between a short line and a don't-miss tag beside it. */
     .title h3 { text-wrap: pretty; }
-    .title a { padding-block: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+    /* The title's 24 px is a min-height here, not the padding below 1024 px: the clamp cuts at the padding box, so
+       padding would let the top of a third line show under it. */
+    .title a { padding-block: 0; min-height: 24px; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
   }
 
   /* 1280 px and up: an unflagged row with a short title is a single line, 25 px tall (20 px title + 4 px padding + 1 px
@@ -147,9 +149,13 @@
      changes page) has no Save, and its stylesheet sets --row-save-width to 0, so all that is left where Save would be
      is one column gap (#181); a kind's page has no chip, so its column is 0 px, likewise one gap. */
   @media (min-width: 1280px) {
+    /* One line, so rows sit about 26 px apart and a slim target's 24 px circle overlaps no other row's: 2.5.8's
+       spacing exception holds. */
     .when { font-size: var(--text-xs); }
-    .row :global(.chip) { justify-self: start; }
-    .row :global(button.save) { justify-self: stretch; }
+    .venue { padding-block: 0; }
+    .title a { min-height: auto; }
+    .row :global(.chip) { min-height: auto; justify-self: start; }
+    .row :global(button.save) { min-height: auto; justify-self: stretch; }
     .row {
       --when-width: 10.75rem;
       --chip-width: 9.75rem; --verified-width: 3.5rem; --save-width: var(--row-save-width, 5rem);
