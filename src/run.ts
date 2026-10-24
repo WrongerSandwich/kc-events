@@ -9,6 +9,7 @@ import {
   candidateToSighting,
   comparable,
   extractionReplySchema,
+  MAX_PAGE_CHARS,
   normalizeUrl,
   overCap,
   quotableText,
@@ -611,7 +612,8 @@ function sumTallies(...tallies: CandidateTally[]): CandidateTally {
  * One extraction call over one page. Sightings are absent when the reply could not be read. A
  * candidate with no title cannot be an event; one outside the geography, or with a field past its
  * length cap, is dropped and counted. One with a date or time that cannot be used is kept, held
- * uncitable, counted, and reported. The model comparison (#222) reads its saved pages through this too.
+ * uncitable, counted, and reported. A page whose text was cut at the cap is reported as cut (#226). The
+ * model comparison (#222) reads its saved pages through this too.
  */
 export async function extractPage(
   page: FetchResult,
@@ -620,18 +622,19 @@ export async function extractPage(
   context: ExtractionContext,
 ): Promise<{ sightings?: Sighting[]; extracted: number; tally: CandidateTally; problems: string[] }> {
   const reading = readPage(page, context.config);
+  const cut = reading.truncated ? [`${page.finalUrl} was cut at the ${MAX_PAGE_CHARS}-character cap`] : [];
   const reply = await model.complete(buildExtractionRequest(page, reading, origin, context));
   const parsed = extractionReplySchema.safeParse(reply.value);
   if (!parsed.success) {
     return {
       extracted: 0,
       tally: noTally(),
-      problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`],
+      problems: [...cut, `extraction reply for ${page.finalUrl} was not in the expected shape`],
     };
   }
   const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl), links: reading.links, quotableText: quotableText(reading) };
   const sightings: Sighting[] = [];
-  const problems: string[] = [];
+  const problems: string[] = [...cut];
   const tally = noTally();
   for (const candidate of parsed.data.events) {
     if (candidate.title.trim() === "") {

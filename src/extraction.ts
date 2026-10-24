@@ -168,6 +168,8 @@ export interface PageReading {
   text: string;
   /** Link n on the page is `links[n - 1]`. */
   links: string[];
+  /** The text ran past `MAX_PAGE_CHARS` and was cut, so the run report can name the page (#226). */
+  truncated?: true;
 }
 
 /**
@@ -179,7 +181,7 @@ export interface PageReading {
  * `eventDataSection`). A feed has no anchors and is passed through.
  */
 export function readPage(page: FetchResult, config: RunConfig): PageReading {
-  if (!isHtml(page.body)) return { text: pageText(page.body), links: [] };
+  if (!isHtml(page.body)) return cutReading(page.body, []);
   const links: string[] = [];
   const linkNumber: LinkNumber = (href) => {
     const link = linkTarget(href, page, config);
@@ -194,7 +196,12 @@ export function readPage(page: FetchResult, config: RunConfig): PageReading {
     return n === undefined ? ` ${content} ` : ` ${content} [${n}] `;
   });
   const section = eventDataSection(page.body, linkNumber, config.timezone);
-  return { text: capped(section ? `${htmlText(marked)}\n\n${section}` : htmlText(marked)), links };
+  return cutReading(section ? `${htmlText(marked)}\n\n${section}` : htmlText(marked), links);
+}
+
+/** A reading of this text, capped, marked truncated when the cap cut it. */
+function cutReading(text: string, links: string[]): PageReading {
+  return text.length > MAX_PAGE_CHARS ? { text: capped(text), links, truncated: true } : { text, links };
 }
 
 /** The number a link to this href is marked with, given the first time it is asked for; undefined for a link not marked. */
