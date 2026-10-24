@@ -80,6 +80,13 @@ describe("likelyDuplicate", () => {
     expect(likelyDuplicate(run!, later, ALIASES)).toBe(false);
   });
 
+  it("does not list a title inside another's word", () => {
+    const a = event("Art", "Charlotte Street", CHARLOTTE, "2026-11-21");
+    const b = event("Smart Party", "Charlotte Street", CHARLOTTE, "2026-11-21");
+    expect(likelyDuplicate(a, b, ALIASES)).toBe(false);
+    expect(likelyDuplicate(event("Endrid", "Knuckleheads", CHARLOTTE, "2026-11-21"), event("Endrid, Poets Mortis", "Knuckleheads", CHARLOTTE, "2026-11-21"), ALIASES)).toBe(true);
+  });
+
   it("does not list two shows of one night under different names, neither containing the other", () => {
     const a = event("Endrid", "Knuckleheads", CHARLOTTE, "2026-11-21T20:00:00-06:00");
     const b = event("Poets Mortis", "Knuckleheads", CHARLOTTE, "2026-11-21T20:00:00-06:00");
@@ -148,8 +155,8 @@ describe("the run's likely duplicates", () => {
     expect(after.get(market!.id)).toMatchObject({ status: "active", title: market!.title, start: market!.start });
     expect(report.likelyDuplicates).toEqual([
       {
-        a: { id: market!.id, title: market!.title, primaryUrl: CHARLOTTE, firstDay: "2026-11-21" },
-        b: { id: reception!.id, title: reception!.title, primaryUrl: CHARLOTTE, firstDay: "2026-11-21" },
+        a: { id: market!.id, title: market!.title, primaryUrl: CHARLOTTE, firstDay: "2026-11-21", end: null },
+        b: { id: reception!.id, title: reception!.title, primaryUrl: CHARLOTTE, firstDay: "2026-11-21", end: null },
       },
     ]);
     const markdown = renderReportMarkdown(report);
@@ -164,8 +171,8 @@ describe("the run's likely duplicates", () => {
     const { report } = await quietRun(withEvents([zoo!, home!]));
     expect(report.likelyDuplicates).toEqual([
       {
-        a: { id: zoo!.id, title: "GloWild", primaryUrl: ZOO_EVENTS, firstDay: "2026-10-01", lastDay: "2026-12-27" },
-        b: { id: home!.id, title: "GloWild", primaryUrl: ZOO_HOME, firstDay: "2026-11-01", lastDay: "2026-11-30" },
+        a: { id: zoo!.id, title: "GloWild", primaryUrl: ZOO_EVENTS, firstDay: "2026-10-01", end: "2026-12-27" },
+        b: { id: home!.id, title: "GloWild", primaryUrl: ZOO_HOME, firstDay: "2026-11-01", end: "2026-11-30" },
       },
     ]);
     expect(renderReportMarkdown(report)).toContain(`- GloWild (${zoo!.id}, 2026-10-01 to 2026-12-27, ${ZOO_EVENTS}) and GloWild (${home!.id}, 2026-11-01 to 2026-11-30, ${ZOO_HOME})`);

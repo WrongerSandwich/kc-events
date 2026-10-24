@@ -203,8 +203,8 @@ export interface RunReport {
   changes?: RunChanges;
 }
 
-/** One record of a likely duplicate pair: its first and last calendar days, none for a recurring record, and no last for one day. */
-export type LikelyDuplicateRecord = ChangeRef & { firstDay?: string; lastDay?: string };
+/** One record of a likely duplicate pair: its first calendar day, null for a recurring record, and its end's, null when it has none. */
+export type LikelyDuplicateRecord = ChangeRef & { firstDay: string | null; end: string | null };
 
 /** An event in the changes section: its id, for the site to find it by, and what the Markdown lists. */
 export type ChangeRef = EventRef & { id: string };
@@ -233,7 +233,7 @@ const flagSince = z.boolean().default(false);
 const listSince = <T extends z.ZodType>(item: T) => z.array(item).default([]);
 const eventRef = z.strictObject({ title: z.string(), primaryUrl: z.string() });
 const changeRef = eventRef.extend({ id: z.string() });
-const likelyDuplicateRecord = changeRef.extend({ firstDay: z.iso.date().optional(), lastDay: z.iso.date().optional() });
+const likelyDuplicateRecord = changeRef.extend({ firstDay: z.iso.date().nullable(), end: z.iso.date().nullable() });
 const hostEvents = z.strictObject({ host: z.string(), events: count });
 const servedBy = z.strictObject({ model: z.string(), provider: z.string().optional(), generationId: z.string() });
 
@@ -514,7 +514,7 @@ function unmappableSection(inCatchAll: RunReport["unmappableNeighborhoods"]): st
 
 /** A record of a likely duplicate pair as the Markdown shows it: title, then id, days and primary page. */
 function likelyDuplicateLine(r: LikelyDuplicateRecord): string {
-  const days = r.firstDay === undefined ? "recurring" : r.lastDay === undefined ? r.firstDay : `${r.firstDay} to ${r.lastDay}`;
+  const days = r.firstDay === null ? "recurring" : r.end === null || r.end === r.firstDay ? r.firstDay : `${r.firstDay} to ${r.end}`;
   return `${r.title} (${r.id}, ${days}, ${r.primaryUrl})`;
 }
 

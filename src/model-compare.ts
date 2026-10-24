@@ -609,7 +609,7 @@ export function renderSetups(scores: SetupScore[]): string {
   lines.push(
     "",
     "- **Verified**: the share of the stored records read verified. **Kept on stored citation**: held only on a quote, kept on the stored one (#124, #220). **Made unverified**: hidden by an own-page reading that cited nothing usable. **Unsighted**: no reading found it, so it takes a strike. **Retitled**: given another title by a reading.",
-    "- **New records**: what the readings started, after the fold. **Churn**: of those, the ones beside an earlier record of the same page or venue that the run report would list as a likely duplicate (#228): on the same day under a title one of the two contains, or under the same title with one's span taking in the other's first day; likely an event under a second identity. **Folded**: new records the fold caught.",
+    "- **New records**: what the readings started, after the fold. **Churn**: of those, the ones beside an earlier record of the same page or venue that the run report would list as a likely duplicate (#228): on the same day under a title one of the two contains as whole words, or under the same title with one's span taking in the other's first day; likely an event under a second identity. Before #228 it also counted the same title on another day, and on the page alone, so an earlier report's Churn is not this one's. **Folded**: new records the fold caught.",
     "- **Retitled** includes the title rules' own clean-ups of stored titles (a venue or presenter dropped, #217), which every set-up makes alike.",
     "- **Minutes**: model time for the extraction calls alone; the run reads pages one after the other.",
     "",

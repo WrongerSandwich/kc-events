@@ -89,12 +89,12 @@ const full: RunReport = {
   identityChurn: [{ title: "Big Show: Encore", primaryUrl: "https://venue.test/calendar", was: { title: "Big Show", primaryUrl: "https://venue.test/old" } }],
   likelyDuplicates: [
     {
-      a: { id: "evt_000000000001", title: "GloWild", primaryUrl: "https://zoo.test/events", firstDay: "2026-10-01", lastDay: "2026-12-27" },
-      b: { id: "evt_000000000002", title: "GloWild", primaryUrl: "https://zoo.test/", firstDay: "2026-11-01", lastDay: "2026-11-30" },
+      a: { id: "evt_000000000001", title: "GloWild", primaryUrl: "https://zoo.test/events", firstDay: "2026-10-01", end: "2026-12-27" },
+      b: { id: "evt_000000000002", title: "GloWild", primaryUrl: "https://zoo.test/", firstDay: "2026-11-01", end: "2026-11-30" },
     },
     {
-      a: { id: "evt_000000000003", title: "Open Studio", primaryUrl: "https://venue.test/calendar" },
-      b: { id: "evt_000000000004", title: "Open Studio Night", primaryUrl: "https://venue.test/calendar" },
+      a: { id: "evt_000000000003", title: "Open Studio", primaryUrl: "https://venue.test/calendar", firstDay: null, end: null },
+      b: { id: "evt_000000000004", title: "Open Studio Night", primaryUrl: "https://venue.test/calendar", firstDay: null, end: null },
     },
   ],
 };

@@ -269,10 +269,7 @@ function couldHaveSighted(event: Event, attempts: PageAttempts, registry: Regist
 
 /** The pairs of active records likely one event (#228), each with its days, for the report; the records are left as they are. */
 function likelyDuplicatesOf(events: Event[], aliases: VenueAliases): RunReport["likelyDuplicates"] {
-  const record = (e: Event): LikelyDuplicateRecord => {
-    const [firstDay, lastDay] = [calendarDate(e.start), calendarDate(e.end)];
-    return { id: e.id, ...titleAndUrl(e), ...(firstDay !== undefined ? { firstDay } : {}), ...(lastDay !== undefined && lastDay !== firstDay ? { lastDay } : {}) };
-  };
+  const record = (e: Event): LikelyDuplicateRecord => ({ id: e.id, ...titleAndUrl(e), firstDay: calendarDate(e.start) ?? null, end: calendarDate(e.end) ?? null });
   const active = events.filter((e) => e.status === "active");
   return likelyDuplicatePairs(active, aliases).map(([a, b]) => ({ a: record(a), b: record(b) }));
 }

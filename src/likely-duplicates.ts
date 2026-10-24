@@ -11,7 +11,7 @@ import { calendarDate, sameVenue, type EventIdentity, type VenueAliases } from "
 /**
  * Two records are likely one event when they share a primary page or a venue (aliases applied) and
  * either start on the same calendar day (or are both recurring) under titles one of which contains
- * the other, the titles not equal ("Artist Market @ Rooms We Carry Opening Reception" and "Rooms We
+ * the other as whole words, the titles not equal ("Artist Market @ Rooms We Carry Opening Reception" and "Rooms We
  * Carry Opening Reception"), or have equal titles and one's span, start through end, covers the
  * other's first day (a run on the venue's events page and a month of it on the homepage; a one-off
  * night inside a run of the same name). Titles are compared as quotes are (`comparable`); an empty
@@ -24,7 +24,14 @@ export function likelyDuplicate(a: EventIdentity, b: EventIdentity, aliases: Ven
   const shared = samePage(a.primaryUrl, b.primaryUrl) || (a.venue !== undefined && b.venue !== undefined && sameVenue(a.venue, b.venue, aliases));
   if (!shared) return false;
   if (x === y) return covers(a, b) || covers(b, a);
-  return sameDay(a, b) && (x.includes(y) || y.includes(x));
+  return sameDay(a, b) && (containsWords(x, y) || containsWords(y, x));
+}
+
+/** Whether a title holds another as whole words: "endrid, poets mortis" holds "endrid", "smart party" does not hold "art". */
+function containsWords(title: string, part: string): boolean {
+  const at = (i: number) => i < 0 || i >= title.length || !/[\p{L}\p{N}]/u.test(title[i]!);
+  for (let i = title.indexOf(part); i !== -1; i = title.indexOf(part, i + 1)) if (at(i - 1) && at(i + part.length)) return true;
+  return false;
 }
 
 /** Every likely pair among the records, each once, in the order the records come. */
