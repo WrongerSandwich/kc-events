@@ -495,21 +495,32 @@ const firstDay = (e: Event) => (e.recurrence === "recurring" ? "recurring" : day
 
 /**
  * A new record is churn when another standing record on its page is likely the same event: on the same
- * day (or both recurring) under a title one of the two contains ("Endrid" and "Endrid, Poets Mortis, …").
- * Two shows of one night under different names are not. (A title read alike on another day is no new
- * record: the merge moves the stored one.)
+ * day (or both recurring) under a title one of the two contains ("Endrid" and "Endrid, Poets Mortis, …"),
+ * or under the same title on another day (a date read two ways, which the merge keeps as a second night
+ * when the page's other reading lists the first). Two shows of one night under different names are
+ * not. A page that really lists a show on two nights counts too, so a set-up's churn is read against
+ * the one-read set-ups'. The other record is a stored one or a new one started before it, so of two
+ * new records of one event only the second counts.
  */
-function isChurn(record: Event, standing: Event[]): boolean {
+function isChurn(record: Event, standing: Event[], storedIds: Set<string>): boolean {
   const title = comparable(record.title);
+  if (title === "") return false;
+  const earlier = standing.slice(0, standing.indexOf(record));
   return standing.some((other) => {
-    if (other.id === record.id || !samePageKey(other, record) || firstDay(other) !== firstDay(record)) return false;
+    if (other.id === record.id || !(storedIds.has(other.id) || earlier.includes(other)) || !samePageKey(other, record)) return false;
     const otherTitle = comparable(other.title);
-    return otherTitle.includes(title) || title.includes(otherTitle);
+    if (otherTitle === title) return true;
+    return firstDay(other) === firstDay(record) && otherTitle !== "" && (otherTitle.includes(title) || title.includes(otherTitle));
   });
 }
 
+/** A saved sighting as the run made it, with its page's quotable text again (the inverse of `trialSighting`). */
+function savedSighting({ quoteProblem, ...rest }: TrialSighting, pageText: string): Sighting {
+  return { ...rest, ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText } } : {}) };
+}
+
 /** What the run's merge and duplicate fold make of the stored dataset from one draw's readings of every saved page. */
-function measureDraw(reads: Read[], trials: Trial[], dataset: Event[], pages: MeasuredPage[], context: ExtractionContext) {
+function measureDraw(reads: Read[], trials: Trial[], dataset: Event[], storedOn: Event[], pages: MeasuredPage[], context: ExtractionContext) {
   const trialOf = new Map(trials.map((t) => [`${t.model} ${t.repeat} ${t.page}`, t]));
   const sightings: Sighting[] = [];
   let costUsd = 0;
@@ -517,37 +528,38 @@ function measureDraw(reads: Read[], trials: Trial[], dataset: Event[], pages: Me
   let parallelMs = 0;
   for (const page of pages) {
     // A page's reads in set-up order, so the first read's verified sighting stands and the second's confirms it, as in the run.
-    const read = reads.map((r) => trialOf.get(`${r.model} ${r.repeat} ${page.key}`)).filter((t): t is Trial => t !== undefined);
-    for (const t of read) {
+    const trialsOfPage = reads.map((r) => trialOf.get(`${r.model} ${r.repeat} ${page.key}`)).filter((t): t is Trial => t !== undefined);
+    for (const t of trialsOfPage) {
       costUsd += t.costUsd;
-      for (const { quoteProblem, ...rest } of t.sightings ?? []) {
-        sightings.push({ ...rest, ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText: page.quotable } } : {}) });
-      }
+      for (const s of t.sightings ?? []) sightings.push(savedSighting(s, page.quotable));
     }
-    serialMs += read.reduce((sum, t) => sum + t.ms, 0);
-    parallelMs += Math.max(0, ...read.map((t) => t.ms));
+    serialMs += trialsOfPage.reduce((sum, t) => sum + t.ms, 0);
+    parallelMs += Math.max(0, ...trialsOfPage.map((t) => t.ms));
   }
   const merged = mergeSightings(dataset, sightings, context);
   const folded = foldDuplicates(merged.events, context.config.venueAliases);
   const after = new Map(folded.events.map((e) => [e.id, e]));
   const storedIds = new Set(dataset.map((e) => e.id));
-  const storedOn = dataset.filter((e) => e.status === "active" && pages.some((p) => samePageKey(e, { primaryUrl: p.finalUrl })));
+  // As in the run: a reading that sighted a duplicate sighted the record it was folded into.
+  const touched = new Set(merged.touched);
+  for (const [duplicate, kept] of folded.foldedInto) if (touched.has(duplicate)) touched.add(kept);
+  // As in the run's report: made unverified and still so, and kept and still active, once every reading is in.
+  const status = (e: Event) => after.get(e.id)?.status;
   const count = { verified: 0, kept: 0, madeUnverified: 0, unsighted: 0 };
   for (const e of storedOn) {
-    if (merged.kept.has(e.id)) count.kept++;
-    else if (merged.uncitable.has(e.id)) count.madeUnverified++;
-    else if (!merged.touched.has(e.id)) count.unsighted++;
-    else if (after.get(e.id)?.status === "active") count.verified++;
+    if (merged.kept.has(e.id) && status(e) === "active") count.kept++;
+    else if (merged.uncitable.has(e.id) && status(e) === "unverified") count.madeUnverified++;
+    else if (!touched.has(e.id)) count.unsighted++;
+    else if (status(e) === "active") count.verified++;
   }
   const standing = folded.events.filter((e) => e.status !== "expired");
   const created = standing.filter((e) => !storedIds.has(e.id) && e.status === "active");
   return {
-    storedOnPages: storedOn.length,
     ...count,
     retitled: storedOn.filter((e) => !sameName(e.title, after.get(e.id)?.title)).length,
     newRecords: created.length,
     folded: [...folded.foldedInto.keys()].filter((id) => !storedIds.has(id)).length,
-    churn: created.filter((e) => isChurn(e, standing)).length,
+    churn: created.filter((e) => isChurn(e, standing, storedIds)).length,
     costUsd,
     serialMinutes: serialMs / 60_000,
     parallelMinutes: parallelMs / 60_000,
@@ -560,9 +572,10 @@ function measureDraw(reads: Read[], trials: Trial[], dataset: Event[], pages: Me
  * saved repeats. Only trials saved with their sightings count; a failed call reads nothing on its page.
  */
 export function measureSetups(setups: ReadSetup[], trials: Trial[], dataset: Event[], pages: MeasuredPage[], context: ExtractionContext): SetupScore[] {
-  const storedOnPages = dataset.filter((e) => e.status === "active" && pages.some((p) => samePageKey(e, { primaryUrl: p.finalUrl }))).length;
+  const storedOn = dataset.filter((e) => e.status === "active" && pages.some((p) => samePageKey(e, { primaryUrl: p.finalUrl })));
+  const storedOnPages = storedOn.length;
   return setups.map((setup) => {
-    const measured = draws(setup, trials).map((reads) => measureDraw(reads, trials, dataset, pages, context));
+    const measured = draws(setup, trials).map((reads) => measureDraw(reads, trials, dataset, storedOn, pages, context));
     const avg = (field: Exclude<keyof SetupScore, "label" | "draws" | "storedOnPages">) => mean(measured.map((m) => m[field]));
     return {
       label: setup.label,

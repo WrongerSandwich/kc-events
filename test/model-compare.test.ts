@@ -239,6 +239,19 @@ describe("measureSetups", () => {
     expect(pair).toMatchObject({ verified: 1, newRecords: 2, churn: 1, retitled: 0, folded: 0 });
   });
 
+  it("counts a record the second read verified as verified, though the first read's quote failed", () => {
+    const beta = { start: "2026-11-02T20:00:00-05:00" };
+    const trials = [read("a", 0, [seen("Beta", { ...beta, status: "unverified" }, 'quoted "x" for its venue')]), read("b", 0, [seen("Beta", beta)])];
+    const [pair] = measure([{ label: "a + b", models: ["a", "b"] }], trials);
+    expect(pair).toMatchObject({ verified: 1, madeUnverified: 0, unsighted: 1 });
+  });
+
+  it("counts as churn a second record of one title that two reads date two ways", () => {
+    const trials = [read("a", 0, [seen("Beta", { start: "2026-11-02T20:00:00-05:00" })]), read("b", 0, [seen("Beta", { start: "2026-11-20T20:00:00-05:00" })])];
+    const [pair] = measure([{ label: "a + b", models: ["a", "b"] }], trials);
+    expect(pair).toMatchObject({ verified: 1, newRecords: 1, churn: 1 });
+  });
+
   it("counts a stored record a reading retitled, which only the first read of a page can do", () => {
     // Matched on its own page and date under a title that is no form of the stored one.
     const eventUrl = "https://example.org/events/alpha";
