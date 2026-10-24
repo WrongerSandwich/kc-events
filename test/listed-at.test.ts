@@ -19,6 +19,7 @@ const at = (overrides: Record<string, unknown>) => candidateAt(council, { venue:
 const choir = at({ title: "Choir Night", startDate: "2026-10-20", dateEvidence: "Tue, Oct 20 @ 7:00 pm" });
 const quartet = at({ title: "String Quartet", startDate: "2026-11-14", dateEvidence: "Sat, Nov 14 @ 7:30 pm" });
 const pottery = at({ title: "Pottery Night", startDate: "2026-10-23", dateEvidence: "Fri, Oct 23 @ 6:00 pm" });
+const winter = at({ title: "Winter Concert", startDate: "2026-12-05", dateEvidence: "Sat, Dec 5 @ 7:00 pm" });
 
 const page: CannedPage = { status: 200, body: "<html><body><div>Arts Council calendar</div></body></html>" };
 const bothPages = { [feedPage(1)]: page, [feedPage(2)]: page };
@@ -42,8 +43,8 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
   it("an event that moves to another page as the calendar fills is the same record, verified, not a duplicate or a strike", async () => {
     const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(choir), reply(quartet)])).dataset;
 
-    // A week on, Choir Night has passed, Pottery Night was added, and String Quartet has moved up to page 1.
-    const { dataset } = await runAt(WEEK_2, week1, [reply(pottery, quartet), reply()]);
+    // A week on, String Quartet has moved up to page 1, and page 2 lists a show added since.
+    const { dataset } = await runAt(WEEK_2, week1, [reply(choir, quartet), reply(winter)]);
 
     const [record] = titled(dataset, "String Quartet");
     expect(titled(dataset, "String Quartet")).toHaveLength(1);
@@ -53,7 +54,7 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
   it("strikes an event no page lists once every page was read, as one page that stopped listing it would", async () => {
     const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(pottery), reply(quartet)])).dataset;
 
-    const { dataset } = await runAt(WEEK_2, week1, [reply(quartet), reply()]);
+    const { dataset } = await runAt(WEEK_2, week1, [reply(quartet), reply(winter)]);
 
     expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ verificationFailures: 1 });
     expect(titled(dataset, "String Quartet")[0]).toMatchObject({ verificationFailures: 0 });
@@ -82,6 +83,36 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
     const { dataset } = await runAt(WEEK_2, week1, [reply(quartet), new TypeError("terminated")]);
 
     expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+  });
+
+  it("holds every event it has not read when one page reads as listing nothing, and says so", async () => {
+    const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(pottery), reply(quartet)])).dataset;
+
+    const { dataset, report } = await runAt(WEEK_2, week1, [reply(), reply(quartet)]);
+
+    expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+    expect(report.sources[0]!.detail).toContain(`${feedPage(1)} read as listing nothing, so the events listed at ${CALENDAR} are held, not struck`);
+  });
+
+  it("holds every event it has not read when one page was cut at the cap, so what fell past the cut is not struck", async () => {
+    const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(pottery), reply(quartet)])).dataset;
+    const long: CannedPage = { status: 200, body: `<html><body>${"<div>A long description of the calendar, nothing on this night</div>\n".repeat(1_500)}</body></html>` };
+
+    const { dataset, report } = await runAt(WEEK_2, week1, [reply(quartet), reply(choir)], { [feedPage(1)]: long, [feedPage(2)]: page });
+
+    expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+    expect(report.sources[0]!.detail).toContain(`${feedPage(1)} was cut at the cap, so the events listed at ${CALENDAR} are held, not struck`);
+  });
+
+  it("takes the latest start any page lists as how far the listing reaches, whichever page gives it", async () => {
+    const recital = at({ title: "Holiday Recital", startDate: "2026-11-28", dateEvidence: "Sat, Nov 28 @ 6:00 pm" });
+    const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(recital, winter), reply(quartet)])).dataset;
+
+    // Page 1 lists Winter Concert (Dec 5); page 2, read last, only String Quartet (Nov 14). Holiday Recital (Nov 28), listed by
+    // neither, falls inside the listing's reach though past the last page's: it is struck, not held as beyond the listing.
+    const { dataset } = await runAt(WEEK_2, week1, [reply(winter), reply(quartet)]);
+
+    expect(titled(dataset, "Holiday Recital")[0]).toMatchObject({ verificationFailures: 1 });
   });
 
   it("is a URL", () => {

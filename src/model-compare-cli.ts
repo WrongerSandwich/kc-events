@@ -33,7 +33,7 @@ import { parseDataset } from "./dataset.js";
 import { quotableText, readPage, type ExtractionContext } from "./extraction.js";
 import { HARD_CASES, measureSetups, renderComparison, renderSetups, scoreModels, trialEvent, trialSighting, type ReadSetup, type Trial } from "./model-compare.js";
 import { ModelReplyUnusable, type FetchResult, type ModelPort } from "./ports.js";
-import { parseRegistry, type Source } from "./registry.js";
+import { listingOf, parseRegistry, type Source } from "./registry.js";
 import { realAdapters } from "./research.js";
 import { checkSource, extractPage } from "./run.js";
 import { capSpend, SpendCapReached } from "./spend.js";
@@ -242,7 +242,12 @@ async function main() {
     ]),
     ...others.map((m): ReadSetup => ({ label: `\`${first}\` + \`${m}\``, models: [first, m] })),
   ];
-  const measuredPages = saved.pages.map((p) => ({ key: p.key, finalUrl: p.page.finalUrl, quotable: quotableText(readPage(p.page, config)) }));
+  // A page of a listing (#226) holds the records that cite the listing.
+  const listingAt = (p: SavedPages["pages"][number]) => {
+    const source = sources.find((s) => s.name === p.source);
+    return source ? listingOf(source, p.page.finalUrl) : p.page.finalUrl;
+  };
+  const measuredPages = saved.pages.map((p) => ({ key: p.key, finalUrl: listingAt(p), quotable: quotableText(readPage(p.page, config)) }));
   const setupScores = measureSetups(setups, scored, dataset.events, measuredPages, context(first));
   const docDir = join(ROOT, "docs", "model-comparison");
   await mkdir(docDir, { recursive: true });

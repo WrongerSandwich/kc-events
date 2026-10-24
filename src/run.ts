@@ -547,6 +547,13 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
       }
     }
     if (!reads.some(readInFull)) markUnread();
+    // A page of a listing read as listing nothing (a wobble, or a page that rendered empty), or cut at the cap, leaves
+    // unknown whether its events are still listed; the other pages cannot say, so the listing's events are held (#226).
+    const cutOrEmpty = reads.some((r) => r.truncated) ? "was cut at the cap" : yields.length > 0 && widestYield(yields).listed === 0 ? "read as listing nothing" : undefined;
+    if (source.listedAt && cutOrEmpty) {
+      attempts.unread.add(pageKey(source.listedAt));
+      outcome.problems.push(`${page.finalUrl} ${cutOrEmpty}, so the events listed at ${source.listedAt} are held, not struck`);
+    }
     outcome.extracted += counted.extracted;
     outcome.problems.push(...counted.problems);
     for (const read of reads) if (read !== counted) outcome.problems.push(...read.problems.filter((p) => !counted.problems.includes(p)));
@@ -638,7 +645,7 @@ export async function extractPage(
   origin: PageOrigin,
   model: ModelPort,
   context: ExtractionContext,
-): Promise<{ sightings?: Sighting[]; extracted: number; tally: CandidateTally; problems: string[] }> {
+): Promise<{ sightings?: Sighting[]; extracted: number; tally: CandidateTally; problems: string[]; truncated?: true }> {
   const reading = readPage(page, context.config);
   const cut = reading.truncated ? [`${page.finalUrl} was cut at the ${MAX_PAGE_CHARS}-character cap`] : [];
   const reply = await model.complete(buildExtractionRequest(page, reading, origin, context));
@@ -688,7 +695,7 @@ export async function extractPage(
     if (sighting.spanNote !== undefined) problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.spanNote}`);
     sightings.push(sighting);
   }
-  return { sightings, extracted: parsed.data.events.length, tally, problems };
+  return { sightings, extracted: parsed.data.events.length, tally, problems, ...(reading.truncated ? { truncated: true as const } : {}) };
 }
 
 function withExtraction(report: SourceReport, extraction: SourceExtraction | undefined): SourceReport {

@@ -439,6 +439,7 @@ export interface ReadSetup {
 /** A saved page as the measure needs it: its key in the trials, where it ended up, and its quotable text. */
 export interface MeasuredPage {
   key: string;
+  /** Where it ended up, or the listing it is a page of (#226): the page its records cite. */
   finalUrl: string;
   /** `quotableText(readPage(page))`, which a sighting held on a quote carries in the run (#124). */
   quotable: string;
