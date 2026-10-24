@@ -163,6 +163,19 @@ describe("built output", () => {
       expect(read(`e/${dated.id}.html`)).toMatch(/<a href="https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&amp;[^"]+" rel="nofollow"[^>]*>Google Calendar<\/a>/);
     });
 
+    it("ends an event page on three rows of its kind still ahead, picks first, and a way to the kind's page", () => {
+      const ahead = (e: (typeof events)[number]) => isDated(e) && e.start !== undefined && e.start.slice(0, 10) >= meta.buildToday;
+      const page = events.find((e) => events.filter((o) => o.id !== e.id && o.kind === e.kind && ahead(o)).length > 3)!;
+      const html = read(`e/${page.id}.html`);
+      const rows = [...html.matchAll(/<li[^>]*><a href="\/e\/(evt_[0-9a-f]+)"/g)].map((m) => m[1]!);
+      expect(rows).toHaveLength(3);
+      const shown = rows.map((id) => events.find((e) => e.id === id)!);
+      for (const e of shown) expect(e.kind).toBe(page.kind);
+      // A pick never sits under a non-pick.
+      expect(shown.map((e) => e.dontMiss)).toEqual([...shown.map((e) => e.dontMiss)].sort((a, b) => Number(b) - Number(a)));
+      expect(html).toContain(`href="/k/${slugify(page.kind)}"`);
+    });
+
     it("writes llms.txt's sections and its cite line (#188)", () => {
       const text = read("llms.txt");
       for (const h of ["## Pages", "## Lists", "## Calendar feeds", "## Explorer links", "## The dataset", "## The picks"]) expect(text, h).toContain(`\n${h}\n`);

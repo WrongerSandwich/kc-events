@@ -12,7 +12,7 @@ import { descriptions } from "../../generated/descriptions";
 import { venues } from "../../generated/venues";
 import { venueNamed, venuePath } from "../../lib/venues";
 import { meta } from "../../generated/meta";
-import { formatDay, formatShort, localDate } from "../../lib/dates";
+import { formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd, eventPageTitle } from "../../lib/event-meta";
 import { breadcrumbJsonLd, kindName, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
@@ -33,10 +33,12 @@ const metaDescription = eventDescription(event, meta.buildToday, description);
 // The reader lands on the event's own page when the job found one; the verified line still names the list it was read from.
 const details = detailsUrl(event);
 const report = { title: event.title, event: `${origin}/e/${event.id}`, primaryUrl: event.primaryUrl, ...(event.eventUrl && { eventUrl: event.eventUrl }) };
-const moreLikeThis = events
+// Three of the kind still ahead, the picks first, then by day: a short list that hands off to the kind's page reads as
+// chosen, where a long one reads as an aggregator's filler.
+const sameKind = events
   .filter((e) => e.id !== event.id && e.kind === event.kind && hasStartDay(e) && firstDay(e)! >= meta.buildToday)
-  .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
-  .slice(0, 5);
+  .sort((a, b) => Number(b.dontMiss) - Number(a.dontMiss) || firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title));
+const moreLikeThis = sameKind.slice(0, 3);
 const admission = admissionLine(event);
 const written = modelNote(event.whyLine, description);
 const venue = venueNamed(venues, event.venue);
@@ -74,13 +76,28 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   </article>
 
   {moreLikeThis.length > 0 && (
-    <section aria-labelledby="more">
+    <section aria-labelledby="more" class={`kind-${slugify(event.kind)}`}>
       <h2 id="more" class="section-heading">More {kindName(event.kind).toLowerCase()}</h2>
-      <ul>
-        {moreLikeThis.map((e) => (
-          <li><a href={`/e/${e.id}`}>{e.title}</a> <span>{formatDay(firstDay(e)!)} · {venueLine(e)}</span></li>
-        ))}
+      <ul class="more">
+        {moreLikeThis.map((e) => {
+          const tile = dateTile(e, meta.buildToday);
+          return (
+            <li>
+              {/* The whole row is the link, its tile in the kind's tint as on a card; it glides into that page's tile. */}
+              <a href={`/e/${e.id}`}>
+                <DateTile tile={tile} id={e.id} />
+                <span class="row">
+                  <span class="title">{e.title}<span class="visually-hidden">, {tile.label}</span></span>
+                  {/* The tag leads the when-and-where line, as on an explorer row's date line, rather than a column of pills. */}
+                  <span class="meta">{e.dontMiss && <span class="dont-miss">Don't miss</span>}{[tile.detail, venueLine(e)].filter(Boolean).join(" · ")}</span>
+                </span>
+              </a>
+            </li>
+          );
+        })}
       </ul>
+      {/* No count: the kind's page lists by its own rule (runs on now too), so a number here could disagree with it. */}
+      <p class="all"><a href={kindPath(event.kind)}>All {kindName(event.kind).toLowerCase()}<UiIcon name="chevron-right" /></a></p>
     </section>
   )}
 </Base>
@@ -129,7 +146,20 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   /* Under the title, not level with it: the page's h1 is --text-2xl, as a section heading is on the front page. */
   #more { font-size: var(--text-xl); }
   .verified { font-size: var(--text-xs); color: var(--fg-faint); }
-  ul { list-style: none; padding: 0; } li { padding: var(--space-1) 0; } li span { font-size: var(--text-xs); color: var(--fg-faint); }
-  /* A link followed by text on the same line must not rely on colour alone (axe link-in-text-block). */
-  li a { text-decoration: underline; }
+  /* Rows as the site's own lists draw them, not an aggregator's link list: tile, title, then when and where, no underline. */
+  .more { list-style: none; padding: 0; margin: var(--space-3) 0 0; }
+  .more a {
+    display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); column-gap: var(--space-3); align-items: center;
+    margin-inline: calc(-1 * var(--space-2)); padding: var(--space-2); border-radius: var(--radius);
+    color: var(--fg); text-decoration: none;
+  }
+  .more a:hover { background: var(--hue-tint); }
+  .more a:hover .title { text-decoration: underline; }
+  .row { display: grid; gap: 2px; }
+  .title { font-weight: var(--weight-medium); line-height: var(--leading-tight); }
+  .meta { font-size: var(--text-sm); color: var(--fg-muted); }
+  .meta .dont-miss { margin-right: var(--space-2); }
+  .all { margin: var(--space-2) 0 0; }
+  .all a { display: inline-flex; align-items: center; gap: 0.2em; min-height: var(--tap); color: var(--fg); font-weight: var(--weight-medium); text-decoration: none; }
+  .all a:hover { text-decoration: underline; }
 </style>
