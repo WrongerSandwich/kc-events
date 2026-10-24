@@ -59,8 +59,9 @@ const runDay = localDate(meta.lastSuccessfulRun);
     0%, 100% { transform: scaleY(1); }
     35% { transform: scaleY(1.35); }
   }
-  /* Links padded to a 44 px target; the negative margin keeps the row's right edge on the column's. */
-  nav { display: flex; margin-right: calc(-1 * var(--space-2)); }
+  /* Links padded to a 44 px target; the negative margin keeps the row's right edge on the column's. They wrap rather
+     than run off a phone's edge at a large text size (the 2026-10-24 audit). */
+  nav { display: flex; flex-wrap: wrap; margin-right: calc(-1 * var(--space-2)); }
   nav :global(a) { display: inline-flex; align-items: center; min-height: var(--tap); padding-inline: var(--space-2); font-size: var(--text-sm); color: var(--fg-muted); }
   nav :global(a:hover) { color: var(--fg); text-decoration: none; }
   .stamp { font-size: var(--text-xs); color: var(--fg-faint); }

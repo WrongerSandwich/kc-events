@@ -35,7 +35,10 @@ const github = reportUrl(siteConfig.repoUrl, context);
     form.addEventListener("submit", async (submit) => {
       submit.preventDefault();
       const button = form.querySelector("button")!;
-      button.disabled = true;
+      // aria-disabled, not disabled: a disabled button loses focus to the page's top, and a failed send leaves the
+      // reader where they were, on the button, to try again (the 2026-10-24 audit). A second press while sending waits.
+      if (button.getAttribute("aria-disabled") === "true") return;
+      button.setAttribute("aria-disabled", "true");
       status.textContent = "Sending…";
       let sent = false;
       let reason: string | undefined;
@@ -46,7 +49,7 @@ const github = reportUrl(siteConfig.repoUrl, context);
       } catch {
         sent = false;
       }
-      button.disabled = false;
+      button.removeAttribute("aria-disabled");
       if (!sent) {
         status.textContent = `Could not send.${reason ? ` ${reason}` : ""} Try again, or use the GitHub link below.`;
         return;
@@ -64,7 +67,9 @@ const github = reportUrl(siteConfig.repoUrl, context);
 
 <style>
   .report { margin-top: var(--space-2); font-size: var(--text-sm); }
-  summary { cursor: pointer; color: var(--fg-muted); width: fit-content; }
+  /* An action, so it has an action's 44 px target: padding around its one line, keeping the disclosure marker a flex
+     summary would drop. */
+  summary { padding-block: calc((var(--tap) - 1lh) / 2); cursor: pointer; color: var(--fg-muted); width: fit-content; }
   form { display: grid; gap: var(--space-2); margin-top: var(--space-3); max-width: 38rem; }
   label { font-weight: var(--weight-medium); }
   textarea {
@@ -80,7 +85,8 @@ const github = reportUrl(siteConfig.repoUrl, context);
     min-height: var(--tap); padding-inline: var(--space-3); font: inherit; font-weight: var(--weight-medium); cursor: pointer;
     color: var(--fg); background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: var(--radius);
   }
-  button:hover { border-color: var(--fg-faint); }
+  button:not([aria-disabled="true"]):hover { border-color: var(--fg-faint); }
+  button[aria-disabled="true"] { cursor: progress; color: var(--fg-muted); }
   .status:empty { display: none; }
   .status, .github { margin: var(--space-2) 0 0; }
   /* A link inside a sentence must not rely on colour alone (axe link-in-text-block). */

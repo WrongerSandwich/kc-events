@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/sve
 import { flushSync, mount, unmount } from "svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { STORAGE_KEY } from "../src/lib/saves";
+import { setShortcuts } from "../src/lib/shortcuts";
 
 // vitest hoists vi.mock above every import and declaration, so the factory builds its own fixture.
 vi.mock("../src/generated/events", async () => {
@@ -520,6 +521,20 @@ describe("Explorer", () => {
     expect(search).toHaveFocus();
     expect(prevented(search, "/")).toBe(false);
     expect(prevented(document.body, "/", { isComposing: true })).toBe(false);
+  });
+
+  it("leaves / alone, and shows no hint, once the reader turns the shortcut off on the About page (WCAG 2.1.4)", () => {
+    setShortcuts(false);
+    try {
+      const { container } = render(Explorer);
+      const search = screen.getByRole("searchbox", { name: "Search" });
+      expect(search).not.toHaveAttribute("aria-keyshortcuts");
+      expect(container.querySelector("kbd.hint")).toBeNull();
+      expect(prevented(document.body, "/")).toBe(false);
+      expect(search).not.toHaveFocus();
+    } finally {
+      setShortcuts(true);
+    }
   });
 
   it("clears a non-empty search on Esc, dropping q from the URL, and leaves an empty one on the next", async () => {

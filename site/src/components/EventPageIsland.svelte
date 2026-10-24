@@ -12,14 +12,20 @@
   let passed = $derived(lastDay !== undefined && lastDay < clock.today);
 
   // A shared link outlives its event, so the page says so above its title, before anything else: the page's .passed
-  // block, which this fills and shows (its status is written, not just revealed, so a screen reader hears it). The page's
-  // CSS then greys the tile and drops the ways to go and to add it to a calendar. One island rather than a second one
-  // above the title: two islands sharing the clock split it into chunks of its own on every page that loads it.
+  // block, which this shows and then fills. The page's CSS then greys the tile and drops the ways to go and to add it to
+  // a calendar. One island rather than a second one above the title: two islands sharing the clock split it into chunks
+  // of its own on every page that loads it.
+  // The status is written a moment after the block is shown, not with it: a live region that enters the accessibility
+  // tree already filled is often not read out (the 2026-10-24 audit).
+  const ANNOUNCE_MS = 200;
   $effect(() => {
     const block = document.querySelector<HTMLElement>(".event .passed");
     if (!block) return;
     block.hidden = !passed;
-    block.querySelector("[role=status]")!.textContent = passed ? "This has already happened. The page stays up until the next weekly run." : "";
+    const status = block.querySelector("[role=status]")!;
+    if (!passed) { status.textContent = ""; return; }
+    const write = setTimeout(() => { status.textContent = "This has already happened. The page stays up until the next weekly run."; }, ANNOUNCE_MS);
+    return () => clearTimeout(write);
   });
 </script>
 

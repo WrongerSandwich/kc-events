@@ -29,6 +29,9 @@ describe("EventPageIsland", () => {
   it("says so once the event has passed on the visitor's clock", () => {
     vi.useFakeTimers({ now: new Date("2026-10-12T12:00:00Z") });
     render(EventPageIsland, { id: "evt_1", title: "A show", lastDay: "2026-10-09", shareText: "Friday, October 9, 7:00 pm · recordBar" });
+    // Shown first, then written, so a screen reader hears it.
+    expect(screen.getByRole("status")).toHaveTextContent("");
+    vi.advanceTimersByTime(200);
     expect(screen.getByRole("status")).toHaveTextContent("This has already happened");
     vi.useRealTimers();
   });
@@ -40,6 +43,7 @@ describe("EventPageIsland", () => {
     vi.setSystemTime(new Date("2026-10-10T14:00:00Z")); // reopened Saturday morning
     document.dispatchEvent(new Event("visibilitychange"));
     await tick();
+    vi.advanceTimersByTime(200);
     expect(screen.getByRole("status")).toHaveTextContent("This has already happened");
     vi.useRealTimers();
   });
