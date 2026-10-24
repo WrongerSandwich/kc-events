@@ -242,8 +242,9 @@ function withoutScripts(body: string): string {
  */
 const TAG = /<\/?[a-z][^\s<>/]*(?:\s+[^\s<>"'=]+(?:\s*=\s*(?:"[^"<]*"|'[^'<]*'|[^\s<>"']+))?)*\s*\/?>/gi;
 
-/** HTML becomes readable text; anything else (an ICS or RSS feed) is passed through. Both are capped. */
-export function pageText(body: string): string {
+/** HTML becomes readable text, as does a JSON answer carrying HTML; anything else (an ICS or RSS feed) is passed through. All are capped. */
+export function pageText(raw: string): string {
+  const body = htmlInJson(raw) ?? raw;
   return capped(isHtml(body) ? htmlText(body) : body);
 }
 

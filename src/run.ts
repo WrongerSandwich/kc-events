@@ -57,7 +57,7 @@ import {
   type MatchRule,
   type VenueAliases,
 } from "./identity.js";
-import type { ExcludedSource, Registry, Source } from "./registry.js";
+import { listingOf, type ExcludedSource, type Registry, type Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
 import type { CandidateTally, EventRef, OwnPagesReport, RunReport, SourceReport } from "./report.js";
@@ -423,9 +423,11 @@ async function checkRegistry(registry: Registry, previous: Record<string, Source
       continue;
     }
     const checked = await checkSource(source, ports);
-    for (const url of [...source.urls, ...checked.pages.map((p) => p.finalUrl)]) attempts.tried.add(pageKey(url));
+    for (const url of [...source.urls, ...checked.pages.map((p) => p.finalUrl), ...(source.listedAt ? [source.listedAt] : [])]) attempts.tried.add(pageKey(url));
     for (const url of checked.outages) attempts.outages.add(pageKey(url));
     for (const url of checked.gone) attempts.gone.add(pageKey(url));
+    // A page of the listing that did not come back leaves what it lists unknown: an outage for the listing, never its strike (#226).
+    if (source.listedAt && checked.outages.length + checked.gone.length > 0) attempts.outages.add(pageKey(source.listedAt));
     sourceReports.push(checked.report);
     pages.push(...checked.pages.map((page) => ({ source, page })));
     if (checked.report.result === "fetched") sourceState[source.name] = { consecutiveFailures: 0 };
@@ -502,17 +504,20 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   const attempts = noAttempts();
   const tally = noTally();
   let pagesNotExtracted = 0;
-  const markUnread = (page: FetchResult) => {
-    for (const url of [page.url, page.finalUrl]) attempts.unread.add(pageKey(url));
-  };
 
   for (const { source, page } of pages) {
     const outcome = bySource.get(source.name) ?? { extracted: 0, problems: [] };
     bySource.set(source.name, outcome);
+    // The page as fetched, as it redirected, and the listing it is a page of (#226).
+    const keys = [...new Set([page.url, page.finalUrl, ...(source.listedAt ? [source.listedAt] : [])].map(pageKey))];
+    const markUnread = () => {
+      for (const key of keys) attempts.unread.add(key);
+    };
     if (isIndexPage(page.finalUrl, context.config)) {
       // A calendar that now redirects to an index page says nothing about its events; like a lead
       // that does (see discover), they are held as through an outage, not struck (#111).
       attempts.outages.add(pageKey(page.url));
+      if (source.listedAt) attempts.outages.add(pageKey(source.listedAt));
       outcome.problems.push(`${page.finalUrl} is an index page and was not extracted`);
       continue;
     }
@@ -525,7 +530,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     const counted = reads.find((r) => r.sightings !== undefined) ?? reads[0];
     if (counted === undefined) {
       const { error } = failures[0]!;
-      markUnread(page);
+      markUnread();
       if (error instanceof SpendCapReached) pagesNotExtracted++;
       outcome.problems.push(`${page.finalUrl} not extracted: ${failedBecause(error)}`);
       continue;
@@ -533,8 +538,15 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     addTally(tally, counted.tally);
     for (const read of reads) if (read.sightings) sightings.push(...read.sightings);
     const yields = reads.flatMap((read) => (read.sightings ? [yieldOf(read.sightings, read.tally)] : []));
-    if (yields.length > 0) for (const url of [page.url, page.finalUrl]) attempts.yields.set(pageKey(url), widestYield(yields));
-    if (!reads.some(readInFull)) markUnread(page);
+    if (yields.length > 0) {
+      const pageYield = widestYield(yields);
+      for (const key of keys) {
+        // A listing's pages together list what each lists (#226); a page read on its own is its own yield.
+        const sofar = source.listedAt && key === pageKey(source.listedAt) ? attempts.yields.get(key) : undefined;
+        attempts.yields.set(key, sofar ? joinedYield(sofar, pageYield) : pageYield);
+      }
+    }
+    if (!reads.some(readInFull)) markUnread();
     outcome.extracted += counted.extracted;
     outcome.problems.push(...counted.problems);
     for (const read of reads) if (read !== counted) outcome.problems.push(...read.problems.filter((p) => !counted.problems.includes(p)));
@@ -595,6 +607,12 @@ interface PageYield {
   latestStart?: string;
 }
 
+/** Two pages of one listing as one (#226): everything both list, and the later latest start. */
+function joinedYield(a: PageYield, b: PageYield): PageYield {
+  const latestStart = [a.latestStart, b.latestStart].filter((d): d is string => d !== undefined).sort().at(-1);
+  return { listed: a.listed + b.listed, ...(latestStart !== undefined ? { latestStart } : {}) };
+}
+
 function yieldOf(sightings: Sighting[], tally: CandidateTally): PageYield {
   const starts = sightings.flatMap((s) => (s.event.recurrence === "recurring" ? [] : [calendarDate(s.event.start)])).filter((d): d is string => d !== undefined);
   const latestStart = starts.sort().at(-1);
@@ -632,7 +650,8 @@ export async function extractPage(
       problems: [`extraction reply for ${page.finalUrl} was not in the expected shape`, ...cut],
     };
   }
-  const candidateOrigin = { ...origin, pageUrl: normalizeUrl(page.finalUrl, page.finalUrl), links: reading.links, quotableText: quotableText(reading) };
+  const pageUrl = origin.lane === "registry" ? listingOf(origin.source, page.finalUrl) : page.finalUrl;
+  const candidateOrigin = { ...origin, pageUrl: normalizeUrl(pageUrl, pageUrl), links: reading.links, quotableText: quotableText(reading) };
   const sightings: Sighting[] = [];
   const problems: string[] = [...cut];
   const tally = noTally();
@@ -1378,7 +1397,7 @@ async function reverify(
  */
 function excludedSourceOf(origin: PageOrigin, url: string, registry: Registry): ExcludedSource | undefined {
   if (origin.lane === "registry" && origin.source.status === "excluded") return origin.source;
-  return registry.sources.find((s): s is ExcludedSource => s.status === "excluded" && s.urls.some((u) => samePage(u, url)));
+  return registry.sources.find((s): s is ExcludedSource => s.status === "excluded" && [...s.urls, ...(s.listedAt ? [s.listedAt] : [])].some((u) => samePage(u, url)));
 }
 
 /**

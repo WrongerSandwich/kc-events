@@ -15,6 +15,11 @@ const sourceFields = {
   eventPageWaitFor: z.string().min(1).optional(),
   /** Read each listed event's own page for the time the list does not give (#123, ADR 0009 amended); only the time is taken. */
   readEventPages: z.boolean().optional(),
+  /**
+   * The calendar's own URL when its `urls` are the pages of the feed its script pages through (#226):
+   * they are one listing at this URL, which every sighting from them cites and which is never fetched.
+   */
+  listedAt: z.url().optional(),
 };
 
 /** A source the job checks on every run, or one it knows about and deliberately does not fetch. */
@@ -36,6 +41,11 @@ export const registrySchema = z
   });
 
 export type Source = z.infer<typeof sourceSchema>;
+
+/** The page a sighting from one of this source's URLs cites: the listing it is a page of (`listedAt`), else the URL itself. */
+export function listingOf(source: Source, url: string): string {
+  return source.listedAt ?? url;
+}
 /** A source the job knows about and deliberately does not fetch, with the reason. */
 export type ExcludedSource = Extract<Source, { status: "excluded" }>;
 export type Registry = z.infer<typeof registrySchema>;

@@ -96,9 +96,12 @@ describe("page reading of a JSON answer carrying HTML", () => {
     expect(reading.text).toBe("Big Show Oct 9\nSecond Show Oct 10");
   });
 
-  it("leaves JSON with no HTML in it as it is, and an HTML page that only looks like JSON at the start as HTML", () => {
+  it("leaves JSON with no HTML in it as it is", () => {
     const json = '{"events": [{"name": "Big Show"}]}';
     expect(readPage(page(json), config)).toEqual({ text: json, links: [] });
+  });
+
+  it("reads a page that only looks like JSON at the start as the HTML it is", () => {
     expect(readPage(page('{ not json <div><a href="/shows/a">A</a></div>'), config).links).toEqual(["https://venue.test/shows/a"]);
   });
 });
