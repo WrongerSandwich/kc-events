@@ -5,10 +5,16 @@
  * Touches nothing the weekly run reads or writes; the pages and every trial go to the gitignored
  * `.cache/model-compare/`. Reads OPENROUTER_API_KEY from the environment or a gitignored `.env`.
  *
- *   pnpm compare-models [--models a,b,...] [--repeats 3] [--cap 6] [--concurrency 2] [--refetch] [--fresh]
+ *   pnpm compare-models [--models a,b,...] [--repeats 3] [--cap 6] [--concurrency 2] [--refetch] [--fresh] [--tag name]
  *
  * Each trial is appended to the day's `trials.jsonl` as it lands, and a comparison started again the
  * same day makes only the trials not already there (unless --fresh), so a stopped one loses nothing.
+ * --tag names a comparison of its own on the same day: its trials and its report go under
+ * `<date>-<tag>`, so an earlier comparison's report and trials stay as they were.
+ *
+ * The report ends with the two-read measure (#223): each model read once and twice, and the first
+ * model with each other, sent through the run's own merge against the stored dataset
+ * (`measureSetups`). It needs trials saved with their sightings, which trials before #223 lack.
  * A failed trial is a result, kept and not made again. The cap counts this invocation's calls only. The
  * report scores every saved trial of the models asked for.
  *
@@ -24,8 +30,8 @@ import { parse as parseYaml } from "yaml";
 import { createOpenRouterModel } from "./adapters/openrouter.js";
 import { parseConfig, type RunConfig } from "./config.js";
 import { parseDataset } from "./dataset.js";
-import type { ExtractionContext } from "./extraction.js";
-import { HARD_CASES, renderComparison, scoreModels, trialEvent, type Trial } from "./model-compare.js";
+import { quotableText, readPage, type ExtractionContext } from "./extraction.js";
+import { HARD_CASES, measureSetups, renderComparison, renderSetups, scoreModels, trialEvent, trialSighting, type ReadSetup, type Trial } from "./model-compare.js";
 import { ModelReplyUnusable, type FetchResult, type ModelPort } from "./ports.js";
 import { parseRegistry, type Source } from "./registry.js";
 import { realAdapters } from "./research.js";
@@ -119,8 +125,10 @@ async function main() {
       concurrency: { type: "string", default: "2" },
       refetch: { type: "boolean", default: false },
       fresh: { type: "boolean", default: false },
+      tag: { type: "string" },
     },
   });
+  if (values.tag !== undefined && !/^[a-z0-9-]+$/.test(values.tag)) throw new Error("--tag must be lowercase letters, digits and dashes");
   const models = values.models ? values.models.split(",").map((m) => m.trim()).filter(Boolean) : DEFAULT_MODELS;
   const repeats = Number(values.repeats);
   const capUsd = Number(values.cap);
@@ -148,7 +156,8 @@ async function main() {
     neighborhoods: neighborhoodList(config, registry),
   });
   const date = toLocalDate(new Date(), config.timezone);
-  const runDir = join(CACHE, date);
+  const name = values.tag === undefined ? date : `${date}-${values.tag}`;
+  const runDir = join(CACHE, name);
   const trialsPath = join(runDir, "trials.jsonl");
   await mkdir(runDir, { recursive: true });
   // Trials of other pages (a --refetch since) are not this comparison's.
@@ -192,15 +201,16 @@ async function main() {
           const ms = Date.now() - started;
           await record(
             result.sightings === undefined
-              ? { ...base, costUsd: meter.cost(), ms, error: result.problems[0] ?? "reply not in the expected shape" }
-              : { ...base, costUsd: meter.cost(), ms, extracted: result.extracted, events: result.sightings.map(trialEvent) },
+              ? { ...base, costUsd: meter.cost(), ms, error: result.problems[0] ?? "reply not in the expected shape", sightings: [] }
+              : { ...base, costUsd: meter.cost(), ms, extracted: result.extracted, events: result.sightings.map(trialEvent), sightings: result.sightings.map(trialSighting) },
           );
         } catch (error) {
           if (error instanceof SpendCapReached) {
             capHit = true;
             break;
           }
-          await record({ ...base, costUsd: meter.cost(), ms: Date.now() - started, error: error instanceof Error ? error.message : String(error) });
+          // A failed call reads nothing, which the two-read measure counts as such (sightings: none).
+          await record({ ...base, costUsd: meter.cost(), ms: Date.now() - started, error: error instanceof Error ? error.message : String(error), sightings: [] });
         }
         if (trials.length % 50 === 0) console.log(`${trials.length} trial(s), ${capped.totalUsd().toFixed(3)} USD this time`);
       }
@@ -223,10 +233,21 @@ async function main() {
     capHit,
     unfetched: saved.unfetched,
   });
+  // Each model once and twice, then the first with each other: Luna, Luna ×2, Luna + Haiku, Haiku ×2 and so on.
+  const [first, ...others] = models as [string, ...string[]];
+  const setups: ReadSetup[] = [
+    ...models.flatMap((m): ReadSetup[] => [
+      { label: `\`${m}\``, models: [m] },
+      { label: `\`${m}\` ×2`, models: [m, m] },
+    ]),
+    ...others.map((m): ReadSetup => ({ label: `\`${first}\` + \`${m}\``, models: [first, m] })),
+  ];
+  const measuredPages = saved.pages.map((p) => ({ key: p.key, finalUrl: p.page.finalUrl, quotable: quotableText(readPage(p.page, config)) }));
+  const setupScores = measureSetups(setups, scored, dataset.events, measuredPages, context(first));
   const docDir = join(ROOT, "docs", "model-comparison");
   await mkdir(docDir, { recursive: true });
-  const docPath = join(docDir, `${date}.md`);
-  await writeFile(docPath, markdown);
+  const docPath = join(docDir, `${name}.md`);
+  await writeFile(docPath, `${markdown}\n${renderSetups(setupScores)}`);
   console.log(`${trials.length} trial(s), ${capped.totalUsd().toFixed(3)} USD${capHit ? ", cap hit" : ""}. Wrote ${docPath}; trials in ${trialsPath}`);
 }
 

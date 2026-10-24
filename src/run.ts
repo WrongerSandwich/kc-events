@@ -665,7 +665,7 @@ function withExtraction(report: SourceReport, extraction: SourceExtraction | und
  * what. When one page lists the show twice within the fuzzy window, the night nearest the stored
  * start is the event's reading, whichever the page gives first (#78); the other confirms it at most.
  */
-function mergeSightings(existing: Event[], sightings: Sighting[], { today, nowIso, config }: ExtractionContext) {
+export function mergeSightings(existing: Event[], sightings: Sighting[], { today, nowIso, config }: ExtractionContext) {
   const aliases = config.venueAliases;
   const events = [...existing];
   const touched = new Set<string>();
@@ -911,7 +911,7 @@ function sameDay(reading: Event, known: Event): boolean {
  * leave a venue-less record with one candidate where it had two. The result depends only on the
  * dataset. Returns which record each duplicate was folded into.
  */
-function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event[]; foldedInto: Map<string, string> } {
+export function foldDuplicates(events: Event[], aliases: VenueAliases): { events: Event[]; foldedInto: Map<string, string> } {
   const byId = new Map(events.map((e) => [e.id, e]));
   const foldedInto = new Map<string, string>();
   const nextPair = () => {

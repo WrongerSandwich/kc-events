@@ -1,6 +1,22 @@
 import { describe, expect, it } from "vitest";
 import type { Event } from "../src/dataset.js";
-import { eventKey, HARD_CASES, renderComparison, scoreModels, trialEvent, type HardCase, type Trial, type TrialEvent } from "../src/model-compare.js";
+import type { ExtractionContext } from "../src/extraction.js";
+import {
+  eventKey,
+  HARD_CASES,
+  measureSetups,
+  renderComparison,
+  renderSetups,
+  scoreModels,
+  trialEvent,
+  trialSighting,
+  type HardCase,
+  type ReadSetup,
+  type Trial,
+  type TrialEvent,
+  type TrialSighting,
+} from "../src/model-compare.js";
+import { testConfig } from "./fakes/config.js";
 
 const PAGE = "https://example.org/events/";
 
@@ -166,5 +182,111 @@ describe("renderComparison", () => {
     expect(md).toMatch(/\| `a\/one` \| 100\.0% \|/);
     expect(md).toContain('- A: venue stored "the hall", read "elsewhere"');
     expect(md).toContain("Secret Show: dated monthly run, no days");
+  });
+});
+
+describe("measureSetups", () => {
+  const context: ExtractionContext = { config: testConfig(), rules: "", today: "2026-10-23", nowIso: "2026-10-23T12:00:00-05:00", neighborhoods: [] };
+  const KEY = `Hall ${PAGE}`;
+  const pages = [{ key: KEY, finalUrl: PAGE, quotable: "nov 1 the hall" }];
+  const seen = (title: string, overrides: Partial<Event> = {}, quoteProblem?: string): TrialSighting => ({
+    event: stored(title, { id: `evt_new_${title}`, firstSeen: context.nowIso, ...overrides }),
+    cancelled: false,
+    ...(quoteProblem !== undefined ? { quoteProblem } : {}),
+  });
+  const read = (model: string, repeat: number, sightings: TrialSighting[] | undefined, overrides: Partial<Trial> = {}): Trial =>
+    trial(model, repeat, sightings?.map((s) => trialEvent({ event: s.event, cancelled: s.cancelled })), { ...(sightings ? { sightings } : {}), ...overrides });
+  // Alpha's stored quotes are on the page; Beta's date quote is not.
+  const dataset = [stored("Alpha"), stored("Beta", { start: "2026-11-02T20:00:00-05:00", evidence: { date: "Nov 2", venue: "The Hall" } })];
+  const measure = (setups: ReadSetup[], trials: Trial[]) => measureSetups(setups, trials, dataset, pages, context);
+
+  it("merges each draw's readings of a page through the run's merge and counts what became of the stored records", () => {
+    const trials = [
+      read("a", 0, [seen("Alpha")]),
+      read("a", 1, [seen("Beta", { start: "2026-11-02T20:00:00-05:00" })]),
+      read("b", 0, [seen("Beta", { start: "2026-11-02T20:00:00-05:00", status: "unverified" }, 'quoted "x" for its venue')]),
+      read("b", 1, [seen("Alpha")]),
+    ];
+    const [single, twice, pair] = measure(
+      [
+        { label: "a", models: ["a"] },
+        { label: "a ×2", models: ["a", "a"] },
+        { label: "a + b", models: ["a", "b"] },
+      ],
+      trials,
+    );
+    // One read finds one of the two each time; the other takes a strike.
+    expect(single).toMatchObject({ label: "a", draws: 2, storedOnPages: 2, verified: 1, unsighted: 1, madeUnverified: 0, newRecords: 0 });
+    // Two reads of a: repeats 0 and 1 together find both.
+    expect(twice).toMatchObject({ draws: 1, verified: 2, unsighted: 0 });
+    // a 0 + b 0: Alpha verified, Beta's own page read with a quote not on it, so held unverified. a 1 + b 1: Beta and Alpha verified.
+    expect(pair).toMatchObject({ draws: 2, verified: 1.5, madeUnverified: 0.5, unsighted: 0 });
+  });
+
+  it("keeps an event on its stored citation when a read's quote fails but the stored quotes are on the page", () => {
+    const trials = [read("a", 0, []), read("b", 0, [seen("Alpha", { status: "unverified" }, 'quoted "x" for its venue')])];
+    const [pair] = measure([{ label: "a + b", models: ["a", "b"] }], trials);
+    expect(pair).toMatchObject({ verified: 0, kept: 1, madeUnverified: 0, unsighted: 1 });
+  });
+
+  it("counts new records, and the ones beside a record of the same page, day and name as identity churn", () => {
+    const trials = [
+      read("a", 0, [seen("Alpha"), seen("Gamma", { start: "2026-11-05T20:00:00-05:00" })]),
+      read("b", 0, [seen("Support Act One, Alpha"), seen("Gamma", { start: "2026-11-05T20:00:00-05:00" })]),
+    ];
+    const [pair] = measure([{ label: "a + b", models: ["a", "b"] }], trials);
+    // Gamma is new once (b's reading confirms a's); b's bill, headliner last, starts a second Alpha.
+    expect(pair).toMatchObject({ verified: 1, newRecords: 2, churn: 1, retitled: 0, folded: 0 });
+  });
+
+  it("counts a stored record a reading retitled, which only the first read of a page can do", () => {
+    // Matched on its own page and date under a title that is no form of the stored one.
+    const eventUrl = "https://example.org/events/alpha";
+    const trials = [read("a", 0, [seen("Alpha", { eventUrl })]), read("b", 0, [seen("The Big Night", { eventUrl })])];
+    const [first, second] = measureSetups(
+      [
+        { label: "b + a", models: ["b", "a"] },
+        { label: "a + b", models: ["a", "b"] },
+      ],
+      trials,
+      [stored("Alpha", { eventUrl })],
+      pages,
+      context,
+    );
+    expect(first).toMatchObject({ verified: 1, newRecords: 0, retitled: 1 });
+    expect(second).toMatchObject({ verified: 1, newRecords: 0, retitled: 0 });
+  });
+
+  it("adds the draw's costs, and times two reads of a page one after the other and side by side", () => {
+    const trials = [read("a", 0, [], { costUsd: 0.002, ms: 20_000 }), read("b", 0, [], { costUsd: 0.004, ms: 40_000 })];
+    const [pair] = measure([{ label: "a + b", models: ["a", "b"] }], trials);
+    expect(pair!.costUsd).toBeCloseTo(0.006);
+    expect(pair!.serialMinutes).toBeCloseTo(1);
+    expect(pair!.parallelMinutes).toBeCloseTo(40 / 60);
+  });
+
+  it("leaves out trials saved without their sightings, and a set-up with no draw scores nothing", () => {
+    const [single] = measure([{ label: "a", models: ["a"] }], [trial("a", 0, [ev("Alpha")])]);
+    expect(single).toMatchObject({ draws: 0 });
+    expect(single!.verified).toBeNaN();
+  });
+
+  it("counts a failed call's cost and time, and reads nothing from it", () => {
+    const [twice] = measure([{ label: "a ×2", models: ["a", "a"] }], [read("a", 0, [seen("Alpha")]), read("a", 1, [], { error: "Request timed out.", events: undefined })]);
+    expect(twice).toMatchObject({ draws: 1, verified: 1, unsighted: 1 });
+    expect(twice!.costUsd).toBeCloseTo(0.004);
+  });
+
+  it("renders the set-ups side by side", () => {
+    const md = renderSetups(measure([{ label: "a", models: ["a"] }], [read("a", 0, [seen("Alpha")])]));
+    expect(md).toContain("## Two reads");
+    expect(md).toMatch(/\| a \| 1 \| 2 \| 50\.0% \|/);
+  });
+});
+
+describe("trialSighting", () => {
+  it("keeps the sighting with the quote problem's phrase and not the page text", () => {
+    const event = stored("A");
+    expect(trialSighting({ event, cancelled: false, quoteProblem: { phrase: "p", pageText: "long" } })).toEqual({ event, cancelled: false, quoteProblem: "p" });
   });
 });

@@ -6,9 +6,15 @@
  * What is scored, per model: whether its quotes are on the page (the run's own check), how stable its
  * readings of one page are from one repeat to the next, how many candidates it finds, how far its
  * verified readings agree with the stored records, a few known hard cases, and cost, time and failures.
+ *
+ * And, per set-up of one or two reads of every page (#223), what the run's own merge makes of the
+ * stored dataset from them: `measureSetups`.
  */
 import type { Event, Weekday } from "./dataset.js";
-import { comparable, type Sighting } from "./extraction.js";
+import { comparable, type ExtractionContext, type Sighting } from "./extraction.js";
+import { pageKey } from "./hosts.js";
+import { sameName } from "./identity.js";
+import { foldDuplicates, mergeSightings } from "./run.js";
 
 /** One event as a trial read it: the fields scored, kept small so a comparison's trials fit in one file. */
 export interface TrialEvent {
@@ -42,6 +48,15 @@ export interface Trial {
   /** Candidates the model returned, before the run's skips and drops. */
   extracted?: number;
   events?: TrialEvent[];
+  /** The sightings themselves, for the two-read measure (#223); trials saved before it have none. */
+  sightings?: TrialSighting[];
+}
+
+/** A sighting as a trial saves it: the quote problem's phrase without the page's text, which the saved page gives again. */
+export type TrialSighting = Omit<Sighting, "quoteProblem"> & { quoteProblem?: string };
+
+export function trialSighting({ quoteProblem, ...rest }: Sighting): TrialSighting {
+  return { ...rest, ...(quoteProblem !== undefined ? { quoteProblem: quoteProblem.phrase } : {}) };
 }
 
 export function trialEvent({ event, quoteProblem }: Sighting): TrialEvent {
@@ -412,5 +427,186 @@ export function renderComparison(scores: ModelScore[], meta: ComparisonMeta): st
     if (s.storedDisagreements.length > shown.length) lines.push(`- …and ${s.storedDisagreements.length - shown.length} more (in the trials file)`);
     lines.push("");
   }
+  return lines.join("\n");
+}
+
+/** One way of reading every page on Monday: one model once, one model twice, or two models once each (#223). */
+export interface ReadSetup {
+  label: string;
+  models: [string] | [string, string];
+}
+
+/** A saved page as the measure needs it: its key in the trials, where it ended up, and its quotable text. */
+export interface MeasuredPage {
+  key: string;
+  finalUrl: string;
+  /** `quotableText(readPage(page))`, which a sighting held on a quote carries in the run (#124). */
+  quotable: string;
+}
+
+export interface SetupScore {
+  label: string;
+  /** How many combinations of saved repeats the set-up was measured on; each figure below is the mean over them. */
+  draws: number;
+  /** Stored active records whose primary page is one of the saved pages. */
+  storedOnPages: number;
+  /** Of those, read verified. */
+  verified: number;
+  /** Of those, kept active on their stored citation by a reading held only on a quote (#124, #220). */
+  kept: number;
+  /** Of those, made unverified by a reading of their own page that cited nothing usable (#220's failure). */
+  madeUnverified: number;
+  /** Of those, sighted by no reading, so each takes a strike. */
+  unsighted: number;
+  /** Of those, given another title by a reading (the first verified one of a page stands, so a later read cannot). */
+  retitled: number;
+  /** Records the readings started, still standing after the duplicate fold. */
+  newRecords: number;
+  /** New records the duplicate fold caught as another record's. */
+  folded: number;
+  /** New records that are likely another record under a new identity (see `isChurn`). */
+  churn: number;
+  costUsd: number;
+  /** Model time of the draw's calls, every page's reads one after the other. */
+  serialMinutes: number;
+  /** The same with a page's two reads side by side. */
+  parallelMinutes: number;
+}
+
+type Read = { model: string; repeat: number };
+
+/** The repeats of a model saved with their sightings. */
+function readableRepeats(model: string, trials: Trial[]): number[] {
+  return [...new Set(trials.filter((t) => t.model === model && t.sightings !== undefined).map((t) => t.repeat))].sort((a, b) => a - b);
+}
+
+/** One model's repeats one at a time; two reads of one model, every pair of its repeats; two models, their repeats side by side. */
+function draws({ models }: ReadSetup, trials: Trial[]): Read[][] {
+  const [a, b] = models;
+  const ra = readableRepeats(a, trials);
+  if (b === undefined) return ra.map((repeat) => [{ model: a, repeat }]);
+  if (b === a) return ra.flatMap((r, i) => ra.slice(i + 1).map((s) => [{ model: a, repeat: r }, { model: a, repeat: s }]));
+  const rb = readableRepeats(b, trials);
+  return ra.slice(0, rb.length).map((r, i) => [{ model: a, repeat: r }, { model: b, repeat: rb[i]! }]);
+}
+
+const samePageKey = (a: { primaryUrl: string }, b: { primaryUrl: string }) => pageKey(a.primaryUrl) === pageKey(b.primaryUrl);
+const firstDay = (e: Event) => (e.recurrence === "recurring" ? "recurring" : day(e.start));
+
+/**
+ * A new record is churn when another standing record on its page is likely the same event: on the same
+ * day (or both recurring) under a title one of the two contains ("Endrid" and "Endrid, Poets Mortis, …").
+ * Two shows of one night under different names are not. (A title read alike on another day is no new
+ * record: the merge moves the stored one.)
+ */
+function isChurn(record: Event, standing: Event[]): boolean {
+  const title = comparable(record.title);
+  return standing.some((other) => {
+    if (other.id === record.id || !samePageKey(other, record) || firstDay(other) !== firstDay(record)) return false;
+    const otherTitle = comparable(other.title);
+    return otherTitle.includes(title) || title.includes(otherTitle);
+  });
+}
+
+/** What the run's merge and duplicate fold make of the stored dataset from one draw's readings of every saved page. */
+function measureDraw(reads: Read[], trials: Trial[], dataset: Event[], pages: MeasuredPage[], context: ExtractionContext) {
+  const trialOf = new Map(trials.map((t) => [`${t.model} ${t.repeat} ${t.page}`, t]));
+  const sightings: Sighting[] = [];
+  let costUsd = 0;
+  let serialMs = 0;
+  let parallelMs = 0;
+  for (const page of pages) {
+    // A page's reads in set-up order, so the first read's verified sighting stands and the second's confirms it, as in the run.
+    const read = reads.map((r) => trialOf.get(`${r.model} ${r.repeat} ${page.key}`)).filter((t): t is Trial => t !== undefined);
+    for (const t of read) {
+      costUsd += t.costUsd;
+      for (const { quoteProblem, ...rest } of t.sightings ?? []) {
+        sightings.push({ ...rest, ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText: page.quotable } } : {}) });
+      }
+    }
+    serialMs += read.reduce((sum, t) => sum + t.ms, 0);
+    parallelMs += Math.max(0, ...read.map((t) => t.ms));
+  }
+  const merged = mergeSightings(dataset, sightings, context);
+  const folded = foldDuplicates(merged.events, context.config.venueAliases);
+  const after = new Map(folded.events.map((e) => [e.id, e]));
+  const storedIds = new Set(dataset.map((e) => e.id));
+  const storedOn = dataset.filter((e) => e.status === "active" && pages.some((p) => samePageKey(e, { primaryUrl: p.finalUrl })));
+  const count = { verified: 0, kept: 0, madeUnverified: 0, unsighted: 0 };
+  for (const e of storedOn) {
+    if (merged.kept.has(e.id)) count.kept++;
+    else if (merged.uncitable.has(e.id)) count.madeUnverified++;
+    else if (!merged.touched.has(e.id)) count.unsighted++;
+    else if (after.get(e.id)?.status === "active") count.verified++;
+  }
+  const standing = folded.events.filter((e) => e.status !== "expired");
+  const created = standing.filter((e) => !storedIds.has(e.id) && e.status === "active");
+  return {
+    storedOnPages: storedOn.length,
+    ...count,
+    retitled: storedOn.filter((e) => !sameName(e.title, after.get(e.id)?.title)).length,
+    newRecords: created.length,
+    folded: [...folded.foldedInto.keys()].filter((id) => !storedIds.has(id)).length,
+    churn: created.filter((e) => isChurn(e, standing)).length,
+    costUsd,
+    serialMinutes: serialMs / 60_000,
+    parallelMinutes: parallelMs / 60_000,
+  };
+}
+
+/**
+ * Each set-up's readings of the saved pages sent through the run's own merge (`mergeSightings`) and
+ * duplicate fold against the stored dataset, as Monday's run would, averaged over its draws of the
+ * saved repeats. Only trials saved with their sightings count; a failed call reads nothing on its page.
+ */
+export function measureSetups(setups: ReadSetup[], trials: Trial[], dataset: Event[], pages: MeasuredPage[], context: ExtractionContext): SetupScore[] {
+  const storedOnPages = dataset.filter((e) => e.status === "active" && pages.some((p) => samePageKey(e, { primaryUrl: p.finalUrl }))).length;
+  return setups.map((setup) => {
+    const measured = draws(setup, trials).map((reads) => measureDraw(reads, trials, dataset, pages, context));
+    const avg = (field: Exclude<keyof SetupScore, "label" | "draws" | "storedOnPages">) => mean(measured.map((m) => m[field]));
+    return {
+      label: setup.label,
+      draws: measured.length,
+      storedOnPages,
+      verified: avg("verified"),
+      kept: avg("kept"),
+      madeUnverified: avg("madeUnverified"),
+      unsighted: avg("unsighted"),
+      retitled: avg("retitled"),
+      newRecords: avg("newRecords"),
+      folded: avg("folded"),
+      churn: avg("churn"),
+      costUsd: avg("costUsd"),
+      serialMinutes: avg("serialMinutes"),
+      parallelMinutes: avg("parallelMinutes"),
+    };
+  });
+}
+
+/** The set-ups side by side, as a section of the comparison. */
+export function renderSetups(scores: SetupScore[]): string {
+  const n = (x: number) => (Number.isNaN(x) ? "–" : x.toFixed(1));
+  const lines = [
+    "## Two reads",
+    "",
+    "Each set-up's readings of every saved page, sent through the run's own merge and duplicate fold against the stored dataset, as Monday's run would make them (#223). " +
+      "Figures are the mean over the set-up's draws: each saved repeat for one read, each pair of repeats for two reads of one model, the repeats side by side for two models. " +
+      "The stored records are mostly one model's past readings, so a model that titles or dates them another way finds fewer of them and starts more new records.",
+    "",
+    "| Set-up | Draws | Stored on pages | Verified | Kept on stored citation | Made unverified | Unsighted (a strike) | Retitled | New records | Churn | Folded | $ a run | Minutes, one after the other | Minutes, side by side |",
+    "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+  ];
+  for (const s of scores) {
+    lines.push(
+      `| ${cell(s.label)} | ${s.draws} | ${s.storedOnPages} | ${pct(ratio(s.verified, s.storedOnPages))} | ${n(s.kept)} | ${n(s.madeUnverified)} | ${n(s.unsighted)} | ${n(s.retitled)} | ${n(s.newRecords)} | ${n(s.churn)} | ${n(s.folded)} | ${usd(s.costUsd, 3)} | ${n(s.serialMinutes)} | ${n(s.parallelMinutes)} |`,
+    );
+  }
+  lines.push(
+    "",
+    "- **Verified**: the share of the stored records read verified. **Kept on stored citation**: held only on a quote, kept on the stored one (#124, #220). **Made unverified**: hidden by an own-page reading that cited nothing usable. **Unsighted**: no reading found it, so it takes a strike. **Retitled**: given another title by a reading.",
+    "- **New records**: what the readings started, after the fold. **Churn**: of those, the ones beside another record of the same page and day whose title one contains: likely an event under a second identity. **Folded**: new records the fold caught.",
+    "- **Minutes**: model time for the extraction calls alone; the run reads pages one after the other.",
+    "",
+  );
   return lines.join("\n");
 }
