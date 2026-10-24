@@ -9,7 +9,8 @@
  *
  * Each trial is appended to the day's `trials.jsonl` as it lands, and a comparison started again the
  * same day makes only the trials not already there (unless --fresh), so a stopped one loses nothing.
- * The cap counts this invocation's calls only. The report scores every saved trial of the models asked for.
+ * A failed trial is a result, kept and not made again. The cap counts this invocation's calls only. The
+ * report scores every saved trial of the models asked for.
  *
  * Pages saved by an earlier comparison are read again unless --refetch, so models added later read
  * the very same pages. Trials go out repeat by repeat, so a cap hit leaves every page read at least
@@ -180,10 +181,14 @@ async function main() {
         const source = sourceByName.get(task.source);
         if (source === undefined) continue;
         const meter = metered(capped);
-        const started = Date.now();
+        let started = Date.now();
         const base = { model, page: task.key, source: task.source, repeat: task.repeat };
         try {
-          const result = await rateLimited(() => extractPage(task.page, { lane: "registry", source }, meter.port, ctx));
+          // Timed from the last attempt's start, so a rate limit's pauses are not the model's time.
+          const result = await rateLimited(() => {
+            started = Date.now();
+            return extractPage(task.page, { lane: "registry", source }, meter.port, ctx);
+          });
           const ms = Date.now() - started;
           await record(
             result.sightings === undefined
@@ -205,14 +210,16 @@ async function main() {
   };
   await Promise.all(models.map(runModel));
 
-  const scores = scoreModels(models, trials.filter((t) => models.includes(t.model)), dataset.events, HARD_CASES);
+  const scored = trials.filter((t) => models.includes(t.model));
+  const scores = scoreModels(models, scored, dataset.events, HARD_CASES);
   const markdown = renderComparison(scores, {
     date,
     pages: saved.pages.length,
     sources: new Set(saved.pages.map((p) => p.source)).size,
-    repeats,
+    // The repeats the saved trials hold, which a resume with another --repeats does not change.
+    repeats: Math.max(0, ...scored.map((t) => t.repeat + 1)),
     capUsd,
-    spentUsd: trials.filter((t) => models.includes(t.model)).reduce((sum, t) => sum + t.costUsd, 0),
+    spentUsd: scored.reduce((sum, t) => sum + t.costUsd, 0),
     capHit,
     unfetched: saved.unfetched,
   });

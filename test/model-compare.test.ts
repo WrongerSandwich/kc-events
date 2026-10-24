@@ -81,6 +81,19 @@ describe("scoreModels", () => {
     expect(s.storedDisagreements).toEqual([{ title: "Lecture", field: "time", stored: "19:00", read: "18:00", times: 2 }]);
   });
 
+  it("counts an end on the start's own day as no end, against the stored record and between repeats", () => {
+    const sameDayEnd = ev("A", { end: "2026-11-01T22:00:00-05:00" });
+    const s = score([trial("m", 0, [sameDayEnd]), trial("m", 1, [ev("A")])], [stored("A")]);
+    expect(s.storedAgreement.date).toBe(1);
+    expect(s.fieldStability).toBe(1);
+  });
+
+  it("counts a failed call on a hard case's page as a miss", () => {
+    const market: HardCase = { label: "Market", matches: (e) => e.title === "Market", problem: () => undefined };
+    const s = score([trial("m", 0, [ev("Market")]), trial("m", 1, undefined, { error: "Request timed out." })], [], [market]);
+    expect(s.hardCases[0]).toEqual({ label: "Market", read: 2, right: 1, misses: { "call failed": 1 } });
+  });
+
   it("scores a hard case on every page any model found it on, so a model that never finds it misses there", () => {
     const market: HardCase = {
       label: "Market",

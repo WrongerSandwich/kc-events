@@ -74,6 +74,8 @@ export interface HardCase {
 const titled = (fragment: string, host: string) => (e: TrialEvent) => comparable(e.title).includes(comparable(fragment)) && new URL(e.primaryUrl).hostname.endsWith(host);
 const day = (iso: string | undefined) => iso?.slice(0, 10);
 const time = (iso: string | undefined) => (iso !== undefined && iso.length > 10 ? iso.slice(11, 16) : undefined);
+/** The last day of a dated reading: its end's, or its start's when it gives no end, so a same-day end is no disagreement. */
+const lastDay = (e: { start?: string; end?: string }) => day(e.end) ?? day(e.start);
 const sameDays = (a: Weekday[] | undefined, b: Weekday[]) => (a ?? []).join() === b.join();
 const firstProblem = (...checks: [boolean, string][]) => checks.find(([ok]) => !ok)?.[1];
 
@@ -105,11 +107,11 @@ export const HARD_CASES: HardCase[] = [
 
 export interface HardCaseScore {
   label: string;
-  /** Trials of the case's page that succeeded. */
+  /** Trials of the case's page, a failed call included. */
   read: number;
   /** Of those, the trials with a verified, right reading. */
   right: number;
-  /** What the others got: "not found", "unverified (quote …)", or the problem, with how often. */
+  /** What the others got: "call failed", "not found", "unverified (quote …)", or the problem, with how often. */
   misses: Record<string, number>;
 }
 
@@ -168,7 +170,7 @@ export function eventKey(e: Pick<TrialEvent, "title" | "start">): string {
 
 /** The fields two readings of one event must share to count as read alike. */
 function shape(e: TrialEvent): string {
-  return JSON.stringify([e.start ?? null, e.end ?? null, e.schedule ? comparable(e.schedule) : null, e.venue ? comparable(e.venue) : null, e.recurrence, e.days ?? null, e.status]);
+  return JSON.stringify([e.start ?? null, lastDay(e) === day(e.start) ? null : (e.end ?? null), e.schedule ? comparable(e.schedule) : null, e.venue ? comparable(e.venue) : null, e.recurrence, e.days ?? null, e.status]);
 }
 
 function jaccard(a: Set<string>, b: Set<string>): number {
@@ -240,7 +242,7 @@ function compareStored(trials: Trial[], dataset: Event[]) {
       if (s === undefined) continue;
       matched++;
       const checks: [StoredDisagreement["field"], string, string][] = [
-        ["date", s.recurrence === "recurring" ? "recurring" : `${day(s.start)}–${day(s.end) ?? ""}`, e.recurrence === "recurring" ? "recurring" : `${day(e.start)}–${day(e.end) ?? ""}`],
+        ["date", s.recurrence === "recurring" ? "recurring" : `${day(s.start)}–${lastDay(s)}`, e.recurrence === "recurring" ? "recurring" : `${day(e.start)}–${lastDay(e)}`],
         ["time", time(s.start) ?? "none", time(e.start) ?? "none"],
         ["venue", comparable(s.venue ?? ""), comparable(e.venue ?? "")],
         ["recurrence", s.recurrence, e.recurrence],
@@ -265,8 +267,12 @@ function scoreHardCase(hardCase: HardCase, trials: Trial[], pages: Set<string>):
   let read = 0;
   let right = 0;
   for (const trial of trials) {
-    if (trial.events === undefined || !pages.has(trial.page)) continue;
+    if (!pages.has(trial.page)) continue;
     read++;
+    if (trial.events === undefined) {
+      miss("call failed");
+      continue;
+    }
     const found = trial.events.filter(hardCase.matches);
     if (found.length === 0) {
       miss("not found");
@@ -375,7 +381,7 @@ export function renderComparison(scores: ModelScore[], meta: ComparisonMeta): st
   lines.push("");
 
   lines.push("## Hard cases", "");
-  lines.push("Right means a verified reading with the right fields, out of the trials that read the case's page.", "");
+  lines.push("Right means a verified reading with the right fields, out of the model's trials of the case's page (a failed call counts as a miss).", "");
   const labels = scores[0]?.hardCases.map((c) => c.label) ?? [];
   lines.push(`| Model | ${labels.map(cell).join(" | ")} |`, `| --- |${labels.map(() => " :---: |").join("")}`);
   for (const s of scores) lines.push(`| \`${s.model}\` | ${s.hardCases.map((c) => (c.read === 0 ? "–" : `${c.right}/${c.read}`)).join(" | ")} |`);
