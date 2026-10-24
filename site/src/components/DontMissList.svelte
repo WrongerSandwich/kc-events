@@ -81,8 +81,13 @@
   /** A kind filter's view transition is running: the cards carry their names. */
   let moving = $state(false);
 
+  /** A kind's chip: pressed again, it lets go, as All does. */
   function toggle(kind: string) {
-    const next = chosen === kind ? undefined : kind;
+    choose(chosen === kind ? undefined : kind);
+  }
+
+  function choose(next: string | undefined) {
+    if (next === chosen) return;
     const update = () => {
       chosen = next;
       const n = picksOf(next).length;
@@ -141,8 +146,20 @@
         </ul>
       {:else}
         {@const kind = chosen}
+        {@const counts = kindCounts(buckets[h])}
+        <!-- All first, pressed until a kind is: the row reads as a filter with a way back, not as a row of tags. The
+             kinds keep the short form every chip uses (a card's, the explorer's), so the row stays a row on a phone. -->
         <ul class="kinds" aria-label="Picks by kind">
-          {#each kindCounts(buckets[h]) as k (k.kind)}
+          {#if counts.length > 1}
+            <li class="all">
+              {#if hydrated}
+                <button type="button" class="chip" aria-pressed={kind === undefined} onclick={() => choose(undefined)}>All {buckets[h].length}</button>
+              {:else}
+                <a class="chip" href={explorerHref()}>All {buckets[h].length}</a>
+              {/if}
+            </li>
+          {/if}
+          {#each counts as k (k.kind)}
             <li>
               {#if hydrated}
                 <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} pressed={k.kind === kind} onclick={() => toggle(k.kind)} />
@@ -251,6 +268,8 @@
     .kinds :global(.chip) { border: 1px solid ButtonText; }
     .kinds :global(.chip[aria-pressed="true"]) { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }
   }
+  /* All is no kind, so it takes the ink as its strong shade and the hairline as its tint. */
+  .kinds .all { --hue: var(--fg); --hue-tint: var(--rule); }
   /* A kind's icon before a title in the one-line list, in the kind's colour. */
   .icon { flex: none; color: var(--hue); margin-right: var(--space-2); }
   @media (prefers-reduced-motion: reduce) { .kinds :global(.chip) { transition: none; } }

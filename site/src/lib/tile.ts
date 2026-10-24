@@ -34,21 +34,34 @@ export function dateTile(e: PublishedEvent, today: string, now?: string): Tile {
   const day = isUnderway(e, today) && first! < today ? today : first!;
   if (now !== undefined && day === localDate(now)) return todayTile(e, day, today, now);
   const weekday = formatDay(day).split(" ")[0]!;
-  if (isMultiDay(e)) return { top: weekday, ...parts(day), detail: closingLine(e, today), label: spanLabel(e, formatDay(day)) };
+  if (isMultiDay(e)) return { top: weekday, ...parts(day), detail: spanDetail(e, day, today), label: spanLabel(e, formatDay(day), day) };
   const time = isDateOnly(e.start!) ? undefined : formatTime(e.start!);
   return { top: weekday, ...parts(day), detail: time, label: time ? `${formatDay(day)}, ${time}` : formatDay(day) };
 }
 
-/** A multi-day one-off in words, from `day`: "Fri Oct 9, 8:30 pm, through Sat Oct 10", "Today through Sun Oct 11". */
-function spanLabel(e: PublishedEvent, day: string): string {
-  const time = isDateOnly(e.start!) ? "" : `, ${formatTime(e.start!)},`;
-  return `${day}${time} through ${formatDay(lastDay(e)!)}`;
+/**
+ * A multi-day one-off's line under the title, on the tile's `day`. On its last day the tile already shows that day,
+ * so "through" it would say the date twice ("Today 24", "7:00 pm · through Sat Oct 24"): it says "last day" instead.
+ */
+function spanDetail(e: PublishedEvent, day: string, today: string): string {
+  if (lastDay(e) !== day) return closingLine(e, today);
+  return isDateOnly(e.start!) ? "Last day" : `${formatTime(e.start!)} · last day`;
+}
+
+/**
+ * A multi-day one-off in words, `said` being the tile's `day` in words: "Fri Oct 9, 8:30 pm, through Sat Oct 10",
+ * "Today through Sun Oct 11", and on its last day "Today, 8:30 pm, the last day".
+ */
+function spanLabel(e: PublishedEvent, said: string, day: string): string {
+  const time = isDateOnly(e.start!) ? "" : `, ${formatTime(e.start!)}`;
+  if (lastDay(e) === day) return `${said}${time}, the last day`;
+  return `${said}${time && `${time},`} through ${formatDay(lastDay(e)!)}`;
 }
 
 /** A one-off on the visitor's today, `day`: its first day, or a later day of its span. */
 function todayTile(e: PublishedEvent, day: string, today: string, now: string): Tile {
   const tile = { top: "Today", ...parts(day), today: true as const };
-  if (isMultiDay(e)) return { ...tile, detail: closingLine(e, today), label: spanLabel(e, "Today") };
+  if (isMultiDay(e)) return { ...tile, detail: spanDetail(e, day, today), label: spanLabel(e, "Today", day) };
   if (isDateOnly(e.start!)) return { ...tile, detail: undefined, label: "Today" };
   const time = formatTime(e.start!);
   // Both are wall time in the site's zone, so the strings compare; the dataset's offset is not needed.

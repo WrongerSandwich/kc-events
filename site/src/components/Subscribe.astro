@@ -1,30 +1,40 @@
 ---
 import CopyButton from "./CopyButton.svelte";
+import UiIcon from "./UiIcon.svelte";
 import { PICKS_FEED, webcalUrl } from "../lib/feeds";
 
 // The picks' feed (#136), two ways (#188): the webcal link opens Apple Calendar's subscribe dialog, but Android and
 // most Windows browsers have nothing for that scheme, so the https address is beside it with a one-tap copy, for an app
-// that asks for a URL (Google Calendar, Outlook). Phones put the address first (first in the source too, so Tab order matches). The page passes the build's origin.
+// that asks for a URL (Google Calendar, Outlook). One sentence says what the feed is before either way is offered, so
+// neither starts mid-thought. Phones put the address first (first in the source too, so Tab order matches). The page
+// passes the build's origin.
 interface Props { origin: string }
 const { origin } = Astro.props;
 const address = new URL(PICKS_FEED, origin);
 // The address may break after a slash, and only there, so a phone wraps it between its parts rather than mid-word (#184).
 const parts = [`${address.origin}/`, ...address.pathname.slice(1).split(/(?<=\/)/)];
 ---
+<p class="what">The picks as a calendar of your own, updated each week. Remove the calendar to stop.</p>
 <div class="subscribe-ways">
-  <p class="by-address">
-    For Google Calendar or Outlook, add it by address: <code>{parts.map((p, i) => <>{i > 0 && <wbr />}{p}</>)}</code> <CopyButton client:load label="Copy address" url={address.toString()} />
-    Google Calendar: Other calendars, From URL.
-  </p>
-  <p class="apple">
-    <a href={webcalUrl(origin, PICKS_FEED)}>Subscribe to the picks</a> in Apple Calendar or any app that opens calendar
-    links. It updates weekly; remove the calendar to stop.
-  </p>
+  <div class="by-address">
+    <CopyButton client:load label="Copy address" url={address.toString()} />
+    <p>
+      For Google Calendar (Other calendars, then From URL) or Outlook, paste the address:{" "}
+      <code>{parts.map((p, i) => <>{i > 0 && <wbr />}{p}</>)}</code>
+    </p>
+  </div>
+  <div class="apple">
+    <a class="control" href={webcalUrl(origin, PICKS_FEED)}><UiIcon name="calendar-plus" />Subscribe to the picks</a>
+    <p>In Apple Calendar, or any app that opens calendar links.</p>
+  </div>
 </div>
 
 <style>
-  .subscribe-ways { display: flex; flex-direction: column; gap: var(--space-2); }
-  .subscribe-ways p { margin: 0; }
+  .what { margin: var(--space-2) 0 0; }
+  /* Each way is its control, then a line of muted small print under it. */
+  .subscribe-ways { display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-3); }
+  .subscribe-ways > div { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+  .subscribe-ways p { margin: 0; font-size: var(--text-sm); color: var(--fg-muted); }
   /* The address is first in the source, so reading and Tab order match a phone's; wider screens lead with the link. */
   @media (min-width: 30.0625rem) {
     .apple { order: -1; }

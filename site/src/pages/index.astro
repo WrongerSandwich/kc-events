@@ -30,7 +30,10 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
   </p>
 
   <DontMissList client:load />
-  <div class="subscribe"><Subscribe origin={origin} /></div>
+  <section class="subscribe" aria-labelledby="calendar">
+    <h2 id="calendar" class="section-heading">In your calendar</h2>
+    <Subscribe origin={origin} />
+  </section>
 
   {alwaysThere.length > 0 && <section aria-labelledby="always">
     <h2 id="always" class="section-heading">Always there</h2>
@@ -45,12 +48,13 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
     </ul>
   </section>}
 
-  <p class="explore"><a href="/explore?when=all&recurring=1">Browse all {count} events</a></p>
   {/* Every kind and region page, one click from here (#188), text only, as the landing pages' own rows; the venues are in the footer. */}
   <nav class="lists" aria-label="More lists">
     <p>By kind: {meta.kinds.map((k, i) => <>{i > 0 && " · "}<a href={kindPath(k)}>{kindName(k)}</a></>)}</p>
     <p>By region: {meta.regions.map((r, i) => <>{i > 0 && " · "}<a href={regionPath(r)}>{r}</a></>)}</p>
   </nav>
+  {/* The page ends on its widest door: everything, in the explorer. */}
+  <p class="explore"><a href="/explore?when=all&recurring=1">Browse all {count} events</a></p>
 </Base>
 
 <style>
@@ -63,7 +67,6 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
   }
   .lede { color: var(--fg-muted); margin-top: var(--space-2); max-width: 36rem; }
   .note { color: var(--fg-muted); margin-top: var(--space-1); }
-  .subscribe { margin-top: var(--space-6); font-size: var(--text-sm); color: var(--fg-muted); }
   .always { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
   /* Two lines a row: the name, then when and where. Schedules run long ("Saturdays & Sundays, April–November; …"),
      so they get the full width rather than a narrow right-hand column. */
@@ -74,8 +77,8 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
   .always a { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
   .always .detail { grid-column: 2; font-size: var(--text-sm); color: var(--fg-muted); }
   .icon { color: var(--hue); }
-  .explore { margin-block: var(--space-12) var(--space-6); font-size: var(--text-lg); font-weight: var(--weight-strong); }
-  .lists { font-size: var(--text-sm); color: var(--fg-muted); }
+  .lists { margin-top: var(--space-12); font-size: var(--text-sm); color: var(--fg-muted); }
   .lists p + p { margin-top: var(--space-2); }
   .lists a { color: var(--fg); text-decoration: underline; text-decoration-color: var(--fg-faint); }
+  .explore { margin-block: var(--space-6); font-size: var(--text-lg); font-weight: var(--weight-strong); }
 </style>

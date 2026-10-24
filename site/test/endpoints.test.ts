@@ -158,7 +158,7 @@ describe("built output", () => {
     });
 
     it("offers the picks' feed by https address beside webcal, and Google Calendar beside Add to calendar (#188)", () => {
-      for (const page of ["index.html", "about.html"]) expect(read(page), page).toContain("Google Calendar: Other calendars, From URL.");
+      for (const page of ["index.html", "about.html"]) expect(read(page), page).toContain("Google Calendar (Other calendars, then From URL)");
       const dated = events.find(isDated)!;
       expect(read(`e/${dated.id}.html`)).toMatch(/<a class="control[^"]*" href="https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&amp;[^"]+" rel="nofollow"[^>]*>Google Calendar<\/a>/);
     });
