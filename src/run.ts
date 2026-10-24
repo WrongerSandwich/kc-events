@@ -46,6 +46,7 @@ import {
   sameEnd,
   sameEvent,
   sameName,
+  sameVenue,
   sameRecurringEvent,
   sameText,
   scheduleSaysWhen,
@@ -726,7 +727,7 @@ function mergeSightings(existing: Event[], sightings: Sighting[], { today, nowIs
     if (event.status === "active" && !cancelled && hasNearerSighting(known, sighting, sightings, events.filter(matchable), config)) continue;
     touched.add(known.id);
     if (event.status === "active" && rule !== "month") readVerified.add(known.id);
-    const applied = applySighting(known, sighting, standing, rule, nowIso);
+    const applied = applySighting(known, sighting, standing, rule, nowIso, aliases);
     events[events.indexOf(known)] = applied.event;
     if (applied.refreshed && !created.has(known.id)) refreshed.add(known.id);
     if (applied.uncitable) uncitable.add(known.id);
@@ -843,8 +844,8 @@ function matchable(event: Event): boolean {
  * outages is cleared. A page with no standing never gets here (#78): it clears nothing. One
  * exception to hiding (#124): an own-page reading held only because a quote is not on the page
  * keeps an active event on its stored reading, verified now (keptOn, the failed quote), when the
- * event's stored quotes are on the page this run read, whatever the reading says (keepsStoredCitation,
- * #220): the page has not changed, only the model's quote has.
+ * event's stored quotes are on the page this run read and the reading puts it on the same day at the
+ * same venue (keepsStoredCitation, #220): the page has not changed, only the model's quote has.
  */
 function applySighting(
   known: Event,
@@ -852,6 +853,7 @@ function applySighting(
   standing: Exclude<Standing, "none">,
   rule: MatchRule,
   nowIso: string,
+  aliases: VenueAliases,
 ): { event: Event; refreshed: boolean; uncitable: boolean; keptOn?: string } {
   const { event, cancelled } = sighting;
   const fromOwnPage = standing === "own-page";
@@ -861,7 +863,7 @@ function applySighting(
   if (event.status === "active" && !confirmsOnly) return { event: refresh(known, event, rule), refreshed: true, uncitable: false };
   const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
   if (known.status === "active" && fromOwnPage && !confirmsOnly) {
-    if (keepsStoredCitation(known, sighting)) return { event: { ...listed, lastVerified: nowIso }, refreshed: false, uncitable: false, keptOn: sighting.quoteProblem!.phrase };
+    if (keepsStoredCitation(known, sighting, aliases)) return { event: { ...listed, lastVerified: nowIso }, refreshed: false, uncitable: false, keptOn: sighting.quoteProblem!.phrase };
     return { event: { ...listed, status: "unverified" }, refreshed: false, uncitable: true };
   }
   const cleared = known.verificationFailures === 0 && known.consecutiveOutages === 0;
@@ -870,18 +872,28 @@ function applySighting(
 
 /**
  * Whether an active event read from its own page by a reading held only on a quote (#124) stays on
- * its stored citation: the stored date and venue quotes are both on the page this run read. What
- * the failed reading says is not evidence of anything (#220): a recurring event's schedule is the
- * model's own wording, and a time taken from an own page never matches the list's, so neither its
- * when nor its venue is asked to agree. A page that has changed the date or the venue has dropped
- * the stored quote. Any other failed reading (a date that does not exist, no date or venue at all)
- * has no quote problem and hides it.
+ * its stored citation: the stored date and venue quotes are both on the page this run read, and the
+ * reading puts the event on the same day at the same venue. Since #220 that is all it asks of the
+ * reading: a recurring event's schedule is the model's own wording, and a time taken from an own
+ * page never matches the list's doors time, so neither the schedule's words nor the time need agree.
+ * The day and the venue still must, since a calendar page keeps a moved show's old date quote while
+ * another show plays that night, and a single-venue page names its venue on every listing: the
+ * stored quotes on the page cannot say the event has not moved. A dated reading of a recurring
+ * event, or the other way about, is not the same day. Any other failed reading (a date that does
+ * not exist, no date or venue at all) has no quote problem and hides it.
  */
-function keepsStoredCitation(known: Event, { quoteProblem }: Sighting): boolean {
+function keepsStoredCitation(known: Event, { event, quoteProblem }: Sighting, aliases: VenueAliases): boolean {
   if (quoteProblem === undefined) return false;
   const { pageText } = quoteProblem;
   const { date, venue } = known.evidence;
-  return date !== undefined && venue !== undefined && quotedOn(date, pageText) && quotedOn(venue, pageText);
+  if (date === undefined || venue === undefined || !quotedOn(date, pageText) || !quotedOn(venue, pageText)) return false;
+  return sameDay(event, known) && event.venue !== undefined && known.venue !== undefined && sameVenue(event.venue, known.venue, aliases);
+}
+
+function sameDay(reading: Event, known: Event): boolean {
+  if (known.recurrence === "recurring" || reading.recurrence === "recurring") return known.recurrence === reading.recurrence;
+  const day = calendarDate(reading.start);
+  return day !== undefined && day === calendarDate(known.start);
 }
 
 /**
@@ -1293,7 +1305,7 @@ async function reverify(
       return strike(event);
     }
     // The page read here is the event's primary page, whatever page the sighting cites.
-    const applied = applySighting(event, listed.sighting, "own-page", listed.rule, context.nowIso);
+    const applied = applySighting(event, listed.sighting, "own-page", listed.rule, context.nowIso, context.config.venueAliases);
     listedHere.add(event.id);
     if (applied.refreshed) refreshed.add(event.id);
     if (applied.uncitable) uncitable.add(event.id);

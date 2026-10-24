@@ -142,7 +142,7 @@ describe("a re-reading of an active event's own page whose quote is not on the p
   const listed = () => quoting(WEEK_1, emptyDataset(), LISTING, { dateEvidence: DATE_QUOTE, venueEvidence: VENUE_QUOTE });
   const struck = (dataset: Dataset): Dataset => ({ ...dataset, events: dataset.events.map((e) => ({ ...e, verificationFailures: 1, consecutiveOutages: 1 })) });
 
-  it("keeps the event active on its stored reading when its stored quotes are still on the page and the reading agrees", async () => {
+  it("keeps the event active on its stored reading when its stored quotes are still on the page (#124)", async () => {
     const first = await listed();
     const stored = only(first.dataset);
 
@@ -178,9 +178,8 @@ describe("a re-reading of an active event's own page whose quote is not on the p
   });
 
   it.each([
-    ["start date", { startDate: "2026-12-13" }],
     ["start time", { startTime: "21:00" }],
-    ["venue", { venue: "Knuckleheads Garage" }],
+    ["name for the same venue", { venue: "  KNUCKLEHEADS saloon " }],
   ])("keeps the event on its stored reading when the new reading gives another %s (#220)", async (_, disagreeing) => {
     const first = await listed();
     const stored = only(first.dataset);
@@ -190,6 +189,36 @@ describe("a re-reading of an active event's own page whose quote is not on the p
     expect(only(kept.dataset)).toMatchObject({ id: stored.id, status: "active", start: stored.start, venue: stored.venue, evidence: stored.evidence, lastVerified: weekIso(2) });
     expect(kept.report.uncitableReadings).toEqual([]);
     expect(kept.report.keptOnStoredCitation).toEqual([{ title: "Big Show", primaryUrl: CALENDAR_URL, failedQuote: `quoted "${STITCHED}" for its date` }]);
+  });
+
+  it.each([
+    ["start date", { startDate: "2026-12-13" }],
+    ["venue", { venue: "The Truman" }],
+  ])("hides the event, as before, when the new reading gives another %s, though the stored quotes are on the page", async (_, disagreeing) => {
+    const first = await listed();
+
+    const hidden = await quoting(week(2), first.dataset, LISTING, { dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE, ...disagreeing });
+
+    expect(only(hidden.dataset)).toMatchObject({ status: "unverified" });
+    expect(hidden.report.uncitableReadings).toHaveLength(1);
+    expect(hidden.report.keptOnStoredCitation).toEqual([]);
+  });
+
+  it("hides a show moved to another night, though another show that night keeps its stored date quote on the calendar (#220)", async () => {
+    const first = await listed();
+    const moved = {
+      status: 200,
+      body: `<html><body><p>Other Show</p><p>${DATE_QUOTE}</p><p>${VENUE_QUOTE}</p><p>Big Show</p><p>Sat, Dec 19 · Show 8:00 PM</p><p>Buy Tickets</p><p>${VENUE_QUOTE}</p></body></html>`,
+    };
+
+    const hidden = await quoting(week(2), first.dataset, moved, {
+      startDate: "2026-12-19",
+      dateEvidence: "Sat, Dec 19 · Show 8:00 PM · Buy Tickets",
+      venueEvidence: VENUE_QUOTE,
+    });
+
+    expect(hidden.dataset.events.find((e) => e.id === first.dataset.events[0]!.id)).toMatchObject({ status: "unverified", start: first.dataset.events[0]!.start });
+    expect(hidden.report.keptOnStoredCitation).toEqual([]);
   });
 
   it("keeps a recurring event on its stored reading when the new reading rewords its schedule (#220)", async () => {
@@ -216,14 +245,6 @@ describe("a re-reading of an active event's own page whose quote is not on the p
     expect(only(hidden.dataset)).toMatchObject({ status: "unverified", lastVerified: weekIso(1) });
     expect(hidden.report.uncitableReadings).toEqual([{ title: "Big Show", primaryUrl: CALENDAR_URL }]);
     expect(hidden.report.keptOnStoredCitation).toEqual([]);
-  });
-
-  it("keeps the event when the new reading's venue differs only in case and spacing", async () => {
-    const first = await listed();
-
-    const kept = await quoting(week(2), first.dataset, LISTING, { dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE, venue: "  KNUCKLEHEADS " });
-
-    expect(only(kept.dataset)).toMatchObject({ status: "active", venue: "Knuckleheads" });
   });
 
   it("hides the event, as before, when the re-reading has a date that does not exist", async () => {

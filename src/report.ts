@@ -178,7 +178,7 @@ export interface RunReport {
   uncitableReadings: EventRef[];
   /**
    * The events kept active on their stored citation this run (#124): a re-reading of their own page
-   * quoted something not on it, but their stored quotes are on it and the reading agrees. The failed
+   * quoted something not on it, but their stored quotes are on it and the reading gives the same day and venue (#220). The failed
    * quote is the model's, kept here so its variance stays visible.
    */
   keptOnStoredCitation: (EventRef & { failedQuote: string })[];
