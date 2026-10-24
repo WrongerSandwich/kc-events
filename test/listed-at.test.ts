@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyDataset, type Dataset } from "../src/dataset.js";
 import { parseRegistry } from "../src/registry.js";
 import type { CannedPage, ScriptedReply } from "./fakes/ports.js";
+import { testConfig } from "./fakes/config.js";
 import { runWith } from "./fakes/run.js";
 import { candidateAt, knuckleheads, reply, source, WEEK_1, WEEK_2 } from "./fakes/fixtures.js";
 
@@ -113,6 +114,76 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
     const { dataset } = await runAt(WEEK_2, week1, [reply(winter), reply(quartet)]);
 
     expect(titled(dataset, "Holiday Recital")[0]).toMatchObject({ verificationFailures: 1 });
+  });
+
+  describe("says when the last page still lists inside the horizon, so the next page may be needed (#229)", () => {
+    // WEEK_2's run date is 2026-10-09; its eight-week horizon ends 2026-12-04.
+    const nextPage = (latest: string) =>
+      `${feedPage(2)} lists through ${latest}, inside the horizon (2026-12-04); events past it may be on a page not read, so add the next page`;
+    const problems = (report: { sources: { detail?: string }[] }) => report.sources[0]!.detail ?? "";
+
+    it("when the last page's latest start falls inside the horizon", async () => {
+      const { report } = await runAt(WEEK_2, emptyDataset(), [reply(winter), reply(choir, quartet)]);
+
+      expect(problems(report)).toContain(nextPage("2026-11-14"));
+    });
+
+    it("from the wider of the last page's two reads", async () => {
+      const recital = at({ title: "Holiday Recital", startDate: "2026-11-28", dateEvidence: "Sat, Nov 28 @ 6:00 pm" });
+      const { report } = await runWith(WEEK_2, emptyDataset(), {
+        sources: [council],
+        pages: bothPages,
+        completions: [reply(winter), reply(winter), reply(quartet), reply(recital)],
+        config: testConfig({ extractionReads: 2 }),
+      });
+
+      expect(problems(report)).toContain(nextPage("2026-11-28"));
+    });
+
+    it("not when the last page's latest start falls past the horizon", async () => {
+      const { report } = await runAt(WEEK_2, emptyDataset(), [reply(choir), reply(quartet, winter)]);
+
+      expect(problems(report)).not.toContain("add the next page");
+    });
+
+    it("not when only an earlier page reaches inside the horizon", async () => {
+      const { report } = await runAt(WEEK_2, emptyDataset(), [reply(quartet), reply(winter)]);
+
+      expect(problems(report)).not.toContain("add the next page");
+    });
+
+    it.each([
+      ["is empty", reply()],
+      ["lists only what is skipped", reply(at({ title: "Trivia Night", startDate: "2026-10-22", dateEvidence: "Thu, Oct 22 @ 7:00 pm" }))],
+      ["lists only what recurs", reply(at({ title: "Open Studio", startDate: null, startTime: null, schedule: "Every Saturday", dateEvidence: "Every Saturday" }))],
+    ])("not when the last page %s", async (_, last) => {
+      const { report } = await runAt(WEEK_2, emptyDataset(), [reply(quartet), last]);
+
+      expect(problems(report)).not.toContain("add the next page");
+    });
+
+    it("not when the last page did not come back", async () => {
+      const { report } = await runWith(WEEK_2, emptyDataset(), {
+        sources: [council, knuckleheads],
+        pages: { [feedPage(1)]: page, [feedPage(2)]: new Error("ECONNRESET"), [knuckleheads.urls[0]!]: page },
+        completions: [reply(quartet), reply()],
+      });
+
+      expect(problems(report)).not.toContain("add the next page");
+    });
+
+    it("not for a source read without listedAt", async () => {
+      const { listedAt: _, ...plain } = council;
+      const plainAt = (title: string, startDate: string) => candidateAt(plain, { title, startDate, venue: "Arts Hall", venueEvidence: "Arts Hall, 1 Main St", dateEvidence: startDate });
+      const { report } = await runWith(WEEK_2, emptyDataset(), {
+        sources: [plain],
+        pages: bothPages,
+        completions: [reply(plainAt("Choir Night", "2026-10-20")), reply(plainAt("String Quartet", "2026-11-14"))],
+      });
+
+      expect(report.sources[0]!.extracted).toBeGreaterThan(0);
+      expect(problems(report)).not.toContain("add the next page");
+    });
   });
 
   it("is a URL", () => {

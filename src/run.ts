@@ -497,6 +497,9 @@ interface SourceExtraction {
  * candidate count and tally come from one read, the first that came back readable, so they do not
  * double; the other read adds only problems that one did not have. It is read in full when either
  * read was, and its yield is the larger listing and the later latest start of the two.
+ *
+ * The last page of a listing (`listedAt`) whose own latest start falls inside the horizon gets a
+ * problem line saying the next page may be needed (#229); it changes nothing and holds nothing.
  */
 async function extractFromPages(pages: SourcePage[], model: ModelPort, context: ExtractionContext) {
   const sightings: Sighting[] = [];
@@ -553,6 +556,12 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     if (source.listedAt && cutOrEmpty) {
       attempts.unread.add(pageKey(source.listedAt));
       outcome.problems.push(`${page.finalUrl} ${cutOrEmpty}, so the events listed at ${source.listedAt} are held, not struck`);
+    }
+    // A listing's last page still listing inside the horizon may have more past it, on a page the registry does not list (#229).
+    const lastDay = horizonEnd(context.today, context.config.horizonWeeks);
+    const reach = yields.length > 0 ? widestYield(yields).latestStart : undefined;
+    if (source.listedAt && page.url === source.urls.at(-1) && reach !== undefined && reach <= lastDay) {
+      outcome.problems.push(`${page.finalUrl} lists through ${reach}, inside the horizon (${lastDay}); events past it may be on a page not read, so add the next page`);
     }
     outcome.extracted += counted.extracted;
     outcome.problems.push(...counted.problems);
