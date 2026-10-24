@@ -14,6 +14,8 @@ const JOIN = String.raw`\s*(?:[-–—]|to|through|thru|until)\s*`;
 /** A closing day number that is no clock time: "Oct 7 – 8 p.m." is a time, not the 8th. */
 const NOT_A_TIME = String.raw`(?!\s*(?:[ap]\.?m\b|:\d))`;
 const SPAN = new RegExp(String.raw`\b${MONTH}\s+${DAY}${YEAR}${JOIN}${WEEKDAY}(?:${MONTH}\s+)?${DAY}${NOT_A_TIME}${YEAR}`, "gi");
+/** A season named by its months alone ("April–November", "Jan–Feb"), with no day at either end. */
+const MONTH_SEASON = new RegExp(String.raw`\b${MONTH}(?![a-z])${JOIN}${MONTH}(?![a-z])(?!\s*\d)`, "i");
 
 export interface QuotedSpan {
   /** `YYYY-MM-DD`. */
@@ -27,9 +29,12 @@ export interface QuotedSpan {
  * puts the span's end on or after today and its start no more than nine months ahead (a run already
  * underway, or the next one), so a past season is not moved to next year; a span that crosses New Year
  * ends in the year after it starts. Two spans, a date that does not exist, or an end before the start
- * ("Dec 28 – 3") give none.
+ * ("Dec 28 – 3") give none, and so does a quote that also names a season by its months alone: it is a
+ * row of a year's hours by season ("April–November: Sat & Sun … Nov. 1 – Nov. 22: Sat & Sun"), and the
+ * dated row is the schedule's hours for those weeks, not a run that ends (#221).
  */
 export function quotedSpan(quote: string, today: string): QuotedSpan | undefined {
+  if (MONTH_SEASON.test(quote)) return undefined;
   const matches = [...quote.matchAll(SPAN)];
   if (matches.length !== 1) return undefined;
   const [, startMonthName, startDayText, startYearText, endMonthName, endDayText, endYearText] = matches[0]!;

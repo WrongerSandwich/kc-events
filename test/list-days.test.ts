@@ -297,6 +297,17 @@ describe("a recurring reading whose date quote gives a month-day span is that sp
     expect(dataset.events[0]).not.toHaveProperty("days");
   });
 
+  it("a dated row among a market's hours by season stays recurring (#221)", async () => {
+    const quote = "Farmers Market Hours by Season: April–November: Sat & Sun, 8:00 a.m. – 3:00 p.m. Nov. 1 – Nov. 22: Sat & Sun, 9:00 a.m. – 3:00 p.m.";
+    const { dataset, report } = await runAt(WEEK_1, {
+      pages: { [LIST_URL]: pageWith(quote) },
+      completions: [scheduled("Sat & Sun, 9:00 a.m. – 3:00 p.m.", quote)],
+    });
+    expect(dataset.events[0]).toMatchObject({ status: "active", recurrence: "recurring", schedule: "Sat & Sun, 9:00 a.m. – 3:00 p.m." });
+    expect(dataset.events[0]).not.toHaveProperty("start");
+    expect(report.sources[0]!.detail ?? "").not.toContain("read as that span");
+  });
+
   it("a quote with two spans is left as the model read it", async () => {
     const quote = "Saturdays, Nov 7 – Nov 21 and Dec 5 – Dec 19";
     const { dataset } = await runAt(WEEK_1, {
@@ -334,6 +345,8 @@ describe("quotedSpan", () => {
     "Nov 30 – Nov 31",
     "Dec 28 – 3",
     "Sept 1 – Sept 30",
+    "April–November: Sat & Sun, 8:00 a.m. – 3:00 p.m. Nov. 1 – Nov. 22: Sat & Sun, 9:00 a.m. – 3:00 p.m.",
+    "Nov. 1 – Nov. 22: Sat & Sun, 9 a.m. – 3 p.m. Jan–Feb: Saturdays only",
   ])("%s gives no span", (quote) => {
     expect(quotedSpan(quote, today)).toBeUndefined();
   });
