@@ -576,3 +576,51 @@ describe("ruledTitle (#217)", () => {
     expect(ruledTitle("Big Show", "BIG SHOW!", [])).toBeUndefined();
   });
 });
+
+describe("one game under two forms of its title (#227)", () => {
+  const park = { primaryUrl: "https://www.sportingkc.com/schedule", venue: "Children's Mercy Park", kind: "sports", recurrence: "one-off" as const };
+  const game = (title: string, start = "2026-10-24T19:30:00-05:00", overrides: Partial<EventIdentity> = {}) => ({ ...park, title, start, ...overrides });
+
+  it("matches the club's forms of one matchup on one day at one venue, from any page", () => {
+    const stored = game("Sporting Kansas City vs. Austin FC");
+    for (const title of ["Sporting KC vs Austin", "Kansas City vs Austin", "SPORTING KC V. AUSTIN"]) {
+      expect(matchSighting(game(title), [stored], {})).toEqual({ kind: "matched", event: stored, rule: "game" });
+      expect(findMatch(game(title, "2026-10-24", { primaryUrl: "https://kcsoccer.test/games" }), [stored], {})).toBe(stored);
+    }
+    expect(sameEvent(game("Sporting KC vs Austin"), game("Kansas City vs Austin", "2026-10-24"), [], {})).toBe(true);
+  });
+
+  it("matches a home game written visitor @ home, the separator in any case", () => {
+    const rink = { primaryUrl: "https://www.kcmavericks.com/schedule", venue: "Cable Dahmer Arena", kind: "Sports", recurrence: "one-off" as const, start: "2026-11-27T19:05:00-06:00" };
+    const stored = { ...rink, title: "Kansas City Mavericks vs Wichita Thunder" };
+    expect(findMatch({ ...rink, title: "Wichita Thunder @ Kansas City Mavericks" }, [stored], {})).toBe(stored);
+    expect(findMatch({ ...rink, title: "Wichita Thunder AT Kansas City Mavericks" }, [stored], {})).toBe(stored);
+  });
+
+  it("matches at a venue under its alias", () => {
+    const aliases = { "Children's Mercy Park": ["Sporting Park"] };
+    expect(findMatch(game("Sporting KC vs Austin", undefined, { venue: "Sporting Park" }), [game("Sporting Kansas City vs. Austin FC")], aliases)).toBeDefined();
+  });
+
+  it("keeps two games at one venue on one day at different times apart: a doubleheader", () => {
+    const first = game("Royals vs Tigers", "2026-10-24T13:10:00-05:00");
+    const second = game("Kansas City Royals vs. Detroit Tigers", "2026-10-24T18:40:00-05:00");
+    expect(findMatch(second, [first], {})).toBeUndefined();
+    expect(sameEvent(first, second, [], {})).toBe(false);
+  });
+
+  it("does not match a title that is not a matchup, a record not of kind sports, another day, or another venue", () => {
+    const stored = game("Sporting Kansas City vs. Austin FC");
+    expect(findMatch(game("Sporting KC Fan Fest"), [stored], {})).toBeUndefined();
+    expect(findMatch(game("Sporting KC vs Austin", undefined, { kind: "music" }), [stored], {})).toBeUndefined();
+    expect(findMatch(game("Sporting KC vs Austin", "2026-10-25T19:30:00-05:00"), [stored], {})).toBeUndefined();
+    expect(findMatch(game("Sporting KC vs Austin", undefined, { venue: "Legends Field" }), [stored], {})).toBeUndefined();
+    const studio = { primaryUrl: "https://studio.test/classes", venue: "Clay Studio", kind: "arts", recurrence: "one-off" as const, start: "2026-10-24T18:00:00-05:00" };
+    expect(findMatch({ ...studio, title: "Pottery vs Painting" }, [{ ...studio, title: "Painting vs Pottery" }], {})).toBeUndefined();
+  });
+
+  it("never matches a recurring record or a limited run", () => {
+    expect(findMatch(game("Sporting KC vs Austin"), [game("Sporting Kansas City vs. Austin FC", undefined, { recurrence: "limited-run" })], {})).toBeUndefined();
+    expect(findMatch(game("Sporting KC vs Austin", undefined, { recurrence: "recurring" }), [game("Sporting Kansas City vs. Austin FC")], {})).toBeUndefined();
+  });
+});
