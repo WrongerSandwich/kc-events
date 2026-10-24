@@ -97,6 +97,23 @@ export function detailsUrl(e: PublishedEvent): string {
   return e.eventUrl ?? e.primaryUrl;
 }
 
+/**
+ * What the event page's main link says: "Tickets at host" when the own page gave a price to pay, else "Details at host",
+ * so a free art walk, or an event whose price the job never read, does not promise a ticket.
+ */
+export function detailsLabel(e: PublishedEvent): string {
+  const paid = e.price !== undefined && !/\bfree\b/i.test(e.price);
+  return `${paid ? "Tickets" : "Details"} at ${hostOf(detailsUrl(e))}`;
+}
+
+/** What on the event page a model wrote, as the verified line owns up to it; undefined when the page has neither. */
+export function modelNote(whyLine: string | undefined, description: string | undefined): string | undefined {
+  if (whyLine && description) return "The reason and description are written by a model.";
+  if (whyLine) return "The reason is written by a model.";
+  if (description) return "The description is written by a model.";
+  return undefined;
+}
+
 /** What it costs and who may go, as the event's own page stated them ("Free · All ages"); undefined when it stated neither. */
 export function admissionLine(e: PublishedEvent): string | undefined {
   const line = [e.price, e.ages].filter((s) => s !== undefined).join(" · ");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { admissionLine, daysSaid, firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, neighborhoodShown, venueLine } from "../src/lib/events";
+import { admissionLine, detailsLabel, modelNote, daysSaid, firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, neighborhoodShown, venueLine } from "../src/lib/events";
 import { event } from "./fixtures/event";
 
 describe("venueLine", () => {
@@ -76,6 +76,25 @@ describe("detailsUrl", () => {
   it("is the event's own page when the job found one, else the primary page", () => {
     expect(detailsUrl(event({ eventUrl: "https://www.therecordbar.com/shows/a-show" }))).toBe("https://www.therecordbar.com/shows/a-show");
     expect(detailsUrl(event())).toBe("https://www.therecordbar.com/shows");
+  });
+});
+
+describe("detailsLabel", () => {
+  it("promises tickets only when the own page gave a price to pay", () => {
+    expect(detailsLabel(event({ eventUrl: "https://www.therecordbar.com/shows/a-show", price: "$25–$45" }))).toBe("Tickets at therecordbar.com");
+    expect(detailsLabel(event({ price: "Pay what you can" }))).toBe("Tickets at therecordbar.com");
+    expect(detailsLabel(event({ price: "Free" }))).toBe("Details at therecordbar.com");
+    expect(detailsLabel(event({ price: "Free with museum admission" }))).toBe("Details at therecordbar.com");
+    expect(detailsLabel(event())).toBe("Details at therecordbar.com");
+  });
+});
+
+describe("modelNote", () => {
+  it("owns up to what the page has a model's words for, and only that", () => {
+    expect(modelNote("A reason", "A description")).toBe("The reason and description are written by a model.");
+    expect(modelNote("A reason", undefined)).toBe("The reason is written by a model.");
+    expect(modelNote(undefined, "A description")).toBe("The description is written by a model.");
+    expect(modelNote(undefined, undefined)).toBeUndefined();
   });
 });
 
