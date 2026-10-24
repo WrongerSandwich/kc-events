@@ -157,10 +157,23 @@ describe("built output", () => {
       }
     });
 
-    it("offers the picks' feed by https address beside webcal, and Google Calendar beside Add to calendar (#188)", () => {
+    it("offers the picks' feed by https address beside webcal, and Google Calendar as Add to calendar's second way (#188)", () => {
       for (const page of ["index.html", "about.html"]) expect(read(page), page).toContain("Google Calendar (Other calendars, then From URL)");
       const dated = events.find(isDated)!;
-      expect(read(`e/${dated.id}.html`)).toMatch(/<a class="control[^"]*" href="https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&amp;[^"]+" rel="nofollow"[^>]*>Google Calendar<\/a>/);
+      expect(read(`e/${dated.id}.html`)).toMatch(/<a href="https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&amp;[^"]+" rel="nofollow"[^>]*>Google Calendar<\/a>/);
+    });
+
+    it("ends an event page on three rows of its kind still ahead, picks first, and a way to the kind's page", () => {
+      const ahead = (e: (typeof events)[number]) => isDated(e) && e.start !== undefined && e.start.slice(0, 10) >= meta.buildToday;
+      const page = events.find((e) => events.filter((o) => o.id !== e.id && o.kind === e.kind && ahead(o)).length > 3)!;
+      const html = read(`e/${page.id}.html`);
+      const rows = [...html.matchAll(/<li[^>]*><a href="\/e\/(evt_[0-9a-f]+)"/g)].map((m) => m[1]!);
+      expect(rows).toHaveLength(3);
+      const shown = rows.map((id) => events.find((e) => e.id === id)!);
+      for (const e of shown) expect(e.kind).toBe(page.kind);
+      // A pick never sits under a non-pick.
+      expect(shown.map((e) => e.dontMiss)).toEqual([...shown.map((e) => e.dontMiss)].sort((a, b) => Number(b) - Number(a)));
+      expect(html).toContain(`href="/k/${slugify(page.kind)}"`);
     });
 
     it("writes llms.txt's sections and its cite line (#188)", () => {

@@ -12,11 +12,11 @@ import { descriptions } from "../../generated/descriptions";
 import { venues } from "../../generated/venues";
 import { venueNamed, venuePath } from "../../lib/venues";
 import { meta } from "../../generated/meta";
-import { formatDay, formatShort, localDate } from "../../lib/dates";
+import { formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd, eventPageTitle } from "../../lib/event-meta";
 import { breadcrumbJsonLd, kindName, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
-import { admissionLine, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, neighborhoodLine, neighborhoodShown, venueLine, verifiedLabel } from "../../lib/events";
+import { admissionLine, detailsLabel, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, modelNote, neighborhoodLine, neighborhoodShown, venueLine, verifiedLabel } from "../../lib/events";
 import ReportForm from "../../components/ReportForm.astro";
 import { googleCalendarUrl, locatedForCalendar } from "../../lib/ics";
 import { siteConfig } from "../../site.config";
@@ -33,19 +33,24 @@ const metaDescription = eventDescription(event, meta.buildToday, description);
 // The reader lands on the event's own page when the job found one; the verified line still names the list it was read from.
 const details = detailsUrl(event);
 const report = { title: event.title, event: `${origin}/e/${event.id}`, primaryUrl: event.primaryUrl, ...(event.eventUrl && { eventUrl: event.eventUrl }) };
-const moreLikeThis = events
+// Three of the kind still ahead, the picks first, then by day: a short list that hands off to the kind's page reads as
+// chosen, where a long one reads as an aggregator's filler.
+const sameKind = events
   .filter((e) => e.id !== event.id && e.kind === event.kind && hasStartDay(e) && firstDay(e)! >= meta.buildToday)
-  .sort((a, b) => firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title))
-  .slice(0, 5);
+  .sort((a, b) => Number(b.dontMiss) - Number(a.dontMiss) || firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title));
+const moreLikeThis = sameKind.slice(0, 3);
 const admission = admissionLine(event);
+const written = modelNote(event.whyLine, description);
 const venue = venueNamed(venues, event.venue);
 const eventLd = eventJsonLd(event, { origin, today: meta.buildToday, description, image: shareImage.url, ...(venue !== undefined && { venue }) });
 const jsonLd = [...(eventLd === undefined ? [] : [eventLd]), breadcrumbJsonLd(event, origin)];
-// Google Calendar on Android opens no .ics, so its template link sits beside the download (#188); nothing is sent until tapped.
+// Google Calendar on Android opens no .ics, so its template link is the second way in Add to calendar (#188).
 const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, event), siteConfig.name) : undefined;
 ---
 <Base title={eventPageTitle(event, events)} description={metaDescription} jsonLd={jsonLd}>
   <article class={`event kind-${slugify(event.kind)}`}>
+    {/* Shown and filled by the island once the visitor's day is past the event's last; see EventPageIsland. */}
+    <div class="passed" hidden><p role="status"></p><a class="control go" href="/explore">See what's on this week</a></div>
     <header class:list={["head", { dated: isDated(event) }]}>
       {/* The same tile as the front page's card, by the same view-transition name, so one glides into the other. */}
       {isDated(event) && <DateTile tile={dateTile(event, meta.buildToday)} id={event.id} large />}
@@ -61,24 +66,38 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
     </header>
     {event.whyLine && <p class="why">{event.whyLine}</p>}
     {description && <p class="about">{description}</p>}
-    <p class="primary"><a href={details}>Details and tickets at {hostOf(details)}</a></p>
+    {/* The one filled control: going, or buying, is what a visitor from a shared link came for. The rest sit quiet under it. */}
+    <p class="primary"><a class="control go" href={details}><UiIcon name={detailsLabel(event).startsWith("Tickets") ? "ticket" : "link"} />{detailsLabel(event)}</a></p>
     <div class="actions">
-      <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} shareText={`${line} · ${venueLine(event)}`} />
-      {isDated(event) && <a class="control" href={`/e/${event.id}.ics`} download><UiIcon name="calendar-plus" />Add to calendar</a>}
-      {google !== undefined && <a class="control" href={google} rel="nofollow">Google Calendar</a>}
+      <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} shareText={`${line} · ${venueLine(event)}`} ics={isDated(event) ? `/e/${event.id}.ics` : undefined} google={google} />
     </div>
-    <p class="verified">{verifiedLabel(event)} {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.{(event.whyLine || description) && " The reason and description are written by a model."}</p>
+    <p class="verified">{verifiedLabel(event)} {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.{written && ` ${written}`}</p>
     <ReportForm context={report} summary="Wrong? Report it" />
   </article>
 
   {moreLikeThis.length > 0 && (
-    <section aria-labelledby="more">
+    <section aria-labelledby="more" class={`kind-${slugify(event.kind)}`}>
       <h2 id="more" class="section-heading">More {kindName(event.kind).toLowerCase()}</h2>
-      <ul>
-        {moreLikeThis.map((e) => (
-          <li><a href={`/e/${e.id}`}>{e.title}</a> <span>{formatDay(firstDay(e)!)} · {venueLine(e)}</span></li>
-        ))}
+      <ul class="more">
+        {moreLikeThis.map((e) => {
+          const tile = dateTile(e, meta.buildToday);
+          return (
+            <li>
+              {/* The whole row is the link, its tile in the kind's tint as on a card; it glides into that page's tile. */}
+              <a href={`/e/${e.id}`}>
+                <DateTile tile={tile} id={e.id} />
+                <span class="row">
+                  <span class="title">{e.title}<span class="visually-hidden">, {tile.label}</span></span>
+                  {/* The tag leads the when-and-where line, as on an explorer row's date line, rather than a column of pills. */}
+                  <span class="meta">{e.dontMiss && <span class="dont-miss">Don't miss</span>}{[tile.detail, venueLine(e)].filter(Boolean).join(" · ")}</span>
+                </span>
+              </a>
+            </li>
+          );
+        })}
       </ul>
+      {/* No count: the kind's page lists by its own rule (runs on now too), so a number here could disagree with it. */}
+      <p class="all"><a href={kindPath(event.kind)}>All {kindName(event.kind).toLowerCase()}<UiIcon name="chevron-right" /></a></p>
     </section>
   )}
 </Base>
@@ -94,17 +113,53 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   /* Wraps: beside the tile at 320 px, "outdoors/community" and the Don't miss tag together are wider than the column (audit 2026-10-21, A2). */
   .kind { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0; }
   h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: var(--space-2) 0; }
-  .date { font-size: var(--text-lg); margin: 0; }
+  /* When is the first answer, so the date line is the heaviest line under the title. */
+  .date { font-size: var(--text-lg); font-weight: var(--weight-medium); margin: 0; }
   .where, .admission { color: var(--fg-muted); margin: 0; }
   /* The venue's page; underlined, since the neighborhood follows it on the line (axe link-in-text-block). */
   .where a { color: inherit; text-decoration: underline; }
   /* In ink, as on a pick's card and an explorer row: the reason is what the site adds (#184). */
   .why { margin: 0 0 var(--space-4); font-size: var(--text-lg); max-width: 38rem; }
   .about { margin: 0 0 var(--space-4); max-width: 38rem; }
-  .primary { font-size: var(--text-lg); margin: 0 0 var(--space-4); }
-  .actions { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin-bottom: var(--space-6); }
+  .primary { margin: 0 0 var(--space-2); }
+  /* The accent fill, as a pressed control has; a phone gives it the column's width. */
+  .go { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); font-size: var(--text-md); }
+  .go:hover { color: var(--accent-fg); border-color: var(--accent); opacity: 0.88; }
+  @media (max-width: 30rem) { .go { display: flex; width: 100%; } }
+  /* Save, Share and Add to calendar as on a card (#233): no box until hovered, in the muted ink, the first one's icon
+     lined up with the main control's left edge; Add to calendar's menu opens under the row, from that edge. A saved Save takes the kind's tint rather than the accent, so a choice
+     already made never outweighs the way to go. */
+  .actions { position: relative; display: flex; flex-wrap: wrap; align-items: center; margin: 0 0 var(--space-6) calc(-1 * var(--space-3)); }
+  .actions :global(.control) { background: none; border-color: transparent; color: var(--fg-muted); }
+  .actions :global(.control:hover), .actions :global(details[open] > .control) { color: var(--fg); background: var(--hue-tint); border-color: transparent; }
+  .actions :global(.control[aria-pressed="true"]) { color: var(--fg); background: var(--hue-tint); }
+  /* Once it has passed (EventPageIsland shows .passed): the tile greys, and there is nothing left to go to or put in a calendar. */
+  .event:has(.passed:not([hidden])) :global(.tile) { background: none; color: var(--fg-muted); box-shadow: inset 0 0 0 1px var(--rule); }
+  .event:has(.passed:not([hidden])) .primary, .event:has(.passed:not([hidden])) :global(.calendar) { display: none; }
+  .passed {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3);
+    margin-bottom: var(--space-6); padding: var(--space-3) var(--space-4);
+    background: var(--bg-raised); border: 1px solid var(--rule); border-radius: var(--radius);
+  }
+  .passed[hidden] { display: none; }
+  .passed p { margin: 0; }
+  /* Under the title, not level with it: the page's h1 is --text-2xl, as a section heading is on the front page. */
+  #more { font-size: var(--text-xl); }
   .verified { font-size: var(--text-xs); color: var(--fg-faint); }
-  ul { list-style: none; padding: 0; } li { padding: var(--space-1) 0; } li span { font-size: var(--text-xs); color: var(--fg-faint); }
-  /* A link followed by text on the same line must not rely on colour alone (axe link-in-text-block). */
-  li a { text-decoration: underline; }
+  /* Rows as the site's own lists draw them, not an aggregator's link list: tile, title, then when and where, no underline. */
+  .more { list-style: none; padding: 0; margin: var(--space-3) 0 0; }
+  .more a {
+    display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); column-gap: var(--space-3); align-items: center;
+    margin-inline: calc(-1 * var(--space-2)); padding: var(--space-2); border-radius: var(--radius);
+    color: var(--fg); text-decoration: none;
+  }
+  .more a:hover { background: var(--hue-tint); }
+  .more a:hover .title { text-decoration: underline; }
+  .row { display: grid; gap: 2px; }
+  .title { font-weight: var(--weight-medium); line-height: var(--leading-tight); }
+  .meta { font-size: var(--text-sm); color: var(--fg-muted); }
+  .meta .dont-miss { margin-right: var(--space-2); }
+  .all { margin: var(--space-2) 0 0; }
+  .all a { display: inline-flex; align-items: center; gap: 0.2em; min-height: var(--tap); color: var(--fg); font-weight: var(--weight-medium); text-decoration: none; }
+  .all a:hover { text-decoration: underline; }
 </style>

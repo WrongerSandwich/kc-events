@@ -523,7 +523,7 @@ test("an event page says don't miss in the explorer's words and case", async ({ 
 
 test("the site's page for an event sends the reader to the event's own page and names the list it was verified from", async ({ page }) => {
   await on(page, BUILD_DAY, "/e/evt_e2e000000001");
-  await expect(page.getByRole("link", { name: "Details and tickets at tickets.example.com" })).toHaveAttribute("href", "https://tickets.example.com/frizzi");
+  await expect(page.getByRole("link", { name: "Tickets at tickets.example.com" })).toHaveAttribute("href", "https://tickets.example.com/frizzi");
   const verified = page.locator(".verified");
   await expect(verified).toContainText("Date and venue verified Oct 3 from the list at example.com. The reason and description are written by a model.");
   await expect(verified.getByRole("link", { name: "the list at example.com" })).toHaveAttribute("href", "https://example.com/recordbar/frizzi");
@@ -553,7 +553,7 @@ test("the price and age limit an own page gave show on the card and the event pa
 
 test("an event with no page of its own links its primary page and says so", async ({ page }) => {
   await on(page, BUILD_DAY, "/e/evt_e2e000000002");
-  await expect(page.getByRole("link", { name: "Details and tickets at example.com" })).toHaveAttribute("href", "https://example.com/westport/comedy");
+  await expect(page.getByRole("link", { name: "Details at example.com" })).toHaveAttribute("href", "https://example.com/westport/comedy");
   await expect(page.locator(".verified")).toContainText("verified Oct 3 from the page linked above.");
 });
 
@@ -747,7 +747,8 @@ test("an event page exists, downloads a calendar, and knows when it has passed",
   // Playwright's text assertions skip <script> contents, so read the JSON-LD as text.
   expect(await page.locator('script[type="application/ld+json"]').first().textContent()).toContain('"@type":"Event"');
   const download = page.waitForEvent("download");
-  await page.getByRole("link", { name: "Add to calendar" }).click();
+  await page.locator("summary", { hasText: "Add to calendar" }).click();
+  await page.getByRole("link", { name: "Apple, Outlook and others (.ics)" }).click();
   const file = await download;
   expect(file.suggestedFilename()).toBe("evt_e2e000000001.ics");
   const ics = readFileSync((await file.path())!, "utf8");
@@ -756,6 +757,10 @@ test("an event page exists, downloads a calendar, and knows when it has passed",
   await expect(page.getByRole("status")).toHaveCount(0);
   await on(page, new Date("2026-10-12T17:00:00Z"), "/e/evt_e2e000000001");
   await expect(page.getByRole("status")).toContainText("This has already happened");
+  // Gone: the week instead of tickets, and nothing to put in a calendar.
+  await expect(page.getByRole("link", { name: "See what's on this week" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Tickets at tickets.example.com" })).toBeHidden();
+  await expect(page.locator("summary", { hasText: "Add to calendar" })).toBeHidden();
 });
 
 test("a past event has no page, and the 404 renders", async ({ page }) => {
