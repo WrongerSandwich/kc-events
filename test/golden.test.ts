@@ -17,8 +17,7 @@ import { candidateAt, PAGE, reply, source, WEEK_1, WEEK_2, WEEK_3 } from "./fake
  * week 3); Recordbar's calendar redirects to its events page; the Midland's page is down in week 2 and back
  * in week 3. Discovery finds a promoter's page in week 1 (held for promotion; `promoter` is not in the
  * registry, only what candidateAt cites), and curation flags one show, whose own page is read for its price
- * and age limit in week 1 and kept from that read after (#133). Each registry page is read twice (#224), the
- * two reads alike but in week 2, when Knuckleheads' first read misses Season Closer and its second covers it.
+ * and age limit in week 1 and kept from that read after (#133). Each registry page is read twice (#224), alike.
  */
 const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms" });
 const recordbar = source("Recordbar", { neighborhood: "Crossroads" });
@@ -115,7 +114,7 @@ describe("golden three-week scenario", () => {
 
     const week2 = await weekly(WEEK_2, week1.dataset, {
       pages: calendars(new Error("connect ECONNREFUSED")),
-      completions: [reply(bigShow), reply(bigShow, closer), reply(lateSet), reply(lateSet)],
+      completions: [reply(bigShow, closer), reply(bigShow, closer), reply(lateSet), reply(lateSet)],
     });
     await pin(2, week2);
 

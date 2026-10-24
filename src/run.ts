@@ -538,6 +538,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     outcome.problems.push(...counted.problems);
     for (const read of reads) if (read !== counted) outcome.problems.push(...read.problems.filter((p) => !counted.problems.includes(p)));
     for (const { read, error } of failures) outcome.problems.push(`the ${read === 0 ? "first" : "second"} read of ${page.finalUrl} failed: ${failedBecause(error)}`);
+    // Only when both calls came back are these the first and second reads in call order.
     const [first, second] = reads;
     if (first?.sightings && second?.sightings) outcome.secondReadAdded = (outcome.secondReadAdded ?? 0) + addedBy(second.sightings, first.sightings);
   }
@@ -547,7 +548,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
 
 const failedBecause = (error: unknown) => (error instanceof SpendCapReached ? "spend cap reached" : modelFailed(error));
 
-/** A sighting's identity within one page, as the model comparison counts it: its title and first day, or "recurring". */
+/** A sighting's identity within one page: its title and first day, or "recurring". */
 const pageIdentity = (s: Sighting) => `${comparable(s.event.title)}|${s.event.recurrence === "recurring" ? "recurring" : (calendarDate(s.event.start) ?? "")}`;
 
 /** How many identities the later read of a page has that the earlier does not. */

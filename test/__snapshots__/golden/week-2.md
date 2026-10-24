@@ -47,7 +47,7 @@ Started 2026-10-09T22:15:00-05:00, finished 2026-10-09T22:15:00-05:00. Horizon 8
 
 | Source | Result | Extracted | Detail |
 | --- | --- | ---: | --- |
-| Knuckleheads | fetched | 1 | the second read added 1 |
+| Knuckleheads | fetched | 2 | the second read added 0 |
 | Recordbar | fetched | 1 | the second read added 0 |
 | Midland | failed | 0 | https://midland.test/calendar: connect ECONNREFUSED |
 
