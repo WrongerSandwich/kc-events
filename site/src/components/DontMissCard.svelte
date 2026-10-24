@@ -70,9 +70,16 @@
   /* Save over Add to calendar, in a column beside the words, both the column's width. The column keeps Save's room
      and stacks from its foot, so Add to calendar stays put when Save mounts above it. */
   .actions { display: flex; flex-direction: column; justify-content: flex-end; gap: var(--space-2); min-height: calc(2 * var(--tap) + var(--space-2)); }
-  /* Phones: the title gets the width beside the tile, and Save and Add to calendar sit in a row under the words. */
+  /* On a card the controls are quiet: no box until hovered, in the muted ink, so the title and the why line carry the
+     card and five cards are not ten buttons. The tap target stays 44 px; a saved Save still fills with the accent. */
+  .actions :global(.control:not([aria-pressed="true"])) { background: none; border-color: transparent; color: var(--fg-muted); }
+  /* Without a box, a centred word floats: each starts at the column's edge, so the two icons line up. */
+  .actions :global(.control) { justify-content: flex-start; }
+  .actions :global(.control:not([aria-pressed="true"]):hover) { color: var(--fg); background: var(--hue-tint); }
+  /* Phones: the title gets the width beside the tile, and Save and Add to calendar sit in a row under the words, the
+     first one's icon lined up with the words' left edge. */
   @media (max-width: 30rem) {
     .card { grid-template-columns: 3.5rem minmax(0, 1fr); column-gap: var(--space-3); }
-    .actions { grid-column: 2; flex-direction: row; flex-wrap: wrap; justify-content: flex-start; min-height: var(--tap); margin-top: var(--space-3); }
+    .actions { grid-column: 2; flex-direction: row; flex-wrap: wrap; justify-content: flex-start; gap: 0; min-height: var(--tap); margin: var(--space-1) 0 0 calc(-1 * var(--space-3)); }
   }
 </style>

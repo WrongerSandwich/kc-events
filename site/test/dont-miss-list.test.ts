@@ -59,7 +59,7 @@ describe("DontMissList", () => {
     expect(within(sections[0]!).getByText("Why A.")).toBeInTheDocument();
     // The tile is visual; the full date is in words for screen readers.
     expect(within(sections[0]!).getByText("On now, closes Sun Oct 11.")).toBeInTheDocument();
-    expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("2 music1 art/exhibitions");
+    expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("All 3 2 music1 art/exhibitions");
     // The next two weeks are the later list's one-line rows (#184): no cards, no kind chips.
     expect(within(sections[1]!).queryAllByRole("article")).toEqual([]);
     expect(within(sections[1]!).queryByRole("list", { name: "Picks by kind" })).toBeNull();
@@ -168,6 +168,18 @@ describe("DontMissList", () => {
       await tick();
       expect(art).toHaveAttribute("aria-pressed", "false");
       expect(titles(week!)).toEqual(["Closing run", "Tuesday show", "Wednesday show"]);
+
+      // All is pressed whenever no kind is, and lets go of one that is.
+      const all = within(week!).getByRole("button", { name: "All 3" });
+      expect(all).toHaveAttribute("aria-pressed", "true");
+      music.click();
+      await tick();
+      expect(all).toHaveAttribute("aria-pressed", "false");
+      all.click();
+      await tick();
+      expect(all).toHaveAttribute("aria-pressed", "true");
+      expect(music).toHaveAttribute("aria-pressed", "false");
+      expect(titles(week!)).toEqual(["Closing run", "Tuesday show", "Wednesday show"]);
     });
 
     it("moves the cards by a view transition where the browser has one, and filters the same where it has none", async () => {
@@ -240,12 +252,13 @@ describe("DontMissList", () => {
         const chips = target.querySelector("section .kinds")!;
         expect(chips.querySelectorAll("button")).toHaveLength(0);
         expect([...chips.querySelectorAll("a")].map((a) => a.getAttribute("href"))).toEqual([
+          "/explore?when=weekend&picks=1",
           "/explore?when=weekend&kind=music&picks=1",
           "/explore?when=weekend&kind=art-exhibitions&picks=1",
         ]);
         flushSync();
         expect(chips.querySelectorAll("a")).toHaveLength(0);
-        expect(chips.querySelectorAll("button[aria-pressed]")).toHaveLength(2);
+        expect(chips.querySelectorAll("button[aria-pressed]")).toHaveLength(3);
       } finally {
         unmount(component);
         target.remove();

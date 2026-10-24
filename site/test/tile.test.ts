@@ -22,9 +22,11 @@ describe("dateTile", () => {
   it("shows a multi-day one-off underway by today, the day the explorer lists it under", () => {
     const fair = event({ start: "2026-10-09", end: "2026-10-11" });
     expect(dateTile(fair, "2026-10-10")).toEqual({ top: "Sat", day: "10", month: "Oct", detail: "Through Sun Oct 11", label: "Sat Oct 10 through Sun Oct 11" });
+    // On its last day the tile shows the day, so the line says so rather than "through" the same date.
+    expect(dateTile(fair, "2026-10-11")).toEqual({ top: "Sun", day: "11", month: "Oct", detail: "Last day", label: "Sun Oct 11, the last day" });
     const comedy = event({ start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" });
     expect(dateTile(comedy, "2026-10-10", "2026-10-10T12:00")).toEqual({
-      top: "Today", day: "10", month: "Oct", today: true, detail: "8:30 pm · through Sat Oct 10", label: "Today, 8:30 pm, through Sat Oct 10",
+      top: "Today", day: "10", month: "Oct", today: true, detail: "8:30 pm · last day", label: "Today, 8:30 pm, the last day",
     });
   });
 
