@@ -246,10 +246,10 @@ describe("measureSetups", () => {
     expect(pair).toMatchObject({ verified: 1, madeUnverified: 0, unsighted: 1 });
   });
 
-  it("counts as churn a second record of one title that two reads date two ways", () => {
+  it("does not count as churn a second record of one title on another day, as a play stored night by night has (#228)", () => {
     const trials = [read("a", 0, [seen("Beta", { start: "2026-11-02T20:00:00-05:00" })]), read("b", 0, [seen("Beta", { start: "2026-11-20T20:00:00-05:00" })])];
     const [pair] = measure([{ label: "a + b", models: ["a", "b"] }], trials);
-    expect(pair).toMatchObject({ verified: 1, newRecords: 1, churn: 1 });
+    expect(pair).toMatchObject({ verified: 1, newRecords: 1, churn: 0 });
   });
 
   it("counts a stored record a reading retitled, which only the first read of a page can do", () => {

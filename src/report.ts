@@ -194,9 +194,17 @@ export interface RunReport {
   skippedAsExpired: (EventRef & { reason: SkipReason })[];
   /** Events whose title or primary page changed this run, as they are now and as they were (#82): a flap shows here the week it happens. */
   identityChurn: (EventRef & { was: EventRef })[];
+  /**
+   * Pairs of active records, after the fold, that are likely one event no identity rule joined (#228;
+   * `likelyDuplicate`), for a person to check. The run changes neither record.
+   */
+  likelyDuplicates: { a: LikelyDuplicateRecord; b: LikelyDuplicateRecord }[];
   /** What changed on the site this run, for its changes page (#135; runChanges). Absent in reports before it. */
   changes?: RunChanges;
 }
+
+/** One record of a likely duplicate pair: its first and last calendar days, none for a recurring record, and no last for one day. */
+export type LikelyDuplicateRecord = ChangeRef & { firstDay?: string; lastDay?: string };
 
 /** An event in the changes section: its id, for the site to find it by, and what the Markdown lists. */
 export type ChangeRef = EventRef & { id: string };
@@ -225,6 +233,7 @@ const flagSince = z.boolean().default(false);
 const listSince = <T extends z.ZodType>(item: T) => z.array(item).default([]);
 const eventRef = z.strictObject({ title: z.string(), primaryUrl: z.string() });
 const changeRef = eventRef.extend({ id: z.string() });
+const likelyDuplicateRecord = changeRef.extend({ firstDay: z.iso.date().optional(), lastDay: z.iso.date().optional() });
 const hostEvents = z.strictObject({ host: z.string(), events: count });
 const servedBy = z.strictObject({ model: z.string(), provider: z.string().optional(), generationId: z.string() });
 
@@ -316,6 +325,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   cancellationsFromElsewhere: listSince(eventRef.extend({ reportedBy: z.string() })),
   skippedAsExpired: listSince(eventRef.extend({ reason: z.enum(SKIP_REASONS) })),
   identityChurn: listSince(eventRef.extend({ was: eventRef })),
+  likelyDuplicates: listSince(z.strictObject({ a: likelyDuplicateRecord, b: likelyDuplicateRecord })),
   changes: z
     .strictObject({
       comparedWith: z.iso.datetime({ offset: true }).nullable(),
@@ -454,6 +464,10 @@ ${markdownList(report.skippedAsExpired.map((e) => `${e.title}: ${e.primaryUrl} (
 
 ${markdownList(report.identityChurn.map((c) => `${c.was.title} (${c.was.primaryUrl}) is now ${c.title} (${c.primaryUrl})`))}
 
+## Likely duplicates
+
+${markdownList(report.likelyDuplicates.map(({ a, b }) => `${likelyDuplicateLine(a)} and ${likelyDuplicateLine(b)}`))}
+
 ## Held for promotion
 
 ${markdownList([
@@ -496,6 +510,12 @@ function unmappableSection(inCatchAll: RunReport["unmappableNeighborhoods"]): st
   ];
   const total = `In the catch-all as the run ends: ${plural(inCatchAll.length, "event")}, ${ofThem} of them in an earlier report.`;
   return lines.length === 0 ? total : `${total}\n\n${markdownList(lines)}`;
+}
+
+/** A record of a likely duplicate pair as the Markdown shows it: title, then id, days and primary page. */
+function likelyDuplicateLine(r: LikelyDuplicateRecord): string {
+  const days = r.firstDay === undefined ? "recurring" : r.lastDay === undefined ? r.firstDay : `${r.firstDay} to ${r.lastDay}`;
+  return `${r.title} (${r.id}, ${days}, ${r.primaryUrl})`;
 }
 
 function eventList(events: EventRef[]): string {

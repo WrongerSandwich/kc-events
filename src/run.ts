@@ -60,7 +60,8 @@ import {
 import { listingOf, type ExcludedSource, type Registry, type Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
-import type { CandidateTally, EventRef, OwnPagesReport, RunReport, SourceReport } from "./report.js";
+import type { CandidateTally, EventRef, LikelyDuplicateRecord, OwnPagesReport, RunReport, SourceReport } from "./report.js";
+import { likelyDuplicatePairs } from "./likely-duplicates.js";
 import { awayGame, SKIP_REASONS, skipReason, type SkipReason } from "./skip.js";
 import { deriveRecurrence } from "./recurrence.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
@@ -235,6 +236,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     cancellationsFromElsewhere: merged.cancellationsFromElsewhere,
     skippedAsExpired: merged.skippedAsExpired,
     identityChurn: identityChurn(dataset.events, events),
+    likelyDuplicates: likelyDuplicatesOf(events, config.venueAliases),
     changes: runChanges(dataset.events, events, dataset.lastSuccessfulRun, today),
   };
 
@@ -263,6 +265,16 @@ function couldHaveSighted(event: Event, attempts: PageAttempts, registry: Regist
   const key = pageKey(event.primaryUrl);
   const excluded = registry.sources.some((s) => s.name === lead.source && s.status === "excluded");
   return !excluded && !attempts.outages.has(key) && !attempts.unread.has(key);
+}
+
+/** The pairs of active records likely one event (#228), each with its days, for the report; the records are left as they are. */
+function likelyDuplicatesOf(events: Event[], aliases: VenueAliases): RunReport["likelyDuplicates"] {
+  const record = (e: Event): LikelyDuplicateRecord => {
+    const [firstDay, lastDay] = [calendarDate(e.start), calendarDate(e.end)];
+    return { id: e.id, ...titleAndUrl(e), ...(firstDay !== undefined ? { firstDay } : {}), ...(lastDay !== undefined && lastDay !== firstDay ? { lastDay } : {}) };
+  };
+  const active = events.filter((e) => e.status === "active");
+  return likelyDuplicatePairs(active, aliases).map(([a, b]) => ({ a: record(a), b: record(b) }));
 }
 
 /** Every event whose title or primary page differs from what the run started with, now and before (#82). */

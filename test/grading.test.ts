@@ -30,6 +30,7 @@ function report(overrides: Partial<RunReport> = {}): RunReport {
     cancellationsFromElsewhere: [],
     skippedAsExpired: [],
     identityChurn: [],
+    likelyDuplicates: [],
     ...overrides,
   };
 }

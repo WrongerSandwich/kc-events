@@ -13,7 +13,8 @@
 import type { Event, Weekday } from "./dataset.js";
 import { comparable, type ExtractionContext, type Sighting } from "./extraction.js";
 import { pageKey } from "./hosts.js";
-import { sameName } from "./identity.js";
+import { sameName, type VenueAliases } from "./identity.js";
+import { likelyDuplicate } from "./likely-duplicates.js";
 import { foldDuplicates, mergeSightings } from "./run.js";
 
 /** One event as a trial read it: the fields scored, kept small so a comparison's trials fit in one file. */
@@ -492,27 +493,17 @@ function draws({ models }: ReadSetup, trials: Trial[]): Read[][] {
 }
 
 const samePageKey = (a: { primaryUrl: string }, b: { primaryUrl: string }) => pageKey(a.primaryUrl) === pageKey(b.primaryUrl);
-const firstDay = (e: Event) => (e.recurrence === "recurring" ? "recurring" : day(e.start));
-
 /**
- * A new record is churn when another standing record on its page is likely the same event: on the same
- * day (or both recurring) under a title one of the two contains ("Endrid" and "Endrid, Poets Mortis, …"),
- * or under the same title on another day (a date read two ways, which the merge keeps as a second night
- * when the page's other reading lists the first). Two shows of one night under different names are
- * not. A page that really lists a show on two nights counts too, so a set-up's churn is read against
- * the one-read set-ups'. The other record is a stored one or a new one started before it, so of two
- * new records of one event only the second counts.
+ * A new record is churn when a standing record is likely the same event (`likelyDuplicate`, #228): on
+ * its page or at its venue, on the same day (or both recurring) under a title one of the two contains
+ * ("Endrid" and "Endrid, Poets Mortis, …"), or under the same title with one's span taking in the
+ * other's first day. Two shows of one night under different names are not, nor two nights of one
+ * show. The other record is a stored one or a new one started before it, so of two new records of
+ * one event only the second counts.
  */
-function isChurn(record: Event, standing: Event[], storedIds: Set<string>): boolean {
-  const title = comparable(record.title);
-  if (title === "") return false;
+function isChurn(record: Event, standing: Event[], storedIds: Set<string>, aliases: VenueAliases): boolean {
   const earlier = standing.slice(0, standing.indexOf(record));
-  return standing.some((other) => {
-    if (other.id === record.id || !(storedIds.has(other.id) || earlier.includes(other)) || !samePageKey(other, record)) return false;
-    const otherTitle = comparable(other.title);
-    if (otherTitle === title) return true;
-    return firstDay(other) === firstDay(record) && otherTitle !== "" && (otherTitle.includes(title) || title.includes(otherTitle));
-  });
+  return standing.some((other) => other.id !== record.id && (storedIds.has(other.id) || earlier.includes(other)) && likelyDuplicate(other, record, aliases));
 }
 
 /** A saved sighting as the run made it, with its page's quotable text again (the inverse of `trialSighting`). */
@@ -560,7 +551,7 @@ function measureDraw(reads: Read[], trials: Trial[], dataset: Event[], storedOn:
     retitled: storedOn.filter((e) => !sameName(e.title, after.get(e.id)?.title)).length,
     newRecords: created.length,
     folded: [...folded.foldedInto.keys()].filter((id) => !storedIds.has(id)).length,
-    churn: created.filter((e) => isChurn(e, standing, storedIds)).length,
+    churn: created.filter((e) => isChurn(e, standing, storedIds, context.config.venueAliases)).length,
     costUsd,
     serialMinutes: serialMs / 60_000,
     parallelMinutes: parallelMs / 60_000,
@@ -618,7 +609,7 @@ export function renderSetups(scores: SetupScore[]): string {
   lines.push(
     "",
     "- **Verified**: the share of the stored records read verified. **Kept on stored citation**: held only on a quote, kept on the stored one (#124, #220). **Made unverified**: hidden by an own-page reading that cited nothing usable. **Unsighted**: no reading found it, so it takes a strike. **Retitled**: given another title by a reading.",
-    "- **New records**: what the readings started, after the fold. **Churn**: of those, the ones beside an earlier record of the same page under the same title on another day, or on the same day under a title one of the two contains: likely an event under a second identity (a page listing a show on two nights counts too, so read it against the one-read set-ups). **Folded**: new records the fold caught.",
+    "- **New records**: what the readings started, after the fold. **Churn**: of those, the ones beside an earlier record of the same page or venue that the run report would list as a likely duplicate (#228): on the same day under a title one of the two contains, or under the same title with one's span taking in the other's first day; likely an event under a second identity. **Folded**: new records the fold caught.",
     "- **Retitled** includes the title rules' own clean-ups of stored titles (a venue or presenter dropped, #217), which every set-up makes alike.",
     "- **Minutes**: model time for the extraction calls alone; the run reads pages one after the other.",
     "",

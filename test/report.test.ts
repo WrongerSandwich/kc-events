@@ -87,6 +87,16 @@ const full: RunReport = {
   cancellationsFromElsewhere: [{ title: "Big Show", primaryUrl: "https://venue.test/calendar", reportedBy: "https://blog.test/news" }],
   skippedAsExpired: [{ title: "Speed Dating", primaryUrl: "https://venue.test/calendar", reason: "promotion" }],
   identityChurn: [{ title: "Big Show: Encore", primaryUrl: "https://venue.test/calendar", was: { title: "Big Show", primaryUrl: "https://venue.test/old" } }],
+  likelyDuplicates: [
+    {
+      a: { id: "evt_000000000001", title: "GloWild", primaryUrl: "https://zoo.test/events", firstDay: "2026-10-01", lastDay: "2026-12-27" },
+      b: { id: "evt_000000000002", title: "GloWild", primaryUrl: "https://zoo.test/", firstDay: "2026-11-01", lastDay: "2026-11-30" },
+    },
+    {
+      a: { id: "evt_000000000003", title: "Open Studio", primaryUrl: "https://venue.test/calendar" },
+      b: { id: "evt_000000000004", title: "Open Studio Night", primaryUrl: "https://venue.test/calendar" },
+    },
+  ],
 };
 
 describe("the run report", () => {
@@ -212,6 +222,11 @@ describe("the run report", () => {
 
       - Big Show (https://venue.test/old) is now Big Show: Encore (https://venue.test/calendar)
 
+      ## Likely duplicates
+
+      - GloWild (evt_000000000001, 2026-10-01 to 2026-12-27, https://zoo.test/events) and GloWild (evt_000000000002, 2026-11-01 to 2026-11-30, https://zoo.test/)
+      - Open Studio (evt_000000000003, recurring, https://venue.test/calendar) and Open Studio Night (evt_000000000004, recurring, https://venue.test/calendar)
+
       ## Held for promotion
 
       - promoter.test: 3 events held
@@ -229,13 +244,13 @@ describe("the run report", () => {
   });
 
   it("fills the fields a report from before them does not carry", () => {
-    const { reverification, offListNeighborhoods, venueNeighborhoods, heldForPromotion, releasedForPromotion, outageLimited, uncitableReadings, keptOnStoredCitation, cancellationsFromElsewhere, skippedAsExpired, identityChurn, ...older } = full;
+    const { reverification, offListNeighborhoods, venueNeighborhoods, heldForPromotion, releasedForPromotion, outageLimited, uncitableReadings, keptOnStoredCitation, cancellationsFromElsewhere, skippedAsExpired, identityChurn, likelyDuplicates, ...older } = full;
     const { archived, heldThroughOutage, quoteNotOnPage, keptOnStoredCitation: keptCount, expired, ...counts } = full.counts;
     const { stale, ...expiredBefore } = expired;
     const parsed = parseRunReport({ ...older, counts: { ...counts, expired: expiredBefore }, spend: { ...full.spend, modelCalls: undefined } });
 
     expect(parsed.counts).toMatchObject({ archived: 0, heldThroughOutage: 0, quoteNotOnPage: 0, keptOnStoredCitation: 0, expired: { ...expiredBefore, stale: 0 } });
-    expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], venueNeighborhoods: [], identityChurn: [], keptOnStoredCitation: [], skippedAsExpired: [], spend: { modelCalls: [] } });
+    expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], venueNeighborhoods: [], identityChurn: [], likelyDuplicates: [], keptOnStoredCitation: [], skippedAsExpired: [], spend: { modelCalls: [] } });
   });
 
   it("refuses a key it does not name", () => {
