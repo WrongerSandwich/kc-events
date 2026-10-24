@@ -507,6 +507,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   const attempts = noAttempts();
   const tally = noTally();
   let pagesNotExtracted = 0;
+  const lastDay = horizonEnd(context.today, context.config.horizonWeeks);
 
   for (const { source, page } of pages) {
     const outcome = bySource.get(source.name) ?? { extracted: 0, problems: [] };
@@ -541,8 +542,8 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     addTally(tally, counted.tally);
     for (const read of reads) if (read.sightings) sightings.push(...read.sightings);
     const yields = reads.flatMap((read) => (read.sightings ? [yieldOf(read.sightings, read.tally)] : []));
-    if (yields.length > 0) {
-      const pageYield = widestYield(yields);
+    const pageYield = yields.length > 0 ? widestYield(yields) : undefined;
+    if (pageYield) {
       for (const key of keys) {
         // A listing's pages together list what each lists (#226); a page read on its own is its own yield.
         const sofar = source.listedAt && key === pageKey(source.listedAt) ? attempts.yields.get(key) : undefined;
@@ -552,16 +553,15 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     if (!reads.some(readInFull)) markUnread();
     // A page of a listing read as listing nothing (a wobble, or a page that rendered empty), or cut at the cap, leaves
     // unknown whether its events are still listed; the other pages cannot say, so the listing's events are held (#226).
-    const cutOrEmpty = reads.some((r) => r.truncated) ? "was cut at the cap" : yields.length > 0 && widestYield(yields).listed === 0 ? "read as listing nothing" : undefined;
+    const cutOrEmpty = reads.some((r) => r.truncated) ? "was cut at the cap" : pageYield?.listed === 0 ? "read as listing nothing" : undefined;
     if (source.listedAt && cutOrEmpty) {
       attempts.unread.add(pageKey(source.listedAt));
       outcome.problems.push(`${page.finalUrl} ${cutOrEmpty}, so the events listed at ${source.listedAt} are held, not struck`);
     }
     // A listing's last page still listing inside the horizon may have more past it, on a page the registry does not list (#229).
-    const lastDay = horizonEnd(context.today, context.config.horizonWeeks);
-    const reach = yields.length > 0 ? widestYield(yields).latestStart : undefined;
+    const reach = pageYield?.latestStart;
     if (source.listedAt && page.url === source.urls.at(-1) && reach !== undefined && reach <= lastDay) {
-      outcome.problems.push(`${page.finalUrl} lists through ${reach}, inside the horizon (${lastDay}); events past it may be on a page not read, so add the next page`);
+      outcome.problems.push(`${page.url} lists through ${reach}, inside the horizon (${lastDay}); events past it may be on a page not read, so add the next page`);
     }
     outcome.extracted += counted.extracted;
     outcome.problems.push(...counted.problems);

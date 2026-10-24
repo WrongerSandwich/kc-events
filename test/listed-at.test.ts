@@ -120,12 +120,19 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
     // WEEK_2's run date is 2026-10-09; its eight-week horizon ends 2026-12-04.
     const nextPage = (latest: string) =>
       `${feedPage(2)} lists through ${latest}, inside the horizon (2026-12-04); events past it may be on a page not read, so add the next page`;
-    const problems = (report: { sources: { detail?: string }[] }) => report.sources[0]!.detail ?? "";
+    const detail = (report: { sources: { detail?: string }[] }) => report.sources[0]!.detail ?? "";
 
     it("when the last page's latest start falls inside the horizon", async () => {
       const { report } = await runAt(WEEK_2, emptyDataset(), [reply(winter), reply(choir, quartet)]);
 
-      expect(problems(report)).toContain(nextPage("2026-11-14"));
+      expect(detail(report)).toContain(nextPage("2026-11-14"));
+    });
+
+    it("when the last page's latest start is the horizon's last day", async () => {
+      const finale = at({ title: "Season Finale", startDate: "2026-12-04", dateEvidence: "Fri, Dec 4 @ 7:00 pm" });
+      const { report } = await runAt(WEEK_2, emptyDataset(), [reply(choir), reply(quartet, finale)]);
+
+      expect(detail(report)).toContain(nextPage("2026-12-04"));
     });
 
     it("from the wider of the last page's two reads", async () => {
@@ -137,19 +144,19 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
         config: testConfig({ extractionReads: 2 }),
       });
 
-      expect(problems(report)).toContain(nextPage("2026-11-28"));
+      expect(detail(report)).toContain(nextPage("2026-11-28"));
     });
 
     it("not when the last page's latest start falls past the horizon", async () => {
       const { report } = await runAt(WEEK_2, emptyDataset(), [reply(choir), reply(quartet, winter)]);
 
-      expect(problems(report)).not.toContain("add the next page");
+      expect(detail(report)).not.toContain("add the next page");
     });
 
     it("not when only an earlier page reaches inside the horizon", async () => {
       const { report } = await runAt(WEEK_2, emptyDataset(), [reply(quartet), reply(winter)]);
 
-      expect(problems(report)).not.toContain("add the next page");
+      expect(detail(report)).not.toContain("add the next page");
     });
 
     it.each([
@@ -159,7 +166,7 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
     ])("not when the last page %s", async (_, last) => {
       const { report } = await runAt(WEEK_2, emptyDataset(), [reply(quartet), last]);
 
-      expect(problems(report)).not.toContain("add the next page");
+      expect(detail(report)).not.toContain("add the next page");
     });
 
     it("not when the last page did not come back", async () => {
@@ -169,7 +176,7 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
         completions: [reply(quartet), reply()],
       });
 
-      expect(problems(report)).not.toContain("add the next page");
+      expect(detail(report)).not.toContain("add the next page");
     });
 
     it("not for a source read without listedAt", async () => {
@@ -182,7 +189,7 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
       });
 
       expect(report.sources[0]!.extracted).toBeGreaterThan(0);
-      expect(problems(report)).not.toContain("add the next page");
+      expect(detail(report)).not.toContain("add the next page");
     });
   });
 
