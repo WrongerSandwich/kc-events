@@ -47,7 +47,7 @@ describe("a shortlist link (#132)", () => {
     render(Explorer);
     await tick();
     expect(screen.getByText("None of this shortlist's events are still to come. Showing everything instead.")).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole("button", { name: "film" }));
+    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
     expect(screen.queryByText(/None of this shortlist's events/)).toBeNull();
   });
 

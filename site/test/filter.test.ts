@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateRange, dayPresets, keepGoing, matches } from "../src/lib/filter";
+import { dateRange, dayPresets, facetCounts, keepGoing, matches, railPresets, shownPreset } from "../src/lib/filter";
 import { DEFAULT_FILTERS, EVERY_DATE, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
 
@@ -43,6 +43,38 @@ describe("dayPresets", () => {
     ];
     for (const [day, presets] of week) expect(dayPresets(day), day).toEqual(presets);
     expect(dayPresets("2026-10-29")).toEqual(["2026-10-30", "2026-10-31", "2026-11-01"]); // across a month, into the DST Sunday
+  });
+});
+
+describe("railPresets and shownPreset", () => {
+  it("offers each span of days once, the first preset that names it: the week is This weekend from Friday, Today on Sunday", () => {
+    expect(railPresets("2026-10-05")).toEqual(["today", "fri-sun", "weekend", "30d", "all"]); // Monday: 7 days is the week
+    expect(railPresets("2026-10-06")).toEqual(["today", "fri-sun", "weekend", "7d", "30d", "all"]);
+    expect(railPresets("2026-10-09")).toEqual(["today", "fri-sun", "7d", "30d", "all"]); // Friday
+    expect(railPresets("2026-10-10")).toEqual(["today", "fri-sun", "7d", "30d", "all"]); // Saturday
+    expect(railPresets("2026-10-11")).toEqual(["today", "7d", "30d", "all"]); // Sunday
+  });
+
+  it("presses the offered preset with the same days, and none for a range", () => {
+    expect(shownPreset({ preset: "weekend" }, "2026-10-09")).toBe("fri-sun");
+    expect(shownPreset({ preset: "weekend" }, "2026-10-11")).toBe("today");
+    expect(shownPreset({ preset: "7d" }, "2026-10-05")).toBe("weekend");
+    expect(shownPreset({ preset: "30d" }, "2026-10-05")).toBe("30d");
+    expect(shownPreset({ from: "2026-10-09", to: "2026-10-09" }, "2026-10-05")).toBeUndefined();
+  });
+});
+
+describe("facetCounts", () => {
+  it("counts each kind with the other kinds let in, and each region with the other regions, the rest as filtered", () => {
+    const events = [
+      event({ id: "a", start: "2026-10-09T19:00:00-05:00", kind: "music", region: "Central KC" }),
+      event({ id: "b", start: "2026-10-10", kind: "film", region: "Lawrence" }),
+      event({ id: "c", start: "2026-10-10", kind: "music", region: "Lawrence" }),
+      event({ id: "d", start: "2026-11-20", kind: "film", region: "Lawrence" }), // past the week
+    ];
+    const { kinds, regions } = facetCounts(events, f({ when: { preset: "weekend" }, kinds: ["music"], regions: ["Lawrence"] }), today, none);
+    expect(Object.fromEntries(kinds)).toEqual({ music: 1, film: 1 }); // in Lawrence, this week
+    expect(Object.fromEntries(regions)).toEqual({ "Central KC": 1, Lawrence: 1 }); // music, this week
   });
 });
 

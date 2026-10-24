@@ -83,8 +83,8 @@
      so a finger's target never crowds the title's (#182). */
   .row :global(.chip) { grid-area: chip; min-height: 24px; }
   .row :global(button.save) { grid-area: save; }
-  /* A sentence that wraps, so it has the page's leading, not the row's. */
-  .why { grid-area: why; margin: 0; font-size: var(--text-sm); line-height: var(--leading); color: var(--fg); }
+  /* A sentence that wraps, so it has the page's leading, not the row's, and a reading line's length on a wide row. */
+  .why { grid-area: why; max-width: 70ch; margin: 0; font-size: var(--text-sm); line-height: var(--leading); color: var(--fg); }
   /* Venue and neighborhood give way together, in proportion to their length; from 1024 px only the venue does. */
   .where { grid-area: where; display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   /* A 12 px line at the row's 1.25 leading is 15 px, so 4.5 px above and below make 24. */
@@ -138,8 +138,9 @@
 
   /* 1280 px and up: an unflagged row with a short title is a single line, 25 px tall (20 px title + 4 px padding + 1 px
      rule), and a long title takes a second line rather than an ellipsis (#182). The date is set small, like the other
-     details, so the title (natural width up to --title-max) and the venue and neighborhood (at least 12rem, then the
-     rest) share the room. The widest dated lines at this size are 149 px, and 206 px with the day first. The trailing
+     details, so the title (--title-max where the room allows, never under 14rem) and the venue and neighborhood (at
+     least 12rem, then the rest) share the room. The title's column is the same width on every row, whatever its
+     words, so the venues start on one line down the list (the 2026-10-24 critique), not where each title ends. The widest dated lines at this size are 169 px ("11:30 am · through Sun Oct 25", on the 10-23 run), and 206 px with the day first. The trailing
      columns have fixed widths, so the kind chips, stamps and Save buttons each make a column down the list, whatever a
      row's title or venue: the widest chip ("outdoors/community") is 154 px, the widest stamp ("✓ Sep 30") about 50 px,
      and Save, its bookmark and "Saved", within its 80 px column. A list that ships no script (a venue, kind, region or
@@ -150,13 +151,13 @@
     .row :global(.chip) { justify-self: start; }
     .row :global(button.save) { justify-self: stretch; }
     .row {
-      --when-width: 9.75rem;
+      --when-width: 10.75rem;
       --chip-width: 9.75rem; --verified-width: 3.5rem; --save-width: var(--row-save-width, 5rem);
       padding: 2px 0;
-      --title-max: 21rem;
+      --title-max: 19rem;
       /* Each detail sits on the title's first line when it wraps. */
       align-items: first baseline;
-      grid-template-columns: var(--when-width) fit-content(var(--title-max)) minmax(12rem, 1fr) var(--chip-width) var(--verified-width) var(--save-width);
+      grid-template-columns: var(--when-width) minmax(14rem, var(--title-max)) minmax(12rem, 1fr) var(--chip-width) var(--verified-width) var(--save-width);
       grid-template-areas: "when title where chip verified save" ". why why why why why";
       contain-intrinsic-size: auto 26px;
     }
@@ -165,6 +166,6 @@
   }
   /* 1440 px and up the container is wider (base.css), so the title can take more. */
   @media (min-width: 1440px) {
-    .row { --title-max: 26rem; }
+    .row { --title-max: 22rem; }
   }
 </style>

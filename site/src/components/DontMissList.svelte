@@ -164,7 +164,7 @@
               {#if hydrated}
                 <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} pressed={k.kind === kind} onclick={() => toggle(k.kind)} />
               {:else}
-                <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} href={k.href} />
+                <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} href={k.href} filter />
               {/if}
             </li>
           {/each}

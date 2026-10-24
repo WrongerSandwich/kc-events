@@ -5,11 +5,11 @@
   import { downloadText } from "../lib/download";
   import { exportName } from "../lib/export-name";
   import { isDated, isPast, lastDay } from "../lib/events";
-  import { keepGoing } from "../lib/filter";
+  import { facetCounts, keepGoing, matches, shownPreset } from "../lib/filter";
   import { formatDay } from "../lib/dates";
   import { groupResults, isTrailingGroup, PASSED_GROUP, resultEvents, SHORTLIST_GROUP } from "../lib/group";
   import { toIcs } from "../lib/ics";
-  import { DEFAULT_FILTERS, EVERY_DATE, filterPills, isDefault, parseQuery, shortlistQuery, toQuery, type Filters } from "../lib/query";
+  import { DEFAULT_FILTERS, EVERY_DATE, filterPills, isDefault, isImpliedWhen, parseQuery, shortlistQuery, toQuery, WHEN_LABELS, type Filters } from "../lib/query";
   import { saves } from "../lib/saves";
   import { slugify } from "../lib/slugs";
   import { siteConfig } from "../site.config";
@@ -112,6 +112,15 @@
     (left[Math.min(index, left.length - 1)] ?? search).focus();
   }
 
+  // The phone sheet's Show button: close the sheet, bring the results' top up under the bar, and focus them, so the
+  // next swipe or Tab starts at the first row rather than where the button was.
+  async function showResults() {
+    sheetOpen = false;
+    await tick();
+    window.scrollBy({ top: results.getBoundingClientRect().top - bar.offsetHeight, behavior: "instant" });
+    results.focus({ preventScroll: true });
+  }
+
   // Where a / is typed rather than taken as the shortcut: a field that takes text. A checkbox or a select does not.
   const TEXT_ENTRY = "textarea, input:not([type=checkbox], [type=radio], [type=button], [type=submit], [type=reset], [type=range], [type=color], [type=file])";
   const isTextEntry = (target: EventTarget | null) => target instanceof HTMLElement && (target.matches(TEXT_ENTRY) || target.isContentEditable);
@@ -143,19 +152,39 @@
   let listed = $derived(resultEvents(groups));
   let count = $derived(listed.length);
   let countText = $derived(`${count} ${count === 1 ? "event" : "events"}`);
+  // Every filter in words, the date's named as the rail names it today (the week is "This weekend" on a Friday).
+  let allPills = $derived(filterPills(filters).map((p) => {
+    const shown = p.when === true ? shownPreset(filters.when, today) : undefined;
+    return shown === undefined ? p : { ...p, label: WHEN_LABELS[shown] };
+  }));
+  // The date the URL leaves out (the week) is what the page opens on, not a filter the reader set: the count says it
+  // ("97 events this week") rather than a pill whose removal would widen to every date, and Filters (n) leaves it out.
+  let impliedWhen = $derived(isImpliedWhen(filters) ? allPills.find((p) => p.when === true) : undefined);
+  let pills = $derived(allPills.filter((p) => p !== impliedWhen));
+  let sliceText = $derived(impliedWhen === undefined ? countText : `${countText} ${impliedWhen.label.toLowerCase()}`);
+  // The filters set in the sheet; search is in the bar, above it.
+  let sheetCount = $derived(pills.filter((p) => p.without.q === filters.q).length);
+  // Each kind's and region's chip, counted for the rest of the filters (facetCounts).
+  let counts = $derived(facetCounts(events, filters, today, saved));
+  // Nothing matches: each filter whose removal alone lists something, the most first, at most three (the empty state).
+  let ways = $derived(count > 0 ? [] : allPills
+    .map((p) => ({ p, n: events.filter((e) => matches(e, p.without, today, saved)).length }))
+    .filter((w) => w.n > 0).sort((a, b) => b.n - a.n).slice(0, 3));
   // The count on screen follows every keystroke; the live region waits until input settles, so a screen reader hears
   // one count per search, not one per letter. Every change restarts the wait, even one that leaves the count alone.
   const SETTLE_MS = 500;
   // Seeded with the first count on purpose (untracked): the region starts out saying what is on screen, and the effect
   // below, not this seed, follows every later change.
-  let announced = $state(untrack(() => countText));
+  // A filter that lists nothing says why, as the empty state does.
+  let matchText = $derived(allPills.map((p) => p.label).join(" · "));
+  let statusText = $derived(count === 0 && allPills.length > 0 ? `No events match ${matchText}` : sliceText);
+  let announced = $state(untrack(() => statusText));
   $effect(() => {
     void filters;
-    const text = countText;
+    const text = statusText;
     const settle = setTimeout(() => { announced = text; }, SETTLE_MS);
     return () => clearTimeout(settle);
   });
-  let pills = $derived(filterPills(filters));
   // A passed save (the saved view lists them) has nothing left to put in a calendar.
   let exportable = $derived(listed.filter((e) => isDated(e) && !isPast(e, today)));
   // Named after the slice (#190): "KC This Week · Comedy" in kc-this-week-comedy.ics.
@@ -189,13 +218,13 @@
      filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
 <div class="explorer" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
   <div class="bar" bind:this={bar} bind:offsetHeight={barHeight}>
-    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts="/" placeholder="Search titles, venues, neighborhoods, reasons" />{#if mounted}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
+    <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts="/" placeholder="Search events, venues, places" />{#if mounted}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
     <a class="skip" href="#results">Skip to results</a>
     <!-- Rows are two Tab stops each, so a week is hundreds of stops from Keep going and the footer (audit 2026-10-21,
          A8): this one lands after the last dated row. -->
     {#if count > 0}<a class="skip" href="#past-results">Skip past results</a>{/if}
     <div class="slice">
-      <p class="count" aria-hidden="true">{countText}</p>
+      <p class="count" aria-hidden="true">{sliceText}</p>
       {#if pills.length > 0}
         <ul class="pills" aria-label="Active filters" bind:this={pillList}>
           <!-- Keyed by what removing the pill leaves, which differs per pill even if a kind and a region share a name. -->
@@ -206,6 +235,8 @@
       {/if}
     </div>
     <p role="status" class="visually-hidden">{announced}</p>
+    <!-- Beside the count it orders, not at the rail's foot, below a laptop's fold. -->
+    <label class="sort"><span class="visually-hidden">Sort</span><select value={filters.sort} onchange={(e) => change({ ...filters, sort: e.currentTarget.value === "venue" ? "venue" : "date" })}><option value="date">By date</option><option value="venue">By venue</option></select></label>
     {#if filters.saved}
       <ShareButton label="Share saved" data={shareSaved} disabled={upcomingSaves.length === 0} />
       <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved to calendar</button>
@@ -217,9 +248,12 @@
   </div>
 
   <aside class="rail" aria-label="Filters">
-    <button type="button" class="sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={() => { sheetOpen = !sheetOpen; }}>Filters{#if pills.length > 0}{` (${pills.length})`}{/if}</button>
+    <button type="button" class="sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={() => { sheetOpen = !sheetOpen; }}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
     <div class="sheet" class:open={sheetOpen} id="filter-sheet">
-      <FilterRail {filters} {today} onchange={change} kinds={meta.kinds} regions={meta.regions} />
+      <FilterRail {filters} {today} onchange={change} kinds={meta.kinds} regions={meta.regions} {counts} />
+      <!-- Phones: the sheet pushes the results a screen down, so a chip changes nothing in view; this stays at the
+           screen's foot while the sheet is open, says what the filters list, and closes it onto the results. -->
+      <button type="button" class="control show-results" onclick={showResults}>Show {countText}</button>
     </div>
   </aside>
 
@@ -230,8 +264,15 @@
       {#if filters.saved && saved.size === 0}
         <!-- The header's Saved link lands here on a first visit: an empty list of one's own, not a filter that failed. -->
         <p class="empty">Nothing saved yet. Save any event and it appears here; saves stay in this browser, with no account. Start with <a href="/">the picks</a>.</p>
-      {:else if pills.length > 0}
-        <p class="empty">No events match <strong>{pills.map((p) => p.label).join(" · ")}</strong>. <button type="button" class="link" onclick={() => change({ ...DEFAULT_FILTERS, when: EVERY_DATE })}>Clear filters</button> to see everything.</p>
+      {:else if allPills.length > 0}
+        <!-- The ways out that cost one filter, each with what it would list, before the reset that costs them all. -->
+        <p class="empty">No events match <strong>{matchText}</strong>.</p>
+        <p class="ways">
+          {#each ways as w (toQuery(w.p.without))}
+            <button type="button" class="control small" onclick={() => change(w.p.without)}>{w.p.when === true ? "Every date" : `Without ${w.p.label}`}, {w.n} {w.n === 1 ? "event" : "events"}</button>
+          {/each}
+          <button type="button" class="link" onclick={() => change({ ...DEFAULT_FILTERS, when: EVERY_DATE })}>Clear all filters</button>
+        </p>
       {:else}
         <p class="empty">Nothing listed right now.</p>
       {/if}
@@ -327,6 +368,14 @@
   .pill:hover { border-color: var(--fg-faint); }
   .pill.kind { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
   .pill :global(.ui-icon) { width: 0.95em; height: 0.95em; margin-right: -0.15em; }
+  /* The sort, as small as the bar's buttons, on the raised surface the search field has: Chromium's dark-scheme select
+     is grey (#6b6b6b), under 4.5:1 with --fg. */
+  .sort select {
+    min-height: 1.75rem; font-size: var(--text-xs); padding: 0 var(--space-1);
+    background: var(--bg-raised); color: var(--fg); border: 1px solid var(--control-border); border-radius: var(--radius); cursor: pointer;
+  }
+  .show-results { display: none; }
+  .ways { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: var(--space-3); }
   .link { font: inherit; font-size: var(--text-sm); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
   .empty { color: var(--fg-muted); }
   /* Keep going: a full-width tap target after the last day, the see-all link quieter beside it. */
@@ -372,5 +421,13 @@
     }
     .sheet-toggle::before { margin-left: var(--space-1); }
     .sheet.open { margin-bottom: var(--space-4); }
+    /* At the screen's foot while any of the sheet is on it, over the chips that scroll under it, with the page's
+       ground under its margin so nothing shows between it and the edge. */
+    .show-results {
+      display: flex; width: 100%; position: sticky; bottom: 0; z-index: var(--z-sticky); margin-top: var(--space-4);
+      color: var(--accent-fg); background: var(--accent); border-color: var(--accent);
+      box-shadow: 0 var(--space-2) 0 var(--bg);
+    }
+    .show-results:hover { border-color: var(--accent); }
   }
 </style>

@@ -31,7 +31,7 @@ test("a shortlist link shows only its events, in its order, under Shortlist · N
   await expect(page.getByRole("heading", { level: 2 })).toHaveText("Shortlist · 3 events");
   await expect(page.getByRole("article").getByRole("heading")).toHaveText(["Mid-month reading", "Fabio Frizzi plays Fulci", "Friday night jazz"]);
   // Another filter narrows it; the shortlist's pill takes only the shortlist away.
-  await page.getByRole("button", { name: "music" }).click();
+  await page.getByRole("button", { name: /^Music\b/ }).click();
   await expect(page.getByRole("heading", { level: 2 })).toHaveText("Shortlist · 2 events");
   await page.getByRole("button", { name: "Remove Shortlist (3)" }).click();
   await expect(page).toHaveURL("/explore?when=all&kind=music");

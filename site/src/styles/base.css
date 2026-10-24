@@ -70,7 +70,8 @@ main:focus { outline: none; }
 @media (prefers-reduced-motion: reduce) { .control:active { transform: none; } }
 
 /* A kind chip: the kind's strong shade on its tint. Put a .kind-<slug> class on the chip or an ancestor. As a link (to
-   the kind's page), it is underlined only on hover, like every other chip, wherever it sits (#181). */
+   the kind's page) it drops the pill, the shade's icon and words alone, so only a filter is pill-shaped; it is
+   underlined on hover, wherever it sits (#181). The strong shade clears AA on the page's ground as on its tint. */
 .chip {
   display: inline-flex; align-items: center; gap: 0.3em;
   font-size: var(--text-xs);
@@ -83,6 +84,7 @@ main:focus { outline: none; }
   white-space: nowrap;
   text-decoration: none;
 }
+a.chip.plain { background: none; padding: 0; }
 a.chip:hover { text-decoration: underline; }
 
 /* Don't miss, in words and in the city flag's red, on an explorer row and an event page: solid where a kind's chip is
@@ -121,6 +123,8 @@ a.chip:hover { text-decoration: underline; }
   margin: var(--space-6) 0 var(--space-1);
   position: sticky; top: var(--bar-height, var(--tap));
   background: var(--bg); z-index: var(--z-sticky);
+  /* A hairline under it, so a row scrolling beneath is cut by a rule rather than seeming to show through. */
+  padding-bottom: 2px; box-shadow: 0 1px 0 var(--rule);
 }
 /* Focus and anchors scroll clear of the explorer's sticky bar and the heading under it: the one-line bar's height here,
    the measured bar's once the explorer sets the document's scroll padding itself (audit 2026-10-21, A1). */

@@ -163,11 +163,11 @@ test.describe("a section's kind filter", () => {
 
 test("the explorer honors the URL and writes it back", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore?when=weekend&kind=music");
-  await expect(page.getByRole("status")).toHaveText("2 events");
+  await expect(page.getByRole("status")).toHaveText("2 events this week");
   await expect(page.getByRole("article").getByRole("heading")).toHaveText(["Fabio Frizzi plays Fulci", "Friday night jazz"]);
-  await page.getByRole("button", { name: "comedy" }).click();
+  await page.getByRole("button", { name: /^Comedy\b/ }).click();
   await expect(page).toHaveURL(/\/explore\?kind=music&kind=comedy$/); // the week is the default, so the URL leaves it out
-  await expect(page.getByRole("status")).toHaveText("3 events");
+  await expect(page.getByRole("status")).toHaveText("3 events this week");
   await page.getByRole("button", { name: "Clear filters" }).click();
   await expect(page).toHaveURL("/explore");
 });
@@ -177,9 +177,9 @@ test("the explorer's picks=1 shows only the picks, under a picks only pill, and 
   const rows = page.locator(".results article.row");
   await expect(rows.first()).toBeVisible();
   await expect(page.locator(".results article.row:not(.flagged)")).toHaveCount(0);
-  await expect(page.getByRole("list", { name: "Active filters" }).getByRole("button", { name: "Remove picks only" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Active filters" }).getByRole("button", { name: "Remove Picks only" })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Picks only", exact: true })).toBeChecked();
-  await page.getByRole("button", { name: "comedy" }).click();
+  await page.getByRole("button", { name: /^Comedy\b/ }).click();
   await expect(page).toHaveURL(/[?&]picks=1(&|$)/);
 });
 
@@ -206,14 +206,14 @@ test.describe("the explorer's active slice at 390 px", () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
   test("names a shared link's filters as pills without opening anything, and each pill removes only its filter", async ({ page }) => {
-    await on(page, BUILD_DAY, "/explore?when=weekend&kind=music");
+    await on(page, BUILD_DAY, "/explore?when=30d&kind=music");
     const pills = page.getByRole("list", { name: "Active filters" }).getByRole("button");
-    await expect(pills).toHaveText(["Through Sunday", "music"]);
+    await expect(pills).toHaveText(["Next 30 days", "Music"]);
     for (const pill of await pills.all()) await expect(pill).toBeInViewport();
     await expect(page.locator("#filter-sheet")).toBeHidden();
-    await page.getByRole("button", { name: "Remove Through Sunday" }).click();
+    await page.getByRole("button", { name: "Remove Next 30 days" }).click();
     await expect(page).toHaveURL("/explore?when=all&kind=music");
-    await expect(pills).toHaveText(["music"]);
+    await expect(pills).toHaveText(["Music"]);
     await expect(page.getByRole("button", { name: /^Filters/ })).toHaveText("Filters (1)");
   });
 
@@ -248,7 +248,7 @@ test.describe("the explorer's active slice at 390 px", () => {
       }).observe({ type: "layout-shift", buffered: true });
     });
     await on(page, BUILD_DAY, "/explore?when=weekend&kind=music");
-    await expect(page.getByRole("status")).toHaveText("2 events");
+    await expect(page.getByRole("status")).toHaveText("2 events this week");
     await expect(page.getByRole("region", { name: "Events" })).toBeVisible();
     // Any shift the hydrated render causes is laid out and observed by the second frame after load.
     await page.waitForLoadState("load");
@@ -290,7 +290,7 @@ test("returns to the first result when a filter changes deep in the list", async
   await page.setViewportSize({ width: 1280, height: 800 });
   await on(page, BUILD_DAY, "/explore");
   await deepInTheList(page);
-  await page.getByRole("button", { name: "music", exact: true }).click();
+  await page.getByRole("button", { name: /^Music\b/ }).click();
   await expectFirstResultInView(page);
 });
 

@@ -71,7 +71,7 @@ test.describe("forced colours", () => {
     await page.goto("/explore?when=7d&kind=music");
     await expect(page.locator("html[data-slice]")).toHaveCount(0);
     const rail = page.locator(".rail");
-    const pressed = rail.getByRole("button", { name: "music", pressed: true });
+    const pressed = rail.getByRole("button", { name: /^Music\b/, pressed: true });
     await expect(pressed).toBeVisible();
     const unpressed = rail.getByRole("button", { pressed: false }).first();
     expect(await fill(pressed)).not.toBe(await fill(unpressed));

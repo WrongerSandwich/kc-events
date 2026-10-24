@@ -44,11 +44,13 @@ describe("ResultRow's names (#181)", () => {
     expect(screen.getByRole("button", { name: "Save Weekly trivia" })).toBeInTheDocument();
   });
 
-  it("makes the kind chip the link it looks like, to the kind's page, out of the Tab order", () => {
+  it("makes the kind a link to the kind's page, out of the Tab order, drawn without a filter's pill", () => {
     render(ResultRow, { event: show, today: "2026-10-05" });
-    const chip = screen.getByRole("link", { name: "film" });
+    const chip = screen.getByRole("link", { name: "Film" });
     expect(chip).toHaveAttribute("href", "/k/film");
     expect(chip).toHaveAttribute("tabindex", "-1");
+    // .plain drops the pill (base.css): only a toggle is pill-shaped (the 2026-10-24 critique).
+    expect(chip).toHaveClass("plain");
   });
 });
 
@@ -94,7 +96,7 @@ describe("ResultRow's width (#182)", () => {
 
   it("hides the kind chip on the kind's own page", () => {
     render(ResultRow, { event: event({ kind: "film" }), today: "2026-10-05", hide: "kind" });
-    expect(screen.queryByRole("link", { name: "film" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Film" })).toBeNull();
     expect(screen.getByRole("link", { name: "recordBar, venue of A show" })).toBeInTheDocument();
   });
 
@@ -102,7 +104,7 @@ describe("ResultRow's width (#182)", () => {
     const { container } = render(ResultRow, { event: event({ room: "Back room" }), today: "2026-10-05", hide: "venue" });
     expect(container.querySelector("a.venue")).toBeNull();
     expect(container.querySelector(".where")).toHaveTextContent(/^Back room$/);
-    expect(screen.getByRole("link", { name: "music" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Music" })).toBeInTheDocument();
   });
 });
 
@@ -111,11 +113,11 @@ describe("LandingEvents (#182)", () => {
 
   it("passes a kind page's hide on to its rows", () => {
     render(LandingEvents, { groups, hide: "kind" });
-    expect(screen.queryByRole("link", { name: "music" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Music" })).toBeNull();
   });
 
   it("keeps the chip on a region page", () => {
     render(LandingEvents, { groups });
-    expect(screen.getByRole("link", { name: "music" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Music" })).toBeInTheDocument();
   });
 });

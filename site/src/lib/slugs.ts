@@ -8,6 +8,11 @@ export function slugify(name: string): string {
   return fold(name).replace(/ /g, "-");
 }
 
+/** A kind as a label, with a capital like every other label: "Outdoors/community". */
+export function kindLabel(kind: string): string {
+  return kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
 export function slugTable(names: readonly string[]): { toSlug(name: string): string; fromSlug(slug: string): string | undefined } {
   const back = new Map(names.map((n) => [slugify(n), n]));
   return { toSlug: slugify, fromSlug: (slug) => back.get(slug) };
