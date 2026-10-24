@@ -181,13 +181,40 @@ describe("a re-reading of an active event's own page whose quote is not on the p
     ["start date", { startDate: "2026-12-13" }],
     ["start time", { startTime: "21:00" }],
     ["venue", { venue: "Knuckleheads Garage" }],
-  ])("hides the event, as before, when the new reading gives another %s", async (_, disagreeing) => {
+  ])("keeps the event on its stored reading when the new reading gives another %s (#220)", async (_, disagreeing) => {
     const first = await listed();
+    const stored = only(first.dataset);
 
-    const hidden = await quoting(week(2), first.dataset, LISTING, { dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE, ...disagreeing });
+    const kept = await quoting(week(2), first.dataset, LISTING, { dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE, ...disagreeing });
 
-    expect(only(hidden.dataset)).toMatchObject({ status: "unverified" });
-    expect(hidden.report.uncitableReadings).toHaveLength(1);
+    expect(only(kept.dataset)).toMatchObject({ id: stored.id, status: "active", start: stored.start, venue: stored.venue, evidence: stored.evidence, lastVerified: weekIso(2) });
+    expect(kept.report.uncitableReadings).toEqual([]);
+    expect(kept.report.keptOnStoredCitation).toEqual([{ title: "Big Show", primaryUrl: CALENDAR_URL, failedQuote: `quoted "${STITCHED}" for its date` }]);
+  });
+
+  it("keeps a recurring event on its stored reading when the new reading rewords its schedule (#220)", async () => {
+    const SCHEDULE_QUOTE = "First Friday of every month";
+    const MONTHLY = { status: 200, body: `<html><body><p>Big Show</p><p>${SCHEDULE_QUOTE}</p><p>Buy Tickets</p><p>${VENUE_QUOTE}</p></body></html>` };
+    const monthly = { startDate: null, startTime: null, schedule: "first Friday of every month", venueEvidence: VENUE_QUOTE };
+    const first = await quoting(WEEK_1, emptyDataset(), MONTHLY, { ...monthly, dateEvidence: SCHEDULE_QUOTE });
+    const stored = only(first.dataset);
+    expect(stored).toMatchObject({ recurrence: "recurring", status: "active" });
+
+    const kept = await quoting(week(2), first.dataset, MONTHLY, { ...monthly, schedule: "first Fridays", dateEvidence: `${SCHEDULE_QUOTE} · Buy Tickets` });
+
+    expect(only(kept.dataset)).toMatchObject({ id: stored.id, status: "active", schedule: stored.schedule, evidence: stored.evidence, lastVerified: weekIso(2) });
+    expect(kept.report.uncitableReadings).toEqual([]);
+    expect(kept.report.keptOnStoredCitation).toHaveLength(1);
+  });
+
+  it("hides the event, as before, when its stored venue quote is no longer on the page", async () => {
+    const first = await listed();
+    const changed = { status: 200, body: `<html><body><p>Big Show</p><p>${DATE_QUOTE}</p><p>Knuckleheads Garage, 2 Main St</p></body></html>` };
+
+    const hidden = await quoting(week(2), first.dataset, changed, { dateEvidence: STITCHED, venueEvidence: VENUE_QUOTE });
+
+    expect(only(hidden.dataset)).toMatchObject({ status: "unverified", lastVerified: weekIso(1) });
+    expect(hidden.report.uncitableReadings).toEqual([{ title: "Big Show", primaryUrl: CALENDAR_URL }]);
     expect(hidden.report.keptOnStoredCitation).toEqual([]);
   });
 

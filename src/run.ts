@@ -45,7 +45,6 @@ import {
   ruledTitle,
   sameEnd,
   sameEvent,
-  sameMoment,
   sameName,
   sameRecurringEvent,
   sameText,
@@ -844,8 +843,8 @@ function matchable(event: Event): boolean {
  * outages is cleared. A page with no standing never gets here (#78): it clears nothing. One
  * exception to hiding (#124): an own-page reading held only because a quote is not on the page
  * keeps an active event on its stored reading, verified now (keptOn, the failed quote), when the
- * event's stored quotes are on the page this run read and the reading agrees with the stored one
- * (keepsStoredCitation): the page has not changed, only the model's quote has.
+ * event's stored quotes are on the page this run read, whatever the reading says (keepsStoredCitation,
+ * #220): the page has not changed, only the model's quote has.
  */
 function applySighting(
   known: Event,
@@ -871,30 +870,18 @@ function applySighting(
 
 /**
  * Whether an active event read from its own page by a reading held only on a quote (#124) stays on
- * its stored citation: the stored date and venue quotes are both on the page this run read, and the
- * reading agrees with the stored one, the same calendar date (and time, when both give one) or the
- * same schedule for a recurring event, and the same venue, case and spacing aside. Any other failed
- * reading (a date that does not exist, no date or venue at all) has no quote problem and hides it.
+ * its stored citation: the stored date and venue quotes are both on the page this run read. What
+ * the failed reading says is not evidence of anything (#220): a recurring event's schedule is the
+ * model's own wording, and a time taken from an own page never matches the list's, so neither its
+ * when nor its venue is asked to agree. A page that has changed the date or the venue has dropped
+ * the stored quote. Any other failed reading (a date that does not exist, no date or venue at all)
+ * has no quote problem and hides it.
  */
-function keepsStoredCitation(known: Event, { event, quoteProblem }: Sighting): boolean {
+function keepsStoredCitation(known: Event, { quoteProblem }: Sighting): boolean {
   if (quoteProblem === undefined) return false;
   const { pageText } = quoteProblem;
   const { date, venue } = known.evidence;
-  if (date === undefined || venue === undefined || !quotedOn(date, pageText) || !quotedOn(venue, pageText)) return false;
-  return sameWhen(event, known) && sameAsideFromCaseAndSpacing(event.venue, known.venue);
-}
-
-function sameWhen(reading: Event, known: Event): boolean {
-  if (known.recurrence === "recurring" || reading.recurrence === "recurring") {
-    return known.recurrence === reading.recurrence && sameAsideFromCaseAndSpacing(reading.schedule, known.schedule);
-  }
-  return calendarDate(reading.start) !== undefined && sameMoment(reading.start, known.start);
-}
-
-/** Two texts that are the same once case and runs of whitespace are set aside; an absent one matches nothing. */
-function sameAsideFromCaseAndSpacing(a: string | undefined, b: string | undefined): boolean {
-  const plain = (text: string) => text.trim().replace(/\s+/g, " ").toLowerCase();
-  return a !== undefined && b !== undefined && plain(a) === plain(b);
+  return date !== undefined && venue !== undefined && quotedOn(date, pageText) && quotedOn(venue, pageText);
 }
 
 /**
