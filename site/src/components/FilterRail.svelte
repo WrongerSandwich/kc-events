@@ -1,14 +1,23 @@
 <script lang="ts">
   import { shortWeekday } from "../lib/dates";
-  import { dayPresets } from "../lib/filter";
-  import { DEFAULT_FILTERS, WHEN_LABELS, WHEN_PRESETS, type Filters } from "../lib/query";
-  import { slugify } from "../lib/slugs";
+  import { dayPresets, railPresets, shownPreset } from "../lib/filter";
+  import { DEFAULT_FILTERS, WHEN_LABELS, type Filters } from "../lib/query";
+  import { kindLabel, slugify } from "../lib/slugs";
   import KindIcon from "./KindIcon.svelte";
 
-  let { filters, today, onchange, kinds, regions }: { filters: Filters; today: string; onchange: (f: Filters) => void; kinds: string[]; regions: string[] } = $props();
+  // counts: what each kind's and region's chip would list (facetCounts), shown on the chip, so a dead end is seen
+  // before it is pressed.
+  let { filters, today, onchange, kinds, regions, counts }: {
+    filters: Filters; today: string; onchange: (f: Filters) => void; kinds: string[]; regions: string[];
+    counts: { kinds: Map<string, number>; regions: Map<string, number> };
+  } = $props();
 
   // From Thursday, a chip for each weekend day still to come (#183), after Today: a one-day range, shareable as any.
   let days = $derived(dayPresets(today));
+  // The presets less any that is another's days today, and the one pressed for the filter in force (#183's week is
+  // "This weekend" on a Friday).
+  let presets = $derived(railPresets(today));
+  let pressed = $derived(shownPreset(filters.when, today));
   const isDay = (d: string) => "from" in filters.when && filters.when.from === d && filters.when.to === d;
 
   // The range inputs follow the range in force, so a shared ?when=a..b link fills them; between changes they hold a
@@ -37,12 +46,15 @@
   }
 </script>
 
+<!-- A chip's count: a bare figure on screen, "Film, 7 events" to a screen reader. -->
+{#snippet tally(n: number)}<span class="n" aria-hidden="true">{n}</span><span class="visually-hidden">, {n} {n === 1 ? "event" : "events"}</span>{/snippet}
+
 <div class="rail">
   <fieldset>
     <legend>When</legend>
     <div class="segments">
-      {#each WHEN_PRESETS as p (p)}
-        <button type="button" aria-pressed={"preset" in filters.when && filters.when.preset === p} onclick={() => onchange({ ...filters, when: { preset: p } })}>{WHEN_LABELS[p]}</button>
+      {#each presets as p (p)}
+        <button type="button" aria-pressed={pressed === p} onclick={() => onchange({ ...filters, when: { preset: p } })}>{WHEN_LABELS[p]}</button>
         {#if p === "today"}
           {#each days as d (d)}
             <button type="button" aria-pressed={isDay(d)} onclick={() => onchange({ ...filters, when: { from: d, to: d } })}>{shortWeekday(d)}</button>
@@ -63,7 +75,8 @@
     <legend>Kind</legend>
     <div class="chips">
       {#each kinds as k (k)}
-        <button type="button" class={`kind kind-${slugify(k)}`} aria-pressed={filters.kinds.includes(k)} onclick={() => onchange({ ...filters, kinds: toggleIn(filters.kinds, k) })}><KindIcon kind={k} />{k}</button>
+        {@const n = counts.kinds.get(k) ?? 0}
+        <button type="button" class={`kind kind-${slugify(k)}`} class:none={n === 0} aria-pressed={filters.kinds.includes(k)} onclick={() => onchange({ ...filters, kinds: toggleIn(filters.kinds, k) })}><KindIcon kind={k} />{kindLabel(k)}{@render tally(n)}</button>
       {/each}
     </div>
   </fieldset>
@@ -72,19 +85,23 @@
     <legend>Region</legend>
     <div class="chips">
       {#each regions as r (r)}
-        <button type="button" aria-pressed={filters.regions.includes(r)} onclick={() => onchange({ ...filters, regions: toggleIn(filters.regions, r) })}>{r}</button>
+        {@const n = counts.regions.get(r) ?? 0}
+        <button type="button" class:none={n === 0} aria-pressed={filters.regions.includes(r)} onclick={() => onchange({ ...filters, regions: toggleIn(filters.regions, r) })}>{r}{@render tally(n)}</button>
       {/each}
     </div>
   </fieldset>
 
-  <fieldset>
+  <!-- Each switch says what it does under its words, out of its name, so a screen reader hears the name and then the
+       line. The rail is on the page once, so the ids are fixed. -->
+  <fieldset class="show">
     <legend>Show</legend>
-    <label><input type="checkbox" checked={filters.dontMiss} onchange={() => onchange({ ...filters, dontMiss: !filters.dontMiss })} /> Picks only</label>
-    <label><input type="checkbox" checked={filters.recurring} onchange={() => onchange({ ...filters, recurring: !filters.recurring })} /> Include always-there</label>
-    <label><input type="checkbox" checked={filters.saved} onchange={() => onchange({ ...filters, saved: !filters.saved })} /> Saved only</label>
+    <label><input type="checkbox" aria-describedby="show-picks" checked={filters.dontMiss} onchange={() => onchange({ ...filters, dontMiss: !filters.dontMiss })} /> Picks only</label>
+    <p class="hint" id="show-picks">Tagged Don't miss, each with a reason</p>
+    <label><input type="checkbox" aria-describedby="show-always" checked={filters.recurring} onchange={() => onchange({ ...filters, recurring: !filters.recurring })} /> Always there</label>
+    <p class="hint" id="show-always">Adds recurring events, after the days</p>
+    <label><input type="checkbox" aria-describedby="show-saved" checked={filters.saved} onchange={() => onchange({ ...filters, saved: !filters.saved })} /> Saved only</label>
+    <p class="hint" id="show-saved">Kept in this browser, no account</p>
   </fieldset>
-
-  <label class="sort">Sort <select value={filters.sort} onchange={(e) => onchange({ ...filters, sort: e.currentTarget.value === "venue" ? "venue" : "date" })}><option value="date">By date</option><option value="venue">By venue</option></select></label>
 </div>
 
 <style>
@@ -108,12 +125,22 @@
   .custom summary { display: inline-flex; align-items: center; min-height: 1.75rem; font-size: var(--text-xs); color: var(--fg-muted); cursor: pointer; }
   .custom summary:hover { color: var(--fg); }
   .range { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1); } .range label { display: flex; flex-direction: column; font-size: var(--text-xs); }
-  /* The Show checkboxes, one per line with the box beside its words. */
+  /* A chip's count, quieter than its words; a chip that would list nothing is quieter still, and stays pressable. */
+  .n { margin-left: 0.35em; color: var(--fg-faint); font-variant-numeric: tabular-nums; font-weight: var(--weight-regular); }
+  button[aria-pressed="true"] .n { color: inherit; }
+  button.none:not([aria-pressed="true"]) { color: var(--fg-faint); border-color: var(--rule-strong); border-style: dashed; }
+  button.none:not([aria-pressed="true"]) :global(.kind-icon) { color: inherit; }
+  /* The Show checkboxes, one per line with the box beside its words, and what each does under them, from the words'
+     edge. The box is set at 13 px with no margin, so the line starts 13 px and a gap in. It is ink, as a pressed chip's
+     edge is, not the browser's blue. */
   fieldset > label { display: flex; align-items: center; gap: var(--space-2); }
-  input, select { font: inherit; }
-  /* Chromium's dark-scheme select is grey (#6b6b6b), under 4.5:1 with --fg; the raised surface clears AA in both schemes. */
-  /* The date fields too: Chromium's dark field is #3b3b3b. (Explorer's search field has the same surface.) */
-  select, input[type="date"] { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
+  .show input { width: 13px; height: 13px; margin: 0; flex: none; accent-color: var(--accent); }
+  .show .hint { margin: 0 0 var(--space-2) calc(13px + var(--space-2)); font-size: var(--text-xs); line-height: var(--leading-tight); color: var(--fg-muted); }
+  .show .hint:last-child { margin-bottom: 0; }
+  input { font: inherit; }
+  /* The date fields: Chromium's dark field is #3b3b3b, under 4.5:1 with --fg; the raised surface clears AA in both
+     schemes. (Explorer's search field and sort have the same surface.) */
+  input[type="date"] { background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
   /* Tabbing onto a date field's calendar button matches neither :focus-visible nor :focus on the field, only
      :focus-within, so the field rings whenever focus is inside it, mouse clicks included. The inner parts are in a
      closed shadow tree, so :has(:focus-visible) cannot see them; no supported way to ring only for the keyboard. */

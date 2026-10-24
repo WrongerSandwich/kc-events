@@ -1,7 +1,7 @@
 import { addDays, comingSunday, weekday } from "./dates";
 import { firstDay, isDated, isPast, lastDay, playsOn } from "./events";
 import { fold } from "./fold";
-import type { Filters, When } from "./query";
+import type { Filters, When, WhenPreset } from "./query";
 import type { PublishedEvent } from "./types";
 
 /** The inclusive local-date range a When means from today; undefined is everything. */
@@ -21,6 +21,34 @@ export function dateRange(when: When, today: string): { from: string; to: string
     case "7d": return { from: today, to: addDays(today, 6) };
     case "30d": return { from: today, to: addDays(today, 29) };
   }
+}
+
+/** The rail's order: the shortest spans first, so of two presets that are the same days today the first is kept. */
+const RAIL_ORDER: readonly WhenPreset[] = ["today", "fri-sun", "weekend", "7d", "30d", "all"];
+const daysOf = (preset: WhenPreset, today: string) => {
+  const range = dateRange({ preset }, today);
+  return range === undefined ? "" : `${range.from}..${range.to}`;
+};
+
+/**
+ * The presets the When group offers today, less any that is an earlier one's days: on a Friday or a Saturday "This
+ * week" is "This weekend", on a Sunday both are "Today", and on a Monday "Next 7 days" is "This week".
+ */
+export function railPresets(today: string): WhenPreset[] {
+  const seen = new Set<string>();
+  return RAIL_ORDER.filter((p) => {
+    const days = daysOf(p, today);
+    if (seen.has(days)) return false;
+    seen.add(days);
+    return true;
+  });
+}
+
+/** The rail's preset for a date filter: itself, or the one it offers for the same days today; undefined for a range. */
+export function shownPreset(when: When, today: string): WhenPreset | undefined {
+  if ("from" in when) return undefined;
+  const days = daysOf(when.preset, today);
+  return railPresets(today).find((p) => daysOf(p, today) === days);
 }
 
 /**
@@ -57,6 +85,22 @@ export function keepGoing(events: readonly PublishedEvent[], f: Filters, today: 
     if (matches(e, next, today, saved) && !matches(e, f, today, saved)) added++;
   }
   return { next, through, nextWeek: weekday(range.to) === 0, added, everyDate, total };
+}
+
+/**
+ * What each kind's and each region's chip stands for: how many events the filters list with that one alone in its
+ * group, the rest of the filters as they are. A kind or region missing from a map has none.
+ */
+export function facetCounts(events: readonly PublishedEvent[], f: Filters, today: string, saved: ReadonlySet<string>): { kinds: Map<string, number>; regions: Map<string, number> } {
+  const kinds = new Map<string, number>();
+  const regions = new Map<string, number>();
+  const anyKind: Filters = { ...f, kinds: [] };
+  const anyRegion: Filters = { ...f, regions: [] };
+  for (const e of events) {
+    if (matches(e, anyKind, today, saved)) kinds.set(e.kind, (kinds.get(e.kind) ?? 0) + 1);
+    if (matches(e, anyRegion, today, saved)) regions.set(e.region, (regions.get(e.region) ?? 0) + 1);
+  }
+  return { kinds, regions };
 }
 
 /**

@@ -1,16 +1,17 @@
 import { formatRange, formatShort, isValidDate } from "./dates";
-import { slugify, slugTable } from "./slugs";
+import { kindLabel, slugify, slugTable } from "./slugs";
 
 export const WHEN_PRESETS = ["today", "fri-sun", "weekend", "7d", "30d", "all"] as const;
 export type WhenPreset = (typeof WHEN_PRESETS)[number];
 /**
  * The presets' names in the filter rail and in the empty state's summary. `weekend` is older than "This weekend" and
- * keeps meaning today through Sunday, so shared links (the front page's among them) do not change.
+ * keeps meaning today through Sunday, so shared links (the front page's among them) do not change; it reads "This week".
+ * The rail leaves out a preset whose days are an earlier one's today (railPresets in filter.ts).
  */
 export const WHEN_LABELS: Record<WhenPreset, string> = {
   today: "Today",
   "fri-sun": "This weekend",
-  weekend: "Through Sunday",
+  weekend: "This week",
   "7d": "Next 7 days",
   "30d": "Next 30 days",
   all: "All",
@@ -70,6 +71,11 @@ function impliedWhen(isList: boolean): { preset: WhenPreset } {
   return isList ? EVERY_DATE : DEFAULT_WHEN;
 }
 
+/** Whether the date filter is the one the rest implies, which a URL leaves out: the week, or every date for a list. */
+export function isImpliedWhen(f: Filters): boolean {
+  return "preset" in f.when && f.when.preset === impliedWhen(f.saved || f.ids.length > 0).preset;
+}
+
 function parseWhen(raw: string | null, implied: When): When {
   if (raw === null) return implied;
   if ((WHEN_PRESETS as readonly string[]).includes(raw)) return { preset: raw as WhenPreset };
@@ -122,23 +128,23 @@ export function isDefault(f: Filters): boolean {
   return toQuery(f) === "";
 }
 
-/** One active filter: its words, its kind when it is one, and the filters with it removed. */
-export type FilterPill = { label: string; kind?: string; without: Filters };
+/** One active filter: its words, its kind when it is one, whether it is the date's, and the filters with it removed. */
+export type FilterPill = { label: string; kind?: string; when?: true; without: Filters };
 
 /**
- * The filters that narrow the results, one pill each, in words ("Through Sunday", "music", "“jazz”"); sort narrows
+ * The filters that narrow the results, one pill each, in words ("This week", "Music", "“jazz”"); sort narrows
  * nothing and has none. A date's pill, the default week's among them, widens to every date when removed.
  */
 export function filterPills(f: Filters): FilterPill[] {
   const out: FilterPill[] = [];
   if (f.ids.length > 0) out.push({ label: `Shortlist (${f.ids.length})`, without: { ...f, ids: [] } });
   const when = "from" in f.when ? (f.when.from === f.when.to ? formatShort(f.when.from) : formatRange(f.when.from, f.when.to)) : f.when.preset === "all" ? undefined : WHEN_LABELS[f.when.preset];
-  if (when !== undefined) out.push({ label: when, without: { ...f, when: EVERY_DATE } });
-  for (const k of f.kinds) out.push({ label: k, kind: k, without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
+  if (when !== undefined) out.push({ label: when, when: true, without: { ...f, when: EVERY_DATE } });
+  for (const k of f.kinds) out.push({ label: kindLabel(k), kind: k, without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
   for (const r of f.regions) out.push({ label: r, without: { ...f, regions: f.regions.filter((x) => x !== r) } });
-  if (f.dontMiss) out.push({ label: "picks only", without: { ...f, dontMiss: false } });
-  if (f.recurring) out.push({ label: "including always-there", without: { ...f, recurring: false } });
-  if (f.saved) out.push({ label: "saved only", without: { ...f, saved: false } });
+  if (f.dontMiss) out.push({ label: "Picks only", without: { ...f, dontMiss: false } });
+  if (f.recurring) out.push({ label: "Always there", without: { ...f, recurring: false } });
+  if (f.saved) out.push({ label: "Saved only", without: { ...f, saved: false } });
   if (f.q.trim() !== "") out.push({ label: `“${f.q.trim()}”`, without: { ...f, q: "" } });
   return out;
 }

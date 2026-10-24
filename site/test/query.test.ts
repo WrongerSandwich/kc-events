@@ -76,12 +76,12 @@ describe("query state", () => {
     expect(parse(toQuery(r))).toEqual(r);
   });
 
-  it("round-trips This weekend under its own key, leaving weekend as Through Sunday", () => {
+  it("round-trips This weekend under its own key, leaving weekend as This week", () => {
     expect(parse("when=fri-sun").when).toEqual({ preset: "fri-sun" });
     expect(toQuery(parse("when=fri-sun"))).toBe("when=fri-sun");
     expect(parse("when=weekend").when).toEqual({ preset: "weekend" });
     expect(WHEN_LABELS["fri-sun"]).toBe("This weekend");
-    expect(WHEN_LABELS.weekend).toBe("Through Sunday");
+    expect(WHEN_LABELS.weekend).toBe("This week");
     expect(labels({ ...DEFAULT_FILTERS, when: { preset: "fri-sun" } })).toEqual(["This weekend"]);
   });
 
@@ -128,11 +128,11 @@ describe("query state", () => {
   });
 
   it("describes the active filters in words, for the empty state", () => {
-    expect(labels(DEFAULT_FILTERS)).toEqual(["Through Sunday"]);
+    expect(labels(DEFAULT_FILTERS)).toEqual(["This week"]);
     expect(labels({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toEqual([]);
     expect(labels({ ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Kansas City, Kansas"], dontMiss: true, saved: true, q: " zzz " }))
-      .toEqual(["Through Sunday", "music", "film", "Kansas City, Kansas", "picks only", "saved only", "“zzz”"]);
-    expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-11" }, recurring: true, sort: "venue" })).toEqual(["Oct 9–11", "including always-there"]);
+      .toEqual(["This week", "Music", "Film", "Kansas City, Kansas", "Picks only", "Saved only", "“zzz”"]);
+    expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-11" }, recurring: true, sort: "venue" })).toEqual(["Oct 9–11", "Always there"]);
     expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-09" } })).toEqual(["Oct 9"]);
   });
 
@@ -144,17 +144,17 @@ describe("query state", () => {
   it("names each active filter as a pill that removes only that filter, sort kept", () => {
     expect(filterPills({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toEqual([]);
     // The default week narrows too, so it has a pill, which widens to every date.
-    expect(filterPills(DEFAULT_FILTERS)).toEqual([{ label: "Through Sunday", without: { ...DEFAULT_FILTERS, when: EVERY_DATE } }]);
+    expect(filterPills(DEFAULT_FILTERS)).toEqual([{ label: "This week", when: true, without: { ...DEFAULT_FILTERS, when: EVERY_DATE } }]);
     const f: Filters = { ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Lawrence"], dontMiss: true, recurring: true, saved: true, q: "jazz", sort: "venue" };
     const pills = filterPills(f);
-    expect(pills.map((p) => p.label)).toEqual(["Through Sunday", "music", "film", "Lawrence", "picks only", "including always-there", "saved only", "“jazz”"]);
+    expect(pills.map((p) => p.label)).toEqual(["This week", "Music", "Film", "Lawrence", "Picks only", "Always there", "Saved only", "“jazz”"]);
     const without = Object.fromEntries(pills.map((p) => [p.label, p.without]));
-    expect(without["Through Sunday"]).toEqual({ ...f, when: { preset: "all" } });
-    expect(without["music"]).toEqual({ ...f, kinds: ["film"] });
+    expect(without["This week"]).toEqual({ ...f, when: { preset: "all" } });
+    expect(without["Music"]).toEqual({ ...f, kinds: ["film"] });
     expect(without["Lawrence"]).toEqual({ ...f, regions: [] });
-    expect(without["picks only"]).toEqual({ ...f, dontMiss: false });
-    expect(without["including always-there"]).toEqual({ ...f, recurring: false });
-    expect(without["saved only"]).toEqual({ ...f, saved: false });
+    expect(without["Picks only"]).toEqual({ ...f, dontMiss: false });
+    expect(without["Always there"]).toEqual({ ...f, recurring: false });
+    expect(without["Saved only"]).toEqual({ ...f, saved: false });
     expect(without["“jazz”"]).toEqual({ ...f, q: "" });
     // Kind pills say which kind they are, so they can carry its icon and tint.
     expect(pills.filter((p) => p.kind !== undefined).map((p) => p.kind)).toEqual(["music", "film"]);
@@ -163,7 +163,7 @@ describe("query state", () => {
   it("names a shortlist as one pill, Shortlist (N), whose removal clears it and nothing else", () => {
     const f: Filters = { ...DEFAULT_FILTERS, ids: ["evt_a1", "evt_b2"], when: { preset: "weekend" } };
     const pills = filterPills(f);
-    expect(pills.map((p) => p.label)).toEqual(["Shortlist (2)", "Through Sunday"]);
+    expect(pills.map((p) => p.label)).toEqual(["Shortlist (2)", "This week"]);
     expect(pills[0]!.without).toEqual({ ...f, ids: [] });
   });
 });

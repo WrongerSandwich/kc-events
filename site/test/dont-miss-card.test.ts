@@ -46,6 +46,6 @@ describe("DontMissCard's actions (#181)", () => {
 
   it("makes the kind chip a link to the kind's page", () => {
     render(DontMissCard, { event: event({ dontMiss: true }), today: "2026-10-05" });
-    expect(screen.getByRole("link", { name: "music" })).toHaveAttribute("href", "/k/music");
+    expect(screen.getByRole("link", { name: "Music" })).toHaveAttribute("href", "/k/music");
   });
 });

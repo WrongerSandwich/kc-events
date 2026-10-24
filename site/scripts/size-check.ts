@@ -73,8 +73,10 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // and 300 for the front page's next pass: a row's Don't miss on its date line on phones, the staleness banner's warning sign
   // in every page's sprite, and the closing-date wording (#184; measured 284 on the fixture build), and 400 for the next
   // accessibility pass: a <time> on each row, Skip past results, forced colours, phone-sized chips and prefers-contrast (#194;
-  // measured 399), less 500 for the header's Saved link and staleness banner as plain script rather than Svelte islands (#195; measured 551)
-  { page: "explore.html", budget: 53_350, build: "fixture" },
+  // measured 399), less 500 for the header's Saved link and staleness banner as plain script rather than Svelte islands (#195; measured 551),
+  // and 1,300 for the explorer critique of 2026-10-24: a count on each kind and region chip, the empty state's ways out, the
+  // phone sheet's Show button, the date presets offered once a day, Sort in the bar, and the Show switches' lines (measured 1,247)
+  { page: "explore.html", budget: 54_650, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
   // A page with no island of its own loads no Svelte runtime: the header's Saved link and staleness banner are plain

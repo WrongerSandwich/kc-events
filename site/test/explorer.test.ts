@@ -61,7 +61,10 @@ describe("Explorer", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["On now", "Fri Oct 9", "Sat Oct 10"]);
     expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film"]);
     expect(screen.queryByText("Trivia")).toBeNull();
-    expect(screen.getByRole("button", { name: "Through Sunday" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "true");
+    // The week the page opens on is said with the count, not shown as a filter the reader set.
+    expect(document.querySelector(".count")).toHaveTextContent("3 events this week");
+    expect(screen.queryByRole("button", { name: /^Remove / })).toBeNull();
     expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
   });
 
@@ -109,7 +112,7 @@ describe("Explorer", () => {
     render(Explorer);
     // One group named When, the fieldset; its buttons were once in a second, so "When" was said twice (#194).
     const when = screen.getByRole("group", { name: "When" });
-    expect(within(when).getAllByRole("button").map((b) => b.textContent)).toEqual(["Today", "Sat", "Sun", "This weekend", "Through Sunday", "Next 7 days", "Next 30 days", "All"]);
+    expect(within(when).getAllByRole("button").map((b) => b.textContent)).toEqual(["Today", "Sat", "Sun", "This weekend", "Next 7 days", "Next 30 days", "All"]);
     await fireEvent.click(within(when).getByRole("button", { name: "Sat" }));
     expect(location.search).toBe("?when=2026-10-10..2026-10-10");
     expect(rows()).toEqual(["Exhibition", "Saturday film"]);
@@ -170,19 +173,19 @@ describe("Explorer", () => {
     expect(location.search).toBe("?recurring=1");
   });
 
-  it("offers This weekend, Friday to Sunday, beside Through Sunday", async () => {
+  it("offers This weekend, Friday to Sunday, beside This week", async () => {
     render(Explorer);
     await fireEvent.click(screen.getByRole("button", { name: "This weekend" }));
     expect(location.search).toBe("?when=fri-sun");
     expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film"]);
-    expect(screen.getByRole("button", { name: "Through Sunday" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("filters by kind chip and writes the URL", async () => {
     render(Explorer);
-    await fireEvent.click(screen.getByRole("button", { name: "film" }));
+    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
     expect(rows()).toEqual(["Saturday film"]);
-    expect(screen.getByRole("button", { name: "film" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: /^Film,/ })).toHaveAttribute("aria-pressed", "true");
     expect(location.search).toBe("?kind=film");
     expect(announced()).toHaveTextContent("1 event");
   });
@@ -242,7 +245,7 @@ describe("Explorer", () => {
     expect(sheet).not.toHaveClass("open");
     flushSync();
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(toggle).toHaveTextContent("Filters (2)");
+    expect(toggle).toHaveTextContent("Filters (1)");
     await fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(sheet).toHaveClass("open");
@@ -251,29 +254,66 @@ describe("Explorer", () => {
   });
 
   it("names the active filters as pills in the bar, each removing only its own filter", async () => {
-    history.replaceState(null, "", "/explore?when=weekend&kind=music&kind=film");
+    history.replaceState(null, "", "/explore?when=30d&kind=music&kind=film");
     render(Explorer);
     const bar = document.querySelector(".bar") as HTMLElement;
     const pills = within(bar).getAllByRole("button", { name: /^Remove / });
-    expect(pills.map((p) => p.textContent?.trim())).toEqual(["Through Sunday", "music", "film"]);
-    await fireEvent.click(within(bar).getByRole("button", { name: "Remove music" }));
-    expect(location.search).toBe("?kind=film");
+    expect(pills.map((p) => p.textContent?.trim())).toEqual(["Next 30 days", "Music", "Film"]);
+    await fireEvent.click(within(bar).getByRole("button", { name: "Remove Music" }));
+    expect(location.search).toBe("?when=30d&kind=film");
     expect(rows()).toEqual(["Saturday film"]);
-    expect(screen.getByRole("button", { name: "music" })).toHaveAttribute("aria-pressed", "false");
-    await fireEvent.click(within(bar).getByRole("button", { name: "Remove Through Sunday" }));
+    expect(screen.getByRole("button", { name: /^Music,/ })).toHaveAttribute("aria-pressed", "false");
+    await fireEvent.click(within(bar).getByRole("button", { name: "Remove Next 30 days" }));
     expect(location.search).toBe("?when=all&kind=film");
-    expect(within(bar).getAllByRole("button", { name: /^Remove / }).map((p) => p.textContent?.trim())).toEqual(["film"]);
+    expect(within(bar).getAllByRole("button", { name: /^Remove / }).map((p) => p.textContent?.trim())).toEqual(["Film"]);
+  });
+
+  it("names a date preset by the rail's name for its days today: Next 7 days is This week on a Monday", () => {
+    history.replaceState(null, "", "/explore?when=7d");
+    render(Explorer);
+    expect(screen.getByRole("button", { name: "Remove This week" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByRole("button", { name: "Next 7 days" })).toBeNull();
   });
 
   it("keeps keyboard focus in the bar when a pill goes: on the next pill, else the one before, else search", async () => {
-    history.replaceState(null, "", "/explore?when=weekend&kind=music&kind=film");
+    history.replaceState(null, "", "/explore?when=30d&kind=music&kind=film");
     render(Explorer);
-    await fireEvent.click(screen.getByRole("button", { name: "Remove music" }));
-    expect(screen.getByRole("button", { name: "Remove film" })).toHaveFocus();
-    await fireEvent.click(screen.getByRole("button", { name: "Remove film" }));
-    expect(screen.getByRole("button", { name: "Remove Through Sunday" })).toHaveFocus();
-    await fireEvent.click(screen.getByRole("button", { name: "Remove Through Sunday" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Remove Music" }));
+    expect(screen.getByRole("button", { name: "Remove Film" })).toHaveFocus();
+    await fireEvent.click(screen.getByRole("button", { name: "Remove Film" }));
+    expect(screen.getByRole("button", { name: "Remove Next 30 days" })).toHaveFocus();
+    await fireEvent.click(screen.getByRole("button", { name: "Remove Next 30 days" }));
     expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();
+  });
+
+  it("counts each kind and region for the rest of the filters, on its chip, and marks one that would list nothing", async () => {
+    render(Explorer); // the week: Exhibition, Friday jazz, Saturday film
+    const film = screen.getByRole("button", { name: "Film, 1 event" });
+    expect(film).not.toHaveClass("none");
+    expect(screen.getByRole("button", { name: "Talks/readings, 0 events" })).toHaveClass("none");
+    expect(screen.getByRole("button", { name: "Central KC, 2 events" })).toBeInTheDocument();
+    // A kind's count leaves the kinds out, so pressing Film leaves Music's count as it was; the regions narrow.
+    await fireEvent.click(film);
+    expect(screen.getByRole("button", { name: "Music, 1 event" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Central KC, 0 events" })).toHaveClass("none");
+    expect(screen.getByRole("button", { name: "Lawrence, 1 event" })).toBeInTheDocument();
+  });
+
+  it("closes the phone sheet onto the results from its Show button, which says what the filters list", async () => {
+    const scrolled = vi.spyOn(window, "scrollBy").mockImplementation(() => {});
+    try {
+      render(Explorer);
+      const toggle = screen.getByRole("button", { name: /^Filters/ });
+      await fireEvent.click(toggle);
+      await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
+      const show = screen.getByRole("button", { name: "Show 1 event" });
+      await fireEvent.click(show);
+      expect(toggle).toHaveAttribute("aria-expanded", "false");
+      expect(document.getElementById("results")).toHaveFocus();
+    } finally {
+      scrolled.mockRestore();
+    }
   });
 
   it("returns to the top of the results when a filter changes below it, and stays put above it", async () => {
@@ -284,11 +324,11 @@ describe("Explorer", () => {
     });
     try {
       render(Explorer);
-      await fireEvent.click(screen.getByRole("button", { name: "film" }));
+      await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
       // jsdom lays nothing out, so the bar measures 0 px and the results' top is the whole distance.
       expect(scrolled).toHaveBeenCalledExactlyOnceWith({ top: -4000, behavior: "instant" });
       top = 300;
-      await fireEvent.click(screen.getByRole("button", { name: "music" }));
+      await fireEvent.click(screen.getByRole("button", { name: /^Music,/ }));
       expect(scrolled).toHaveBeenCalledTimes(1);
     } finally {
       rect.mockRestore();
@@ -309,7 +349,7 @@ describe("Explorer", () => {
     const from = screen.getByLabelText("From");
     await fireEvent.input(from, { target: { value: "2026-10-09" } });
     await fireEvent.change(from);
-    await fireEvent.click(screen.getByRole("button", { name: "film" }));
+    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
     expect(screen.getByLabelText("From")).toHaveValue("2026-10-09");
   });
 
@@ -332,21 +372,33 @@ describe("Explorer", () => {
     expect(rows()).toEqual(["Saturday film"]);
     await fireEvent.click(screen.getByRole("button", { name: "Clear filters" }));
     expect(rows()).toHaveLength(3); // back to the week;
-    await fireEvent.click(screen.getByRole("checkbox", { name: "Include always-there" }));
+    await fireEvent.click(screen.getByRole("checkbox", { name: "Always there" }));
     expect(screen.getByRole("heading", { level: 3, name: "Trivia" })).toBeInTheDocument();
     expect(location.search).toBe("?recurring=1");
   });
 
   it("says which filters are active when nothing matches, and offers to clear them", async () => {
     render(Explorer);
-    await fireEvent.click(screen.getByRole("button", { name: "film" }));
+    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
     await fireEvent.input(screen.getByRole("searchbox"), { target: { value: "zzz" } });
-    expect(announced()).toHaveTextContent("0 events");
-    const empty = screen.getByText(/No events match/);
-    expect(empty).toHaveTextContent("No events match Through Sunday · film · “zzz”.");
-    await fireEvent.click(within(empty).getByRole("button", { name: "Clear filters" }));
+    // The live region says why, as the empty state does.
+    expect(announced()).toHaveTextContent("No events match This week · Film · “zzz”");
+    const empty = screen.getByText(/No events match/, { selector: ".empty" });
+    expect(empty).toHaveTextContent("No events match This week · Film · “zzz”.");
+    // Each filter whose removal alone lists something is a way out, with its count; the others are not offered.
+    const ways = found((empty.nextElementSibling as HTMLElement | null) ?? undefined, "the ways out");
+    expect(within(ways).getAllByRole("button").map((b) => b.textContent)).toEqual(["Without “zzz”, 1 event", "Clear all filters"]);
+    await fireEvent.click(within(ways).getByRole("button", { name: "Clear all filters" }));
     expect(rows()).toHaveLength(4);
     expect(location.search).toBe("?when=all");
+  });
+
+  it("takes one filter away from the empty state's way out", async () => {
+    history.replaceState(null, "", "/explore?kind=film&q=jazz");
+    render(Explorer);
+    await fireEvent.click(screen.getByRole("button", { name: "Without Film, 1 event" }));
+    expect(location.search).toBe("?q=jazz");
+    expect(rows()).toEqual(["Friday jazz"]);
   });
 
   it("shows only saved events when asked", async () => {
