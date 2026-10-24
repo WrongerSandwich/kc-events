@@ -178,10 +178,12 @@ export interface PageReading {
  * model names an event's own page by number, so it never writes a URL. Not numbered: the page
  * itself (as fetched or as it redirected), and anything `linkTarget` rules out (assets, ignored
  * and aggregator hosts). The page's schema.org events follow the text, numbered the same way (see
- * `eventDataSection`). A feed has no anchors and is passed through.
+ * `eventDataSection`). A feed has no anchors and is passed through. A JSON answer carrying HTML is
+ * read as that HTML (see `htmlInJson`).
  */
 export function readPage(page: FetchResult, config: RunConfig): PageReading {
-  if (!isHtml(page.body)) return cappedReading(page.body, []);
+  const body = htmlInJson(page.body) ?? page.body;
+  if (!isHtml(body)) return cappedReading(body, []);
   const links: string[] = [];
   const linkNumber: LinkNumber = (href) => {
     const link = linkTarget(href, page, config);
@@ -189,14 +191,32 @@ export function readPage(page: FetchResult, config: RunConfig): PageReading {
     const n = links.indexOf(link) + 1;
     return n === 0 ? links.push(link) : n;
   };
-  const marked = withoutScripts(page.body).replace(ANCHOR, (_, attributes: string, content: string) => {
+  const marked = withoutScripts(body).replace(ANCHOR, (_, attributes: string, content: string) => {
     const href = attributes.match(HREF);
     const n = href ? linkNumber(href[1] ?? href[2] ?? href[3] ?? "") : undefined;
     // Spaced as the tags were, so adjacent anchors do not run together once the tags are gone.
     return n === undefined ? ` ${content} ` : ` ${content} [${n}] `;
   });
-  const section = eventDataSection(page.body, linkNumber, config.timezone);
+  const section = eventDataSection(body, linkNumber, config.timezone);
   return cappedReading(section ? `${htmlText(marked)}\n\n${section}` : htmlText(marked), links);
+}
+
+/**
+ * The HTML in a body that is a JSON object, as a calendar paging by script fetches its later pages
+ * (#226): every top-level string that is HTML, in order. Undefined for any other body, JSON with no
+ * HTML in it included, which is read as it is.
+ */
+function htmlInJson(body: string): string | undefined {
+  if (!body.trimStart().startsWith("{")) return undefined;
+  let value: unknown;
+  try {
+    value = JSON.parse(body);
+  } catch {
+    return undefined;
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const html = Object.values(value).filter((field): field is string => typeof field === "string" && isHtml(field));
+  return html.length > 0 ? html.join("\n") : undefined;
 }
 
 /** A reading of this text, capped, marked truncated when the cap cut it. */

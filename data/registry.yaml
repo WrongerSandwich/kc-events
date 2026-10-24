@@ -370,11 +370,14 @@ sources:
     status: active
 
   - name: Arts Council of Johnson County
-    urls: [https://artsjoco.org/acjc/calendar-of-events/]
+    urls:
+      - https://artsjoco.org/acjc/wp-admin/admin-ajax.php?action=ac_get_feed&page=1&first_tab=true
+      - https://artsjoco.org/acjc/wp-admin/admin-ajax.php?action=ac_get_feed&page=2&first_tab=true
+      - https://artsjoco.org/acjc/wp-admin/admin-ajax.php?action=ac_get_feed&page=3&first_tab=true
     kind: art/exhibitions
     neighborhood: Overland Park
     checkHints: A community calendar for Johnson County arts; many listings are classes or ongoing, which are not events. Read the venue from each listing. Skip exhibitions at the Nerman Museum of Contemporary Art; the Nerman source carries them, and the first date this calendar gives an exhibition is when it was listed, not when it opened.
-    notes: The calendar shows 21 events and pages the rest by script (#226). No plain URL pages it (checked 2026-10-24); ?page=2 and ?paged=2 redirect back, /page/2/, ?pg=2, ?view=list and ?view=tile give the same first 21, and ?view=month loads by script. The script's endpoint, https://artsjoco.org/acjc/wp-admin/admin-ajax.php?action=ac_get_feed&page=N&first_tab=true, pages it plainly (21, 21, 14 of 56; page 4 empty) but answers JSON wrapping the HTML; its titles and dates read as quotable text, yet every link is lost (no event links, no own pages) and each record's page would be the wp-admin endpoint, so it is not used.
+    notes: The calendar at https://artsjoco.org/acjc/calendar-of-events/ shows 21 events and pages the rest by script (#226); no plain URL pages it (?page=2 and ?paged=2 redirect back, /page/2/, ?pg=2, ?view=list and ?view=tile give the same first 21, ?view=month loads by script), and the plain page is a stale cache (on 2026-10-24 it still listed Oct 14-18). These are the feed its script pages, live, in date order, 21 a page; JSON carrying the listings' HTML, read as that HTML. On 2026-10-24 they held 21, 21 and 14 of 56 events, page 3 all past the horizon, page 4 empty; add page 4 once page 3's last listing falls inside the horizon.
     status: active
 
   # --- Talks and readings ------------------------------------------------------------------------

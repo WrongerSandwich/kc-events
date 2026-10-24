@@ -78,6 +78,31 @@ describe("page reading with links", () => {
   });
 });
 
+/**
+ * A calendar that pages by script fetches its later pages from an endpoint that answers JSON with the
+ * listings' HTML in a string (#226: the Arts Council of Johnson County's admin-ajax feed). It is read
+ * as that HTML, so its links are numbered and its text carries no JSON escapes the model would quote.
+ */
+describe("page reading of a JSON answer carrying HTML", () => {
+  const listing = '\n<div class="eli_row"><h4><a href="https://venue.test/calendar?ceramics-night&event_id=7">Ceramics Night</a></h4>\n<p>Ensemble Ibérica · Fri, Nov 06 @ 6:00 pm</p></div>';
+
+  it("reads the HTML: links numbered, text unescaped, the other fields left out", () => {
+    const reading = readPage(page(JSON.stringify({ html: listing, total: 56, page_size: "21" }).replaceAll("/", "\\/").replace("é", "\\u00e9")), config);
+    expect(reading).toEqual({ text: "Ceramics Night [1]\nEnsemble Ibérica · Fri, Nov 06 @ 6:00 pm", links: ["https://venue.test/calendar?ceramics-night&event_id=7"] });
+  });
+
+  it("reads every top-level string holding HTML, in order", () => {
+    const reading = readPage(page(JSON.stringify({ main: "<div>Big Show Oct 9</div>", note: "21 shown", more: "<div>Second Show Oct 10</div>" })), config);
+    expect(reading.text).toBe("Big Show Oct 9\nSecond Show Oct 10");
+  });
+
+  it("leaves JSON with no HTML in it as it is, and an HTML page that only looks like JSON at the start as HTML", () => {
+    const json = '{"events": [{"name": "Big Show"}]}';
+    expect(readPage(page(json), config)).toEqual({ text: json, links: [] });
+    expect(readPage(page('{ not json <div><a href="/shows/a">A</a></div>'), config).links).toEqual(["https://venue.test/shows/a"]);
+  });
+});
+
 const ldJson = (data: unknown) => `<script type="application/ld+json">${JSON.stringify(data)}</script>`;
 const DOLLY = {
   "@context": "https://schema.org",
