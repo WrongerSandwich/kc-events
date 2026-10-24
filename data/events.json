@@ -15452,7 +15452,7 @@
       "lastVerified": "2026-10-23T12:32:11-05:00",
       "lastChanged": "2026-10-19T19:18:51-05:00",
       "lastJudged": "2026-10-19T19:18:51-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -15462,7 +15462,9 @@
       "evidence": {
         "date": "Saturday, November 21, 2026 from 3-5 PM",
         "venue": "Charlotte Street’s free programming is hosted here."
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_4cc53c09e7ba"
     },
     {
       "id": "evt_94ff4163eaa7",
@@ -42361,7 +42363,7 @@
       "lastVerified": "2026-10-23T12:32:11-05:00",
       "lastChanged": "2026-10-23T12:32:11-05:00",
       "lastJudged": "2026-10-23T12:32:11-05:00",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -42371,7 +42373,9 @@
       "evidence": {
         "date": "November 1 – 30",
         "venue": "Home | Kansas City Zoo & Aquarium"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_185de5c79494"
     },
     {
       "id": "evt_4022996ed9fc",
