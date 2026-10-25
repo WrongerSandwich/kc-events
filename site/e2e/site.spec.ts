@@ -106,7 +106,7 @@ test.describe("a section's kind filter", () => {
     test("is a link to the explorer", async ({ page }) => {
       await page.goto("/");
       const kinds = page.getByRole("region").nth(0).getByRole("list", { name: "Picks by kind" });
-      await expect(kinds.getByRole("link", { name: "1 music" })).toHaveAttribute("href", "/explore?when=weekend&kind=music&picks=1");
+      await expect(kinds.getByRole("link", { name: "1 Music" })).toHaveAttribute("href", "/explore?when=weekend&kind=music&picks=1");
       await expect(kinds.getByRole("button")).toHaveCount(0);
     });
   });
@@ -114,7 +114,7 @@ test.describe("a section's kind filter", () => {
   test("hydrated, narrows its section in place, carries the kind to the explorer link, and says so", async ({ page }) => {
     await on(page, BUILD_DAY, "/");
     const week = page.getByRole("region").nth(0);
-    const music = week.getByRole("button", { name: "1 music" });
+    const music = week.getByRole("button", { name: "1 Music" });
     await expect(music).toHaveAttribute("aria-pressed", "false");
     await music.click();
     await expect(music).toHaveAttribute("aria-pressed", "true");
@@ -134,7 +134,7 @@ test.describe("a section's kind filter", () => {
   async function pressMusic(page: Page): Promise<{ animations: number; cards: number }> {
     await on(page, BUILD_DAY, "/");
     // Pressed and measured in the page, so nothing has a chance to finish between the press and the count.
-    return page.getByRole("region").nth(0).getByRole("button", { name: "1 music" }).evaluate(async (music) => {
+    return page.getByRole("region").nth(0).getByRole("button", { name: "1 Music" }).evaluate(async (music) => {
       const section = music.closest("section")!;
       const before = section.querySelectorAll("article").length;
       (music as HTMLButtonElement).click();

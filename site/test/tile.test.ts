@@ -105,5 +105,15 @@ describe("dateTile", () => {
       expect(dateTile(onNow, today, now)).toEqual(dateTile(onNow, today));
       expect(dateTile(opening, today, now)).toEqual(dateTile(opening, today));
     });
+
+    it("says Today before a run's weekdays on one of them, and only with the visitor's clock", () => {
+      const weekends = event({ recurrence: "limited-run", start: "2026-09-01", end: "2026-11-01", days: [5, 6, 0], daysLine: "Fri–Sun" });
+      const weekdays = event({ recurrence: "limited-run", start: "2026-09-01", end: "2026-11-01", days: [1, 2], daysLine: "Mon & Tue" });
+      expect(dateTile(weekends, today, now)).toEqual(dateTile(weekends, today)); // Monday: not one of its days
+      expect(dateTile(weekdays, today)).toMatchObject({ detail: "Mon & Tue" }); // built: no day claimed
+      expect(dateTile(weekdays, today, now)).toEqual({
+        top: "Closes", day: "1", month: "Nov", detail: "Today · Mon & Tue", label: "On today. Mon & Tue each week, closes Sun Nov 1",
+      });
+    });
   });
 });

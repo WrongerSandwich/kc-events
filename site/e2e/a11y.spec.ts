@@ -56,7 +56,7 @@ test.describe("forced colours", () => {
     await expect(band).toBeVisible();
     expect(await fill(band)).not.toBe("rgba(0, 0, 0, 0)");
     const kinds = page.getByRole("region").nth(0).getByRole("list", { name: "Picks by kind" });
-    const music = kinds.getByRole("button", { name: "1 music" });
+    const music = kinds.getByRole("button", { name: "1 Music" });
     await music.click();
     await expect(music).toHaveAttribute("aria-pressed", "true");
     const other = kinds.getByRole("button", { pressed: false }).first();

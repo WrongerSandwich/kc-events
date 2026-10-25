@@ -4,9 +4,9 @@
   import { dontMiss } from "../generated/dont-miss";
   import { addDays, formatDay, formatShort, formatTime } from "../lib/dates";
   import { firstDay, isMultiDay, lastDay, playsOn, venueLine } from "../lib/events";
-  import { bucketDontMiss, horizonBounds, horizonHeading, HORIZONS } from "../lib/horizon";
+  import { anchorDate, bucketDontMiss, horizonBounds, horizonHeading, HORIZONS } from "../lib/horizon";
   import { kindName, kindWords } from "../lib/landing";
-  import { hashId, slugify } from "../lib/slugs";
+  import { hashId, kindLabel, slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
   import DontMissCard from "./DontMissCard.svelte";
@@ -56,7 +56,7 @@
   let total = $derived(HORIZONS.reduce((n, h) => n + buckets[h].length, 0));
 
   // This week's kind filter, one kind at a time, and what its live region last announced. Per visit: not in the URL,
-  // not stored. Only this week has one: the sections after it are one-line rows (#184).
+  // not stored. Only this week has one: the sections after it are one-line rows (#184), but for the weekend's cards (soon).
   let chosen = $state<string | undefined>();
   let announced = $state<string | undefined>();
 
@@ -142,6 +142,20 @@
     return buckets["through-sunday"].some(hasStarted) && ahead.length > 0 && ahead.every(afterToday);
   });
 
+  /** Three days or more left in the week: enough for the week strip to say something. */
+  let stripShown = $derived(horizonBounds(today).sunday >= addDays(today, 2));
+
+  /**
+   * Saturday and Sunday, with the strip gone and little of the week left, the next two weeks' picks through Wednesday
+   * are cards too, so tomorrow's show is not a muted row under a run open until December. The heading stays the
+   * bucket's; the cards lead it, the rows follow.
+   */
+  let soon = $derived.by(() => {
+    if (stripShown) return new Set<string>();
+    const until = addDays(horizonBounds(today).sunday, 3);
+    return new Set(buckets["next-two-weeks"].filter((e) => anchorDate(e, today)! <= until).map((e) => e.id));
+  });
+
   /** A one-line row's date: everything after this week starts after Sunday, so nothing there is on now. */
   function shortWhen(e: PublishedEvent): string {
     const first = firstDay(e)!;
@@ -161,9 +175,15 @@
       {#if buckets[h].length === 0}
         <p class="empty">{emptyLines[h]}</p>
       {:else if h !== "through-sunday"}
-        <!-- After this week, one line a pick (#184): the cards are for what is close enough to plan tonight. -->
+        <!-- After this week, one line a pick (#184): the cards are for what is close enough to plan tonight, which at
+             the weekend reaches into the days after it (soon). -->
+        {#each buckets[h].filter((e) => soon.has(e.id)) as event (event.id)}
+          <div class="pick"><DontMissCard {event} {today} {now} /></div>
+        {/each}
+        {@const rows = buckets[h].filter((e) => !soon.has(e.id))}
+        {#if rows.length > 0}
         <ul class="later">
-          {#each buckets[h] as event (event.id)}
+          {#each rows as event (event.id)}
             <li class={`kind-${slugify(event.kind)}`}>
               <span class="when">{shortWhen(event)}</span>
               <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {kindName(event.kind).toLowerCase()}</span></a>
@@ -171,6 +191,7 @@
             </li>
           {/each}
         </ul>
+        {/if}
       {:else}
         {@const kind = chosen}
         {@const ahead = upcomingOf(undefined)}
@@ -194,9 +215,9 @@
           {#each counts as k (k.kind)}
             <li>
               {#if hydrated}
-                <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} pressed={k.kind === kind} onclick={() => toggle(k.kind)} />
+                <KindChip kind={k.kind} label={`${k.n} ${kindLabel(k.kind)}`} pressed={k.kind === kind} onclick={() => toggle(k.kind)} />
               {:else}
-                <KindChip kind={k.kind} label={`${k.n} ${k.kind}`} href={k.href} filter />
+                <KindChip kind={k.kind} label={`${k.n} ${kindLabel(k.kind)}`} href={k.href} filter />
               {/if}
             </li>
           {/each}
@@ -206,9 +227,9 @@
         {@const shown = picksOf(kind)}
         {@const upcoming = shown.filter((e) => !hasStarted(e))}
         {@const started = shown.filter(hasStarted)}
-        {#if horizonBounds(today).sunday >= addDays(today, 2)}
-          <!-- Three days or more left in the week: enough for a strip to say something. It follows the kind filter,
-               and lists started picks last, so a day jumps to one that can still be gone to. -->
+        {#if stripShown}
+          <!-- The strip follows the kind filter, and lists started picks last, so a day jumps to one that can still be
+               gone to. -->
           <WeekStrip picks={[...upcoming, ...started]} {today} sunday={horizonBounds(today).sunday} />
         {/if}
         <!-- Named while a filter moves them (toggle), so its view transition slides the kept cards into place. -->
@@ -243,6 +264,8 @@
      component's scoped styles cannot see its own siblings. */
   .pick + .pick { border-top: 1px solid var(--rule); margin-top: var(--space-6); padding-top: var(--space-6); }
   .empty { color: var(--fg-muted); margin-top: var(--space-3); }
+  /* The rows after a run of cards (the next days' picks at the weekend) stand off them as one card does the next. */
+  .pick + .later { margin-top: var(--space-6); border-top: 1px solid var(--rule); }
   /* The one-line rows, after this week and in the started fold (the class is the Later list's, which had them first):
      date in a fixed column so titles align; the venue drops under on a phone. */
   .later { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
