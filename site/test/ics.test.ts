@@ -210,4 +210,54 @@ describe("googleCalendarUrl (#188)", () => {
     expect(p.get("dates")).toBe("20261001/20261002");
     expect(p.get("recur")).toBe("RRULE:FREQ=WEEKLY;BYDAY=WE,TH;UNTIL=20261115");
   });
+
+  it("puts a run in one event's own file as one day to go from visitFrom, as the file does", () => {
+    const run = event({ recurrence: "limited-run", start: "2026-07-14", end: "2026-12-13" });
+    const p = params(googleCalendarUrl(run, "KC Events", "2026-10-24"));
+    expect(p.get("dates")).toBe("20261024/20261025");
+    expect(p.get("details")).toContain("Runs Tue Jul 14 through Sun Dec 13.");
+  });
+});
+
+describe("one event's own file (visitFrom)", () => {
+  const own = { ...opts, visitFrom: "2026-10-24" }; // a Saturday
+  const vevent = (e: Parameters<typeof toIcs>[0][number], o: Parameters<typeof toIcs>[1] = own) => toIcs([e], o).replace(/\r\n[ \t]/g, "").split("BEGIN:VEVENT")[1]!;
+
+  it("puts a run already open in as today, not its whole span, and says the span and to move it", () => {
+    const out = vevent(event({ recurrence: "limited-run", start: "2026-07-14", end: "2026-12-13" }));
+    expect(out).toContain("DTSTART;VALUE=DATE:20261024\r\nDTEND;VALUE=DATE:20261025\r\n");
+    expect(out).not.toContain("RRULE");
+    expect(out).toContain("Runs Tue Jul 14 through Sun Dec 13.\\n\\nSet on one day of the run\\; move it to the day you go.");
+  });
+
+  it("puts a run not yet open in as its opening day", () => {
+    expect(vevent(event({ recurrence: "limited-run", start: "2026-11-05", end: "2026-12-13" }))).toContain("DTSTART;VALUE=DATE:20261105\r\n");
+  });
+
+  it("puts a run with days in as the next day it plays, once, with its days in the notes", () => {
+    // Sundays only: from Saturday the 24th, the 25th.
+    const out = vevent(event({ recurrence: "limited-run", start: "2026-10-04", end: "2026-11-29", days: [0], daysLine: "Sun" }));
+    expect(out).toContain("DTSTART;VALUE=DATE:20261025\r\nDTEND;VALUE=DATE:20261026\r\n");
+    expect(out).not.toContain("RRULE");
+    expect(out).toContain("Sun each week.");
+  });
+
+  it("puts a start-less run in as today, and keeps a timed start in the notes", () => {
+    expect(vevent(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }))).toContain("DTSTART;VALUE=DATE:20261024\r\n");
+    expect(vevent(event({ recurrence: "limited-run", start: "2026-10-02T18:00:00-05:00", end: "2026-10-31" }))).toContain("Starts Fri Oct 2 at 6:00 pm");
+  });
+
+  it("keeps the span for a run with no playing day left, or one already closed, rather than a day it is not on", () => {
+    // Sundays only, closing Fri Oct 30: from Sat Oct 24, the 25th; from Wed Oct 28, none.
+    const sundays = event({ recurrence: "limited-run", start: "2026-10-04", end: "2026-10-30", days: [0] });
+    expect(vevent(sundays)).toContain("DTSTART;VALUE=DATE:20261025\r\n");
+    expect(vevent(sundays, { ...opts, visitFrom: "2026-10-28" })).toContain("RRULE:FREQ=WEEKLY;BYDAY=SU;UNTIL=20261030");
+    const closed = event({ recurrence: "limited-run", start: "2026-09-01", end: "2026-10-11" });
+    expect(vevent(closed)).toContain("DTSTART;VALUE=DATE:20260901\r\nDTEND;VALUE=DATE:20261012\r\n");
+  });
+
+  it("leaves a one-off as it was, and a feed or export (no visitFrom) keeps the run's span", () => {
+    expect(toIcs([event({})], own)).toBe(toIcs([event({})], opts));
+    expect(vevent(event({ recurrence: "limited-run", start: "2026-07-14", end: "2026-12-13" }), opts)).toContain("DTSTART;VALUE=DATE:20260714\r\nDTEND;VALUE=DATE:20261214\r\n");
+  });
 });

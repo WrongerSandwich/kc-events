@@ -22,12 +22,13 @@ export function dateTile(e: PublishedEvent, today: string, now?: string): Tile {
   const first = firstDay(e);
   const last = lastDay(e)!;
   if (e.recurrence === "limited-run") {
-    // A run that plays only some weekdays shows them where another says "Running now" or "Closes" (#143). A run's close
-    // is "Closes", pairing with "Opens"; "through" is a one-off's span, or the end of a run's weekdays (#184). "Running",
-    // not "On": the run is under way, which says nothing of whether its doors are open at this hour.
+    // A run that plays only some weekdays shows them under the title (#143). A run's close is "Closes", pairing with
+    // "Opens"; "through" is a one-off's span, or the end of a run's weekdays (#184). A run under way without days says
+    // nothing there: the tile's "Closes" has it, and "On now" or "Running now" read at night as open at this hour,
+    // which no page tells us.
     const days = e.daysLine;
     if (isUnderway(e, today) || first === undefined) {
-      return { top: "Closes", ...parts(last), detail: days ?? "Running now", label: closingLine(e, today) };
+      return { top: "Closes", ...parts(last), detail: days, label: closingLine(e, today) };
     }
     const close = days === undefined ? `Closes ${formatDay(last)}` : `${days}, through ${formatDay(last)}`;
     return { top: "Opens", ...parts(first), detail: close, label: closingLine(e, today) };

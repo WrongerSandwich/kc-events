@@ -68,7 +68,7 @@ export function isUnderway(e: PublishedEvent, today: string): boolean {
   return (first === undefined || first <= today) && lastDay(e)! >= today;
 }
 
-/** A limited run open today: what the explorer's "On now" lists and the cards call "Running now". A run with days is open only on them (#143). */
+/** A limited run open today: what the explorer's "On now" lists; a card says only when it closes. A run with days is open only on them (#143). */
 export function isOnNow(e: PublishedEvent, today: string): boolean {
   return isOpen(e, today) && playsOn(e, today);
 }

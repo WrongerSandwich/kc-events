@@ -58,7 +58,7 @@ describe("DontMissList", () => {
     expect(first).toEqual(["Closing run", "Tuesday show", "Wednesday show"]); // the run is on now, so it sorts as today
     expect(within(sections[0]!).getByText("Why A.")).toBeInTheDocument();
     // The tile is visual; the full date is in words for screen readers.
-    expect(within(sections[0]!).getByText("Running now, closes Sun Oct 11.")).toBeInTheDocument();
+    expect(within(sections[0]!).getByText("Closes Sun Oct 11.")).toBeInTheDocument();
     expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("All 3 2 music1 art/exhibitions");
     // The next two weeks are the later list's one-line rows (#184): no cards, no kind chips.
     expect(within(sections[1]!).queryAllByRole("article")).toEqual([]);
@@ -302,6 +302,23 @@ describe("DontMissList", () => {
     // The run is still to come, so the section is not empty; the show waits in the fold.
     expect(within(week()).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Closing run"]);
     expect(within(week()).getByText("1 earlier today")).toBeInTheDocument();
+  });
+
+  it("dates the week from tomorrow late in the evening once today's picks have all begun and the rest are on later days", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-06T12:00:00Z") }); // Tuesday 7 am: the Tuesday show is still to come
+    render(DontMissList);
+    await tick();
+    const heading = () => within(screen.getAllByRole("region")[0]!).getByRole("heading", { level: 2 }).textContent;
+    const at = async (iso: string) => {
+      vi.setSystemTime(new Date(iso));
+      document.dispatchEvent(new Event("visibilitychange"));
+      await tick();
+    };
+    expect(heading()).toBe("This week, Oct 6–11");
+    await at("2026-10-07T01:05:00Z"); // 8:05 pm: it has started, but the run is open today and its doors may be too
+    expect(heading()).toBe("This week, Oct 6–11");
+    await at("2026-10-07T02:05:00Z"); // 9:05 pm: the run and Wednesday's show are what is left, after today
+    expect(heading()).toBe("This week, Oct 7–11");
   });
 
   it("never calls a day empty while a run is open, and follows the kind filter", async () => {

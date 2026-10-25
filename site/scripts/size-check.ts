@@ -77,8 +77,9 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // and 1,300 for the explorer critique of 2026-10-24: a count on each kind and region chip, the empty state's ways out, the
   // phone sheet's Show button, the date presets offered once a day, Sort in the bar, and the Show switches' lines (measured 1,247),
   // and 300 for the audit of 2026-10-24: 24 px row targets from 1024 px, an off switch for the / shortcut, and the open
-  // sheet scrolling a tabbed-to control clear of its Show button (measured 263)
-  { page: "explore.html", budget: 54_950, build: "fixture" },
+  // sheet scrolling a tabbed-to control clear of its Show button (measured 263), and 200 for the home critique of 2026-10-24
+  // late: the calendar writer putting a run in one event's own file as one day to go, which the export bundles (measured 161)
+  { page: "explore.html", budget: 55_150, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
   // A page with no island of its own loads no Svelte runtime: the header's Saved link and staleness banner are plain

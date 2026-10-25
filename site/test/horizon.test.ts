@@ -30,6 +30,15 @@ describe("horizon", () => {
     expect(horizonHeading("further-out", "2026-10-05")).toBe("Later, after Oct 19");
   });
 
+  it("dates the first bucket from tomorrow when today is done, and says Tomorrow when that is Sunday", () => {
+    expect(horizonHeading("through-sunday", "2026-10-09", true)).toBe("This weekend, Oct 10–11"); // Fri night
+    expect(horizonHeading("through-sunday", "2026-10-10", true)).toBe("Tomorrow, Sun Oct 11"); // Sat night
+    expect(horizonHeading("through-sunday", "2026-10-11", true)).toBe("This weekend, Oct 11"); // Sun: no tomorrow in it
+    expect(horizonHeading("through-sunday", "2026-10-06", true)).toBe("This week, Oct 7–11"); // Tue night
+    expect(horizonHeading("through-sunday", "2026-10-07", true)).toBe("This weekend, Oct 8–11"); // Wed night: from Thursday
+    expect(horizonHeading("next-two-weeks", "2026-10-10", true)).toBe("Next two weeks, through Oct 24");
+  });
+
   it("buckets around the DST Sunday by local date", () => {
     const today = "2026-11-01";
     expect(horizon(event({ start: "2026-11-01T01:30:00-05:00" }), today)).toBe("through-sunday");
@@ -136,9 +145,9 @@ describe("horizon", () => {
 
   it("writes the closing line for runs", () => {
     const today = "2026-10-05";
-    expect(closingLine(event({ recurrence: "limited-run", start: "2026-09-20", end: "2026-10-11" }), today)).toBe("Running now, closes Sun Oct 11");
+    expect(closingLine(event({ recurrence: "limited-run", start: "2026-09-20", end: "2026-10-11" }), today)).toBe("Closes Sun Oct 11");
     expect(closingLine(event({ recurrence: "limited-run", start: "2026-10-20", end: "2026-11-14" }), today)).toBe("Opens Tue Oct 20, closes Sat Nov 14");
-    expect(closingLine(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }), today)).toBe("Running now, closes Sat Oct 31");
+    expect(closingLine(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }), today)).toBe("Closes Sat Oct 31");
     expect(closingLine(event({ recurrence: "limited-run", start: undefined, end: "2026-10-03" }), today)).toBe("Closed Sat Oct 3");
     // A one-off is never "On now", which is for runs (#90): its time, if it has one, and its last day.
     expect(closingLine(event({ start: "2026-10-09", end: "2026-10-11" }), today)).toBe("Through Sun Oct 11");

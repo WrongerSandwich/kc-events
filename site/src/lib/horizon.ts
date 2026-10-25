@@ -31,13 +31,20 @@ export function horizon(e: PublishedEvent, today: string): Horizon | undefined {
   return "further-out";
 }
 
-/** "This weekend" Thursday to Sunday, "This week" Monday to Wednesday, always with the dates. */
-export function horizonHeading(h: Horizon, today: string): string {
+/**
+ * "This weekend" Thursday to Sunday, "This week" Monday to Wednesday, always with the dates. `doneToday`: nothing
+ * picked for today is still to come (its timed picks have all begun), so the first bucket's dates start tomorrow, and
+ * with Sunday tomorrow it is "Tomorrow, Sun Oct 25": on a Saturday night the section is about the day still ahead.
+ */
+export function horizonHeading(h: Horizon, today: string, doneToday = false): string {
   const { sunday, twoWeeks } = horizonBounds(today);
   switch (h) {
     case "through-sunday": {
-      const label = weekday(today) === 0 || weekday(today) >= 4 ? "This weekend" : "This week";
-      return today === sunday ? `${label}, ${formatShort(today)}` : `${label}, ${formatRange(today, sunday)}`;
+      const from = doneToday && today < sunday ? addDays(today, 1) : today;
+      if (from !== today && from === sunday) return `Tomorrow, ${formatDay(sunday)}`;
+      // By the day the dates start: a Wednesday night's Thursday to Sunday is a weekend, as every other one is.
+      const label = weekday(from) === 0 || weekday(from) >= 4 ? "This weekend" : "This week";
+      return from === sunday ? `${label}, ${formatShort(from)}` : `${label}, ${formatRange(from, sunday)}`;
     }
     case "next-two-weeks":
       return `Next two weeks, through ${formatShort(twoWeeks)}`;
@@ -82,7 +89,7 @@ export function closingLine(e: PublishedEvent, today: string): string {
   if (e.recurrence === "limited-run") {
     // A run that plays only some weekdays names them, since it is not on every day it is open (#143).
     const days = e.daysLine;
-    if (isUnderway(e, today)) return `${days === undefined ? "Running now" : `${days} each week`}, closes ${formatDay(last)}`;
+    if (isUnderway(e, today)) return days === undefined ? `Closes ${formatDay(last)}` : `${days} each week, closes ${formatDay(last)}`;
     return `Opens ${formatDay(first!)}, ${days === undefined ? "closes" : `${days} each week, through`} ${formatDay(last)}`;
   }
   return throughLine(e);

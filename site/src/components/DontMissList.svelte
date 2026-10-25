@@ -3,7 +3,7 @@
   // dont-miss, not events: the front page ships only the flagged events (the full list would be about 26 KB more).
   import { dontMiss } from "../generated/dont-miss";
   import { addDays, formatDay, formatShort, formatTime } from "../lib/dates";
-  import { firstDay, isMultiDay, lastDay, venueLine } from "../lib/events";
+  import { firstDay, isMultiDay, lastDay, playsOn, venueLine } from "../lib/events";
   import { bucketDontMiss, horizonBounds, horizonHeading, HORIZONS } from "../lib/horizon";
   import { kindName, kindWords } from "../lib/landing";
   import { hashId, slugify } from "../lib/slugs";
@@ -21,6 +21,8 @@
     "next-two-weeks": "Nothing picked for the next two weeks yet.",
     "further-out": "Nothing picked further out yet.",
   } as const;
+  /** The hour, on the visitor's wall clock, from which a day with its picks all begun counts as done (doneToday). */
+  const LATE_HOUR = "21";
   // The visitor's clock, shared with every island (clock.svelte.ts): the build's date and no clock as rendered.
   const clock = islandClock();
   let now = $derived(clock.now);
@@ -120,6 +122,26 @@
    */
   const hasStarted = (e: PublishedEvent) => now !== undefined && dateTile(e, today, now).started === true;
 
+  /** A pick this week that can be gone to after today: a later one-off, or a run open, and playing, on a later day by Sunday. */
+  function afterToday(e: PublishedEvent): boolean {
+    if (e.recurrence !== "limited-run") return firstDay(e)! > today;
+    const until = lastDay(e)! < horizonBounds(today).sunday ? lastDay(e)! : horizonBounds(today).sunday;
+    for (let d = addDays(today, 1); d <= until; d = addDays(d, 1)) if (playsOn(e, d)) return true;
+    return false;
+  }
+
+  /**
+   * Late in the evening, today's picks have all begun, and what is left this week is after today: the heading's dates
+   * start tomorrow (horizonHeading), so on a Saturday night the section reads "Tomorrow, Sun Oct 25". From 9 pm only: a
+   * run open today is open tomorrow too, and by day its doors may well be open now. Never as built, with no clock, and
+   * not with nothing left to show under it.
+   */
+  let doneToday = $derived.by(() => {
+    if (now === undefined || now.slice(11, 13) < LATE_HOUR) return false;
+    const ahead = upcomingOf(undefined);
+    return buckets["through-sunday"].some(hasStarted) && ahead.length > 0 && ahead.every(afterToday);
+  });
+
   /** A one-line row's date: everything after this week starts after Sunday, so nothing there is on now. */
   function shortWhen(e: PublishedEvent): string {
     const first = firstDay(e)!;
@@ -132,7 +154,7 @@
   <p class="empty">Nothing picked right now. <a href="/explore?when=all">Browse everything</a> instead.</p>
 {:else}
   {#each HORIZONS as h (h)}
-    {@const heading = horizonHeading(h, today)}
+    {@const heading = horizonHeading(h, today, doneToday)}
     {@const headingId = `heading-${h}`}
     <section aria-labelledby={headingId}>
       <h2 id={headingId} class="section-heading">{heading}</h2>
