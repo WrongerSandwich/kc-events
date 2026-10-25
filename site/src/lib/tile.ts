@@ -7,7 +7,8 @@ import type { PublishedEvent } from "./types";
  * A card's calendar tile, read top to bottom: a small label, the day of the month large, the month; plus `detail`,
  * the one fact the tile cannot show (a time, a span), for the line under the title. `label` is the whole date in
  * words, for screen readers, since the tile itself is visual. `today` marks a one-off whose first day, or a
- * later day of whose span, is the visitor's today; `started`, a timed one-off today whose start has passed.
+ * later day of whose span, is the visitor's today; `started`, a timed one-off today whose start has passed (a span
+ * only on its last day, since before it another day can still be gone to).
  */
 export type Tile = { top: string; day: string; month: string; detail?: string; label: string; today?: true; started?: true };
 
@@ -21,11 +22,12 @@ export function dateTile(e: PublishedEvent, today: string, now?: string): Tile {
   const first = firstDay(e);
   const last = lastDay(e)!;
   if (e.recurrence === "limited-run") {
-    // A run that plays only some weekdays shows them where another says "On now" or "Closes" (#143). A run's close is
-    // "Closes", pairing with "Opens"; "through" is a one-off's span, or the end of a run's weekdays (#184).
+    // A run that plays only some weekdays shows them where another says "Running now" or "Closes" (#143). A run's close
+    // is "Closes", pairing with "Opens"; "through" is a one-off's span, or the end of a run's weekdays (#184). "Running",
+    // not "On": the run is under way, which says nothing of whether its doors are open at this hour.
     const days = e.daysLine;
     if (isUnderway(e, today) || first === undefined) {
-      return { top: "Closes", ...parts(last), detail: days ?? "On now", label: closingLine(e, today) };
+      return { top: "Closes", ...parts(last), detail: days ?? "Running now", label: closingLine(e, today) };
     }
     const close = days === undefined ? `Closes ${formatDay(last)}` : `${days}, through ${formatDay(last)}`;
     return { top: "Opens", ...parts(first), detail: close, label: closingLine(e, today) };
@@ -61,10 +63,16 @@ function spanLabel(e: PublishedEvent, said: string, day: string): string {
 /** A one-off on the visitor's today, `day`: its first day, or a later day of its span. */
 function todayTile(e: PublishedEvent, day: string, today: string, now: string): Tile {
   const tile = { top: "Today", ...parts(day), today: true as const };
-  if (isMultiDay(e)) return { ...tile, detail: spanDetail(e, day, today), label: spanLabel(e, "Today", day) };
+  // Both are wall time in the site's zone, so the strings compare; the dataset's offset is not needed. A span starts at
+  // its start's time on each of its days.
+  const begun = !isDateOnly(e.start!) && now >= `${day}${e.start!.slice(10, 16)}`;
+  if (isMultiDay(e)) {
+    if (!begun || lastDay(e) !== day) return { ...tile, detail: spanDetail(e, day, today), label: spanLabel(e, "Today", day) };
+    const time = formatTime(e.start!);
+    return { ...tile, detail: `Started ${time} · last day`, label: `Today, started ${time}, the last day`, started: true };
+  }
   if (isDateOnly(e.start!)) return { ...tile, detail: undefined, label: "Today" };
   const time = formatTime(e.start!);
-  // Both are wall time in the site's zone, so the strings compare; the dataset's offset is not needed.
-  if (now < e.start!.slice(0, 16)) return { ...tile, detail: time, label: `Today, ${time}` };
+  if (!begun) return { ...tile, detail: time, label: `Today, ${time}` };
   return { ...tile, detail: `Started ${time}`, label: `Today, started ${time}`, started: true };
 }

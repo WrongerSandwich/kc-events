@@ -136,9 +136,9 @@ describe("horizon", () => {
 
   it("writes the closing line for runs", () => {
     const today = "2026-10-05";
-    expect(closingLine(event({ recurrence: "limited-run", start: "2026-09-20", end: "2026-10-11" }), today)).toBe("On now, closes Sun Oct 11");
+    expect(closingLine(event({ recurrence: "limited-run", start: "2026-09-20", end: "2026-10-11" }), today)).toBe("Running now, closes Sun Oct 11");
     expect(closingLine(event({ recurrence: "limited-run", start: "2026-10-20", end: "2026-11-14" }), today)).toBe("Opens Tue Oct 20, closes Sat Nov 14");
-    expect(closingLine(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }), today)).toBe("On now, closes Sat Oct 31");
+    expect(closingLine(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }), today)).toBe("Running now, closes Sat Oct 31");
     expect(closingLine(event({ recurrence: "limited-run", start: undefined, end: "2026-10-03" }), today)).toBe("Closed Sat Oct 3");
     // A one-off is never "On now", which is for runs (#90): its time, if it has one, and its last day.
     expect(closingLine(event({ start: "2026-10-09", end: "2026-10-11" }), today)).toBe("Through Sun Oct 11");

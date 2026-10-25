@@ -32,7 +32,7 @@ describe("dateTile", () => {
 
   it("shows a run on now by its close, and a run not yet open by its opening", () => {
     expect(dateTile(event({ recurrence: "limited-run", start: "2026-09-01", end: "2026-12-13" }), today)).toEqual({
-      top: "Closes", day: "13", month: "Dec", detail: "On now", label: "On now, closes Sun Dec 13",
+      top: "Closes", day: "13", month: "Dec", detail: "Running now", label: "Running now, closes Sun Dec 13",
     });
     expect(dateTile(event({ recurrence: "limited-run", start: undefined, end: "2026-10-31" }), today)).toMatchObject({ top: "Closes", day: "31" });
     expect(dateTile(event({ recurrence: "limited-run", start: "2026-10-08", end: "2026-10-25" }), today)).toEqual({
@@ -66,6 +66,29 @@ describe("dateTile", () => {
       });
       expect(dateTile(event({ start: "2026-10-05T12:00:00-05:00" }), today, now)).toMatchObject({ detail: "Started 12:00 pm", started: true });
       expect(dateTile(event({ start: "2026-10-05T12:01:00-05:00" }), today, now)).not.toHaveProperty("started");
+    });
+
+    it("says a timed span has started on its last day once the start has passed, and not on a day before it", () => {
+      const comedy = event({ start: "2026-10-04T11:30:00-05:00", end: "2026-10-05" });
+      expect(dateTile(comedy, today, now)).toEqual({
+        top: "Today", day: "5", month: "Oct", today: true, started: true,
+        detail: "Started 11:30 am · last day", label: "Today, started 11:30 am, the last day",
+      });
+      expect(dateTile(event({ start: "2026-10-04T12:30:00-05:00", end: "2026-10-05" }), today, now)).not.toHaveProperty("started");
+      // Another day follows: the span can still be gone to.
+      expect(dateTile(event({ start: "2026-10-05T11:30:00-05:00", end: "2026-10-06" }), today, now)).not.toHaveProperty("started");
+      expect(dateTile(event({ start: "2026-10-04", end: "2026-10-05" }), today, "2026-10-05T23:59")).not.toHaveProperty("started");
+    });
+
+    it("says a timed span has started on its last day once the start has passed, and not on a day before it", () => {
+      expect(dateTile(event({ start: "2026-10-04T11:30:00-05:00", end: "2026-10-05" }), today, now)).toEqual({
+        top: "Today", day: "5", month: "Oct", today: true, started: true,
+        detail: "Started 11:30 am · last day", label: "Today, started 11:30 am, the last day",
+      });
+      expect(dateTile(event({ start: "2026-10-04T12:30:00-05:00", end: "2026-10-05" }), today, now)).not.toHaveProperty("started");
+      // Another day follows: the span can still be gone to.
+      expect(dateTile(event({ start: "2026-10-05T11:30:00-05:00", end: "2026-10-06" }), today, now)).not.toHaveProperty("started");
+      expect(dateTile(event({ start: "2026-10-04", end: "2026-10-05" }), today, "2026-10-05T23:59")).not.toHaveProperty("started");
     });
 
     it("never says a date-only pick has started", () => {

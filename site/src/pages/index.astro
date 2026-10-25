@@ -30,10 +30,6 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
   </p>
 
   <DontMissList client:load />
-  <section class="subscribe" aria-labelledby="calendar">
-    <h2 id="calendar" class="section-heading">In your calendar</h2>
-    <Subscribe origin={origin} />
-  </section>
 
   {alwaysThere.length > 0 && <section aria-labelledby="always">
     <h2 id="always" class="section-heading">Always there</h2>
@@ -47,6 +43,13 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
       ))}
     </ul>
   </section>}
+
+  {/* After the events, soonest to always there, rather than among them: a way to keep the picks, not one of them.
+      Named apart from a card's "Add to calendar", which is one event's file; this is a feed that keeps itself up. */}
+  <section class="subscribe" aria-labelledby="calendar">
+    <h2 id="calendar" class="section-heading">The picks as a calendar</h2>
+    <Subscribe origin={origin} />
+  </section>
 
   {/* Every kind and region page, one click from here (#188), text only, as the landing pages' own rows; the venues are in the footer. */}
   <nav class="lists" aria-label="More lists">

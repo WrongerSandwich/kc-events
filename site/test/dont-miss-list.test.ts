@@ -58,7 +58,7 @@ describe("DontMissList", () => {
     expect(first).toEqual(["Closing run", "Tuesday show", "Wednesday show"]); // the run is on now, so it sorts as today
     expect(within(sections[0]!).getByText("Why A.")).toBeInTheDocument();
     // The tile is visual; the full date is in words for screen readers.
-    expect(within(sections[0]!).getByText("On now, closes Sun Oct 11.")).toBeInTheDocument();
+    expect(within(sections[0]!).getByText("Running now, closes Sun Oct 11.")).toBeInTheDocument();
     expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("All 3 2 music1 art/exhibitions");
     // The next two weeks are the later list's one-line rows (#184): no cards, no kind chips.
     expect(within(sections[1]!).queryAllByRole("article")).toEqual([]);
@@ -102,7 +102,9 @@ describe("DontMissList", () => {
       expect(card()).toBeFalsy();
       const fold = document.querySelector("details.started")!;
       expect(fold).not.toHaveAttribute("open");
-      expect(fold.querySelector("summary")).toHaveTextContent("1 already started today");
+      expect(fold.querySelector("summary")).toHaveTextContent("1 earlier today");
+      // The chips count what can still be gone to, as the cards show it.
+      expect(within(screen.getAllByRole("region")[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent(/^All 2\s*1 art\/exhibitions\s*1 music$/);
       expect(within(fold as HTMLElement).getByRole("link", { name: "Tuesday show, music" })).toHaveAttribute("href", "/e/a");
       expect(within(fold as HTMLElement).getByText("8:00 pm")).toBeInTheDocument();
       const week = screen.getAllByRole("region")[0]!;
@@ -282,6 +284,24 @@ describe("DontMissList", () => {
     await tick();
     expect(within(week()).getByRole("button", { name: "1 art/exhibitions" })).toHaveAttribute("aria-pressed", "false");
     expect(within(week()).getByRole("link", { name: "This week's picks in the explorer" })).not.toHaveAttribute("href", expect.stringContaining("kind="));
+  });
+
+  it("drops a kind's chip, and lets its filter go, once every pick of it has started, so no chip leads to nothing", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-07T17:00:00Z") }); // Wednesday noon: the Wednesday show is the music left
+    render(DontMissList);
+    await tick();
+    const week = () => screen.getAllByRole("region")[0]!;
+    within(week()).getByRole("button", { name: "1 music" }).click();
+    await tick();
+    expect(within(week()).getByRole("button", { name: "1 music" })).toHaveAttribute("aria-pressed", "true");
+    vi.setSystemTime(new Date("2026-10-08T01:05:00Z")); // 8:05 pm: it has started
+    document.dispatchEvent(new Event("visibilitychange"));
+    await tick();
+    expect(within(week()).queryByRole("button", { name: /music/ })).toBeNull();
+    expect(within(week()).getByRole("status")).toHaveTextContent("");
+    // The run is still to come, so the section is not empty; the show waits in the fold.
+    expect(within(week()).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Closing run"]);
+    expect(within(week()).getByText("1 earlier today")).toBeInTheDocument();
   });
 
   it("never calls a day empty while a run is open, and follows the kind filter", async () => {
