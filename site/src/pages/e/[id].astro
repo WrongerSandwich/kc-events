@@ -45,7 +45,7 @@ const venue = venueNamed(venues, event.venue);
 const eventLd = eventJsonLd(event, { origin, today: meta.buildToday, description, image: shareImage.url, ...(venue !== undefined && { venue }) });
 const jsonLd = [...(eventLd === undefined ? [] : [eventLd]), breadcrumbJsonLd(event, origin)];
 // Google Calendar on Android opens no .ics, so its template link is the second way in Add to calendar (#188).
-const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, event), siteConfig.name) : undefined;
+const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, event), siteConfig.name, meta.buildToday) : undefined;
 ---
 <Base title={eventPageTitle(event, events)} description={metaDescription} jsonLd={jsonLd}>
   <article class={`event kind-${slugify(event.kind)}`}>

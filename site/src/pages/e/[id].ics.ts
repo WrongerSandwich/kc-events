@@ -12,6 +12,9 @@ export function getStaticPaths() {
   return events.filter(isDated).map((event) => ({ params: { id: event.id }, props: { event } }));
 }
 
-// The venue table's street address and position (#137), when the venue has a row.
+// The venue table's street address and position (#137), when the venue has a row; a run as one day to go from the
+// build's day (calendarTimes), which the daily rebuild moves on.
 export const GET: APIRoute = ({ props }) =>
-  calendarResponse(toIcs([locatedForCalendar(venues, props.event as PublishedEvent)], { siteName: siteConfig.name, stamp: meta.lastSuccessfulRun }));
+  calendarResponse(
+    toIcs([locatedForCalendar(venues, props.event as PublishedEvent)], { siteName: siteConfig.name, stamp: meta.lastSuccessfulRun, visitFrom: meta.buildToday }),
+  );

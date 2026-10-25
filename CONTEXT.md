@@ -191,7 +191,7 @@ A group of neighborhoods at the scale of a trip decision (Central KC, Johnson Co
 _Avoid_: area, zone
 
 **Horizon**:
-The time bucket a don't-miss event falls into: through Sunday (headed "This weekend" Thursday to Sunday, "This week" Monday to Wednesday), next two weeks, further out (headed "Later, after <date>" and listed one line each). A one-off is bucketed by its start, a limited run by when it can first be seen: its opening, or today once it is open. Its closing date stays in its date line.
+The time bucket a don't-miss event falls into: through Sunday (headed "This weekend" Thursday to Sunday, "This week" Monday to Wednesday, its dates starting tomorrow once today's picks have all begun and the rest are on later days, and "Tomorrow, Sun <date>" on such a Saturday night), next two weeks, further out (headed "Later, after <date>" and listed one line each). A one-off is bucketed by its start, a limited run by when it can first be seen: its opening, or today once it is open. Its closing date stays in its date line.
 
 **Always there**:
 The section below the don't-miss list: a short, hand-kept list of recurring events (`site/src/always-there.ts`). Every recurring event is in the explorer.
@@ -211,7 +211,7 @@ A handful of events named in an explorer link (`/explore?ids=evt_a,evt_b`), show
 _Avoid_: list, collection, playlist
 
 **Event page**:
-The page for one active event, at `/e/<id>`: its date, venue, why-line when flagged, description when there is one, primary link, calendar file, last-verified stamp, and corrections link.
+The page for one active event, at `/e/<id>`: its date, venue, why-line when flagged, description when there is one, primary link, calendar file, last-verified stamp, and corrections link. The calendar file (`/e/<id>.ics`, and the Google Calendar link beside it) puts a limited run in as one day to go, the first it is open (and plays) from the build's day, with its span in the notes; a feed and the explorer's export keep a run's whole span.
 _Avoid_: detail page, listing page
 
 **Venue page**:

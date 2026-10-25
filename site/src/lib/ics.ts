@@ -70,10 +70,23 @@ function spanNote(start: string, end: string | undefined, last: string): string 
  * same for Google Calendar's template link (#188), so the two never disagree. Stamps are RFC 5545's: a date for an
  * all-day event, whose end is exclusive, else a UTC instant.
  */
-function calendarTimes(e: PublishedEvent): { allDay: boolean; start: string; end: string; rrule?: string; notes: string[] } {
+function calendarTimes(e: PublishedEvent, visitFrom?: string): { allDay: boolean; start: string; end: string; rrule?: string; notes: string[] } {
   const notes: string[] = [];
   const first = firstDay(e);
   const last = lastDay(e)!;
+
+  if (visitFrom !== undefined && e.recurrence === "limited-run" && (first === undefined || last > first)) {
+    // One event's own file, from a card or its page: a run goes in as one day to go, the first it is open from
+    // `visitFrom` (a day it plays, when it has days), not as its whole span, which would lay an exhibition months long
+    // across the calendar from a day already gone. A feed or an export keeps the span: there it is a run to know about.
+    const from = first === undefined || first < visitFrom ? visitFrom : first;
+    const day = (e.days === undefined ? undefined : nextPlayingDay(e, from, last)) ?? (from < last ? from : last);
+    if (e.start !== undefined && !isDateOnly(e.start)) notes.push(spanNote(e.start, e.end, last));
+    else notes.push(first === undefined ? `Runs through ${formatDay(last)}.` : `Runs ${formatDay(first)} through ${formatDay(last)}.`);
+    if (e.daysLine !== undefined) notes.push(`${e.daysLine} each week.`);
+    notes.push("Set on one day of the run; move it to the day you go.");
+    return { allDay: true, start: dateStamp(day), end: dateStamp(addDays(day, 1)), notes };
+  }
 
   if (first === undefined) {
     // A run read after it began: the one day we can stand behind is its last.
@@ -118,8 +131,8 @@ function calendarNotes(e: IcsEvent, siteName: string, timeNotes: string[]): stri
   return notes.join("\n\n");
 }
 
-function vevent(e: IcsEvent, siteName: string, stamp: string): string[] {
-  const t = calendarTimes(e);
+function vevent(e: IcsEvent, siteName: string, stamp: string, visitFrom?: string): string[] {
+  const t = calendarTimes(e, visitFrom);
   const lines = [`UID:${e.id}@kc-events`, `DTSTAMP:${utcStamp(stamp)}`];
   if (t.allDay) lines.push(`DTSTART;VALUE=DATE:${t.start}`, `DTEND;VALUE=DATE:${t.end}`);
   else lines.push(`DTSTART:${t.start}`, `DTEND:${t.end}`);
@@ -138,10 +151,10 @@ function vevent(e: IcsEvent, siteName: string, stamp: string): string[] {
 /**
  * Google Calendar's event template for a dated event (#188): Google Calendar on Android does not open a downloaded
  * .ics, so the event page links this beside Add to calendar. A plain link, so nothing goes to Google until it is
- * tapped; the times, place and notes are the calendar file's.
+ * tapped; the times, place and notes are the calendar file's, so it takes the same `visitFrom`.
  */
-export function googleCalendarUrl(e: IcsEvent, siteName: string): string {
-  const t = calendarTimes(e);
+export function googleCalendarUrl(e: IcsEvent, siteName: string, visitFrom?: string): string {
+  const t = calendarTimes(e, visitFrom);
   const p = new URLSearchParams({ action: "TEMPLATE", text: e.title, dates: `${t.start}/${t.end}`, details: calendarNotes(e, siteName, t.notes), location: calendarLocation(e) });
   if (t.rrule !== undefined) p.set("recur", t.rrule);
   return `https://calendar.google.com/calendar/render?${p.toString()}`;
@@ -153,16 +166,17 @@ export function googleCalendarUrl(e: IcsEvent, siteName: string): string {
  * unnamed one. A single event's file goes without, so adding it does not offer to make a calendar for one event.
  * The name goes as RFC 7986's NAME and the older X-WR-CALNAME most clients read; `description` likewise as DESCRIPTION
  * and X-WR-CALDESC (#190). `properties` are more of the calendar's own, after those: a feed's refresh interval (#136).
+ * `visitFrom`, for one event's own file, puts a run in as one day to go from that day on (calendarTimes).
  */
 export function toIcs(
   events: IcsEvent[],
-  opts: { siteName: string; stamp: string; calendarName?: string; description?: string; properties?: string[] },
+  opts: { siteName: string; stamp: string; calendarName?: string; description?: string; properties?: string[]; visitFrom?: string },
 ): string {
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", `PRODID:-//${opts.siteName}//EN`, "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
   if (opts.calendarName !== undefined) lines.push(`NAME:${escapeText(opts.calendarName)}`, `X-WR-CALNAME:${escapeText(opts.calendarName)}`);
   if (opts.description !== undefined) lines.push(`DESCRIPTION:${escapeText(opts.description)}`, `X-WR-CALDESC:${escapeText(opts.description)}`);
   lines.push(...(opts.properties ?? []));
-  for (const e of events) if (isDated(e)) lines.push(...vevent(e, opts.siteName, opts.stamp));
+  for (const e of events) if (isDated(e)) lines.push(...vevent(e, opts.siteName, opts.stamp, opts.visitFrom));
   lines.push("END:VCALENDAR");
   return lines.map(fold).join("\r\n") + "\r\n";
 }
