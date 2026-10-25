@@ -89,18 +89,22 @@ export function keepGoing(events: readonly PublishedEvent[], f: Filters, today: 
 
 /**
  * What each kind's and each region's chip stands for: how many events the filters list with that one alone in its
- * group, the rest of the filters as they are. A kind or region missing from a map has none.
+ * group, the rest of the filters as they are. A kind or region missing from a map has none. `picks` is what the Don't
+ * miss toggle would list with the rest as they are.
  */
-export function facetCounts(events: readonly PublishedEvent[], f: Filters, today: string, saved: ReadonlySet<string>): { kinds: Map<string, number>; regions: Map<string, number> } {
+export function facetCounts(events: readonly PublishedEvent[], f: Filters, today: string, saved: ReadonlySet<string>): { kinds: Map<string, number>; regions: Map<string, number>; picks: number } {
   const kinds = new Map<string, number>();
   const regions = new Map<string, number>();
+  let picks = 0;
   const anyKind: Filters = { ...f, kinds: [] };
   const anyRegion: Filters = { ...f, regions: [] };
+  const onlyPicks: Filters = { ...f, dontMiss: true };
   for (const e of events) {
     if (matches(e, anyKind, today, saved)) kinds.set(e.kind, (kinds.get(e.kind) ?? 0) + 1);
     if (matches(e, anyRegion, today, saved)) regions.set(e.region, (regions.get(e.region) ?? 0) + 1);
+    if (matches(e, onlyPicks, today, saved)) picks++;
   }
-  return { kinds, regions };
+  return { kinds, regions, picks };
 }
 
 /**

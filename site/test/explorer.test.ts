@@ -73,7 +73,9 @@ describe("Explorer", () => {
     history.replaceState(null, "", "/explore?when=all");
     render(Explorer);
     expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film", "Later talk"]);
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Every date" })).toHaveAttribute("aria-pressed", "true");
+    // Not what the page opens on, so it has a pill, which goes back to the week.
+    expect(screen.getByRole("button", { name: "Remove Every date" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Keep going/ })).toBeNull();
   });
 
@@ -85,7 +87,8 @@ describe("Explorer", () => {
       const onNow = screen.getByRole("heading", { level: 2, name: "On now" }).closest("details")!;
       expect(onNow).not.toHaveAttribute("open");
       const summary = onNow.querySelector("summary")!;
-      expect(summary).toHaveTextContent("On now · 7 events");
+      // Its picks are named, so a closed line does not hide them.
+      expect(summary).toHaveTextContent("On now · 7 events, 1 Don't miss");
       // Plain text: some screen readers flatten a heading inside a summary; the heading is in the group (#194).
       expect(summary.querySelector("h1, h2, h3, h4, h5, h6")).toBeNull();
       expect(within(onNow).getAllByRole("article")[0]).toHaveTextContent("Exhibition");
@@ -96,6 +99,25 @@ describe("Explorer", () => {
     } finally {
       events.splice(events.length - runs.length);
     }
+  });
+
+  it("has the picks as a toggle in the bar, counted for the rest of the filters, with no pill of its own", async () => {
+    render(Explorer);
+    const bar = document.querySelector(".bar") as HTMLElement;
+    const picks = within(bar).getByRole("button", { name: "Don't miss, 1 event" });
+    expect(picks).toHaveAttribute("aria-pressed", "false");
+    await fireEvent.click(picks);
+    expect(location.search).toBe("?picks=1");
+    expect(rows()).toEqual(["Exhibition"]);
+    expect(picks).toHaveAttribute("aria-pressed", "true");
+    expect(within(bar).queryByRole("button", { name: /^Remove / })).toBeNull();
+    // Not in the sheet, so Filters (n) leaves it out.
+    expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
+    expect(within(bar).getByRole("button", { name: "Don't miss, 0 events" })).toHaveAttribute("aria-pressed", "true");
+    // The empty state still names it, and offers to drop it.
+    expect(screen.getByText(/No events match/, { selector: ".empty" })).toHaveTextContent("No events match This week · Film · Don't miss.");
+    expect(screen.getByRole("button", { name: "Without Don't miss, 1 event" })).toBeInTheDocument();
   });
 
   it("keeps a short On now as an open day group, under any when-filter", () => {
@@ -113,7 +135,7 @@ describe("Explorer", () => {
     render(Explorer);
     // One group named When, the fieldset; its buttons were once in a second, so "When" was said twice (#194).
     const when = screen.getByRole("group", { name: "When" });
-    expect(within(when).getAllByRole("button").map((b) => b.textContent)).toEqual(["Today", "Sat", "Sun", "This weekend", "Next 7 days", "Next 30 days", "All"]);
+    expect(within(when).getAllByRole("button").map((b) => b.textContent)).toEqual(["Today", "Sat", "Sun", "This weekend", "Next 7 days", "Next 30 days", "Every date"]);
     await fireEvent.click(within(when).getByRole("button", { name: "Sat" }));
     expect(location.search).toBe("?when=2026-10-10..2026-10-10");
     expect(rows()).toEqual(["Exhibition", "Saturday film"]);
@@ -131,7 +153,7 @@ describe("Explorer", () => {
       const keep = screen.getByRole("link", { name: /^Keep going/ });
       expect(keep).toHaveTextContent("Keep going: next week · 1 event");
       expect(keep).toHaveAttribute("href", "/explore?when=2026-10-15..2026-10-25");
-      const all = screen.getByRole("link", { name: "or see all 2" });
+      const all = screen.getByRole("link", { name: "or every date · 2" });
       expect(all).toHaveAttribute("href", "/explore?when=all");
       // After the last row of the week (here On now's).
       const lastRow = [...container.querySelectorAll("article")].at(-1)!;
@@ -144,7 +166,7 @@ describe("Explorer", () => {
       expect(scrolled).toHaveBeenCalledExactlyOnceWith({ top: 0, behavior: "instant" });
       // Nothing lies past the new end: no button, and no every-date link, which would show the same.
       expect(screen.queryByRole("link", { name: /Keep going/ })).toBeNull();
-      expect(screen.queryByRole("link", { name: /see all/ })).toBeNull();
+      expect(screen.queryByRole("link", { name: /every date/ })).toBeNull();
     } finally {
       scrolled.mockRestore();
     }
@@ -163,7 +185,7 @@ describe("Explorer", () => {
     const keep = screen.getByRole("link", { name: /^Keep going/ });
     expect(keep.compareDocumentPosition(screen.getByRole("heading", { level: 2, name: "Always there" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(keep).toHaveAttribute("href", "/explore?when=2026-10-15..2026-10-25&recurring=1");
-    expect(screen.getByRole("link", { name: "or see all 3" })).toHaveAttribute("href", "/explore?when=all&recurring=1");
+    expect(screen.getByRole("link", { name: "or every date · 3" })).toHaveAttribute("href", "/explore?when=all&recurring=1");
     // Skip past results lands after the last dated row, just before Keep going (#194).
     expect(screen.getByRole("link", { name: "Skip past results" })).toHaveAttribute("href", "#past-results");
     const target = document.getElementById("past-results")!;
@@ -266,7 +288,7 @@ describe("Explorer", () => {
     expect(screen.getByRole("button", { name: /^Music,/ })).toHaveAttribute("aria-pressed", "false");
     await fireEvent.click(within(bar).getByRole("button", { name: "Remove Next 30 days" }));
     expect(location.search).toBe("?when=all&kind=film");
-    expect(within(bar).getAllByRole("button", { name: /^Remove / }).map((p) => p.textContent?.trim())).toEqual(["Film"]);
+    expect(within(bar).getAllByRole("button", { name: /^Remove / }).map((p) => p.textContent?.trim())).toEqual(["Every date", "Film"]);
   });
 
   it("names a date preset by the rail's name for its days today: Next 7 days is This week on a Monday", () => {
@@ -285,6 +307,8 @@ describe("Explorer", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Remove Film" }));
     expect(screen.getByRole("button", { name: "Remove Next 30 days" })).toHaveFocus();
     await fireEvent.click(screen.getByRole("button", { name: "Remove Next 30 days" }));
+    expect(screen.getByRole("button", { name: "Remove Every date" })).toHaveFocus();
+    await fireEvent.click(screen.getByRole("button", { name: "Remove Every date" }));
     expect(screen.getByRole("searchbox", { name: "Search" })).toHaveFocus();
   });
 
@@ -388,10 +412,11 @@ describe("Explorer", () => {
     expect(empty).toHaveTextContent("No events match This week · Film · “zzz”.");
     // Each filter whose removal alone lists something is a way out, with its count; the others are not offered.
     const ways = found((empty.nextElementSibling as HTMLElement | null) ?? undefined, "the ways out");
-    expect(within(ways).getAllByRole("button").map((b) => b.textContent)).toEqual(["Without “zzz”, 1 event", "Clear all filters"]);
-    await fireEvent.click(within(ways).getByRole("button", { name: "Clear all filters" }));
-    expect(rows()).toHaveLength(4);
-    expect(location.search).toBe("?when=all");
+    expect(within(ways).getAllByRole("button").map((b) => b.textContent)).toEqual(["Without “zzz”, 1 event", "Clear filters"]);
+    // The bar's reset: back to the week the page opens on.
+    await fireEvent.click(within(ways).getByRole("button", { name: "Clear filters" }));
+    expect(rows()).toHaveLength(3);
+    expect(location.search).toBe("");
   });
 
   it("takes one filter away from the empty state's way out", async () => {

@@ -37,11 +37,16 @@
   let shortcut = $state(true);
   // The bar's height, so the sticky group headings sit just under it however it wraps (search takes a line on phones).
   let barHeight = $state(0);
+  // How much of the bar stays on screen once stuck: on phones its search line scrolls away (a negative top), so only
+  // the lines under it stick.
+  let barShown = $state(0);
+  const barTop = () => parseFloat(getComputedStyle(bar).top) || 0;
+  $effect(() => { barShown = barHeight > 0 ? barHeight + barTop() : 0; });
   // The bar is sticky, and a sticky day heading (about 2.5rem) sits under it, so a row the browser scrolls to the
   // viewport's top edge on focus or by anchor would land under both. The document's scroll padding keeps it clear
   // (audit 2026-10-21, A1); base.css carries a one-line estimate for before this measures, and without JavaScript.
   $effect(() => {
-    document.documentElement.style.scrollPaddingTop = barHeight > 0 ? `calc(${barHeight}px + 2.5rem)` : "";
+    document.documentElement.style.scrollPaddingTop = barShown > 0 ? `calc(${barShown}px + 2.5rem)` : "";
     return () => { document.documentElement.style.scrollPaddingTop = ""; };
   });
   // A shortlist link none of whose events is still to come parses to no shortlist; say so until the next change, so
@@ -104,7 +109,7 @@
     // Scrolled past the results' top, a new slice would open mid-list; bring its first result up under the bar. The
     // bar is measured now, not through barHeight, which lags a pill that has just wrapped it onto another line.
     await tick();
-    const below = results.getBoundingClientRect().top - bar.offsetHeight;
+    const below = results.getBoundingClientRect().top - bar.offsetHeight - barTop();
     if (below < 0) window.scrollBy({ top: below, behavior: "instant" });
   }
 
@@ -121,7 +126,7 @@
   async function showResults() {
     sheetOpen = false;
     await tick();
-    window.scrollBy({ top: results.getBoundingClientRect().top - bar.offsetHeight, behavior: "instant" });
+    window.scrollBy({ top: results.getBoundingClientRect().top - bar.offsetHeight - barTop(), behavior: "instant" });
     results.focus({ preventScroll: true });
   }
 
@@ -174,7 +179,8 @@
   // The date the URL leaves out (the week) is what the page opens on, not a filter the reader set: the count says it
   // ("97 events this week") rather than a pill whose removal would widen to every date, and Filters (n) leaves it out.
   let impliedWhen = $derived(isImpliedWhen(filters) ? allPills.find((p) => p.when === true) : undefined);
-  let pills = $derived(allPills.filter((p) => p !== impliedWhen));
+  // The Don't miss toggle shows its own state beside them, so it has no pill (the empty state still names it).
+  let pills = $derived(allPills.filter((p) => p !== impliedWhen && p.without.dontMiss === filters.dontMiss));
   let sliceText = $derived(impliedWhen === undefined ? countText : `${countText} ${impliedWhen.label.toLowerCase()}`);
   // The filters set in the sheet; search is in the bar, above it.
   let sheetCount = $derived(pills.filter((p) => p.without.q === filters.q).length);
@@ -230,13 +236,24 @@
 
 <!-- The bar comes first so search is the explorer's first Tab stop, and its skip link the second; the grid puts the
      filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
-<div class="explorer" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
+<div class="explorer" style={barShown > 0 ? `--bar-height: ${barShown}px` : undefined}>
   <div class="bar" bind:this={bar} bind:offsetHeight={barHeight}>
     <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts={shortcut ? "/" : undefined} placeholder="Search events, venues, places" />{#if mounted && shortcut}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
     <a class="skip" href="#results">Skip to results</a>
     <!-- Rows are two Tab stops each, so a week is hundreds of stops from Keep going and the footer (audit 2026-10-21,
          A8): this one lands after the last dated row. -->
     {#if count > 0}<a class="skip" href="#past-results">Skip past results</a>{/if}
+    <!-- The picks are the first lens (the 2026-10-25 critique), in the bar beside search rather than a switch at the
+         rail's foot, named as the tag is, with what it would list. Pressed, it wears the tag's red. -->
+    <button type="button" class="picks" aria-pressed={filters.dontMiss} onclick={() => change({ ...filters, dontMiss: !filters.dontMiss })}>Don't miss<span class="n" aria-hidden="true">{counts.picks}</span><span class="visually-hidden">, {counts.picks} {counts.picks === 1 ? "event" : "events"}</span></button>
+    <!-- Beside the count it orders, not at the rail's foot, below a laptop's fold. -->
+    <label class="sort"><span class="visually-hidden">Sort</span><select value={filters.sort} onchange={(e) => change({ ...filters, sort: e.currentTarget.value === "venue" ? "venue" : "date" })}><option value="date">By date</option><option value="venue">By venue</option></select></label>
+    {#if filters.saved}
+      <ShareButton label="Share saved" data={shareSaved} disabled={upcomingSaves.length === 0} />
+      <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved to calendar</button>
+    {/if}
+    <!-- Phones: the sheet's button, a real control on the bar's second line with the lens and the sort. -->
+    <button type="button" class="control sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={() => { sheetOpen = !sheetOpen; }}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
     <div class="slice">
       <p class="count" aria-hidden="true">{sliceText}</p>
       {#if pills.length > 0}
@@ -249,20 +266,11 @@
       {/if}
     </div>
     <p role="status" class="visually-hidden">{announced}</p>
-    <!-- Beside the count it orders, not at the rail's foot, below a laptop's fold. -->
-    <label class="sort"><span class="visually-hidden">Sort</span><select value={filters.sort} onchange={(e) => change({ ...filters, sort: e.currentTarget.value === "venue" ? "venue" : "date" })}><option value="date">By date</option><option value="venue">By venue</option></select></label>
-    {#if filters.saved}
-      <ShareButton label="Share saved" data={shareSaved} disabled={upcomingSaves.length === 0} />
-      <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved to calendar</button>
-    {:else}
-      <button type="button" class="control small export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs(exportAs.filename, exportable, exportAs.calendarName)}><UiIcon name="calendar-plus" />{exportable.length === 0 ? "Export to calendar" : `Export ${exportable.length} to calendar`}</button>
-    {/if}
     <!-- The bar's buttons are one kind (#181): base.css's small control, an icon and words, like Share saved. -->
-    {#if !isDefault(filters)}<button type="button" class="control small" onclick={() => change(DEFAULT_FILTERS)}><UiIcon name="x" />Clear filters</button>{/if}
+    {#if !isDefault(filters)}<button type="button" class="control small clear" onclick={() => change(DEFAULT_FILTERS)}><UiIcon name="x" />Clear filters</button>{/if}
   </div>
 
   <aside class="rail" aria-label="Filters">
-    <button type="button" class="sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={() => { sheetOpen = !sheetOpen; }}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
     <div class="sheet" class:open={sheetOpen} id="filter-sheet" onfocusin={clearShowResults}>
       <FilterRail {filters} {today} onchange={change} kinds={meta.kinds} regions={meta.regions} {counts} />
       <!-- Phones: the sheet pushes the results a screen down, so a chip changes nothing in view; this stays at the
@@ -285,7 +293,8 @@
           {#each ways as w (toQuery(w.p.without))}
             <button type="button" class="control small" onclick={() => change(w.p.without)}>{w.p.when === true ? "Every date" : `Without ${w.p.label}`}, {w.n} {w.n === 1 ? "event" : "events"}</button>
           {/each}
-          <button type="button" class="link" onclick={() => change({ ...DEFAULT_FILTERS, when: EVERY_DATE })}>Clear all filters</button>
+          <!-- The bar's Clear filters, the same reset: back to the week. -->
+          <button type="button" class="link" onclick={() => change(DEFAULT_FILTERS)}>Clear filters</button>
         </p>
       {:else}
         <p class="empty">Nothing listed right now.</p>
@@ -309,8 +318,9 @@
           {#if more.added > 0}
             <a class="keep-going" href={`/explore?${toQuery(next)}`} onclick={inPlace(() => goOn(next))}>Keep going: {more.nextWeek ? "next week" : `through ${formatDay(more.through)}`} · {more.added} {more.added === 1 ? "event" : "events"} <span aria-hidden="true">→</span></a>
           {/if}
-          {#if more.total > count}
-            <a class="see-all" href={`/explore?${toQuery(everyDate)}`} onclick={inPlace(() => change(everyDate))}>{more.added > 0 ? "or see" : "See"} all {more.total}</a>
+          <!-- Not where the empty state above offers Every date already. -->
+          {#if more.total > count && !ways.some((w) => w.p.when === true)}
+            <a class="see-all" href={`/explore?${toQuery(everyDate)}`} onclick={inPlace(() => change(everyDate))}>{more.added > 0 ? "or every date" : "Every date"} · {more.total}</a>
           {/if}
         </p>
       {/if}
@@ -318,11 +328,13 @@
     {#each groups as g, i (g.key)}
       {#if i === moreAt}{@render keep()}{/if}
       {#if g.collapsed}
+        {@const picks = g.events.filter((e) => e.dontMiss).length}
         <!-- A native disclosure, so it opens without JS and announces its state; closed, it is one line. The summary is
              plain text, since some screen readers flatten a heading inside it (audit A15); the group's heading is inside
-             the group, for heading navigation once it is open. -->
+             the group, for heading navigation once it is open. The picks inside are named, so a closed On now does not
+             hide them (the 2026-10-25 critique). -->
         <details class="collapsed">
-          <summary data-group={g.key}><span class="heading">{g.heading}</span> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
+          <summary data-group={g.key}><span class="heading">{g.heading}</span> · {g.events.length} {g.events.length === 1 ? "event" : "events"}{#if picks > 0}<span class="visually-hidden">{", "}</span><span class="dont-miss">{picks} Don't miss</span>{/if}</summary>
           <h2 class="visually-hidden">{g.heading}</h2>
           {@render rows(g)}
         </details>
@@ -332,6 +344,11 @@
       {/if}
     {/each}
     {#if moreAt === groups.length}{@render keep()}{/if}
+    <!-- Export, after the list it takes: the rarest action, out of the bar (the 2026-10-25 critique) and after every
+         filter in the Tab order. The saved view's is in the bar, beside Share saved. -->
+    {#if !filters.saved && count > 0}
+      <p class="foot"><button type="button" class="control export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs(exportAs.filename, exportable, exportAs.calendarName)}><UiIcon name="calendar-plus" />{exportable.length === 0 ? "Export to calendar" : `Export ${exportable.length} to calendar`}</button></p>
+    {/if}
   </section>
 </div>
 
@@ -349,8 +366,15 @@
   /* The results take focus only from the skip link; the next Tab lands on the first row, which shows the ring. */
   .results:focus, #past-results:focus { outline: none; }
   /* Sticky beside the results, scrolling on its own when it is taller than the window (a 768 px laptop). */
-  .rail { position: sticky; top: var(--space-4); max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto; padding: var(--space-1); margin: calc(-1 * var(--space-1)); }
-  /* (The padding keeps focus rings on the rail's edge from being clipped by the scroll box.) */
+  .rail { position: sticky; top: var(--space-4); max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto; padding: var(--space-1); margin: calc(-1 * var(--space-1)); scroll-padding-bottom: var(--space-8); }
+  /* (The padding keeps focus rings on the rail's edge from being clipped by the scroll box.) A rail cut by the window
+     fades out at its foot until it is scrolled to its end, so a half line reads as more below (the 2026-10-25
+     critique); one that fits is not faded, since its scroll timeline is inactive and the fade's initial value is 0. */
+  @property --rail-fade { syntax: "<length>"; inherits: false; initial-value: 0px; }
+  @keyframes rail-end { from, 95% { --rail-fade: 2rem; } to { --rail-fade: 0px; } }
+  @supports (animation-timeline: scroll()) {
+    .rail { mask-image: linear-gradient(to bottom, black calc(100% - var(--rail-fade)), transparent); animation: rail-end linear both; animation-timeline: scroll(self); }
+  }
   .sheet-toggle { display: none; }
   /* Sticky within the whole explorer, not just its grid row, so it stays over the results as they scroll. */
   .bar { grid-area: bar; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); position: sticky; top: 0; background: var(--bg); padding: var(--space-2) 0; z-index: var(--z-bar); }
@@ -358,6 +382,24 @@
   /* The raised surface, as in the rail: Chromium's dark field is #3b3b3b, where its placeholder grey is about 2.4:1. */
   .search input { width: 100%; font-size: var(--text-sm); padding: var(--space-1) 1.75rem var(--space-1) var(--space-2); background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
   .search input::placeholder { color: var(--fg-faint); opacity: 1; }
+  /* Chromium draws its clear button in its own blue, the one hue in the chrome that names no kind. */
+  .search input::-webkit-search-cancel-button { filter: grayscale(1); }
+  /* The Don't miss lens: an outlined pill with the tag's red as a dot; pressed, it is the tag, solid red. */
+  .picks {
+    display: inline-flex; align-items: center; gap: 0.35em; min-height: 1.75rem; padding: 0 var(--space-3);
+    font: inherit; font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--fg);
+    background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: 999px; cursor: pointer;
+  }
+  .picks::before { content: ""; width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--flag-red); }
+  .picks:hover { border-color: var(--fg-faint); }
+  .picks .n { color: var(--fg-faint); font-weight: var(--weight-regular); font-variant-numeric: tabular-nums; }
+  .picks[aria-pressed="true"] { color: var(--flag-red-fg); background: var(--flag-red); border-color: var(--flag-red); }
+  .picks[aria-pressed="true"]::before { background: currentColor; }
+  .picks[aria-pressed="true"] .n { color: inherit; }
+  @media (forced-colors: active) {
+    .picks[aria-pressed="true"] { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }
+  }
+  .foot { margin: var(--space-8) 0 0; }
   /* The / shortcut, at the field's end (in the padding it keeps clear) while it is empty and unfocused; not where
      there is no keyboard to press it. */
   .hint { position: absolute; right: var(--space-2); top: 50%; transform: translateY(-50%); pointer-events: none; font-size: var(--text-xs); color: var(--fg-muted); }
@@ -401,40 +443,49 @@
   }
   .keep-going:hover { border-color: var(--fg-faint); }
   .see-all { color: var(--fg-muted); }
-  /* A collapsed group (On now with no when-filter): one raised line, a full tap target, with a chevron that turns
-     when it opens. Open, its line sticks under the bar like a day heading, so it can be closed from anywhere. */
+  /* A collapsed group (On now with no when-filter): one line between hairlines, as light as a day heading, a full tap
+     target, with a chevron that turns when it opens and its picks named. Open, its line sticks under the bar like a
+     day heading, so it can be closed from anywhere. */
   .collapsed { margin-top: var(--space-2); }
   /* A hundred-odd venues, half of them with a single event: their headings sit closer than the days'. */
   .results :global(.section-heading.venue) { margin-top: var(--space-3); }
   .collapsed summary {
-    display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0 var(--space-3);
-    background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: var(--radius);
+    display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0 var(--space-1);
+    background: var(--bg); border-block: 1px solid var(--rule);
     color: var(--fg-muted); font-size: var(--text-sm); cursor: pointer; list-style: none;
   }
   .collapsed summary::-webkit-details-marker { display: none; }
+  .collapsed summary .dont-miss { margin-left: var(--space-1); }
   /* A chevron that turns when its disclosure opens: On now's line, and the phone's Filters button. */
   .collapsed summary::before, .sheet-toggle::before {
     content: ""; width: 0.4em; height: 0.4em; margin-right: var(--space-1);
     border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
     transform: rotate(-45deg); transition: transform 150ms var(--ease-out);
   }
-  .collapsed summary:hover { border-color: var(--fg-faint); }
+  .collapsed summary:hover { color: var(--fg); }
   .collapsed .heading { display: inline; font-size: inherit; font-weight: var(--weight-medium); color: var(--fg); margin: 0; }
   .collapsed[open] summary::before, .sheet-toggle[aria-expanded="true"]::before { transform: rotate(45deg); }
   .collapsed[open] summary { position: sticky; top: var(--bar-height, var(--tap)); z-index: var(--z-sticky); margin-bottom: var(--space-1); }
   @media (max-width: 800px) {
-    .explorer { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "bar" "rail" "results"; gap: var(--space-2); }
+    /* No gap: the rail is empty but for the sheet, which spaces itself when it is open. */
+    .explorer { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "bar" "rail" "results"; gap: 0; }
+    /* Three lines: search; the lens, the sort and Filters, each a 44 px target; then the count and the pills. The
+       first line scrolls away and the other two stick (the negative top), and the pills keep to one line, scrolled
+       sideways, so the stuck bar never grows past two lines (the 2026-10-25 critique). */
     .search { flex-basis: 100%; max-width: none; }
     .search input { min-height: var(--tap); font-size: var(--text-md); }
-    .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; }
+    /* The lens is a filter chip, 32 px as the rail's are on phones; the sort and Filters are 44 px actions. */
+    .picks { min-height: 2rem; }
+    .sort select { min-height: var(--tap); }
+    .sort { margin-left: auto; }
+    .sheet-toggle { display: inline-flex; gap: var(--space-2); }
+    .slice { flex: 1 1 60%; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -3px auto -3px -3px; padding: 3px; }
+    .count, .pills, .pill { flex: none; }
+    .pills { flex-wrap: nowrap; }
+    .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; mask-image: none; animation: none; }
     /* Closed by default in CSS and in the server HTML alike, so nothing moves when the page hydrates. */
     .sheet:not(.open) { display: none; }
-    .sheet-toggle {
-      display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0; font: inherit;
-      font-weight: var(--weight-medium); color: var(--fg); background: none; border: 0; cursor: pointer;
-    }
-    .sheet-toggle::before { margin-left: var(--space-1); }
-    .sheet.open { margin-bottom: var(--space-4); }
+    .sheet.open { margin: var(--space-2) 0 var(--space-4); }
     /* At the screen's foot while any of the sheet is on it, over the chips that scroll under it, with the page's
        ground under its margin so nothing shows between it and the edge. */
     .show-results {
@@ -443,5 +494,9 @@
       box-shadow: 0 var(--space-2) 0 var(--bg);
     }
     .show-results:hover { border-color: var(--accent); }
+  }
+  /* The search line's height and the gap under it: what scrolls away before the bar sticks. */
+  @media (max-width: 800px) and (min-height: 501px) {
+    .bar { top: calc(-1 * (var(--tap) + var(--space-2))); }
   }
 </style>

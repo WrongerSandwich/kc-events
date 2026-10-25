@@ -172,13 +172,12 @@ test("the explorer honors the URL and writes it back", async ({ page }) => {
   await expect(page).toHaveURL("/explore");
 });
 
-test("the explorer's picks=1 shows only the picks, under a picks only pill, and writes it back (#185)", async ({ page }) => {
+test("the explorer's picks=1 shows only the picks, under a pressed Don't miss toggle, and writes it back (#185)", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore?when=all&picks=1");
   const rows = page.locator(".results article.row");
   await expect(rows.first()).toBeVisible();
   await expect(page.locator(".results article.row:not(.flagged)")).toHaveCount(0);
-  await expect(page.getByRole("list", { name: "Active filters" }).getByRole("button", { name: "Remove Picks only" })).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Picks only", exact: true })).toBeChecked();
+  await expect(page.getByRole("button", { name: /^Don't miss\b/ })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: /^Comedy\b/ }).click();
   await expect(page).toHaveURL(/[?&]picks=1(&|$)/);
 });
@@ -213,8 +212,19 @@ test.describe("the explorer's active slice at 390 px", () => {
     await expect(page.locator("#filter-sheet")).toBeHidden();
     await page.getByRole("button", { name: "Remove Next 30 days" }).click();
     await expect(page).toHaveURL("/explore?when=all&kind=music");
-    await expect(pills).toHaveText(["Music"]);
-    await expect(page.getByRole("button", { name: /^Filters/ })).toHaveText("Filters (1)");
+    // Every date is not what the page opens on, so it is a filter too, with a pill that goes back to the week.
+    await expect(pills).toHaveText(["Every date", "Music"]);
+    await expect(page.getByRole("button", { name: /^Filters/ })).toHaveText("Filters (2)");
+  });
+
+  test("scrolled, the bar keeps Don't miss, the sort and Filters at the top and lets search go (the 2026-10-25 critique)", async ({ page }) => {
+    await on(page, BUILD_DAY, "/explore?when=all");
+    await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await expect(page.getByRole("searchbox")).not.toBeInViewport();
+    for (const name of [/^Don't miss/, /^Filters/]) await expect(page.getByRole("button", { name })).toBeInViewport();
+    // Stuck, it is two lines at most: the controls, then the count and the pills.
+    expect(await page.locator(".bar").evaluate((el) => el.getBoundingClientRect().bottom)).toBeLessThan(120);
   });
 
   test("never leaves a control tabbed to under the sheet's Show button (WCAG 2.4.11)", async ({ page }) => {
@@ -332,6 +342,11 @@ test("without JavaScript, a filtered link says the filters need it", async ({ br
   await expect(notice.locator("a[href^='/r/']")).toHaveCount(1);
   // Hidden by the <noscript> style, which the CSP lets through by its hash.
   await expect(page.getByRole("button", { name: /^Filters/ })).toBeHidden();
+  // So are the controls that would do nothing under it: search, sort, the Don't miss lens and export.
+  await expect(page.getByRole("searchbox")).toBeHidden();
+  await expect(page.getByRole("combobox", { name: "Sort" })).toBeHidden();
+  await expect(page.getByRole("button", { name: /^Don't miss/ })).toBeHidden();
+  await expect(page.getByRole("button", { name: /^Export/ })).toBeHidden();
   expect(violations).toEqual([]);
   await context.close();
 });
@@ -365,7 +380,7 @@ for (const js of [true, false]) {
     await expect(results.locator("details")).toHaveCount(0);
     await expect(results.getByRole("heading", { name: "Closing exhibition" })).toBeVisible();
     const keep = results.getByRole("link", { name: /^Keep going/ });
-    const all = results.getByRole("link", { name: "or see all 9" });
+    const all = results.getByRole("link", { name: "or every date · 9" });
     if (js) {
       await expect(keep).toHaveText("Keep going: next week · 1 event →");
       await expect(keep).toHaveAttribute("href", "/explore?when=2026-10-05..2026-10-18");
@@ -396,7 +411,7 @@ test("Keep going adds next week below where the reader is, without moving the pa
   await expect(page.getByRole("article").filter({ hasText: "Mid-month reading" })).toBeVisible();
   // Nothing is listed the week after, so only every date is left to offer.
   await expect(page.getByRole("link", { name: /^Keep going/ })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "See all 9" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Every date · 9" })).toBeVisible();
 });
 
 for (const width of [1280, 1440]) {
@@ -604,7 +619,7 @@ test("From and To wait behind Custom dates…, out of the Tab order until it ope
   await on(page, BUILD_DAY, "/explore");
   await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
   await expect(page.getByLabel("From")).toBeHidden();
-  await page.getByRole("button", { name: "All", exact: true }).focus();
+  await page.getByRole("button", { name: "Every date", exact: true }).focus();
   await page.keyboard.press("Tab");
   const custom = page.getByText("Custom dates…");
   await expect(custom).toBeFocused();

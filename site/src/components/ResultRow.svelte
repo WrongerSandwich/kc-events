@@ -83,9 +83,18 @@
      so a finger's target never crowds the title's (#182). */
   .row :global(.chip) { grid-area: chip; min-height: 24px; }
   .row :global(button.save) { grid-area: save; }
+  /* Below 1024 px Save is the bookmark alone, quiet as on a pick's card, so five boxes a screen do not outweigh the
+     titles and the venue keeps the room (the 2026-10-25 critique). The 44 px target stays; the word is sized out of
+     sight (font-size 0) but stays the button's name, with the title and day after it. Saved, the bookmark is ink. */
+  @media (max-width: 1023px) {
+    .row :global(button.save) { min-width: var(--tap); padding: 0; font-size: 0; color: var(--fg-muted); background: none; border-color: transparent; }
+    .row :global(button.save .ui-icon) { width: 1.25rem; height: 1.25rem; }
+    .row :global(button.save:hover) { color: var(--fg); border-color: var(--control-border); }
+    .row :global(button.save[aria-pressed="true"]) { color: var(--fg); background: none; border-color: transparent; }
+  }
   /* A sentence that wraps, so it has the page's leading, not the row's, and a reading line's length on a wide row. */
   .why { grid-area: why; max-width: 70ch; margin: 0; font-size: var(--text-sm); line-height: var(--leading); color: var(--fg); }
-  /* Venue and neighborhood give way together, in proportion to their length; from 1024 px only the venue does. */
+  /* Venue and neighborhood give way, the neighborhood first below 1024 px; from 1024 px only the venue does. */
   .where { grid-area: where; display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   /* A 12 px line at the row's 1.25 leading is 15 px, so 4.5 px above and below make 24. */
   .venue { min-width: 0; overflow: hidden; text-overflow: ellipsis; padding-block: 4.5px; }
@@ -95,6 +104,8 @@
   /* A kind's page has no chip, so its venue line starts where the chip would (#182). */
   @media (max-width: 1023px) {
     .row.no-chip .where { grid-column-start: 1; }
+    /* Short of room, the neighbourhood gives way well before the venue does, which is what a reader looks for. */
+    .hood { flex-shrink: 20; }
   }
   /* Below 800 px the verified stamp leaves the row; the event page keeps it. */
   .verified { grid-area: verified; display: none; }
@@ -144,7 +155,7 @@
      least 12rem, then the rest) share the room. The title's column is the same width on every row, whatever its
      words, so the venues start on one line down the list (the 2026-10-24 critique), not where each title ends. The widest dated lines at this size are 169 px ("11:30 am · through Sun Oct 25", on the 10-23 run), and 206 px with the day first. The trailing
      columns have fixed widths, so the kind chips, stamps and Save buttons each make a column down the list, whatever a
-     row's title or venue: the widest chip ("outdoors/community") is 154 px, the widest stamp ("✓ Sep 30") about 50 px,
+     row's title or venue: the widest chip ("Outdoors/community", sentence case since the 2026-10-24 critique) is 141 px, the widest stamp ("✓ Sep 30") about 50 px,
      and Save, its bookmark and "Saved", within its 80 px column. A list that ships no script (a venue, kind, region or
      changes page) has no Save, and its stylesheet sets --row-save-width to 0, so all that is left where Save would be
      is one column gap (#181); a kind's page has no chip, so its column is 0 px, likewise one gap. */
@@ -158,7 +169,7 @@
     .row :global(button.save) { min-height: auto; justify-self: stretch; }
     .row {
       --when-width: 10.75rem;
-      --chip-width: 9.75rem; --verified-width: 3.5rem; --save-width: var(--row-save-width, 5rem);
+      --chip-width: 9rem; --verified-width: 3.5rem; --save-width: var(--row-save-width, 5rem);
       padding: 2px 0;
       --title-max: 19rem;
       /* Each detail sits on the title's first line when it wraps. */

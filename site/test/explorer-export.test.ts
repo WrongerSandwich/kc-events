@@ -69,10 +69,10 @@ describe("export the view (#186: the count on the button)", () => {
     target.remove();
   });
 
-  it("is disabled with nothing to export", () => {
+  it("is not there when nothing is listed: it sits after the results, and the empty state has the ways out", () => {
     history.replaceState(null, "", "/explore?q=zzz");
     render(Explorer);
-    expect(screen.getByRole("button", { name: "Export to calendar" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /^Export/ })).toBeNull();
   });
 });
 

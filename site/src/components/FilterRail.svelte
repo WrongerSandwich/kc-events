@@ -92,11 +92,10 @@
   </fieldset>
 
   <!-- Each switch says what it does under its words, out of its name, so a screen reader hears the name and then the
-       line. The rail is on the page once, so the ids are fixed. -->
+       line. The rail is on the page once, so the ids are fixed. Don't miss is the bar's, the first lens, not a switch
+       here. -->
   <fieldset class="show">
     <legend>Show</legend>
-    <label><input type="checkbox" aria-describedby="show-picks" checked={filters.dontMiss} onchange={() => onchange({ ...filters, dontMiss: !filters.dontMiss })} /> Picks only</label>
-    <p class="hint" id="show-picks">Tagged Don't miss, each with a reason</p>
     <label><input type="checkbox" aria-describedby="show-always" checked={filters.recurring} onchange={() => onchange({ ...filters, recurring: !filters.recurring })} /> Always there</label>
     <p class="hint" id="show-always">Adds recurring events, after the days</p>
     <label><input type="checkbox" aria-describedby="show-saved" checked={filters.saved} onchange={() => onchange({ ...filters, saved: !filters.saved })} /> Saved only</label>
@@ -118,15 +117,16 @@
      the rail so a kind button's own class still wins. */
   .rail { --hue: var(--fg); --hue-tint: var(--pressed-tint); }
   button[aria-pressed="true"] { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
-  /* Kind buttons carry their kind: the icon in its colour. */
-  .kind { display: inline-flex; align-items: center; gap: 0.3em; }
+  /* Kind buttons carry their kind: the icon in its colour. Region buttons share the layout, so a count sits as far
+     from its words on both. */
+  .chips button { display: inline-flex; align-items: center; gap: 0.3em; }
   .kind :global(.kind-icon) { color: var(--hue); }
   .custom { margin-top: var(--space-2); }
   .custom summary { display: inline-flex; align-items: center; min-height: 1.75rem; font-size: var(--text-xs); color: var(--fg-muted); cursor: pointer; }
   .custom summary:hover { color: var(--fg); }
   .range { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1); } .range label { display: flex; flex-direction: column; font-size: var(--text-xs); }
   /* A chip's count, quieter than its words; a chip that would list nothing is quieter still, and stays pressable. */
-  .n { margin-left: 0.35em; color: var(--fg-faint); font-variant-numeric: tabular-nums; font-weight: var(--weight-regular); }
+  .n { margin-left: 0.1em; color: var(--fg-faint); font-variant-numeric: tabular-nums; font-weight: var(--weight-regular); }
   button[aria-pressed="true"] .n { color: inherit; }
   button.none:not([aria-pressed="true"]) { color: var(--fg-faint); border-color: var(--rule-strong); border-style: dashed; }
   button.none:not([aria-pressed="true"]) :global(.kind-icon) { color: inherit; }

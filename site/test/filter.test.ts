@@ -76,6 +76,17 @@ describe("facetCounts", () => {
     expect(Object.fromEntries(kinds)).toEqual({ music: 1, film: 1 }); // in Lawrence, this week
     expect(Object.fromEntries(regions)).toEqual({ "Central KC": 1, Lawrence: 1 }); // music, this week
   });
+
+  it("counts the picks the rest of the filters list", () => {
+    const events = [
+      event({ id: "a", start: "2026-10-09T19:00:00-05:00", kind: "music", dontMiss: true }),
+      event({ id: "b", start: "2026-10-10", kind: "film", dontMiss: true }),
+      event({ id: "c", start: "2026-10-10", kind: "music" }),
+      event({ id: "d", start: "2026-11-20", kind: "music", dontMiss: true }), // past the week
+    ];
+    expect(facetCounts(events, f({ when: { preset: "weekend" }, kinds: ["music"] }), today, none).picks).toBe(1);
+    expect(facetCounts(events, f({ when: { preset: "weekend" }, dontMiss: true }), today, none).picks).toBe(2);
+  });
 });
 
 describe("keepGoing", () => {
