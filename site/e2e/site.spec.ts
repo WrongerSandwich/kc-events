@@ -68,7 +68,7 @@ test.describe("a visitor's browser in Tokyo", () => {
     // No longer a card: a row in the fold at the section's end, which the week strip's Today opens.
     await expect(card).not.toHaveClass(/card/);
     const fold = page.locator("details.started");
-    await expect(fold.locator("summary")).toHaveText("1 already started today");
+    await expect(fold.locator("summary")).toHaveText("1 earlier today");
     await expect(card).toBeHidden();
     await page.goto("/#pick-evt_e2e000000001"); // a link straight to it opens the fold
     await expect(card).toBeVisible();
@@ -920,17 +920,20 @@ test("the front page offers the picks as a calendar subscription, with the addre
   await expect(page.locator(".subscribe code")).toHaveText(/^https?:\/\/[^/]+\/calendar\/picks\.ics$/);
 });
 
-test("the subscription's https address copies in one tap, and comes first on a phone (#188)", async ({ page, context }) => {
+test("the subscription's https address copies in one tap, and comes first on a phone (#188), its steps behind a disclosure", async ({ page, context }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await on(page, BUILD_DAY, "/");
+  await expect(page.locator(".subscribe code")).toBeHidden();
+  await page.locator(".subscribe summary", { hasText: "Which to use" }).click();
+  await expect(page.locator(".subscribe code")).toBeVisible();
   await expect(page.locator(".subscribe")).toContainText("Google Calendar (Other calendars, then From URL)");
   await page.locator(".subscribe").getByRole("button", { name: "Copy address" }).click();
   await expect(page.locator(".subscribe")).toContainText("Address copied");
   expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/^https?:\/\/[^/]+\/calendar\/picks\.ics$/);
-  const top = async (sel: string) => (await page.locator(`.subscribe ${sel}`).boundingBox())!.y;
-  expect(await top(".apple")).toBeLessThan(await top(".by-address"));
+  const left = async (sel: string) => (await page.locator(`.subscribe ${sel}`).boundingBox())!.x;
+  expect(await left(".apple")).toBeLessThan(await left(".by-address"));
   await page.setViewportSize({ width: 375, height: 800 });
-  expect(await top(".by-address")).toBeLessThan(await top(".apple"));
+  expect(await left(".by-address")).toBeLessThan(await left(".apple"));
 });
 
 // The explorer link carries a query so its inline script takes the slice-pending branch.

@@ -5,40 +5,51 @@ import { PICKS_FEED, webcalUrl } from "../lib/feeds";
 
 // The picks' feed (#136), two ways (#188): the webcal link opens Apple Calendar's subscribe dialog, but Android and
 // most Windows browsers have nothing for that scheme, so the https address is beside it with a one-tap copy, for an app
-// that asks for a URL (Google Calendar, Outlook). One sentence says what the feed is before either way is offered, so
-// neither starts mid-thought. Phones put the address first (first in the source too, so Tab order matches). The page
-// passes the build's origin.
-interface Props { origin: string }
-const { origin } = Astro.props;
+// that asks for a URL (Google Calendar, Outlook). The two controls share one row and say which is which only on request,
+// so the block is a line of the page rather than a set of instructions (the 2026-10-24 re-critique). Phones put the
+// copy first (first in the source too, so Tab order matches). The page passes the build's origin.
+// The intro is the page's: the front page's heading names the picks, the About page's does not ("In your calendar").
+interface Props { origin: string; intro?: string }
+const { origin, intro = "Updated each week. Remove the calendar to stop." } = Astro.props;
 const address = new URL(PICKS_FEED, origin);
 // The address may break after a slash, and only there, so a phone wraps it between its parts rather than mid-word (#184).
 const parts = [`${address.origin}/`, ...address.pathname.slice(1).split(/(?<=\/)/)];
 ---
-<p class="what">The picks as a calendar of your own, updated each week. Remove the calendar to stop.</p>
-<div class="subscribe-ways">
-  <div class="by-address">
-    <CopyButton client:load label="Copy address" url={address.toString()} />
-    <p>
-      For Google Calendar (Other calendars, then From URL) or Outlook, paste the address:{" "}
-      <code>{parts.map((p, i) => <>{i > 0 && <wbr />}{p}</>)}</code>
-    </p>
-  </div>
-  <div class="apple">
-    <a class="control" href={webcalUrl(origin, PICKS_FEED)}><UiIcon name="calendar-plus" />Subscribe to the picks</a>
-    <p>In Apple Calendar, or any app that opens calendar links.</p>
-  </div>
+<p class="what">{intro}</p>
+<div class="ways">
+  <span class="by-address"><CopyButton client:load label="Copy address" url={address.toString()} failed="Could not copy; the address is under Which to use" /></span>
+  <a class="control apple" href={webcalUrl(origin, PICKS_FEED)}><UiIcon name="calendar-plus" />Subscribe<span class="visually-hidden"> to the picks</span></a>
 </div>
+<details class="which">
+  <summary><UiIcon name="chevron-right" />Which to use</summary>
+  <p>Subscribe opens Apple Calendar, or any app that opens calendar links.</p>
+  <p>
+    For Google Calendar (Other calendars, then From URL) or Outlook, paste the address:{" "}
+    <code>{parts.map((p, i) => <>{i > 0 && <wbr />}{p}</>)}</code>
+  </p>
+</details>
 
 <style>
-  .what { margin: var(--space-2) 0 0; }
-  /* Each way is its control, then a line of muted small print under it. */
-  .subscribe-ways { display: flex; flex-direction: column; gap: var(--space-4); margin-top: var(--space-3); }
-  .subscribe-ways > div { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
-  .subscribe-ways p { margin: 0; font-size: var(--text-sm); color: var(--fg-muted); }
-  /* The address is first in the source, so reading and Tab order match a phone's; wider screens lead with the link. */
+  .what { margin: var(--space-1) 0 0; color: var(--fg-muted); }
+  .ways { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin-top: var(--space-3); }
+  /* The copy is first in the source, so reading and Tab order match a phone's; wider screens lead with the link. */
   @media (min-width: 30.0625rem) {
     .apple { order: -1; }
   }
+  /* Until the copy button mounts (and without JavaScript), its slot takes no room in the row. */
+  .by-address:not(:has(button)) { display: none; }
+  /* Which to use: a muted line with a chevron that turns, as the front page's started fold. */
+  .which { margin-top: var(--space-1); font-size: var(--text-sm); color: var(--fg-muted); }
+  .which summary {
+    display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); width: fit-content;
+    font-weight: var(--weight-medium); cursor: pointer; list-style: none;
+  }
+  .which summary::-webkit-details-marker { display: none; }
+  .which summary:hover { color: var(--fg); }
+  .which summary :global(.ui-icon) { transition: transform 150ms var(--ease-out); }
+  .which[open] summary :global(.ui-icon) { transform: rotate(90deg); }
+  .which p { margin: 0 0 var(--space-2); max-width: 36rem; }
+  @media (prefers-reduced-motion: reduce) { .which summary :global(.ui-icon) { transition: none; } }
   /* Breaks inside a part only when that part alone is wider than the line. */
   code { overflow-wrap: break-word; user-select: all; }
 </style>

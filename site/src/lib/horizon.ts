@@ -82,7 +82,7 @@ export function closingLine(e: PublishedEvent, today: string): string {
   if (e.recurrence === "limited-run") {
     // A run that plays only some weekdays names them, since it is not on every day it is open (#143).
     const days = e.daysLine;
-    if (isUnderway(e, today)) return `${days === undefined ? "On now" : `${days} each week`}, closes ${formatDay(last)}`;
+    if (isUnderway(e, today)) return `${days === undefined ? "Running now" : `${days} each week`}, closes ${formatDay(last)}`;
     return `Opens ${formatDay(first!)}, ${days === undefined ? "closes" : `${days} each week, through`} ${formatDay(last)}`;
   }
   return throughLine(e);

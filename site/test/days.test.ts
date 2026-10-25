@@ -55,7 +55,7 @@ describe("a limited run that plays only some weekdays (#143)", () => {
     expect(dateTile(poe, THU)).toMatchObject({ top: "Closes", detail: "Fri–Sun" });
     expect(dateTile(poe, "2026-10-05")).toEqual({ top: "Opens", day: "14", month: "Oct", detail: "Fri–Sun, through Sun Nov 1", label: "Opens Wed Oct 14, Fri–Sun each week, through Sun Nov 1" });
     expect(closingLine(poe, THU)).toBe("Fri–Sun each week, closes Sun Nov 1");
-    expect(dateTile(everyDay, THU)).toMatchObject({ detail: "On now", label: "On now, closes Sun Nov 1" });
+    expect(dateTile(everyDay, THU)).toMatchObject({ detail: "Running now", label: "Running now, closes Sun Nov 1" });
   });
 
   it("is listed under its next playing day in the explorer on a day it does not play, and under On now on one it does", () => {

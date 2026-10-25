@@ -42,10 +42,10 @@
     tick().then(unfold); // arriving with the hash: the fold exists once the visitor's clock has rendered
     return () => window.removeEventListener("hashchange", unfold);
   });
-  // A new day can take every pick of the chosen kind out of this week. The filter goes with them, so it cannot come
-  // back on unpressed when a later pick of that kind moves into the week.
+  // A new day, or a start passing, can take every pick of the chosen kind out of what can still be gone to. The filter
+  // goes with them (its chip has gone), so it cannot come back on unpressed when a later pick of that kind moves in.
   $effect(() => {
-    if (chosen !== undefined && picksOf(chosen).length === 0) {
+    if (chosen !== undefined && upcomingOf(chosen).length === 0) {
       chosen = undefined;
       announced = undefined;
     }
@@ -62,6 +62,11 @@
   function picksOf(kind: string | undefined): PublishedEvent[] {
     const week = buckets["through-sunday"];
     return kind === undefined ? week : week.filter((e) => e.kind === kind);
+  }
+
+  /** The same, less the picks that have started: what the cards show, and so what the chips count. */
+  function upcomingOf(kind: string | undefined): PublishedEvent[] {
+    return picksOf(kind).filter((e) => !hasStarted(e));
   }
 
   /** The explorer showing this week's picks, or just one kind of them: the page's one link to the explorer's picks (#184). */
@@ -90,7 +95,7 @@
     if (next === chosen) return;
     const update = () => {
       chosen = next;
-      const n = picksOf(next).length;
+      const n = upcomingOf(next).length;
       const picks = n === 1 ? "pick" : "picks";
       // The kind in words before "picks": "2 theater and dance picks", "2 other picks" (kindName's "other events" would
       // read "other events picks").
@@ -146,16 +151,21 @@
         </ul>
       {:else}
         {@const kind = chosen}
-        {@const counts = kindCounts(buckets[h])}
+        {@const ahead = upcomingOf(undefined)}
+        <!-- The chips count only what is still to come, as the cards show it: a kind whose picks have all started has
+             no chip, so none can filter the cards down to nothing (they wait in the fold below, under All). -->
+        {@const counts = kindCounts(ahead)}
         <!-- All first, pressed until a kind is: the row reads as a filter with a way back, not as a row of tags. The
              kinds keep the short form every chip uses (a card's, the explorer's), so the row stays a row on a phone. -->
+        <!-- None at all once every pick this week has started: no row, rather than an empty labelled list. -->
+        {#if counts.length > 0}
         <ul class="kinds" aria-label="Picks by kind">
           {#if counts.length > 1}
             <li class="all">
               {#if hydrated}
-                <button type="button" class="chip" aria-pressed={kind === undefined} onclick={() => choose(undefined)}>All {buckets[h].length}</button>
+                <button type="button" class="chip" aria-pressed={kind === undefined} onclick={() => choose(undefined)}>All {ahead.length}</button>
               {:else}
-                <a class="chip" href={explorerHref()}>All {buckets[h].length}</a>
+                <a class="chip" href={explorerHref()}>All {ahead.length}</a>
               {/if}
             </li>
           {/if}
@@ -169,6 +179,7 @@
             </li>
           {/each}
         </ul>
+        {/if}
         <p role="status" class="visually-hidden">{announced ?? ""}</p>
         {@const shown = picksOf(kind)}
         {@const upcoming = shown.filter((e) => !hasStarted(e))}
@@ -186,11 +197,12 @@
         {/each}
         {#if started.length > 0}
           <details class="started" class:alone={upcoming.length === 0}>
-            <summary><UiIcon name="chevron-right" />{started.length} already started today</summary>
+            <summary><UiIcon name="chevron-right" />{started.length} earlier today</summary>
             <ul class="later">
               {#each started as event (event.id)}
                 <li class={`kind-${slugify(event.kind)}`} id={`pick-${event.id}`}>
-                  <span class="when">{formatTime(event.start!)}</span>
+                  <!-- A span's start is its first day's hour, not today's (a last day can close before it). -->
+                  <span class="when">{isMultiDay(event) ? "Last day" : formatTime(event.start!)}</span>
                   <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {kindName(event.kind).toLowerCase()}</span></a>
                   <span class="where">{venueLine(event)}</span>
                 </li>
