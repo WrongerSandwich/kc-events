@@ -304,15 +304,20 @@ describe("DontMissList", () => {
     expect(within(week()).getByText("1 earlier today")).toBeInTheDocument();
   });
 
-  it("dates the week from tomorrow once today's picks have all begun and the rest are on later days", async () => {
+  it("dates the week from tomorrow late in the evening once today's picks have all begun and the rest are on later days", async () => {
     vi.useFakeTimers({ now: new Date("2026-10-06T12:00:00Z") }); // Tuesday 7 am: the Tuesday show is still to come
     render(DontMissList);
     await tick();
     const heading = () => within(screen.getAllByRole("region")[0]!).getByRole("heading", { level: 2 }).textContent;
+    const at = async (iso: string) => {
+      vi.setSystemTime(new Date(iso));
+      document.dispatchEvent(new Event("visibilitychange"));
+      await tick();
+    };
     expect(heading()).toBe("This week, Oct 6–11");
-    vi.setSystemTime(new Date("2026-10-07T01:05:00Z")); // 8:05 pm: it has started; the run and Wednesday's are after today
-    document.dispatchEvent(new Event("visibilitychange"));
-    await tick();
+    await at("2026-10-07T01:05:00Z"); // 8:05 pm: it has started, but the run is open today and its doors may be too
+    expect(heading()).toBe("This week, Oct 6–11");
+    await at("2026-10-07T02:05:00Z"); // 9:05 pm: the run and Wednesday's show are what is left, after today
     expect(heading()).toBe("This week, Oct 7–11");
   });
 

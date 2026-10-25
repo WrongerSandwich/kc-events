@@ -35,6 +35,7 @@ describe("horizon", () => {
     expect(horizonHeading("through-sunday", "2026-10-10", true)).toBe("Tomorrow, Sun Oct 11"); // Sat night
     expect(horizonHeading("through-sunday", "2026-10-11", true)).toBe("This weekend, Oct 11"); // Sun: no tomorrow in it
     expect(horizonHeading("through-sunday", "2026-10-06", true)).toBe("This week, Oct 7–11"); // Tue night
+    expect(horizonHeading("through-sunday", "2026-10-07", true)).toBe("This weekend, Oct 8–11"); // Wed night: from Thursday
     expect(horizonHeading("next-two-weeks", "2026-10-10", true)).toBe("Next two weeks, through Oct 24");
   });
 

@@ -75,12 +75,14 @@ function calendarTimes(e: PublishedEvent, visitFrom?: string): { allDay: boolean
   const first = firstDay(e);
   const last = lastDay(e)!;
 
-  if (visitFrom !== undefined && e.recurrence === "limited-run" && (first === undefined || last > first)) {
+  const from = visitFrom === undefined || (first !== undefined && first > visitFrom) ? first : visitFrom;
+  // A day it plays, when it has days; none left (or a run already closed) leaves the span, as before.
+  const day = from === undefined || from > last ? undefined : e.days === undefined ? from : nextPlayingDay(e, from, last);
+  if (visitFrom !== undefined && e.recurrence === "limited-run" && (first === undefined || last > first) && day !== undefined) {
     // One event's own file, from a card or its page: a run goes in as one day to go, the first it is open from
-    // `visitFrom` (a day it plays, when it has days), not as its whole span, which would lay an exhibition months long
-    // across the calendar from a day already gone. A feed or an export keeps the span: there it is a run to know about.
-    const from = first === undefined || first < visitFrom ? visitFrom : first;
-    const day = (e.days === undefined ? undefined : nextPlayingDay(e, from, last)) ?? (from < last ? from : last);
+    // `visitFrom`, not as its whole span, which would lay an exhibition months long across the calendar from a day
+    // already gone. A feed or an export keeps the span: there it is a run to know about. `visitFrom` is the build's
+    // day, so between midnight and the daily rebuild (or after a failed one) it is a day behind.
     if (e.start !== undefined && !isDateOnly(e.start)) notes.push(spanNote(e.start, e.end, last));
     else notes.push(first === undefined ? `Runs through ${formatDay(last)}.` : `Runs ${formatDay(first)} through ${formatDay(last)}.`);
     if (e.daysLine !== undefined) notes.push(`${e.daysLine} each week.`);

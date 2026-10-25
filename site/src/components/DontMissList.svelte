@@ -21,6 +21,8 @@
     "next-two-weeks": "Nothing picked for the next two weeks yet.",
     "further-out": "Nothing picked further out yet.",
   } as const;
+  /** The hour, on the visitor's wall clock, from which a day with its picks all begun counts as done (doneToday). */
+  const LATE_HOUR = "21";
   // The visitor's clock, shared with every island (clock.svelte.ts): the build's date and no clock as rendered.
   const clock = islandClock();
   let now = $derived(clock.now);
@@ -129,11 +131,13 @@
   }
 
   /**
-   * Today's picks have all begun, and what is left this week is after today: the heading's dates start tomorrow
-   * (horizonHeading), so late on a Saturday the section reads "Tomorrow, Sun Oct 25". Never as built, with no clock,
-   * and not with nothing left to show under it.
+   * Late in the evening, today's picks have all begun, and what is left this week is after today: the heading's dates
+   * start tomorrow (horizonHeading), so on a Saturday night the section reads "Tomorrow, Sun Oct 25". From 9 pm only: a
+   * run open today is open tomorrow too, and by day its doors may well be open now. Never as built, with no clock, and
+   * not with nothing left to show under it.
    */
   let doneToday = $derived.by(() => {
+    if (now === undefined || now.slice(11, 13) < LATE_HOUR) return false;
     const ahead = upcomingOf(undefined);
     return buckets["through-sunday"].some(hasStarted) && ahead.length > 0 && ahead.every(afterToday);
   });

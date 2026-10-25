@@ -42,7 +42,8 @@ export function horizonHeading(h: Horizon, today: string, doneToday = false): st
     case "through-sunday": {
       const from = doneToday && today < sunday ? addDays(today, 1) : today;
       if (from !== today && from === sunday) return `Tomorrow, ${formatDay(sunday)}`;
-      const label = weekday(today) === 0 || weekday(today) >= 4 ? "This weekend" : "This week";
+      // By the day the dates start: a Wednesday night's Thursday to Sunday is a weekend, as every other one is.
+      const label = weekday(from) === 0 || weekday(from) >= 4 ? "This weekend" : "This week";
       return from === sunday ? `${label}, ${formatShort(from)}` : `${label}, ${formatRange(from, sunday)}`;
     }
     case "next-two-weeks":
