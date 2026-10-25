@@ -1,5 +1,5 @@
 import { dayOfMonth, formatDay, formatShort, formatTime, isDateOnly, localDate } from "./dates";
-import { firstDay, isMultiDay, isUnderway, lastDay } from "./events";
+import { firstDay, isMultiDay, isUnderway, lastDay, playsOn } from "./events";
 import { closingLine } from "./horizon";
 import type { PublishedEvent } from "./types";
 
@@ -25,9 +25,13 @@ export function dateTile(e: PublishedEvent, today: string, now?: string): Tile {
     // A run that plays only some weekdays shows them under the title (#143). A run's close is "Closes", pairing with
     // "Opens"; "through" is a one-off's span, or the end of a run's weekdays (#184). A run under way without days says
     // nothing there: the tile's "Closes" has it, and "On now" or "Running now" read at night as open at this hour,
-    // which no page tells us.
+    // which no page tells us. A run that plays only some weekdays, one of them today, says "Today" before them once the
+    // visitor's clock is read: a day it is on, which its days say, never an hour.
     const days = e.daysLine;
     if (isUnderway(e, today) || first === undefined) {
+      if (now !== undefined && days !== undefined && isUnderway(e, today) && playsOn(e, today)) {
+        return { top: "Closes", ...parts(last), detail: `Today · ${days}`, label: `On today. ${closingLine(e, today)}` };
+      }
       return { top: "Closes", ...parts(last), detail: days, label: closingLine(e, today) };
     }
     const close = days === undefined ? `Closes ${formatDay(last)}` : `${days}, through ${formatDay(last)}`;

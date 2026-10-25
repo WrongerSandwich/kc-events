@@ -3,6 +3,7 @@ import Base from "../layouts/Base.astro";
 import DontMissList from "../components/DontMissList.svelte";
 import KindIcon from "../components/KindIcon.svelte";
 import Subscribe from "../components/Subscribe.astro";
+import UiIcon from "../components/UiIcon.svelte";
 import { events } from "../generated/events";
 import { dontMiss } from "../generated/dont-miss";
 import { meta } from "../generated/meta";
@@ -51,13 +52,19 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
     <Subscribe origin={origin} />
   </section>
 
-  {/* Every kind and region page, one click from here (#188), text only, as the landing pages' own rows; the venues are in the footer. */}
-  <nav class="lists" aria-label="More lists">
-    <p>By kind: {meta.kinds.map((k, i) => <>{i > 0 && " · "}<a href={kindPath(k)}>{kindName(k)}</a></>)}</p>
-    <p>By region: {meta.regions.map((r, i) => <>{i > 0 && " · "}<a href={regionPath(r)}>{r}</a></>)}</p>
-  </nav>
-  {/* The page ends on its widest door: everything, in the explorer. */}
+  {/* The widest door, everything in the explorer, before the narrower ones. */}
   <p class="explore"><a href="/explore?when=all&recurring=1">Browse all {count} events</a></p>
+  {/* Every kind and region page, linked from here (#188), folded so nineteen links are not a wall at the page's end;
+      the venues are in the footer. Open, each list is a column of rows a thumb can hit. */}
+  <details class="lists">
+    <summary><UiIcon name="chevron-right" />Lists by kind and region</summary>
+    <nav aria-label="More lists">
+      <p class="group" id="by-kind">By kind</p>
+      <ul aria-labelledby="by-kind">{meta.kinds.map((k) => <li><a href={kindPath(k)}>{kindName(k)}</a></li>)}</ul>
+      <p class="group" id="by-region">By region</p>
+      <ul aria-labelledby="by-region">{meta.regions.map((r) => <li><a href={regionPath(r)}>{r}</a></li>)}</ul>
+    </nav>
+  </details>
 </Base>
 
 <style>
@@ -80,8 +87,20 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
   .always a { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
   .always .detail { grid-column: 2; font-size: var(--text-sm); color: var(--fg-muted); }
   .icon { color: var(--hue); }
-  .lists { margin-top: var(--space-12); font-size: var(--text-sm); color: var(--fg-muted); }
-  .lists p + p { margin-top: var(--space-2); }
-  .lists a { color: var(--fg); text-decoration: underline; text-decoration-color: var(--fg-faint); }
-  .explore { margin-block: var(--space-6); font-size: var(--text-lg); font-weight: var(--weight-strong); }
+  .explore { margin-top: var(--space-12); font-size: var(--text-lg); font-weight: var(--weight-strong); }
+  /* The lists: a muted line with a chevron that turns, as Which to use and the started fold. */
+  .lists { margin: var(--space-2) 0 var(--space-6); font-size: var(--text-sm); color: var(--fg-muted); }
+  .lists summary {
+    display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); width: fit-content;
+    font-weight: var(--weight-medium); cursor: pointer; list-style: none;
+  }
+  .lists summary::-webkit-details-marker { display: none; }
+  .lists summary:hover { color: var(--fg); }
+  .lists summary :global(.ui-icon) { transition: transform 150ms var(--ease-out); }
+  .lists[open] summary :global(.ui-icon) { transform: rotate(90deg); }
+  .lists .group { margin-top: var(--space-3); font-size: var(--text-xs); font-weight: var(--weight-medium); }
+  /* Columns of rows, each 32 px tall: a list to pick from with a thumb, not a paragraph of links. */
+  .lists ul { list-style: none; padding: 0; margin: var(--space-1) 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); column-gap: var(--space-4); }
+  .lists li a { display: flex; align-items: center; min-height: 2rem; color: var(--fg); }
+  @media (prefers-reduced-motion: reduce) { .lists summary :global(.ui-icon) { transition: none; } }
 </style>

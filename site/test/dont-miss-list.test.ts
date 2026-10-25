@@ -59,7 +59,7 @@ describe("DontMissList", () => {
     expect(within(sections[0]!).getByText("Why A.")).toBeInTheDocument();
     // The tile is visual; the full date is in words for screen readers.
     expect(within(sections[0]!).getByText("Closes Sun Oct 11.")).toBeInTheDocument();
-    expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("All 3 2 music1 art/exhibitions");
+    expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("All 3 2 Music1 Art/exhibitions");
     // The next two weeks are the later list's one-line rows (#184): no cards, no kind chips.
     expect(within(sections[1]!).queryAllByRole("article")).toEqual([]);
     expect(within(sections[1]!).queryByRole("list", { name: "Picks by kind" })).toBeNull();
@@ -104,7 +104,7 @@ describe("DontMissList", () => {
       expect(fold).not.toHaveAttribute("open");
       expect(fold.querySelector("summary")).toHaveTextContent("1 earlier today");
       // The chips count what can still be gone to, as the cards show it.
-      expect(within(screen.getAllByRole("region")[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent(/^All 2\s*1 art\/exhibitions\s*1 music$/);
+      expect(within(screen.getAllByRole("region")[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent(/^All 2\s*1 Art\/exhibitions\s*1 Music$/);
       expect(within(fold as HTMLElement).getByRole("link", { name: "Tuesday show, music" })).toHaveAttribute("href", "/e/a");
       expect(within(fold as HTMLElement).getByText("8:00 pm")).toBeInTheDocument();
       const week = screen.getAllByRole("region")[0]!;
@@ -151,8 +151,8 @@ describe("DontMissList", () => {
 
     it("narrows only its own section, switches kinds, and clears on a second press", async () => {
       const [week] = await front();
-      const music = within(week!).getByRole("button", { name: "2 music" });
-      const art = within(week!).getByRole("button", { name: "1 art/exhibitions" });
+      const music = within(week!).getByRole("button", { name: "2 Music" });
+      const art = within(week!).getByRole("button", { name: "1 Art/exhibitions" });
       expect(music).toHaveAttribute("aria-pressed", "false");
 
       music.click();
@@ -195,7 +195,7 @@ describe("DontMissList", () => {
       Object.defineProperty(document, "startViewTransition", { value: start, configurable: true });
       try {
         const [week] = await front();
-        within(week!).getByRole("button", { name: "2 music" }).click();
+        within(week!).getByRole("button", { name: "2 Music" }).click();
         await tick();
         expect(start).toHaveBeenCalledTimes(1);
         expect(titles(week!)).toEqual(["Tuesday show", "Wednesday show"]);
@@ -213,7 +213,7 @@ describe("DontMissList", () => {
     it("is this week's alone, and leaves the rows after it whole", async () => {
       const [week, next] = await front();
       expect(within(next!).queryAllByRole("button")).toEqual([]);
-      within(week!).getByRole("button", { name: "1 art/exhibitions" }).click();
+      within(week!).getByRole("button", { name: "1 Art/exhibitions" }).click();
       await tick();
       expect(titles(week!)).toEqual(["Closing run"]);
       expect(within(next!).getAllByRole("link").map((a) => a.textContent)).toEqual(["Later show, music", "Art fair, art and exhibitions"]);
@@ -223,10 +223,10 @@ describe("DontMissList", () => {
       const [week] = await front();
       const link = () => within(week!).getByRole("link", { name: /in the explorer/ });
       expect(link()).toHaveAttribute("href", "/explore?when=weekend&picks=1");
-      within(week!).getByRole("button", { name: "2 music" }).click();
+      within(week!).getByRole("button", { name: "2 Music" }).click();
       await tick();
       expect(link()).toHaveAttribute("href", "/explore?when=weekend&kind=music&picks=1");
-      within(week!).getByRole("button", { name: "2 music" }).click();
+      within(week!).getByRole("button", { name: "2 Music" }).click();
       await tick();
       expect(link()).toHaveAttribute("href", "/explore?when=weekend&picks=1");
     });
@@ -235,13 +235,13 @@ describe("DontMissList", () => {
       const [week] = await front();
       const status = within(week!).getByRole("status");
       expect(status).toHaveTextContent("");
-      within(week!).getByRole("button", { name: "2 music" }).click();
+      within(week!).getByRole("button", { name: "2 Music" }).click();
       await tick();
       expect(status).toHaveTextContent("Showing 2 music picks");
-      within(week!).getByRole("button", { name: "1 art/exhibitions" }).click();
+      within(week!).getByRole("button", { name: "1 Art/exhibitions" }).click();
       await tick();
       expect(status).toHaveTextContent("Showing 1 art and exhibitions pick");
-      within(week!).getByRole("button", { name: "1 art/exhibitions" }).click();
+      within(week!).getByRole("button", { name: "1 Art/exhibitions" }).click();
       await tick();
       expect(status).toHaveTextContent("Showing all 3 picks");
     });
@@ -273,7 +273,7 @@ describe("DontMissList", () => {
     render(DontMissList);
     await tick();
     const week = () => screen.getAllByRole("region")[0]!;
-    within(week()).getByRole("button", { name: "1 art/exhibitions" }).click();
+    within(week()).getByRole("button", { name: "1 Art/exhibitions" }).click();
     await tick();
     vi.setSystemTime(new Date("2026-10-12T17:00:00Z")); // the run has closed: no art this week
     document.dispatchEvent(new Event("visibilitychange"));
@@ -282,7 +282,7 @@ describe("DontMissList", () => {
     vi.setSystemTime(new Date("2026-10-19T17:00:00Z")); // the art fair's week: art is back, the filter is not
     document.dispatchEvent(new Event("visibilitychange"));
     await tick();
-    expect(within(week()).getByRole("button", { name: "1 art/exhibitions" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(week()).getByRole("button", { name: "1 Art/exhibitions" })).toHaveAttribute("aria-pressed", "false");
     expect(within(week()).getByRole("link", { name: "This week's picks in the explorer" })).not.toHaveAttribute("href", expect.stringContaining("kind="));
   });
 
@@ -291,9 +291,9 @@ describe("DontMissList", () => {
     render(DontMissList);
     await tick();
     const week = () => screen.getAllByRole("region")[0]!;
-    within(week()).getByRole("button", { name: "1 music" }).click();
+    within(week()).getByRole("button", { name: "1 Music" }).click();
     await tick();
-    expect(within(week()).getByRole("button", { name: "1 music" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(week()).getByRole("button", { name: "1 Music" })).toHaveAttribute("aria-pressed", "true");
     vi.setSystemTime(new Date("2026-10-08T01:05:00Z")); // 8:05 pm: it has started
     document.dispatchEvent(new Event("visibilitychange"));
     await tick();
@@ -337,10 +337,30 @@ describe("DontMissList", () => {
     // A day with only the run open jumps to the run's card, and draws its band.
     expect(within(strip).getByRole("link", { name: "Mon 5, today: no new picks, 1 run still on" })).toHaveAttribute("href", "#pick-b");
     expect(strip.querySelectorAll(".day:first-child .lane.open")).toHaveLength(1);
-    within(screen.getAllByRole("region")[0]!).getByRole("button", { name: "2 music" }).click();
+    within(screen.getAllByRole("region")[0]!).getByRole("button", { name: "2 Music" }).click();
     await tick();
     expect(days()[0]).toBe("Mon 5, today: no picks");
     expect(days()[1]).toBe("Tue 6: 1 pick");
+  });
+
+  it("at the weekend, with no strip, gives the next two weeks' picks through Wednesday cards, the rest rows", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-16T15:00:00Z") }); // Friday: the strip is up, Monday's fair a row
+    render(DontMissList);
+    await tick();
+    const next = () => screen.getAllByRole("region")[1]!;
+    expect(screen.getByRole("navigation", { name: "This week by day" })).toBeInTheDocument();
+    expect(within(next()).queryAllByRole("article")).toEqual([]);
+    expect(within(next()).getByRole("link", { name: "Art fair, art and exhibitions" })).toBeInTheDocument();
+
+    vi.setSystemTime(new Date("2026-10-17T15:00:00Z")); // Saturday: the strip is gone, Monday's fair a card
+    document.dispatchEvent(new Event("visibilitychange"));
+    await tick();
+    expect(screen.queryByRole("navigation", { name: "This week by day" })).toBeNull();
+    expect(next()).toHaveAccessibleName("Next two weeks, through Oct 31"); // the bucket's heading, as ever
+    expect(within(next()).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Art fair"]);
+    expect(within(next()).queryByRole("list")).toBeNull(); // no rows left, so no empty list
+    // This week's kind filter leaves the next days' cards alone.
+    expect(within(screen.getAllByRole("region")[0]!).queryByRole("list", { name: "Picks by kind" })).toHaveTextContent("1 Music");
   });
 
   it("says so and points at the explorer when nothing is picked", async () => {
