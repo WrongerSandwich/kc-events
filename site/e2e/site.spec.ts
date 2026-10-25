@@ -225,6 +225,21 @@ test.describe("the explorer's active slice at 390 px", () => {
     for (const name of [/^Don't miss/, /^Filters/]) await expect(page.getByRole("button", { name })).toBeInViewport();
     // Stuck, it is two lines at most: the controls, then the count and the pills.
     expect(await page.locator(".bar").evaluate((el) => el.getBoundingClientRect().bottom)).toBeLessThan(120);
+    // Focused from down the list (the / shortcut; Shift+Tab and a removed last pill likewise), search comes back.
+    await page.keyboard.press("/");
+    await expect(page.getByRole("searchbox")).toBeFocused();
+    await expect(page.getByRole("searchbox")).toBeInViewport({ ratio: 1 });
+    // The day headings stick under the whole bar meanwhile.
+    const bar = await page.locator(".bar").evaluate((el) => el.getBoundingClientRect().bottom);
+    const heading = await page.locator(".section-heading.group").last().evaluate((el) => getComputedStyle(el).top);
+    expect(Math.abs(parseFloat(heading) - bar)).toBeLessThan(2);
+  });
+
+  test("opening Filters puts focus in the sheet, not on the pills between it and the button", async ({ page }) => {
+    await on(page, BUILD_DAY, "/explore?kind=music");
+    await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+    await page.getByRole("button", { name: /^Filters/ }).click();
+    await expect(page.locator("#filter-sheet button").first()).toBeFocused();
   });
 
   test("never leaves a control tabbed to under the sheet's Show button (WCAG 2.4.11)", async ({ page }) => {

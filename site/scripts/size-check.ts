@@ -81,7 +81,7 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // late: the calendar writer putting a run in one event's own file as one day to go, which the export bundles (measured 161),
   // and 1,000 for the explorer critique of 2026-10-25: the Don't miss lens in the bar with its count, the phone bar's
   // stuck lines and Filters control, Export after the results, quiet Saves on phone rows, On now's picks, the Every date
-  // pill, and the rail's fade (measured 930)
+  // pill, and the rail's fade (measured 1,061 against a 55,006 build)
   { page: "explore.html", budget: 56_150, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },

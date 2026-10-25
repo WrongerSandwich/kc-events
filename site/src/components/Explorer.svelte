@@ -37,16 +37,15 @@
   let shortcut = $state(true);
   // The bar's height, so the sticky group headings sit just under it however it wraps (search takes a line on phones).
   let barHeight = $state(0);
-  // How much of the bar stays on screen once stuck: on phones its search line scrolls away (a negative top), so only
-  // the lines under it stick.
-  let barShown = $state(0);
-  const barTop = () => parseFloat(getComputedStyle(bar).top) || 0;
-  $effect(() => { barShown = barHeight > 0 ? barHeight + barTop() : 0; });
+  // On phones the bar's search line scrolls away once it is stuck (a negative top, --bar-top on the root, set in CSS
+  // so it follows a rotation or a focused search on its own), so only the lines under it stick. Read when it is
+  // needed; registered as a length, so it reads in px.
+  const barTop = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--bar-top")) || 0;
   // The bar is sticky, and a sticky day heading (about 2.5rem) sits under it, so a row the browser scrolls to the
   // viewport's top edge on focus or by anchor would land under both. The document's scroll padding keeps it clear
   // (audit 2026-10-21, A1); base.css carries a one-line estimate for before this measures, and without JavaScript.
   $effect(() => {
-    document.documentElement.style.scrollPaddingTop = barShown > 0 ? `calc(${barShown}px + 2.5rem)` : "";
+    document.documentElement.style.scrollPaddingTop = barHeight > 0 ? `calc(${barHeight}px + var(--bar-top, 0px) + 2.5rem)` : "";
     return () => { document.documentElement.style.scrollPaddingTop = ""; };
   });
   // A shortlist link none of whose events is still to come parses to no shortlist; say so until the next change, so
@@ -119,6 +118,15 @@
     await change(without);
     const left = pillList?.querySelectorAll("button") ?? [];
     (left[Math.min(index, left.length - 1)] ?? search).focus();
+  }
+
+  // Filters is in the bar, the sheet after the pills: opened, focus goes to its first control, so the next Tab or
+  // swipe is in the sheet rather than on the pills between them.
+  async function toggleSheet() {
+    sheetOpen = !sheetOpen;
+    if (!sheetOpen) return;
+    await tick();
+    document.querySelector<HTMLElement>("#filter-sheet button")?.focus();
   }
 
   // The phone sheet's Show button: close the sheet, bring the results' top up under the bar, and focus them, so the
@@ -236,7 +244,7 @@
 
 <!-- The bar comes first so search is the explorer's first Tab stop, and its skip link the second; the grid puts the
      filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
-<div class="explorer" style={barShown > 0 ? `--bar-height: ${barShown}px` : undefined}>
+<div class="explorer" style={barHeight > 0 ? `--bar-height: calc(${barHeight}px + var(--bar-top, 0px))` : undefined}>
   <div class="bar" bind:this={bar} bind:offsetHeight={barHeight}>
     <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts={shortcut ? "/" : undefined} placeholder="Search events, venues, places" />{#if mounted && shortcut}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
     <a class="skip" href="#results">Skip to results</a>
@@ -253,7 +261,7 @@
       <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved to calendar</button>
     {/if}
     <!-- Phones: the sheet's button, a real control on the bar's second line with the lens and the sort. -->
-    <button type="button" class="control sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={() => { sheetOpen = !sheetOpen; }}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
+    <button type="button" class="control sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={toggleSheet}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
     <div class="slice">
       <p class="count" aria-hidden="true">{sliceText}</p>
       {#if pills.length > 0}
@@ -291,10 +299,11 @@
         <p class="empty">No events match <strong>{matchText}</strong>.</p>
         <p class="ways">
           {#each ways as w (toQuery(w.p.without))}
-            <button type="button" class="control small" onclick={() => change(w.p.without)}>{w.p.when === true ? "Every date" : `Without ${w.p.label}`}, {w.n} {w.n === 1 ? "event" : "events"}</button>
+            {@const to = w.p.without.when}
+            <button type="button" class="control small" onclick={() => change(w.p.without)}>{w.p.when !== true ? `Without ${w.p.label}` : "preset" in to ? WHEN_LABELS[to.preset] : w.p.label}, {w.n} {w.n === 1 ? "event" : "events"}</button>
           {/each}
-          <!-- The bar's Clear filters, the same reset: back to the week. -->
-          <button type="button" class="link" onclick={() => change(DEFAULT_FILTERS)}>Clear filters</button>
+          <!-- The bar's Clear filters, the same reset: back to the week; not where the week is all that is set. -->
+          {#if !isDefault(filters)}<button type="button" class="link" onclick={() => change(DEFAULT_FILTERS)}>Clear filters</button>{/if}
         </p>
       {:else}
         <p class="empty">Nothing listed right now.</p>
@@ -479,7 +488,7 @@
     .sort select { min-height: var(--tap); }
     .sort { margin-left: auto; }
     .sheet-toggle { display: inline-flex; gap: var(--space-2); }
-    .slice { flex: 1 1 60%; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -3px auto -3px -3px; padding: 3px; }
+    .slice { flex: 1 1 60%; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -4px auto -4px -4px; padding: 4px; }
     .count, .pills, .pill { flex: none; }
     .pills { flex-wrap: nowrap; }
     .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; mask-image: none; animation: none; }
@@ -495,8 +504,14 @@
     }
     .show-results:hover { border-color: var(--accent); }
   }
-  /* The search line's height and the gap under it: what scrolls away before the bar sticks. */
+  /* The search line's height and the gap under it: what scrolls away before the bar sticks. On the root, so the
+     document's scroll padding can use it too. Not while search has focus (the / shortcut, Shift+Tab, the last pill
+     removed), so the field being typed in is never off screen (WCAG 2.4.11). explore.astro's no-JS style sets it back
+     to 0, since the bar is then the count alone. */
+  @property --bar-top { syntax: "<length>"; inherits: true; initial-value: 0px; }
+  .bar { top: var(--bar-top); }
   @media (max-width: 800px) and (min-height: 501px) {
-    .bar { top: calc(-1 * (var(--tap) + var(--space-2))); }
+    :global(:root) { --bar-top: calc(-1 * (var(--tap) + var(--space-2))); }
+    :global(:root:has(.explorer .search input:focus)) { --bar-top: 0px; }
   }
 </style>
