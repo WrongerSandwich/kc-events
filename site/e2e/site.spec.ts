@@ -916,7 +916,7 @@ test("the calendar feeds build from the fixture, each event with a UID, a start,
 
 test("the front page offers the picks as a calendar subscription, with the address to copy (#136)", async ({ page }) => {
   await on(page, BUILD_DAY, "/");
-  await expect(page.getByRole("link", { name: "Subscribe", exact: true })).toHaveAttribute("href", /^webcal:\/\/[^/]+\/calendar\/picks\.ics$/);
+  await expect(page.getByRole("link", { name: "Subscribe to the picks" })).toHaveAttribute("href", /^webcal:\/\/[^/]+\/calendar\/picks\.ics$/);
   await expect(page.locator(".subscribe code")).toHaveText(/^https?:\/\/[^/]+\/calendar\/picks\.ics$/);
 });
 

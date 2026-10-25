@@ -5,7 +5,8 @@
   // page does not split the share module into a chunk of its own. Copying needs the browser, so the button renders
   // only once mounted; the page shows the address itself either way. It is base.css's .control, the size of every
   // other button a tap can reach.
-  let { label, url }: { label: string; url: string } = $props();
+  // failed: what to say when the clipboard refuses, pointing at where the page shows the address.
+  let { label, url, failed = "Could not copy; select the address instead" }: { label: string; url: string; failed?: string } = $props();
   let mounted = $state(false);
   let note = $state<"copied" | "failed" | undefined>();
   let clear: ReturnType<typeof setTimeout> | undefined;
@@ -30,7 +31,7 @@
 {#if mounted}
   <span class="copy-wrap">
     <button type="button" class="control" onclick={copy}>{label}</button>
-    <span class="note" aria-live="polite">{#if note === "copied"}Address copied{:else if note === "failed"}Could not copy; select the address instead{/if}</span>
+    <span class="note" aria-live="polite">{#if note === "copied"}Address copied{:else if note === "failed"}{failed}{/if}</span>
   </span>
 {/if}
 

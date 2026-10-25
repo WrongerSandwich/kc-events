@@ -8,16 +8,17 @@ import { PICKS_FEED, webcalUrl } from "../lib/feeds";
 // that asks for a URL (Google Calendar, Outlook). The two controls share one row and say which is which only on request,
 // so the block is a line of the page rather than a set of instructions (the 2026-10-24 re-critique). Phones put the
 // copy first (first in the source too, so Tab order matches). The page passes the build's origin.
-interface Props { origin: string }
-const { origin } = Astro.props;
+// The intro is the page's: the front page's heading names the picks, the About page's does not ("In your calendar").
+interface Props { origin: string; intro?: string }
+const { origin, intro = "Updated each week. Remove the calendar to stop." } = Astro.props;
 const address = new URL(PICKS_FEED, origin);
 // The address may break after a slash, and only there, so a phone wraps it between its parts rather than mid-word (#184).
 const parts = [`${address.origin}/`, ...address.pathname.slice(1).split(/(?<=\/)/)];
 ---
-<p class="what">Updated each week. Remove the calendar to stop.</p>
+<p class="what">{intro}</p>
 <div class="ways">
-  <span class="by-address"><CopyButton client:load label="Copy address" url={address.toString()} /></span>
-  <a class="control apple" href={webcalUrl(origin, PICKS_FEED)}><UiIcon name="calendar-plus" />Subscribe</a>
+  <span class="by-address"><CopyButton client:load label="Copy address" url={address.toString()} failed="Could not copy; the address is under Which to use" /></span>
+  <a class="control apple" href={webcalUrl(origin, PICKS_FEED)}><UiIcon name="calendar-plus" />Subscribe<span class="visually-hidden"> to the picks</span></a>
 </div>
 <details class="which">
   <summary><UiIcon name="chevron-right" />Which to use</summary>
@@ -35,7 +36,9 @@ const parts = [`${address.origin}/`, ...address.pathname.slice(1).split(/(?<=\/)
   @media (min-width: 30.0625rem) {
     .apple { order: -1; }
   }
-  /* The started fold's disclosure: a muted line with a chevron that turns. */
+  /* Until the copy button mounts (and without JavaScript), its slot takes no room in the row. */
+  .by-address:not(:has(button)) { display: none; }
+  /* Which to use: a muted line with a chevron that turns, as the front page's started fold. */
   .which { margin-top: var(--space-1); font-size: var(--text-sm); color: var(--fg-muted); }
   .which summary {
     display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); width: fit-content;

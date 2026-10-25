@@ -157,6 +157,8 @@
         {@const counts = kindCounts(ahead)}
         <!-- All first, pressed until a kind is: the row reads as a filter with a way back, not as a row of tags. The
              kinds keep the short form every chip uses (a card's, the explorer's), so the row stays a row on a phone. -->
+        <!-- None at all once every pick this week has started: no row, rather than an empty labelled list. -->
+        {#if counts.length > 0}
         <ul class="kinds" aria-label="Picks by kind">
           {#if counts.length > 1}
             <li class="all">
@@ -177,6 +179,7 @@
             </li>
           {/each}
         </ul>
+        {/if}
         <p role="status" class="visually-hidden">{announced ?? ""}</p>
         {@const shown = picksOf(kind)}
         {@const upcoming = shown.filter((e) => !hasStarted(e))}
@@ -198,7 +201,8 @@
             <ul class="later">
               {#each started as event (event.id)}
                 <li class={`kind-${slugify(event.kind)}`} id={`pick-${event.id}`}>
-                  <span class="when">{formatTime(event.start!)}</span>
+                  <!-- A span's start is its first day's hour, not today's (a last day can close before it). -->
+                  <span class="when">{isMultiDay(event) ? "Last day" : formatTime(event.start!)}</span>
                   <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {kindName(event.kind).toLowerCase()}</span></a>
                   <span class="where">{venueLine(event)}</span>
                 </li>

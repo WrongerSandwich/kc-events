@@ -47,7 +47,18 @@ export function dateTile(e: PublishedEvent, today: string, now?: string): Tile {
  */
 function spanDetail(e: PublishedEvent, day: string, today: string): string {
   if (lastDay(e) !== day) return closingLine(e, today);
+  const close = earlyClose(e);
+  if (close !== undefined) return `Until ${formatTime(close)} · last day`;
   return isDateOnly(e.start!) ? "Last day" : `${formatTime(e.start!)} · last day`;
+}
+
+/**
+ * A timed span's end, when it comes earlier in the day than the start's hour: a weekend that opens Friday evening and
+ * closes Sunday afternoon has no evening show on its last day, so that day is timed by the end, not the start.
+ */
+function earlyClose(e: PublishedEvent): string | undefined {
+  if (e.end === undefined || isDateOnly(e.start!) || isDateOnly(e.end)) return undefined;
+  return e.end.slice(11, 16) < e.start!.slice(11, 16) ? e.end : undefined;
 }
 
 /**
@@ -56,7 +67,8 @@ function spanDetail(e: PublishedEvent, day: string, today: string): string {
  */
 function spanLabel(e: PublishedEvent, said: string, day: string): string {
   const time = isDateOnly(e.start!) ? "" : `, ${formatTime(e.start!)}`;
-  if (lastDay(e) === day) return `${said}${time}, the last day`;
+  const close = earlyClose(e);
+  if (lastDay(e) === day) return close === undefined ? `${said}${time}, the last day` : `${said}, until ${formatTime(close)}, the last day`;
   return `${said}${time && `${time},`} through ${formatDay(lastDay(e)!)}`;
 }
 
@@ -64,10 +76,15 @@ function spanLabel(e: PublishedEvent, said: string, day: string): string {
 function todayTile(e: PublishedEvent, day: string, today: string, now: string): Tile {
   const tile = { top: "Today", ...parts(day), today: true as const };
   // Both are wall time in the site's zone, so the strings compare; the dataset's offset is not needed. A span starts at
-  // its start's time on each of its days.
+  // its start's time on each of its days, except a last day that closes before that hour (earlyClose).
   const begun = !isDateOnly(e.start!) && now >= `${day}${e.start!.slice(10, 16)}`;
   if (isMultiDay(e)) {
-    if (!begun || lastDay(e) !== day) return { ...tile, detail: spanDetail(e, day, today), label: spanLabel(e, "Today", day) };
+    const close = lastDay(e) === day ? earlyClose(e) : undefined;
+    if (close !== undefined && now >= `${day}${close.slice(10, 16)}`) {
+      const ended = formatTime(close);
+      return { ...tile, detail: `Ended ${ended} · last day`, label: `Today, ended ${ended}, the last day`, started: true };
+    }
+    if (close !== undefined || !begun || lastDay(e) !== day) return { ...tile, detail: spanDetail(e, day, today), label: spanLabel(e, "Today", day) };
     const time = formatTime(e.start!);
     return { ...tile, detail: `Started ${time} · last day`, label: `Today, started ${time}, the last day`, started: true };
   }
