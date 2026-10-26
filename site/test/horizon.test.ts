@@ -59,6 +59,15 @@ describe("horizon", () => {
     expect(anchorDate(event({ recurrence: "recurring", start: undefined, schedule: "Tuesdays" }), today)).toBeUndefined();
   });
 
+  it("anchors a run with days on the first day it plays, open now or opening later", () => {
+    const today = "2026-10-05"; // a Monday
+    const weekends = { recurrence: "limited-run" as const, days: [5, 6, 0], daysLine: "Fri–Sun" };
+    expect(anchorDate(event({ ...weekends, start: "2026-09-20", end: "2026-11-01" }), today)).toBe("2026-10-09");
+    expect(anchorDate(event({ ...weekends, start: "2026-10-14", end: "2026-11-01" }), today)).toBe("2026-10-16");
+    expect(anchorDate(event({ ...weekends, start: undefined, end: "2026-11-01" }), today)).toBe("2026-10-09");
+    expect(anchorDate(event({ ...weekends, days: [1], daysLine: "Mon", start: "2026-09-20", end: "2026-11-01" }), today)).toBe(today);
+  });
+
   it("buckets by anchor against the bounds", () => {
     const today = "2026-10-05";
     expect(horizon(event({ start: "2026-10-06" }), today)).toBe("through-sunday");
@@ -133,6 +142,14 @@ describe("horizon", () => {
     const lingering = event({ id: "lingering", dontMiss: true, recurrence: "limited-run", start: "2026-09-01", end: "2026-12-13" });
     const show = event({ id: "show", dontMiss: true, start: "2026-10-07" });
     expect(bucketDontMiss([lingering, show, closing], today)["through-sunday"].map((e) => e.id)).toEqual(["closing", "show", "lingering"]);
+  });
+
+  it("sorts a run on now that plays only at the weekend under its next day, not today", () => {
+    const today = "2026-10-26"; // a Monday: Electric Poe on the 10-26 front page
+    const poe = event({ id: "poe", dontMiss: true, recurrence: "limited-run", start: "2026-10-14", end: "2026-11-01", days: [5, 6, 0], daysLine: "Fri–Sun" });
+    const wed = event({ id: "wed", dontMiss: true, start: "2026-10-28T19:00:00-05:00" });
+    const sat = event({ id: "sat", dontMiss: true, start: "2026-10-31T19:00:00-05:00" });
+    expect(bucketDontMiss([sat, poe, wed], today)["through-sunday"].map((e) => e.id)).toEqual(["wed", "poe", "sat"]);
   });
 
   it("orders one day's events by start time, all-day first, then title", () => {
