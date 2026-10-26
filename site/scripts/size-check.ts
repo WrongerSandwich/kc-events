@@ -114,8 +114,9 @@ function main(): void {
   // pages (#137) likewise, their markup growing with the venue's events. A kind or region page (#138) lists a whole
   // slice through the horizon with no island, so its ceiling is for the data: Central KC was 59 KB on the 10-19 run.
   // Venue, kind and region pages load no Svelte runtime since #195, which took 20 KB off each (Screenland's venue page
-  // 36.9 to 17.1 KB, Central KC 58.3 to 38.4 KB, on the 10-19 run), so their ceilings came down by as much.
-  for (const [dir, kind, budget] of [["e", "event", 40_000], ["v", "venue", 20_000], ["k", "kind", 80_000], ["r", "region", 80_000]] as const) {
+  // 36.9 to 17.1 KB, Central KC 58.3 to 38.4 KB, on the 10-19 run), so their ceilings came down by as much. The event
+  // page's ceiling rises with its data too: the 10-26 run's largest (Judy Chicago at the Nerman) was 40.0 KB, so 45 KB.
+  for (const [dir, kind, budget] of [["e", "event", 45_000], ["v", "venue", 20_000], ["k", "kind", 80_000], ["r", "region", 80_000]] as const) {
     const pagesDir = join(dist, dir);
     const pages = existsSync(pagesDir) ? readdirSync(pagesDir).filter((f) => f.endsWith(".html")) : [];
     const largest = pages
