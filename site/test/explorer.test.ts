@@ -108,15 +108,29 @@ describe("Explorer", () => {
     expect(rows()).toEqual(["Exhibition"]);
     expect(screen.getByRole("list", { name: "Active filters" })).toHaveTextContent("Don't miss");
     expect(screen.getByRole("button", { name: "Filters (1)" })).toBeInTheDocument();
+    // Nothing matching, the empty state names it and offers to drop it.
+    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
+    expect(screen.getByText(/No events match/, { selector: ".empty" })).toHaveTextContent("No events match This week · Film · Don't miss.");
+    expect(screen.getByRole("button", { name: "Without Don't miss, 1 event" })).toBeInTheDocument();
   });
 
   it("offers the near date presets in the bar for phones, the same filter as the rail's", async () => {
     render(Explorer);
     const bar = found(document.querySelector<HTMLElement>(".bar-when") ?? undefined, "the bar's dates");
-    expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Today", "This weekend", "This week"]);
+    // Shorter names than the rail's, so three fit a phone's line beside Filters.
+    expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Today", "Weekend", "This week"]);
     expect(within(bar).getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "true");
     await fireEvent.click(within(bar).getByRole("button", { name: "Today" }));
     expect(location.search).toBe("?when=today");
+    // The rail's own Today is the same filter, and the sheet leaves the bar's dates to it: hidden there on phones, and
+    // left out of Filters (n), whose sheet does not show them.
+    const rail = screen.getByRole("group", { name: "When" });
+    expect(within(rail).getByRole("button", { name: "Today" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(rail).getByRole("button", { name: "Today" })).toHaveClass("near");
+    expect(within(rail).getByRole("button", { name: "Next 30 days" })).not.toHaveClass("near");
+    expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument();
+    await fireEvent.click(within(rail).getByRole("button", { name: "Next 30 days" }));
+    expect(screen.getByRole("button", { name: "Filters (1)" })).toBeInTheDocument();
   });
 
   it("keeps a short On now as an open day group, under any when-filter", () => {

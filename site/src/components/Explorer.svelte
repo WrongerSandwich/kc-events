@@ -9,7 +9,7 @@
   import { formatDay } from "../lib/dates";
   import { groupResults, isTrailingGroup, PASSED_GROUP, resultEvents, SHORTLIST_GROUP } from "../lib/group";
   import { toIcs } from "../lib/ics";
-  import { DEFAULT_FILTERS, EVERY_DATE, filterPills, isDefault, isImpliedWhen, parseQuery, shortlistQuery, toQuery, WHEN_LABELS, type Filters } from "../lib/query";
+  import { DEFAULT_FILTERS, EVERY_DATE, filterPills, isDefault, isImpliedWhen, parseQuery, shortlistQuery, toQuery, WHEN_LABELS, type Filters, type WhenPreset } from "../lib/query";
   import { saves } from "../lib/saves";
   import { shortcutsOn } from "../lib/shortcuts";
   import { slugify } from "../lib/slugs";
@@ -189,12 +189,23 @@
   // ("97 events this week") rather than a pill whose removal would widen to every date, and Filters (n) leaves it out.
   let impliedWhen = $derived(isImpliedWhen(filters) ? allPills.find((p) => p.when === true) : undefined);
   let pills = $derived(allPills.filter((p) => p !== impliedWhen));
-  // The phone bar's date presets; the rest wait in the sheet.
+  // The phone bar's date presets; the rest wait in the sheet. Their shorter names, so three fit a 375 px phone's line.
   let nearPresets = $derived(barPresets(today));
+  const BAR_LABELS: Partial<Record<WhenPreset, string>> = { "fri-sun": "Weekend", "7d": "7 days" };
+  // A chip a narrow phone's line cuts is scrolled into view when it is the pressed one, without moving the page.
+  let barWhen: HTMLElement;
+  $effect(() => {
+    void pressedPreset;
+    const on = barWhen.querySelector<HTMLElement>("[aria-pressed=true]");
+    if (on === null) return;
+    const over = on.getBoundingClientRect().right - barWhen.getBoundingClientRect().right;
+    if (over > 0) barWhen.scrollLeft += over + 4;
+  });
   let pressedPreset = $derived(shownPreset(filters.when, today));
   let sliceText = $derived(impliedWhen === undefined ? countText : `${countText} ${impliedWhen.label.toLowerCase()}`);
   // The filters set in the sheet; search is in the bar, above it.
-  let sheetCount = $derived(pills.filter((p) => p.without.q === filters.q).length);
+  // Less a date the bar's chips show, which the sheet leaves to them on phones (and wide windows have no Filters).
+  let sheetCount = $derived(pills.filter((p) => p.without.q === filters.q && !(p.when === true && pressedPreset !== undefined && nearPresets.includes(pressedPreset))).length);
   // Each kind's and region's chip, counted for the rest of the filters (facetCounts).
   let counts = $derived(facetCounts(events, filters, today, saved));
   // Nothing matches: each filter whose removal alone lists something, the most first, at most three (the empty state).
@@ -257,12 +268,14 @@
     <!-- Phones: the date is the lens, the question a shared link's visitor asks first (the 2026-10-25 critique, as Evan
          turned it): the near presets (barPresets) on the bar's second line, Filters at its end; the rest, the
          weekend's days and custom dates stay in the sheet. Wide windows have the rail's When group in view instead. -->
-    <div class="bar-when" role="group" aria-label="Dates">
+    <div class="bar-when" role="group" aria-label="Dates" bind:this={barWhen}>
       {#each nearPresets as p (p)}
-        <button type="button" aria-pressed={pressedPreset === p} onclick={() => change({ ...filters, when: { preset: p } })}>{WHEN_LABELS[p]}</button>
+        <button type="button" aria-pressed={pressedPreset === p} onclick={() => change({ ...filters, when: { preset: p } })}>{BAR_LABELS[p] ?? WHEN_LABELS[p]}</button>
       {/each}
     </div>
     <button type="button" class="control sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={toggleSheet}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
+    <!-- Phones: the end of the bar's second line, whatever room the dates leave. -->
+    <span class="break" aria-hidden="true"></span>
     <div class="slice">
       <p class="count" aria-hidden="true">{sliceText}</p>
       {#if pills.length > 0}
@@ -400,9 +413,9 @@
   /* Chromium draws its clear button in its own blue, the one hue in the chrome that names no kind. */
   .search input::-webkit-search-cancel-button { filter: grayscale(1); }
   /* The phone bar's date presets: the rail's chips, outlined in muted ink, the grey pressed tint under ink. */
-  .bar-when { display: none; }
+  .bar-when, .break { display: none; }
   .bar-when button {
-    flex: none; min-height: 2rem; padding: 0 var(--space-3); font: inherit; font-size: var(--text-xs); color: var(--fg-muted);
+    flex: none; min-height: 2rem; padding: 0 var(--space-2); font: inherit; font-size: var(--text-xs); color: var(--fg-muted);
     background: none; border: 1px solid var(--control-border); border-radius: 999px; cursor: pointer;
   }
   .bar-when button[aria-pressed="true"] { color: var(--fg); background: var(--pressed-tint); border-color: var(--fg); font-weight: var(--weight-medium); }
@@ -485,13 +498,16 @@
     .search { flex-basis: 100%; max-width: none; }
     .search input { min-height: var(--tap); font-size: var(--text-md); }
     .bar-when, .slice { min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -4px; padding: 4px; }
-    .bar-when { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 60%; }
-    .sheet-toggle { display: inline-flex; gap: var(--space-2); }
-    .slice { flex: 1 1 40%; margin-right: auto; }
+    .bar-when { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 0; }
+    .sheet-toggle { display: inline-flex; gap: var(--space-2); flex: none; }
+    .break { display: block; flex-basis: 100%; height: 0; }
+    .slice { flex: 1 1 0; margin-right: auto; }
     .count, .pills, .pill { flex: none; }
     .pills { flex-wrap: nowrap; }
-    /* Clear is its × beside the pills, its words its name (WCAG 2.5.3 holds: the name has no visible words to match). */
-    .clear { min-width: 1.75rem; padding: 0; }
+    /* Clear, and the saved view's Share and Export, are their icons beside the pills, their words their names (WCAG
+       2.5.3 holds: the name has no visible words to match), so the line never wraps. */
+    .clear, .bar .export, .bar :global(button.share) { min-width: 1.75rem; padding: 0; font-size: 0; }
+    .bar .export :global(.ui-icon), .bar :global(button.share .ui-icon) { width: 1rem; height: 1rem; }
     .clear-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; mask-image: none; animation: none; }
     /* Closed by default in CSS and in the server HTML alike, so nothing moves when the page hydrates. */

@@ -238,6 +238,22 @@ test.describe("the explorer's active slice at 390 px", () => {
     expect(Math.abs(parseFloat(heading) - bar)).toBeLessThan(2);
   });
 
+  test("the saved view's stuck bar keeps to two lines too, Share and Export as their icons", async ({ page }) => {
+    await on(page, BUILD_DAY, "/explore?when=all");
+    await page.locator("article.row button.save").first().click();
+    await page.goto("/explore?saved=1");
+    await expect(page.getByRole("button", { name: /^Export saved/ })).toBeVisible();
+    // What sticks: the bar's height less the search line that scrolls away (a short list may not scroll at all).
+    expect(await page.locator(".bar").evaluate((el) => (el as HTMLElement).offsetHeight + parseFloat(getComputedStyle(el).top))).toBeLessThan(120);
+  });
+
+  test("on a 320 px phone the pressed date chip is in view", async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 640 });
+    await on(page, BUILD_DAY, "/explore?kind=music");
+    await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+    await expect(page.getByRole("group", { name: "Dates" }).locator("[aria-pressed=true]")).toBeInViewport({ ratio: 1 });
+  });
+
   test("opening Filters puts focus in the sheet, not on the pills between it and the button", async ({ page }) => {
     await on(page, BUILD_DAY, "/explore?kind=music");
     await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
