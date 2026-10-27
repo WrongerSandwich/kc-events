@@ -26,6 +26,8 @@ import { event } from "./fixtures/event";
 import { found } from "./fixtures/found";
 
 const rows = () => screen.getAllByRole("article").map((a) => within(a).getByRole("heading").textContent);
+// A kind's chip in the rail; the phone bar's row has the same chips, which jsdom, with no media queries, shows too.
+const railKind = (name: string | RegExp) => within(screen.getByRole("group", { name: "Kind" })).getByRole("button", { name });
 // The live count is announced once input settles (Explorer's SETTLE_MS, 500 ms), so read it after the wait.
 const announced = () => { vi.advanceTimersByTime(500); flushSync(); return screen.getByRole("status"); };
 // Dispatches a keydown and says whether a handler prevented it (testing-library's fireEvent is async here).
@@ -109,28 +111,28 @@ describe("Explorer", () => {
     expect(screen.getByRole("list", { name: "Active filters" })).toHaveTextContent("Don't miss");
     expect(screen.getByRole("button", { name: "Filters (1)" })).toBeInTheDocument();
     // Nothing matching, the empty state names it and offers to drop it.
-    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
+    await fireEvent.click(railKind(/^Film,/));
     expect(screen.getByText(/No events match/, { selector: ".empty" })).toHaveTextContent("No events match This week · Film · Don't miss.");
     expect(screen.getByRole("button", { name: "Without Don't miss, 1 event" })).toBeInTheDocument();
   });
 
-  it("offers the near date presets in the bar for phones, the same filter as the rail's", async () => {
+  it("offers every kind in the bar for phones, counted, the same filter as the rail's", async () => {
     render(Explorer);
-    const bar = found(document.querySelector<HTMLElement>(".bar-when") ?? undefined, "the bar's dates");
-    // Shorter names than the rail's, so three fit a phone's line beside Filters.
-    expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Today", "Weekend", "This week"]);
-    expect(within(bar).getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "true");
-    await fireEvent.click(within(bar).getByRole("button", { name: "Today" }));
-    expect(location.search).toBe("?when=today");
-    // The rail's own Today is the same filter, and the sheet leaves the bar's dates to it: hidden there on phones, and
-    // left out of Filters (n), whose sheet does not show them.
-    const rail = screen.getByRole("group", { name: "When" });
-    expect(within(rail).getByRole("button", { name: "Today" })).toHaveAttribute("aria-pressed", "true");
-    expect(within(rail).getByRole("button", { name: "Today" })).toHaveClass("near");
-    expect(within(rail).getByRole("button", { name: "Next 30 days" })).not.toHaveClass("near");
+    const bar = screen.getByRole("group", { name: "Kinds" });
+    expect(within(bar).getAllByRole("button").map((b) => b.getAttribute("aria-pressed"))).toEqual(["false", "false", "false", "false", "false"]);
+    const film = within(bar).getByRole("button", { name: "Film, 1 event" });
+    expect(within(bar).getByRole("button", { name: "Talks/readings, 0 events" })).toHaveClass("none");
+    await fireEvent.click(film);
+    expect(location.search).toBe("?kind=film");
+    expect(rows()).toEqual(["Saturday film"]);
+    expect(film).toHaveAttribute("aria-pressed", "true");
+    expect(railKind(/^Film,/)).toHaveAttribute("aria-pressed", "true");
+    // The sheet leaves the kinds to the bar on phones, so Filters (n) leaves them out; it counts the rest.
     expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument();
-    await fireEvent.click(within(rail).getByRole("button", { name: "Next 30 days" }));
+    await fireEvent.click(within(screen.getByRole("group", { name: "When" })).getByRole("button", { name: "Next 30 days" }));
     expect(screen.getByRole("button", { name: "Filters (1)" })).toBeInTheDocument();
+    await fireEvent.click(film);
+    expect(location.search).toBe("?when=30d");
   });
 
   it("keeps a short On now as an open day group, under any when-filter", () => {
@@ -219,9 +221,9 @@ describe("Explorer", () => {
 
   it("filters by kind chip and writes the URL", async () => {
     render(Explorer);
-    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
+    await fireEvent.click(railKind(/^Film,/));
     expect(rows()).toEqual(["Saturday film"]);
-    expect(screen.getByRole("button", { name: /^Film,/ })).toHaveAttribute("aria-pressed", "true");
+    expect(railKind(/^Film,/)).toHaveAttribute("aria-pressed", "true");
     expect(location.search).toBe("?kind=film");
     expect(announced()).toHaveTextContent("1 event");
   });
@@ -271,7 +273,8 @@ describe("Explorer", () => {
   });
 
   it("renders the phone filter sheet closed from the first render, behind a Filters button that opens it", async () => {
-    history.replaceState(null, "", "/explore?kind=music");
+    // A region: the kinds are the bar's on phones, so Filters (n) counts only what the sheet holds.
+    history.replaceState(null, "", "/explore?region=lawrence");
     const target = document.body.appendChild(document.createElement("div"));
     const component = mount(Explorer, { target });
     // The first render is the server's: closed already, so nothing closes on hydration.
@@ -298,7 +301,7 @@ describe("Explorer", () => {
     await fireEvent.click(within(bar).getByRole("button", { name: "Remove Music" }));
     expect(location.search).toBe("?when=30d&kind=film");
     expect(rows()).toEqual(["Saturday film"]);
-    expect(screen.getByRole("button", { name: /^Music,/ })).toHaveAttribute("aria-pressed", "false");
+    expect(railKind(/^Music,/)).toHaveAttribute("aria-pressed", "false");
     await fireEvent.click(within(bar).getByRole("button", { name: "Remove Next 30 days" }));
     expect(location.search).toBe("?when=all&kind=film");
     expect(within(bar).getAllByRole("button", { name: /^Remove / }).map((p) => p.textContent?.trim())).toEqual(["Every date", "Film"]);
@@ -327,13 +330,13 @@ describe("Explorer", () => {
 
   it("counts each kind and region for the rest of the filters, on its chip, and marks one that would list nothing", async () => {
     render(Explorer); // the week: Exhibition, Friday jazz, Saturday film
-    const film = screen.getByRole("button", { name: "Film, 1 event" });
+    const film = railKind("Film, 1 event");
     expect(film).not.toHaveClass("none");
-    expect(screen.getByRole("button", { name: "Talks/readings, 0 events" })).toHaveClass("none");
+    expect(railKind("Talks/readings, 0 events")).toHaveClass("none");
     expect(screen.getByRole("button", { name: "Central KC, 2 events" })).toBeInTheDocument();
     // A kind's count leaves the kinds out, so pressing Film leaves Music's count as it was; the regions narrow.
     await fireEvent.click(film);
-    expect(screen.getByRole("button", { name: "Music, 1 event" })).toBeInTheDocument();
+    expect(railKind("Music, 1 event")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Central KC, 0 events" })).toHaveClass("none");
     expect(screen.getByRole("button", { name: "Lawrence, 1 event" })).toBeInTheDocument();
   });
@@ -344,7 +347,7 @@ describe("Explorer", () => {
       render(Explorer);
       const toggle = screen.getByRole("button", { name: /^Filters/ });
       await fireEvent.click(toggle);
-      await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
+      await fireEvent.click(railKind(/^Film,/));
       const show = screen.getByRole("button", { name: "Show 1 event" });
       await fireEvent.click(show);
       expect(toggle).toHaveAttribute("aria-expanded", "false");
@@ -362,11 +365,11 @@ describe("Explorer", () => {
     });
     try {
       render(Explorer);
-      await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
+      await fireEvent.click(railKind(/^Film,/));
       // jsdom lays nothing out, so the bar measures 0 px and the results' top is the whole distance.
       expect(scrolled).toHaveBeenCalledExactlyOnceWith({ top: -4000, behavior: "instant" });
       top = 300;
-      await fireEvent.click(screen.getByRole("button", { name: /^Music,/ }));
+      await fireEvent.click(railKind(/^Music,/));
       expect(scrolled).toHaveBeenCalledTimes(1);
     } finally {
       rect.mockRestore();
@@ -387,7 +390,7 @@ describe("Explorer", () => {
     const from = screen.getByLabelText("From");
     await fireEvent.input(from, { target: { value: "2026-10-09" } });
     await fireEvent.change(from);
-    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
+    await fireEvent.click(railKind(/^Film,/));
     expect(screen.getByLabelText("From")).toHaveValue("2026-10-09");
   });
 
@@ -417,7 +420,7 @@ describe("Explorer", () => {
 
   it("says which filters are active when nothing matches, and offers to clear them", async () => {
     render(Explorer);
-    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
+    await fireEvent.click(railKind(/^Film,/));
     await fireEvent.input(screen.getByRole("searchbox"), { target: { value: "zzz" } });
     // The live region says why, as the empty state does.
     expect(announced()).toHaveTextContent("No events match This week · Film · “zzz”");

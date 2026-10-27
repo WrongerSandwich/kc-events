@@ -44,14 +44,6 @@ export function railPresets(today: string): WhenPreset[] {
   });
 }
 
-/**
- * The near presets the phone bar offers as its lens (the 2026-10-25 critique): the first three of the rail's for today
- * short of Next 30 days and Every date, so they fit a phone's line beside Filters. The sheet keeps the rest.
- */
-export function barPresets(today: string): WhenPreset[] {
-  return railPresets(today).filter((p) => p !== "30d" && p !== "all").slice(0, 3);
-}
-
 /** The rail's preset for a date filter: itself, or the one it offers for the same days today; undefined for a range. */
 export function shownPreset(when: When, today: string): WhenPreset | undefined {
   if ("from" in when) return undefined;

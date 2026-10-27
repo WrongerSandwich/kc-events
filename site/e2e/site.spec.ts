@@ -207,23 +207,26 @@ test.describe("the explorer's active slice at 390 px", () => {
 
   test("names a shared link's filters as pills without opening anything, and each pill removes only its filter", async ({ page }) => {
     await on(page, BUILD_DAY, "/explore?when=30d&kind=music");
-    const pills = page.getByRole("list", { name: "Active filters" }).getByRole("button");
-    await expect(pills).toHaveText(["Next 30 days", "Music"]);
+    // A kind shows as its pressed chip in the bar's row, not again as a pill beside the count.
+    const pills = page.getByRole("list", { name: "Active filters" }).getByRole("button").filter({ visible: true });
+    await expect(pills).toHaveText(["Next 30 days"]);
+    await expect(page.getByRole("group", { name: "Kinds" }).getByRole("button", { name: /^Music\b/ })).toHaveAttribute("aria-pressed", "true");
     for (const pill of await pills.all()) await expect(pill).toBeInViewport();
     await expect(page.locator("#filter-sheet")).toBeHidden();
     await page.getByRole("button", { name: "Remove Next 30 days" }).click();
     await expect(page).toHaveURL("/explore?when=all&kind=music");
     // Every date is not what the page opens on, so it is a filter too, with a pill that goes back to the week.
-    await expect(pills).toHaveText(["Every date", "Music"]);
-    await expect(page.getByRole("button", { name: /^Filters/ })).toHaveText("Filters (2)");
+    await expect(pills).toHaveText(["Every date"]);
+    // The kinds are the bar's on a phone, so Filters (n) counts the date alone.
+    await expect(page.getByRole("button", { name: /^Filters/ })).toHaveText("Filters (1)");
   });
 
-  test("scrolled, the bar keeps the dates, the sort and Filters at the top and lets search go (the 2026-10-25 critique)", async ({ page }) => {
+  test("scrolled, the bar keeps the kinds, the sort and Filters at the top and lets search go (the 2026-10-25 critique)", async ({ page }) => {
     await on(page, BUILD_DAY, "/explore?when=all");
     await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await expect(page.getByRole("searchbox")).not.toBeInViewport();
-    await expect(page.getByRole("group", { name: "Dates" }).getByRole("button").first()).toBeInViewport();
+    await expect(page.getByRole("group", { name: "Kinds" }).getByRole("button").first()).toBeInViewport();
     await expect(page.getByRole("button", { name: /^Filters/ })).toBeInViewport();
     await expect(page.getByRole("combobox", { name: "Sort" })).toBeInViewport();
     // Stuck, it is two lines at most: the controls, then the count and the pills.
@@ -247,20 +250,27 @@ test.describe("the explorer's active slice at 390 px", () => {
     expect(await page.locator(".bar").evaluate((el) => (el as HTMLElement).offsetHeight + parseFloat(getComputedStyle(el).top))).toBeLessThan(120);
   });
 
-  test("on a 320 px phone the pressed date chip is in view", async ({ page }) => {
+  test("the kinds swipe in one line, and a shared link's kind off its end is brought into view", async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 640 });
-    await on(page, BUILD_DAY, "/explore?kind=music");
+    await on(page, BUILD_DAY, "/explore");
+    const kinds = page.getByRole("group", { name: "Kinds" });
+    await expect(kinds.getByRole("button").last()).not.toBeInViewport({ ratio: 1 }); // off the line's end
+    const slug = (await kinds.getByRole("button").last().getAttribute("class"))!.match(/kind-([a-z-]+)/)![1];
+    await on(page, BUILD_DAY, `/explore?kind=${slug}`);
     await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
-    await expect(page.getByRole("group", { name: "Dates" }).locator("[aria-pressed=true]")).toBeInViewport({ ratio: 1 });
+    await expect(kinds.locator("[aria-pressed=true]")).toBeInViewport({ ratio: 1 });
+    // Still one line: the kinds and Filters share it.
+    const [chip, filters] = await Promise.all([kinds.getByRole("button").first().boundingBox(), page.getByRole("button", { name: /^Filters/ }).boundingBox()]);
+    expect(Math.abs(chip!.y + chip!.height / 2 - (filters!.y + filters!.height / 2))).toBeLessThan(2);
   });
 
   test("opening Filters puts focus in the sheet, not on the pills between it and the button", async ({ page }) => {
     await on(page, BUILD_DAY, "/explore?kind=music");
     await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
     await page.getByRole("button", { name: /^Filters/ }).click();
-    // The first it shows: the near dates are the bar's on a phone, so it starts past them.
+    // The first it shows: the kinds are the bar's on a phone, so the sheet starts at the dates.
     await expect(page.locator("#filter-sheet button").filter({ visible: true }).first()).toBeFocused();
-    await expect(page.locator("#filter-sheet .near").first()).toBeHidden();
+    await expect(page.locator("#filter-sheet .kinds").first()).toBeHidden();
   });
 
   test("never leaves a control tabbed to under the sheet's Show button (WCAG 2.4.11)", async ({ page }) => {
@@ -381,7 +391,7 @@ test("without JavaScript, a filtered link says the filters need it", async ({ br
   // So are the controls that would do nothing under it: search, sort, the phone bar's dates and export.
   await expect(page.getByRole("searchbox")).toBeHidden();
   await expect(page.getByRole("combobox", { name: "Sort" })).toBeHidden();
-  await expect(page.locator(".bar-when")).toBeHidden();
+  await expect(page.locator(".bar-kinds")).toBeHidden();
   await expect(page.getByRole("button", { name: /^Export/ })).toBeHidden();
   expect(violations).toEqual([]);
   await context.close();

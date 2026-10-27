@@ -246,7 +246,7 @@ Quiet instruments: precise edges, ink words, colour only where a kind lives.
 ### Chips
 - **Kind chip:** a pill (999px) in the kind's tint with its shade for the icon and words, label type. As a link to the kind's page it drops the pill, keeping icon and words, underlined on hover: only a filter is pill-shaped.
 - **Filter chip (explorer rail, front page kinds):** an outlined pill in muted ink. Pressed, it takes its kind's tint, shade and edge at weight 500; a filter that is not a kind takes the grey pressed tint under ink. A chip that would list nothing goes faint with a dashed edge and stays pressable. Each carries its count in faint ink. In forced colours a pressed chip takes the system's Highlight.
-- **Date chips (explorer bar, phones):** the near When presets (Today, This weekend, This week or Next 7 days) as filter chips on the bar's second line, Filters at its end; date is the explorer's lens. The picks lead the front page, not the explorer, where Don't miss is a Show switch like the others.
+- **Kind row (explorer bar, phones):** every kind's filter chip in one line that swipes sideways, fading at its end until swiped there, Filters at its end; kind is the explorer's lens, since the list is in date order already and the picks lead the front page (Don't miss is a Show switch like the others). The sheet keeps the dates, regions and switches; wide windows keep the rail's Kind group.
 - **Don't-miss tag:** a solid Flag Carmine pill with "Don't miss" in white. A passed save's tag sits in the same place, outlined in a hairline, muted.
 
 ### Date Tile (signature)

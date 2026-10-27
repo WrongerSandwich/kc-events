@@ -8,9 +8,9 @@ import { QUERY_KEYS } from "../lib/query";
 import { cspHash } from "../build/csp";
 const description = `Opens on this week in Kansas City, today through Sunday, with all ${events.length} upcoming events a tap away, by date, kind, and region.`;
 // Built here rather than written inline so the page can hash exactly what it renders for the CSP. Keep going and every
-// date go too: without JavaScript every link shows this same week. So do search, sort, the phone bar's dates and export,
+// date go too: without JavaScript every link shows this same week. So do search, sort, the phone bar's kinds and export,
 // which would sit there doing nothing under the notice that says so; with the search line gone, the bar sticks whole.
-const noJsStyle = ".explorer :is(.sheet-toggle, .search, .sort, .bar-when, .export), .keep { display: none !important; } :root { --bar-top: 0px !important; }";
+const noJsStyle = ".explorer :is(.sheet-toggle, .search, .sort, .bar-kinds, .export), .keep { display: none !important; } :root { --bar-top: 0px !important; }";
 // The kind and region pages list three weeks without JavaScript, and each links to the others, so one of each leads to all.
 const [firstKind] = meta.kinds;
 const [firstRegion] = meta.regions;

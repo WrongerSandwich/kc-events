@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { downloadText } from "../src/lib/download";
@@ -23,6 +23,8 @@ vi.mock("../src/generated/meta", () => ({
 vi.mock("../src/lib/download", () => ({ downloadText: vi.fn() }));
 import Explorer from "../src/components/Explorer.svelte";
 
+// A kind's chip in the rail, not the phone bar's row of the same chips.
+const railKind = (name: string | RegExp) => within(screen.getByRole("group", { name: "Kind" })).getByRole("button", { name });
 const titles = () => screen.queryAllByRole("heading", { level: 3 }).map((h) => h.textContent?.trim());
 
 describe("a shortlist link (#132)", () => {
@@ -47,7 +49,7 @@ describe("a shortlist link (#132)", () => {
     render(Explorer);
     await tick();
     expect(screen.getByText("None of this shortlist's events are still to come. Showing everything instead.")).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
+    await fireEvent.click(railKind(/^Film,/));
     expect(screen.queryByText(/None of this shortlist's events/)).toBeNull();
   });
 

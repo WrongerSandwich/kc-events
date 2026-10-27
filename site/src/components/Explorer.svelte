@@ -5,14 +5,14 @@
   import { downloadText } from "../lib/download";
   import { exportName } from "../lib/export-name";
   import { isDated, isPast, lastDay } from "../lib/events";
-  import { barPresets, facetCounts, keepGoing, matches, shownPreset } from "../lib/filter";
+  import { facetCounts, keepGoing, matches, shownPreset } from "../lib/filter";
   import { formatDay } from "../lib/dates";
   import { groupResults, isTrailingGroup, PASSED_GROUP, resultEvents, SHORTLIST_GROUP } from "../lib/group";
   import { toIcs } from "../lib/ics";
-  import { DEFAULT_FILTERS, EVERY_DATE, filterPills, isDefault, isImpliedWhen, parseQuery, shortlistQuery, toQuery, WHEN_LABELS, type Filters, type WhenPreset } from "../lib/query";
+  import { DEFAULT_FILTERS, EVERY_DATE, filterPills, isDefault, isImpliedWhen, parseQuery, shortlistQuery, toQuery, WHEN_LABELS, type Filters } from "../lib/query";
   import { saves } from "../lib/saves";
   import { shortcutsOn } from "../lib/shortcuts";
-  import { slugify } from "../lib/slugs";
+  import { kindLabel, slugify } from "../lib/slugs";
   import { siteConfig } from "../site.config";
   import FilterRail from "./FilterRail.svelte";
   import KindIcon from "./KindIcon.svelte";
@@ -69,7 +69,7 @@
     shortcut = shortcutsOn();
     mounted = true;
     // The explore page hides a filtered link's explorer until its own slice is on screen; show it once this render lands.
-    void tick().then(() => { delete document.documentElement.dataset.slice; });
+    void tick().then(() => { delete document.documentElement.dataset.slice; showLinkedKind(); });
     return unsubscribe;
   });
 
@@ -116,7 +116,8 @@
   // before it, or search when none is left.
   async function removePill(index: number, without: Filters) {
     await change(without);
-    const left = pillList?.querySelectorAll("button") ?? [];
+    // Shown ones only: a phone hides the kinds' pills, whose chips are pressed in the bar's row instead.
+    const left = [...(pillList?.querySelectorAll("button") ?? [])].filter((b) => getComputedStyle(b).display !== "none");
     (left[Math.min(index, left.length - 1)] ?? search).focus();
   }
 
@@ -126,7 +127,7 @@
     sheetOpen = !sheetOpen;
     if (!sheetOpen) return;
     await tick();
-    // The first shown: on phones the near date presets are the bar's, hidden in the sheet.
+    // The first shown (the sheet's controls vary with the day and the width).
     [...document.querySelectorAll<HTMLElement>("#filter-sheet button")].find((b) => b.offsetParent !== null)?.focus();
   }
 
@@ -189,23 +190,19 @@
   // ("97 events this week") rather than a pill whose removal would widen to every date, and Filters (n) leaves it out.
   let impliedWhen = $derived(isImpliedWhen(filters) ? allPills.find((p) => p.when === true) : undefined);
   let pills = $derived(allPills.filter((p) => p !== impliedWhen));
-  // The phone bar's date presets; the rest wait in the sheet. Their shorter names, so three fit a 375 px phone's line.
-  let nearPresets = $derived(barPresets(today));
-  const BAR_LABELS: Partial<Record<WhenPreset, string>> = { "fri-sun": "Weekend", "7d": "7 days" };
-  // A chip a narrow phone's line cuts is scrolled into view when it is the pressed one, without moving the page.
-  let barWhen: HTMLElement;
-  $effect(() => {
-    void pressedPreset;
-    const on = barWhen.querySelector<HTMLElement>("[aria-pressed=true]");
-    if (on === null) return;
-    const over = on.getBoundingClientRect().right - barWhen.getBoundingClientRect().right;
-    if (over > 0) barWhen.scrollLeft += over + 4;
-  });
-  let pressedPreset = $derived(shownPreset(filters.when, today));
+  // A shared link's kind, off the end of the phone bar's swiping row, is scrolled into view on mount, without moving the
+  // page; only then, so a chip tapped further along never sends the row back to an earlier one.
+  let barKinds: HTMLElement;
+  function showLinkedKind() {
+    const on = barKinds.children[meta.kinds.findIndex((k) => filters.kinds.includes(k))];
+    if (on === undefined) return;
+    const row = barKinds.getBoundingClientRect(), chip = on.getBoundingClientRect();
+    if (chip.right > row.right || chip.left < row.left) barKinds.scrollLeft += chip.left - row.left - 4;
+  }
   let sliceText = $derived(impliedWhen === undefined ? countText : `${countText} ${impliedWhen.label.toLowerCase()}`);
-  // The filters set in the sheet; search is in the bar, above it.
-  // Less a date the bar's chips show, which the sheet leaves to them on phones (and wide windows have no Filters).
-  let sheetCount = $derived(pills.filter((p) => p.without.q === filters.q && !(p.when === true && pressedPreset !== undefined && nearPresets.includes(pressedPreset))).length);
+  // The filters set in the sheet; search is in the bar, above it, and so are the kinds on phones (wide windows have no
+  // Filters button).
+  let sheetCount = $derived(pills.filter((p) => p.without.q === filters.q && p.kind === undefined).length);
   // Each kind's and region's chip, counted for the rest of the filters (facetCounts).
   let counts = $derived(facetCounts(events, filters, today, saved));
   // Nothing matches: each filter whose removal alone lists something, the most first, at most three (the empty state).
@@ -265,12 +262,13 @@
     <!-- Rows are two Tab stops each, so a week is hundreds of stops from Keep going and the footer (audit 2026-10-21,
          A8): this one lands after the last dated row. -->
     {#if count > 0}<a class="skip" href="#past-results">Skip past results</a>{/if}
-    <!-- Phones: the date is the lens, the question a shared link's visitor asks first (the 2026-10-25 critique, as Evan
-         turned it): the near presets (barPresets) on the bar's second line, Filters at its end; the rest, the
-         weekend's days and custom dates stay in the sheet. Wide windows have the rail's When group in view instead. -->
-    <div class="bar-when" role="group" aria-label="Dates" bind:this={barWhen}>
-      {#each nearPresets as p (p)}
-        <button type="button" aria-pressed={pressedPreset === p} onclick={() => change({ ...filters, when: { preset: p } })}>{BAR_LABELS[p] ?? WHEN_LABELS[p]}</button>
+    <!-- Phones: the kinds are the lens (the 2026-10-25 critique, as Evan turned it: the list is in date order already,
+         and the picks are the front page's), a row of the rail's kind toggles that swipes sideways, Filters at its end;
+         the sheet keeps the dates, regions and switches. Wide windows have the rail's Kind group in view instead. -->
+    <div class="bar-kinds" role="group" aria-label="Kinds" bind:this={barKinds}>
+      {#each meta.kinds as k (k)}
+        {@const n = counts.kinds.get(k) ?? 0}
+        <button type="button" class={`kind kind-${slugify(k)}`} class:none={n === 0} aria-pressed={filters.kinds.includes(k)} onclick={() => change({ ...filters, kinds: filters.kinds.includes(k) ? filters.kinds.filter((x) => x !== k) : [...filters.kinds, k] })}><KindIcon kind={k} />{kindLabel(k)}<span class="n" aria-hidden="true">{n}</span><span class="visually-hidden">, {n} {n === 1 ? "event" : "events"}</span></button>
       {/each}
     </div>
     <button type="button" class="control sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={toggleSheet}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
@@ -295,8 +293,8 @@
       <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved to calendar</button>
     {/if}
     <!-- The bar's buttons are one kind (#181): base.css's small control, an icon and words, like Share saved. On phones
-         the words are sized out of sight beside the pills, the × and the name left. -->
-    {#if !isDefault(filters)}<button type="button" class="control small clear" onclick={() => change(DEFAULT_FILTERS)}><UiIcon name="x" /><span class="clear-words">Clear filters</span></button>{/if}
+         the words are sized to nothing beside the pills (font-size 0), the × left and the words its name. -->
+    {#if !isDefault(filters)}<button type="button" class="control small clear" onclick={() => change(DEFAULT_FILTERS)}><UiIcon name="x" />Clear filters</button>{/if}
   </div>
 
   <aside class="rail" aria-label="Filters">
@@ -400,6 +398,9 @@
      critique); one that fits is not faded, since its scroll timeline is inactive and the fade's initial value is 0. */
   @property --rail-fade { syntax: "<length>"; inherits: false; initial-value: 0px; }
   @keyframes rail-end { from, 95% { --rail-fade: 2rem; } to { --rail-fade: 0px; } }
+  /* The phone bar's kinds do the same at their row's end. */
+  @property --kinds-fade { syntax: "<length>"; inherits: false; initial-value: 0px; }
+  @keyframes kinds-end { from, 95% { --kinds-fade: 1.5rem; } to { --kinds-fade: 0px; } }
   @supports (animation-timeline: scroll()) {
     .rail { mask-image: linear-gradient(to bottom, black calc(100% - var(--rail-fade)), transparent); animation: rail-end linear both; animation-timeline: scroll(self); }
   }
@@ -412,15 +413,23 @@
   .search input::placeholder { color: var(--fg-faint); opacity: 1; }
   /* Chromium draws its clear button in its own blue, the one hue in the chrome that names no kind. */
   .search input::-webkit-search-cancel-button { filter: grayscale(1); }
-  /* The phone bar's date presets: the rail's chips, outlined in muted ink, the grey pressed tint under ink. */
-  .bar-when, .break { display: none; }
-  .bar-when button {
-    flex: none; min-height: 2rem; padding: 0 var(--space-2); font: inherit; font-size: var(--text-xs); color: var(--fg-muted);
-    background: none; border: 1px solid var(--control-border); border-radius: 999px; cursor: pointer;
+  /* The phone bar's kinds: the rail's kind chips (FilterRail.svelte), outlined in muted ink with the icon in its shade,
+     pressed in the kind's tint, shade and edge; one that would list nothing faint and dashed, its count beside it. */
+  .bar-kinds, .break { display: none; }
+  .bar-kinds button {
+    display: inline-flex; align-items: center; gap: 0.3em; flex: none; min-height: 2rem; padding: 0 var(--space-2);
+    font: inherit; font-size: var(--text-xs); color: var(--fg-muted); background: none;
+    border: 1px solid var(--control-border); border-radius: 999px; cursor: pointer;
   }
-  .bar-when button[aria-pressed="true"] { color: var(--fg); background: var(--pressed-tint); border-color: var(--fg); font-weight: var(--weight-medium); }
+  .bar-kinds :global(.kind-icon) { color: var(--hue); }
+  .bar-kinds .n { margin-left: 0.1em; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+  .bar-kinds button[aria-pressed="true"] { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
+  .bar-kinds button[aria-pressed="true"] .n { color: inherit; }
+  .bar-kinds button.none:not([aria-pressed="true"]) { color: var(--fg-faint); border-color: var(--rule-strong); border-style: dashed; }
+  .bar-kinds button.none:not([aria-pressed="true"]) :global(.kind-icon) { color: inherit; }
   @media (forced-colors: active) {
-    .bar-when button[aria-pressed="true"] { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }
+    .bar-kinds button[aria-pressed="true"] { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }
+    .bar-kinds button[aria-pressed="true"] :global(.kind-icon) { color: HighlightText; }
   }
   .foot { margin: var(--space-8) 0 0; }
   /* The / shortcut, at the field's end (in the padding it keeps clear) while it is empty and unfocused; not where
@@ -491,14 +500,20 @@
   @media (max-width: 800px) {
     /* No gap: the rail is empty but for the sheet, which spaces itself when it is open. */
     .explorer { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "bar" "rail" "results"; gap: 0; }
-    /* Three lines: search; the date presets (32 px chips, as the rail's on phones) and Filters (a 44 px action); then
-       the count and the pills, the sort and Clear. The first line scrolls away and the other two stick (the negative
-       top), and the chips and the pills each keep to one line, scrolled sideways, so the stuck bar never grows past two
-       lines (the 2026-10-25 critique). */
+    /* Three lines: search; the kinds (32 px chips, as the rail's on phones) and Filters (a 44 px action); then the count
+       and the pills, the sort and Clear. The first line scrolls away and the other two stick (the negative top), and
+       the kinds and the pills each keep to one line, swiped sideways, so the stuck bar never grows past two lines (the
+       2026-10-25 critique). */
     .search { flex-basis: 100%; max-width: none; }
     .search input { min-height: var(--tap); font-size: var(--text-md); }
-    .bar-when, .slice { min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -4px; padding: 4px; }
-    .bar-when { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 0; }
+    .bar-kinds, .slice { min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -4px; padding: 4px; }
+    /* Positioned, so the chips' out-of-sight counts (absolute) are laid out in the row and clipped with it, not in the
+       sticky bar, where they would widen the page. */
+    .bar-kinds { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 0; position: relative; }
+    /* The kinds fade at the row's end until it is swiped there, so a cut chip reads as more to come. */
+    @supports (animation-timeline: scroll()) {
+      .bar-kinds { mask-image: linear-gradient(to right, black calc(100% - var(--kinds-fade)), transparent); animation: kinds-end linear both; animation-timeline: scroll(self inline); }
+    }
     .sheet-toggle { display: inline-flex; gap: var(--space-2); flex: none; }
     .break { display: block; flex-basis: 100%; height: 0; }
     .slice { flex: 1 1 0; margin-right: auto; }
@@ -507,8 +522,9 @@
     /* Clear, and the saved view's Share and Export, are their icons beside the pills, their words their names (WCAG
        2.5.3 holds: the name has no visible words to match), so the line never wraps. */
     .clear, .bar .export, .bar :global(button.share) { min-width: 1.75rem; padding: 0; font-size: 0; }
-    .bar .export :global(.ui-icon), .bar :global(button.share .ui-icon) { width: 1rem; height: 1rem; }
-    .clear-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .clear :global(.ui-icon), .bar .export :global(.ui-icon), .bar :global(button.share .ui-icon) { width: 1rem; height: 1rem; }
+    /* A kind's pill would repeat the pressed chip just above it. */
+    .pill.kind { display: none; }
     .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; mask-image: none; animation: none; }
     /* Closed by default in CSS and in the server HTML alike, so nothing moves when the page hydrates. */
     .sheet:not(.open) { display: none; }

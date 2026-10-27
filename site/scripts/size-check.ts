@@ -79,10 +79,10 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // and 300 for the audit of 2026-10-24: 24 px row targets from 1024 px, an off switch for the / shortcut, and the open
   // sheet scrolling a tabbed-to control clear of its Show button (measured 263), and 200 for the home critique of 2026-10-24
   // late: the calendar writer putting a run in one event's own file as one day to go, which the export bundles (measured 161),
-  // and 1,250 for the explorer critique of 2026-10-25: the phone bar's date chips, stuck lines, icon-only Clear and saved
-  // view buttons and Filters control, Export after the results, quiet Saves on phone rows, the Every date pill, and the
-  // rail's fade (measured 1,372 against a 55,006 build)
-  { page: "explore.html", budget: 56_400, build: "fixture" },
+  // and 1,650 for the explorer critique of 2026-10-25: the phone bar's swiping row of kind chips, stuck lines, icon-only
+  // Clear and saved view buttons and Filters control, Export after the results, quiet Saves on phone rows, the Every
+  // date pill, and the fades at the rail's and the kind row's ends (measured 1,622 against a 55,006 build)
+  { page: "explore.html", budget: 56_650, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
   // A page with no island of its own loads no Svelte runtime: the header's Saved link and staleness banner are plain

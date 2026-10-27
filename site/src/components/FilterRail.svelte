@@ -1,6 +1,6 @@
 <script lang="ts">
   import { shortWeekday } from "../lib/dates";
-  import { barPresets, dayPresets, railPresets, shownPreset } from "../lib/filter";
+  import { dayPresets, railPresets, shownPreset } from "../lib/filter";
   import { DEFAULT_FILTERS, WHEN_LABELS, type Filters } from "../lib/query";
   import { kindLabel, slugify } from "../lib/slugs";
   import KindIcon from "./KindIcon.svelte";
@@ -18,8 +18,6 @@
   // "This weekend" on a Friday).
   let presets = $derived(railPresets(today));
   let pressed = $derived(shownPreset(filters.when, today));
-  // The ones the phone bar offers, which the sheet leaves to it on phones.
-  let near = $derived(barPresets(today));
   const isDay = (d: string) => "from" in filters.when && filters.when.from === d && filters.when.to === d;
 
   // The range inputs follow the range in force, so a shared ?when=a..b link fills them; between changes they hold a
@@ -56,7 +54,7 @@
     <legend>When</legend>
     <div class="segments">
       {#each presets as p (p)}
-        <button type="button" class:near={near.includes(p)} aria-pressed={pressed === p} onclick={() => onchange({ ...filters, when: { preset: p } })}>{WHEN_LABELS[p]}</button>
+        <button type="button" aria-pressed={pressed === p} onclick={() => onchange({ ...filters, when: { preset: p } })}>{WHEN_LABELS[p]}</button>
         {#if p === "today"}
           {#each days as d (d)}
             <button type="button" aria-pressed={isDay(d)} onclick={() => onchange({ ...filters, when: { from: d, to: d } })}>{shortWeekday(d)}</button>
@@ -73,7 +71,7 @@
     </details>
   </fieldset>
 
-  <fieldset>
+  <fieldset class="kinds">
     <legend>Kind</legend>
     <div class="chips">
       {#each kinds as k (k)}
@@ -116,8 +114,8 @@
   button { font: inherit; font-size: var(--text-xs); background: none; color: var(--fg-muted); border: 1px solid var(--control-border); border-radius: 999px; padding: var(--space-1) var(--space-2); cursor: pointer; }
   /* Phones: 32 px, over WCAG 2.5.8's 24 px with room to spare for a finger (audit 2026-10-21, A5). */
   @media (max-width: 800px) { button { min-height: 2rem; } }
-  /* Phones have the near presets in the explorer's bar (barPresets), so the sheet's When keeps the rest. */
-  @media (max-width: 800px) { .near { display: none; } }
+  /* Phones have the kinds in the explorer's bar, a row that swipes, so the sheet leaves them to it. */
+  @media (max-width: 800px) { .kinds { display: none; } }
   /* One pressed look across the rail: a tint, an edge and words in a shade, and medium weight. Kind buttons take their
      kind's tint and shade from their .kind-<slug> class; every other button the grey pressed tint and ink, set here on
      the rail so a kind button's own class still wins. */
