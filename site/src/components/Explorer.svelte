@@ -116,8 +116,7 @@
   // before it, or search when none is left.
   async function removePill(index: number, without: Filters) {
     await change(without);
-    // Shown ones only: a phone hides the kinds' pills, whose chips are pressed in the bar's row instead.
-    const left = [...(pillList?.querySelectorAll("button") ?? [])].filter((b) => getComputedStyle(b).display !== "none");
+    const left = pillList?.querySelectorAll("button") ?? [];
     (left[Math.min(index, left.length - 1)] ?? search).focus();
   }
 
@@ -194,6 +193,7 @@
   // page; only then, so a chip tapped further along never sends the row back to an earlier one.
   let barKinds: HTMLElement;
   function showLinkedKind() {
+    if (!barKinds) return; // unmounted before the tick
     const on = barKinds.children[meta.kinds.findIndex((k) => filters.kinds.includes(k))];
     if (on === undefined) return;
     const row = barKinds.getBoundingClientRect(), chip = on.getBoundingClientRect();
@@ -265,14 +265,16 @@
     <!-- Phones: the kinds are the lens (the 2026-10-25 critique, as Evan turned it: the list is in date order already,
          and the picks are the front page's), a row of the rail's kind toggles that swipes sideways, Filters at its end;
          the sheet keeps the dates, regions and switches. Wide windows have the rail's Kind group in view instead. -->
-    <div class="bar-kinds" role="group" aria-label="Kinds" bind:this={barKinds}>
+    <!-- A chip tabbed to half past the row's edge is brought fully in, clear of the fade (Chromium leaves a partly
+         visible one where it is). -->
+    <div class="bar-kinds" role="group" aria-label="Kinds" bind:this={barKinds} onfocusin={(e) => (e.target as HTMLElement).scrollIntoView({ block: "nearest", inline: "nearest" })}>
       {#each meta.kinds as k (k)}
         {@const n = counts.kinds.get(k) ?? 0}
         <button type="button" class={`kind kind-${slugify(k)}`} class:none={n === 0} aria-pressed={filters.kinds.includes(k)} onclick={() => change({ ...filters, kinds: filters.kinds.includes(k) ? filters.kinds.filter((x) => x !== k) : [...filters.kinds, k] })}><KindIcon kind={k} />{kindLabel(k)}<span class="n" aria-hidden="true">{n}</span><span class="visually-hidden">, {n} {n === 1 ? "event" : "events"}</span></button>
       {/each}
     </div>
     <button type="button" class="control sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={toggleSheet}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
-    <!-- Phones: the end of the bar's second line, whatever room the dates leave. -->
+    <!-- Phones: the end of the bar's second line, whatever room the kinds leave. -->
     <span class="break" aria-hidden="true"></span>
     <div class="slice">
       <p class="count" aria-hidden="true">{sliceText}</p>
@@ -402,7 +404,10 @@
   @property --kinds-fade { syntax: "<length>"; inherits: false; initial-value: 0px; }
   @keyframes kinds-end { from, 95% { --kinds-fade: 1.5rem; } to { --kinds-fade: 0px; } }
   @supports (animation-timeline: scroll()) {
-    .rail { mask-image: linear-gradient(to bottom, black calc(100% - var(--rail-fade)), transparent); animation: rail-end linear both; animation-timeline: scroll(self); }
+    .rail { mask-image: linear-gradient(to bottom, black calc(100% - var(--rail-fade)), transparent); animation: rail-end linear both; }
+    /* A rule of its own (a doubled selector, so it still wins): in one rule the minifier folds the timeline into the
+       animation shorthand, which Chromium rejects, and the fade never runs. */
+    .rail.rail { animation-timeline: scroll(self); }
   }
   .sheet-toggle { display: none; }
   /* Sticky within the whole explorer, not just its grid row, so it stays over the results as they scroll. */
@@ -509,10 +514,11 @@
     .bar-kinds, .slice { min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -4px; padding: 4px; }
     /* Positioned, so the chips' out-of-sight counts (absolute) are laid out in the row and clipped with it, not in the
        sticky bar, where they would widen the page. */
-    .bar-kinds { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 0; position: relative; }
+    .bar-kinds { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 0; position: relative; scroll-padding-inline: 4px calc(1.5rem + 4px); }
     /* The kinds fade at the row's end until it is swiped there, so a cut chip reads as more to come. */
     @supports (animation-timeline: scroll()) {
-      .bar-kinds { mask-image: linear-gradient(to right, black calc(100% - var(--kinds-fade)), transparent); animation: kinds-end linear both; animation-timeline: scroll(self inline); }
+      .bar-kinds { mask-image: linear-gradient(to right, black calc(100% - var(--kinds-fade)), transparent); animation: kinds-end linear both; }
+      .bar-kinds.bar-kinds { animation-timeline: scroll(self inline); } /* apart, as the rail's */
     }
     .sheet-toggle { display: inline-flex; gap: var(--space-2); flex: none; }
     .break { display: block; flex-basis: 100%; height: 0; }
@@ -522,10 +528,7 @@
     /* Clear, and the saved view's Share and Export, are their icons beside the pills, their words their names (WCAG
        2.5.3 holds: the name has no visible words to match), so the line never wraps. */
     .clear, .bar .export, .bar :global(button.share) { min-width: 1.75rem; padding: 0; font-size: 0; }
-    .clear :global(.ui-icon), .bar .export :global(.ui-icon), .bar :global(button.share .ui-icon) { width: 1rem; height: 1rem; }
-    /* A kind's pill would repeat the pressed chip just above it. */
-    .pill.kind { display: none; }
-    .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; mask-image: none; animation: none; }
+    .clear :global(.ui-icon), .bar .export :global(.ui-icon), .bar :global(button.share .ui-icon) { width: 1rem; height: 1rem; }    .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; mask-image: none; animation: none; }
     /* Closed by default in CSS and in the server HTML alike, so nothing moves when the page hydrates. */
     .sheet:not(.open) { display: none; }
     .sheet.open { margin: var(--space-2) 0 var(--space-4); }

@@ -207,16 +207,16 @@ test.describe("the explorer's active slice at 390 px", () => {
 
   test("names a shared link's filters as pills without opening anything, and each pill removes only its filter", async ({ page }) => {
     await on(page, BUILD_DAY, "/explore?when=30d&kind=music");
-    // A kind shows as its pressed chip in the bar's row, not again as a pill beside the count.
-    const pills = page.getByRole("list", { name: "Active filters" }).getByRole("button").filter({ visible: true });
-    await expect(pills).toHaveText(["Next 30 days"]);
+    // A kind is its pressed chip in the bar's row and a pill too, which stays in sight when the chip is swiped away.
+    const pills = page.getByRole("list", { name: "Active filters" }).getByRole("button");
+    await expect(pills).toHaveText(["Next 30 days", "Music"]);
     await expect(page.getByRole("group", { name: "Kinds" }).getByRole("button", { name: /^Music\b/ })).toHaveAttribute("aria-pressed", "true");
     for (const pill of await pills.all()) await expect(pill).toBeInViewport();
     await expect(page.locator("#filter-sheet")).toBeHidden();
     await page.getByRole("button", { name: "Remove Next 30 days" }).click();
     await expect(page).toHaveURL("/explore?when=all&kind=music");
     // Every date is not what the page opens on, so it is a filter too, with a pill that goes back to the week.
-    await expect(pills).toHaveText(["Every date"]);
+    await expect(pills).toHaveText(["Every date", "Music"]);
     // The kinds are the bar's on a phone, so Filters (n) counts the date alone.
     await expect(page.getByRole("button", { name: /^Filters/ })).toHaveText("Filters (1)");
   });
@@ -259,6 +259,11 @@ test.describe("the explorer's active slice at 390 px", () => {
     await on(page, BUILD_DAY, `/explore?kind=${slug}`);
     await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
     await expect(kinds.locator("[aria-pressed=true]")).toBeInViewport({ ratio: 1 });
+    // The row fades at its end while swiping: the scroll-driven animation runs (a minified shorthand once dropped it).
+    expect(await kinds.evaluate((el) => getComputedStyle(el).animationName)).not.toBe("none");
+    // A chip tabbed to at the row's edge comes fully into view.
+    await kinds.getByRole("button").nth(2).focus();
+    await expect(kinds.getByRole("button").nth(2)).toBeInViewport({ ratio: 1 });
     // Still one line: the kinds and Filters share it.
     const [chip, filters] = await Promise.all([kinds.getByRole("button").first().boundingBox(), page.getByRole("button", { name: /^Filters/ }).boundingBox()]);
     expect(Math.abs(chip!.y + chip!.height / 2 - (filters!.y + filters!.height / 2))).toBeLessThan(2);

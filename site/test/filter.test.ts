@@ -46,7 +46,6 @@ describe("dayPresets", () => {
   });
 });
 
-
 describe("railPresets and shownPreset", () => {
   it("offers each span of days once, the first preset that names it: the week is This weekend from Friday, Today on Sunday", () => {
     expect(railPresets("2026-10-05")).toEqual(["today", "fri-sun", "weekend", "30d", "all"]); // Monday: 7 days is the week
