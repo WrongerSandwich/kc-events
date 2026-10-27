@@ -540,6 +540,11 @@
       box-shadow: 0 var(--space-2) 0 var(--bg);
     }
     .show-results:hover { border-color: var(--accent); }
+    /* In the dark the ink fill is a white slab across the screen's foot, the brightest thing on it: the raised surface
+       with ink words and a firm edge, still the sheet's one action, says it without the glare. */
+    @media (prefers-color-scheme: dark) {
+      .show-results, .show-results:hover { color: var(--fg); background: var(--bg-raised); border-color: var(--fg-muted); }
+    }
   }
   /* The search line's height and the gap under it: what scrolls away before the bar sticks. On the root, so the
      document's scroll padding can use it too. Not while search has focus (the / shortcut, Shift+Tab, the last pill
