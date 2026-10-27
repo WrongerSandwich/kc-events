@@ -14,7 +14,7 @@ export const WHEN_LABELS: Record<WhenPreset, string> = {
   weekend: "This week",
   "7d": "Next 7 days",
   "30d": "Next 30 days",
-  all: "All",
+  all: "Every date",
 };
 export type When = { preset: WhenPreset } | { from: string; to: string };
 export type Sort = "date" | "venue";
@@ -38,7 +38,7 @@ export const QUERY_KEYS = ["ids", "when", "kind", "region", "picks", "recurring"
 
 /** What the explorer opens on (#183): today through Sunday, the front page's first horizon; omitted from URLs. */
 export const DEFAULT_WHEN = { preset: "weekend" } as const satisfies When;
-/** Every date: the "All" preset, written out as `when=all` since the default is the week. */
+/** Every date: the "all" preset, written out as `when=all` since the default is the week. */
 export const EVERY_DATE = { preset: "all" } as const satisfies When;
 
 export const DEFAULT_FILTERS: Filters = { when: DEFAULT_WHEN, kinds: [], regions: [], dontMiss: false, recurring: false, saved: false, q: "", sort: "date", ids: [] };
@@ -133,16 +133,22 @@ export type FilterPill = { label: string; kind?: string; when?: true; without: F
 
 /**
  * The filters that narrow the results, one pill each, in words ("This week", "Music", "“jazz”"); sort narrows
- * nothing and has none. A date's pill, the default week's among them, widens to every date when removed.
+ * nothing and has none. A date's pill, the default week's among them, widens to every date when removed; Every
+ * date's narrows to the week.
  */
 export function filterPills(f: Filters): FilterPill[] {
   const out: FilterPill[] = [];
   if (f.ids.length > 0) out.push({ label: `Shortlist (${f.ids.length})`, without: { ...f, ids: [] } });
-  const when = "from" in f.when ? (f.when.from === f.when.to ? formatShort(f.when.from) : formatRange(f.when.from, f.when.to)) : f.when.preset === "all" ? undefined : WHEN_LABELS[f.when.preset];
-  if (when !== undefined) out.push({ label: when, when: true, without: { ...f, when: EVERY_DATE } });
+  // Every date has a pill only where it is not what the rest implies (a list's dates); removing it goes back to the week.
+  if ("preset" in f.when && f.when.preset === "all") {
+    if (!isImpliedWhen(f)) out.push({ label: WHEN_LABELS.all, when: true, without: { ...f, when: DEFAULT_WHEN } });
+  } else {
+    const when = "from" in f.when ? (f.when.from === f.when.to ? formatShort(f.when.from) : formatRange(f.when.from, f.when.to)) : WHEN_LABELS[f.when.preset];
+    out.push({ label: when, when: true, without: { ...f, when: EVERY_DATE } });
+  }
   for (const k of f.kinds) out.push({ label: kindLabel(k), kind: k, without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
   for (const r of f.regions) out.push({ label: r, without: { ...f, regions: f.regions.filter((x) => x !== r) } });
-  if (f.dontMiss) out.push({ label: "Picks only", without: { ...f, dontMiss: false } });
+  if (f.dontMiss) out.push({ label: "Don't miss", without: { ...f, dontMiss: false } });
   if (f.recurring) out.push({ label: "Always there", without: { ...f, recurring: false } });
   if (f.saved) out.push({ label: "Saved only", without: { ...f, saved: false } });
   if (f.q.trim() !== "") out.push({ label: `“${f.q.trim()}”`, without: { ...f, q: "" } });

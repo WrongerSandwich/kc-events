@@ -129,9 +129,10 @@ describe("query state", () => {
 
   it("describes the active filters in words, for the empty state", () => {
     expect(labels(DEFAULT_FILTERS)).toEqual(["This week"]);
-    expect(labels({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toEqual([]);
+    expect(labels({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toEqual(["Every date"]);
+    expect(labels({ ...DEFAULT_FILTERS, when: EVERY_DATE, saved: true })).toEqual(["Saved only"]); // a list's dates are implied
     expect(labels({ ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Kansas City, Kansas"], dontMiss: true, saved: true, q: " zzz " }))
-      .toEqual(["This week", "Music", "Film", "Kansas City, Kansas", "Picks only", "Saved only", "“zzz”"]);
+      .toEqual(["This week", "Music", "Film", "Kansas City, Kansas", "Don't miss", "Saved only", "“zzz”"]);
     expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-11" }, recurring: true, sort: "venue" })).toEqual(["Oct 9–11", "Always there"]);
     expect(labels({ ...DEFAULT_FILTERS, when: { from: "2026-10-09", to: "2026-10-09" } })).toEqual(["Oct 9"]);
   });
@@ -142,17 +143,18 @@ describe("query state", () => {
   });
 
   it("names each active filter as a pill that removes only that filter, sort kept", () => {
-    expect(filterPills({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toEqual([]);
+    // Every date narrows nothing, but it is not what the page opens on, so it has a pill, which goes back to the week.
+    expect(filterPills({ ...DEFAULT_FILTERS, when: EVERY_DATE })).toEqual([{ label: "Every date", when: true, without: DEFAULT_FILTERS }]);
     // The default week narrows too, so it has a pill, which widens to every date.
     expect(filterPills(DEFAULT_FILTERS)).toEqual([{ label: "This week", when: true, without: { ...DEFAULT_FILTERS, when: EVERY_DATE } }]);
     const f: Filters = { ...DEFAULT_FILTERS, when: { preset: "weekend" }, kinds: ["music", "film"], regions: ["Lawrence"], dontMiss: true, recurring: true, saved: true, q: "jazz", sort: "venue" };
     const pills = filterPills(f);
-    expect(pills.map((p) => p.label)).toEqual(["This week", "Music", "Film", "Lawrence", "Picks only", "Always there", "Saved only", "“jazz”"]);
+    expect(pills.map((p) => p.label)).toEqual(["This week", "Music", "Film", "Lawrence", "Don't miss", "Always there", "Saved only", "“jazz”"]);
     const without = Object.fromEntries(pills.map((p) => [p.label, p.without]));
     expect(without["This week"]).toEqual({ ...f, when: { preset: "all" } });
     expect(without["Music"]).toEqual({ ...f, kinds: ["film"] });
     expect(without["Lawrence"]).toEqual({ ...f, regions: [] });
-    expect(without["Picks only"]).toEqual({ ...f, dontMiss: false });
+    expect(without["Don't miss"]).toEqual({ ...f, dontMiss: false });
     expect(without["Always there"]).toEqual({ ...f, recurring: false });
     expect(without["Saved only"]).toEqual({ ...f, saved: false });
     expect(without["“jazz”"]).toEqual({ ...f, q: "" });

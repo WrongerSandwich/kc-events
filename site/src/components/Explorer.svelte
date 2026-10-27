@@ -12,7 +12,7 @@
   import { DEFAULT_FILTERS, EVERY_DATE, filterPills, isDefault, isImpliedWhen, parseQuery, shortlistQuery, toQuery, WHEN_LABELS, type Filters } from "../lib/query";
   import { saves } from "../lib/saves";
   import { shortcutsOn } from "../lib/shortcuts";
-  import { slugify } from "../lib/slugs";
+  import { kindLabel, slugify } from "../lib/slugs";
   import { siteConfig } from "../site.config";
   import FilterRail from "./FilterRail.svelte";
   import KindIcon from "./KindIcon.svelte";
@@ -37,11 +37,15 @@
   let shortcut = $state(true);
   // The bar's height, so the sticky group headings sit just under it however it wraps (search takes a line on phones).
   let barHeight = $state(0);
+  // On phones the bar's search line scrolls away once it is stuck (a negative top, --bar-top on the root, set in CSS
+  // so it follows a rotation or a focused search on its own), so only the lines under it stick. Read when it is
+  // needed; registered as a length, so it reads in px.
+  const barTop = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--bar-top")) || 0;
   // The bar is sticky, and a sticky day heading (about 2.5rem) sits under it, so a row the browser scrolls to the
   // viewport's top edge on focus or by anchor would land under both. The document's scroll padding keeps it clear
   // (audit 2026-10-21, A1); base.css carries a one-line estimate for before this measures, and without JavaScript.
   $effect(() => {
-    document.documentElement.style.scrollPaddingTop = barHeight > 0 ? `calc(${barHeight}px + 2.5rem)` : "";
+    document.documentElement.style.scrollPaddingTop = barHeight > 0 ? `calc(${barHeight}px + var(--bar-top, 0px) + 2.5rem)` : "";
     return () => { document.documentElement.style.scrollPaddingTop = ""; };
   });
   // A shortlist link none of whose events is still to come parses to no shortlist; say so until the next change, so
@@ -65,7 +69,7 @@
     shortcut = shortcutsOn();
     mounted = true;
     // The explore page hides a filtered link's explorer until its own slice is on screen; show it once this render lands.
-    void tick().then(() => { delete document.documentElement.dataset.slice; });
+    void tick().then(() => { delete document.documentElement.dataset.slice; showLinkedKind(); });
     return unsubscribe;
   });
 
@@ -104,7 +108,7 @@
     // Scrolled past the results' top, a new slice would open mid-list; bring its first result up under the bar. The
     // bar is measured now, not through barHeight, which lags a pill that has just wrapped it onto another line.
     await tick();
-    const below = results.getBoundingClientRect().top - bar.offsetHeight;
+    const below = results.getBoundingClientRect().top - bar.offsetHeight - barTop();
     if (below < 0) window.scrollBy({ top: below, behavior: "instant" });
   }
 
@@ -116,12 +120,22 @@
     (left[Math.min(index, left.length - 1)] ?? search).focus();
   }
 
+  // Filters is in the bar, the sheet after the pills: opened, focus goes to its first control, so the next Tab or
+  // swipe is in the sheet rather than on the pills between them.
+  async function toggleSheet() {
+    sheetOpen = !sheetOpen;
+    if (!sheetOpen) return;
+    await tick();
+    // The first shown (the sheet's controls vary with the day and the width).
+    [...document.querySelectorAll<HTMLElement>("#filter-sheet button")].find((b) => b.offsetParent !== null)?.focus();
+  }
+
   // The phone sheet's Show button: close the sheet, bring the results' top up under the bar, and focus them, so the
   // next swipe or Tab starts at the first row rather than where the button was.
   async function showResults() {
     sheetOpen = false;
     await tick();
-    window.scrollBy({ top: results.getBoundingClientRect().top - bar.offsetHeight, behavior: "instant" });
+    window.scrollBy({ top: results.getBoundingClientRect().top - bar.offsetHeight - barTop(), behavior: "instant" });
     results.focus({ preventScroll: true });
   }
 
@@ -175,9 +189,20 @@
   // ("97 events this week") rather than a pill whose removal would widen to every date, and Filters (n) leaves it out.
   let impliedWhen = $derived(isImpliedWhen(filters) ? allPills.find((p) => p.when === true) : undefined);
   let pills = $derived(allPills.filter((p) => p !== impliedWhen));
+  // A shared link's kind, off the end of the phone bar's swiping row, is scrolled into view on mount, without moving the
+  // page; only then, so a chip tapped further along never sends the row back to an earlier one.
+  let barKinds: HTMLElement;
+  function showLinkedKind() {
+    if (!barKinds) return; // unmounted before the tick
+    const on = barKinds.children[meta.kinds.findIndex((k) => filters.kinds.includes(k))];
+    if (on === undefined) return;
+    const row = barKinds.getBoundingClientRect(), chip = on.getBoundingClientRect();
+    if (chip.right > row.right || chip.left < row.left) barKinds.scrollLeft += chip.left - row.left - 4;
+  }
   let sliceText = $derived(impliedWhen === undefined ? countText : `${countText} ${impliedWhen.label.toLowerCase()}`);
-  // The filters set in the sheet; search is in the bar, above it.
-  let sheetCount = $derived(pills.filter((p) => p.without.q === filters.q).length);
+  // The filters set in the sheet; search is in the bar, above it, and so are the kinds on phones (wide windows have no
+  // Filters button).
+  let sheetCount = $derived(pills.filter((p) => p.without.q === filters.q && p.kind === undefined).length);
   // Each kind's and region's chip, counted for the rest of the filters (facetCounts).
   let counts = $derived(facetCounts(events, filters, today, saved));
   // Nothing matches: each filter whose removal alone lists something, the most first, at most three (the empty state).
@@ -230,13 +255,27 @@
 
 <!-- The bar comes first so search is the explorer's first Tab stop, and its skip link the second; the grid puts the
      filter rail beside it on wide windows and under it on phones, outside the filter sheet. -->
-<div class="explorer" style={barHeight > 0 ? `--bar-height: ${barHeight}px` : undefined}>
+<div class="explorer" style={barHeight > 0 ? `--bar-height: calc(${barHeight}px + var(--bar-top, 0px))` : undefined}>
   <div class="bar" bind:this={bar} bind:offsetHeight={barHeight}>
     <label class="search"><span class="visually-hidden">Search</span><input type="search" bind:this={search} value={filters.q} oninput={(e) => change({ ...filters, q: e.currentTarget.value })} onkeydown={escapeSearch} aria-keyshortcuts={shortcut ? "/" : undefined} placeholder="Search events, venues, places" />{#if mounted && shortcut}<kbd class="hint" aria-hidden="true">/</kbd>{/if}</label>
     <a class="skip" href="#results">Skip to results</a>
     <!-- Rows are two Tab stops each, so a week is hundreds of stops from Keep going and the footer (audit 2026-10-21,
          A8): this one lands after the last dated row. -->
     {#if count > 0}<a class="skip" href="#past-results">Skip past results</a>{/if}
+    <!-- Phones: the kinds are the lens (the 2026-10-25 critique, as Evan turned it: the list is in date order already,
+         and the picks are the front page's), a row of the rail's kind toggles that swipes sideways, Filters at its end;
+         the sheet keeps the dates, regions and switches. Wide windows have the rail's Kind group in view instead. -->
+    <!-- A chip tabbed to half past the row's edge is brought fully in, clear of the fade (Chromium leaves a partly
+         visible one where it is). -->
+    <div class="bar-kinds" role="group" aria-label="Kinds" bind:this={barKinds} onfocusin={(e) => (e.target as HTMLElement).scrollIntoView({ block: "nearest", inline: "nearest" })}>
+      {#each meta.kinds as k (k)}
+        {@const n = counts.kinds.get(k) ?? 0}
+        <button type="button" class={`kind kind-${slugify(k)}`} class:none={n === 0} aria-pressed={filters.kinds.includes(k)} onclick={() => change({ ...filters, kinds: filters.kinds.includes(k) ? filters.kinds.filter((x) => x !== k) : [...filters.kinds, k] })}><KindIcon kind={k} />{kindLabel(k)}<span class="n" aria-hidden="true">{n}</span><span class="visually-hidden">, {n} {n === 1 ? "event" : "events"}</span></button>
+      {/each}
+    </div>
+    <button type="button" class="control sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={toggleSheet}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
+    <!-- Phones: the end of the bar's second line, whatever room the kinds leave. -->
+    <span class="break" aria-hidden="true"></span>
     <div class="slice">
       <p class="count" aria-hidden="true">{sliceText}</p>
       {#if pills.length > 0}
@@ -254,15 +293,13 @@
     {#if filters.saved}
       <ShareButton label="Share saved" data={shareSaved} disabled={upcomingSaves.length === 0} />
       <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved to calendar</button>
-    {:else}
-      <button type="button" class="control small export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs(exportAs.filename, exportable, exportAs.calendarName)}><UiIcon name="calendar-plus" />{exportable.length === 0 ? "Export to calendar" : `Export ${exportable.length} to calendar`}</button>
     {/if}
-    <!-- The bar's buttons are one kind (#181): base.css's small control, an icon and words, like Share saved. -->
-    {#if !isDefault(filters)}<button type="button" class="control small" onclick={() => change(DEFAULT_FILTERS)}><UiIcon name="x" />Clear filters</button>{/if}
+    <!-- The bar's buttons are one kind (#181): base.css's small control, an icon and words, like Share saved. On phones
+         the words are sized to nothing beside the pills (font-size 0), the × left and the words its name. -->
+    {#if !isDefault(filters)}<button type="button" class="control small clear" onclick={() => change(DEFAULT_FILTERS)}><UiIcon name="x" />Clear filters</button>{/if}
   </div>
 
   <aside class="rail" aria-label="Filters">
-    <button type="button" class="sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={() => { sheetOpen = !sheetOpen; }}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
     <div class="sheet" class:open={sheetOpen} id="filter-sheet" onfocusin={clearShowResults}>
       <FilterRail {filters} {today} onchange={change} kinds={meta.kinds} regions={meta.regions} {counts} />
       <!-- Phones: the sheet pushes the results a screen down, so a chip changes nothing in view; this stays at the
@@ -283,9 +320,11 @@
         <p class="empty">No events match <strong>{matchText}</strong>.</p>
         <p class="ways">
           {#each ways as w (toQuery(w.p.without))}
-            <button type="button" class="control small" onclick={() => change(w.p.without)}>{w.p.when === true ? "Every date" : `Without ${w.p.label}`}, {w.n} {w.n === 1 ? "event" : "events"}</button>
+            {@const to = w.p.without.when}
+            <button type="button" class="control small" onclick={() => change(w.p.without)}>{w.p.when !== true ? `Without ${w.p.label}` : "preset" in to ? WHEN_LABELS[to.preset] : w.p.label}, {w.n} {w.n === 1 ? "event" : "events"}</button>
           {/each}
-          <button type="button" class="link" onclick={() => change({ ...DEFAULT_FILTERS, when: EVERY_DATE })}>Clear all filters</button>
+          <!-- The bar's Clear filters, the same reset: back to the week; not where the week is all that is set. -->
+          {#if !isDefault(filters)}<button type="button" class="link" onclick={() => change(DEFAULT_FILTERS)}>Clear filters</button>{/if}
         </p>
       {:else}
         <p class="empty">Nothing listed right now.</p>
@@ -309,8 +348,9 @@
           {#if more.added > 0}
             <a class="keep-going" href={`/explore?${toQuery(next)}`} onclick={inPlace(() => goOn(next))}>Keep going: {more.nextWeek ? "next week" : `through ${formatDay(more.through)}`} · {more.added} {more.added === 1 ? "event" : "events"} <span aria-hidden="true">→</span></a>
           {/if}
-          {#if more.total > count}
-            <a class="see-all" href={`/explore?${toQuery(everyDate)}`} onclick={inPlace(() => change(everyDate))}>{more.added > 0 ? "or see" : "See"} all {more.total}</a>
+          <!-- Not where the empty state above offers Every date already. -->
+          {#if more.total > count && !ways.some((w) => w.p.when === true)}
+            <a class="see-all" href={`/explore?${toQuery(everyDate)}`} onclick={inPlace(() => change(everyDate))}>{more.added > 0 ? "or every date" : "Every date"} · {more.total}</a>
           {/if}
         </p>
       {/if}
@@ -332,6 +372,11 @@
       {/if}
     {/each}
     {#if moreAt === groups.length}{@render keep()}{/if}
+    <!-- Export, after the list it takes: the rarest action, out of the bar (the 2026-10-25 critique) and after every
+         filter in the Tab order. The saved view's is in the bar, beside Share saved. -->
+    {#if !filters.saved && count > 0}
+      <p class="foot"><button type="button" class="control export" disabled={!mounted || exportable.length === 0} onclick={() => exportIcs(exportAs.filename, exportable, exportAs.calendarName)}><UiIcon name="calendar-plus" />{exportable.length === 0 ? "Export to calendar" : `Export ${exportable.length} to calendar`}</button></p>
+    {/if}
   </section>
 </div>
 
@@ -349,8 +394,21 @@
   /* The results take focus only from the skip link; the next Tab lands on the first row, which shows the ring. */
   .results:focus, #past-results:focus { outline: none; }
   /* Sticky beside the results, scrolling on its own when it is taller than the window (a 768 px laptop). */
-  .rail { position: sticky; top: var(--space-4); max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto; padding: var(--space-1); margin: calc(-1 * var(--space-1)); }
-  /* (The padding keeps focus rings on the rail's edge from being clipped by the scroll box.) */
+  .rail { position: sticky; top: var(--space-4); max-height: calc(100dvh - 2 * var(--space-4)); overflow-y: auto; padding: var(--space-1); margin: calc(-1 * var(--space-1)); scroll-padding-bottom: var(--space-8); }
+  /* (The padding keeps focus rings on the rail's edge from being clipped by the scroll box.) A rail cut by the window
+     fades out at its foot until it is scrolled to its end, so a half line reads as more below (the 2026-10-25
+     critique); one that fits is not faded, since its scroll timeline is inactive and the fade's initial value is 0. */
+  @property --rail-fade { syntax: "<length>"; inherits: false; initial-value: 0px; }
+  @keyframes rail-end { from, 95% { --rail-fade: 2rem; } to { --rail-fade: 0px; } }
+  /* The phone bar's kinds do the same at their row's end. */
+  @property --kinds-fade { syntax: "<length>"; inherits: false; initial-value: 0px; }
+  @keyframes kinds-end { from, 95% { --kinds-fade: 1.5rem; } to { --kinds-fade: 0px; } }
+  @supports (animation-timeline: scroll()) {
+    .rail { mask-image: linear-gradient(to bottom, black calc(100% - var(--rail-fade)), transparent); animation: rail-end linear both; }
+    /* A rule of its own (a doubled selector, so it still wins): in one rule the minifier folds the timeline into the
+       animation shorthand, which Chromium rejects, and the fade never runs. */
+    .rail.rail { animation-timeline: scroll(self); }
+  }
   .sheet-toggle { display: none; }
   /* Sticky within the whole explorer, not just its grid row, so it stays over the results as they scroll. */
   .bar { grid-area: bar; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); position: sticky; top: 0; background: var(--bg); padding: var(--space-2) 0; z-index: var(--z-bar); }
@@ -358,6 +416,27 @@
   /* The raised surface, as in the rail: Chromium's dark field is #3b3b3b, where its placeholder grey is about 2.4:1. */
   .search input { width: 100%; font-size: var(--text-sm); padding: var(--space-1) 1.75rem var(--space-1) var(--space-2); background: var(--bg-raised); color: var(--fg); border: 1px solid var(--fg-faint); border-radius: 4px; }
   .search input::placeholder { color: var(--fg-faint); opacity: 1; }
+  /* Chromium draws its clear button in its own blue, the one hue in the chrome that names no kind. */
+  .search input::-webkit-search-cancel-button { filter: grayscale(1); }
+  /* The phone bar's kinds: the rail's kind chips (FilterRail.svelte), outlined in muted ink with the icon in its shade,
+     pressed in the kind's tint, shade and edge; one that would list nothing faint and dashed, its count beside it. */
+  .bar-kinds, .break { display: none; }
+  .bar-kinds button {
+    display: inline-flex; align-items: center; gap: 0.3em; flex: none; min-height: 2rem; padding: 0 var(--space-2);
+    font: inherit; font-size: var(--text-xs); color: var(--fg-muted); background: none;
+    border: 1px solid var(--control-border); border-radius: 999px; cursor: pointer;
+  }
+  .bar-kinds :global(.kind-icon) { color: var(--hue); }
+  .bar-kinds .n { margin-left: 0.1em; color: var(--fg-faint); font-variant-numeric: tabular-nums; }
+  .bar-kinds button[aria-pressed="true"] { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: var(--weight-medium); }
+  .bar-kinds button[aria-pressed="true"] .n { color: inherit; }
+  .bar-kinds button.none:not([aria-pressed="true"]) { color: var(--fg-faint); border-color: var(--rule-strong); border-style: dashed; }
+  .bar-kinds button.none:not([aria-pressed="true"]) :global(.kind-icon) { color: inherit; }
+  @media (forced-colors: active) {
+    .bar-kinds button[aria-pressed="true"] { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }
+    .bar-kinds button[aria-pressed="true"] :global(.kind-icon) { color: HighlightText; }
+  }
+  .foot { margin: var(--space-8) 0 0; }
   /* The / shortcut, at the field's end (in the padding it keeps clear) while it is empty and unfocused; not where
      there is no keyboard to press it. */
   .hint { position: absolute; right: var(--space-2); top: 50%; transform: translateY(-50%); pointer-events: none; font-size: var(--text-xs); color: var(--fg-muted); }
@@ -401,14 +480,15 @@
   }
   .keep-going:hover { border-color: var(--fg-faint); }
   .see-all { color: var(--fg-muted); }
-  /* A collapsed group (On now with no when-filter): one raised line, a full tap target, with a chevron that turns
-     when it opens. Open, its line sticks under the bar like a day heading, so it can be closed from anywhere. */
+  /* A collapsed group (On now with no when-filter): one line between hairlines, as light as a day heading, a full tap
+     target, with a chevron that turns when it opens. Open, its line sticks under the bar like a
+     day heading, so it can be closed from anywhere. */
   .collapsed { margin-top: var(--space-2); }
   /* A hundred-odd venues, half of them with a single event: their headings sit closer than the days'. */
   .results :global(.section-heading.venue) { margin-top: var(--space-3); }
   .collapsed summary {
-    display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0 var(--space-3);
-    background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: var(--radius);
+    display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0 var(--space-1);
+    background: var(--bg); border-block: 1px solid var(--rule);
     color: var(--fg-muted); font-size: var(--text-sm); cursor: pointer; list-style: none;
   }
   .collapsed summary::-webkit-details-marker { display: none; }
@@ -418,23 +498,40 @@
     border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
     transform: rotate(-45deg); transition: transform 150ms var(--ease-out);
   }
-  .collapsed summary:hover { border-color: var(--fg-faint); }
+  .collapsed summary:hover { color: var(--fg); }
   .collapsed .heading { display: inline; font-size: inherit; font-weight: var(--weight-medium); color: var(--fg); margin: 0; }
   .collapsed[open] summary::before, .sheet-toggle[aria-expanded="true"]::before { transform: rotate(45deg); }
   .collapsed[open] summary { position: sticky; top: var(--bar-height, var(--tap)); z-index: var(--z-sticky); margin-bottom: var(--space-1); }
   @media (max-width: 800px) {
-    .explorer { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "bar" "rail" "results"; gap: var(--space-2); }
+    /* No gap: the rail is empty but for the sheet, which spaces itself when it is open. */
+    .explorer { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "bar" "rail" "results"; gap: 0; }
+    /* Three lines: search; the kinds (32 px chips, as the rail's on phones) and Filters (a 44 px action); then the count
+       and the pills, the sort and Clear. The first line scrolls away and the other two stick (the negative top), and
+       the kinds and the pills each keep to one line, swiped sideways, so the stuck bar never grows past two lines (the
+       2026-10-25 critique). */
     .search { flex-basis: 100%; max-width: none; }
     .search input { min-height: var(--tap); font-size: var(--text-md); }
-    .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; }
+    .bar-kinds, .slice { min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -4px; padding: 4px; }
+    /* Positioned, so the chips' out-of-sight counts (absolute) are laid out in the row and clipped with it, not in the
+       sticky bar, where they would widen the page. */
+    .bar-kinds { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 0; position: relative; scroll-padding-inline: 4px calc(1.5rem + 4px); }
+    /* The kinds fade at the row's end until it is swiped there, so a cut chip reads as more to come. */
+    @supports (animation-timeline: scroll()) {
+      .bar-kinds { mask-image: linear-gradient(to right, black calc(100% - var(--kinds-fade)), transparent); animation: kinds-end linear both; }
+      .bar-kinds.bar-kinds { animation-timeline: scroll(self inline); } /* apart, as the rail's */
+    }
+    .sheet-toggle { display: inline-flex; gap: var(--space-2); flex: none; }
+    .break { display: block; flex-basis: 100%; height: 0; }
+    .slice { flex: 1 1 0; margin-right: auto; }
+    .count, .pills, .pill { flex: none; }
+    .pills { flex-wrap: nowrap; }
+    /* Clear, and the saved view's Share and Export, are their icons beside the pills, their words their names (WCAG
+       2.5.3 holds: the name has no visible words to match), so the line never wraps. */
+    .clear, .bar .export, .bar :global(button.share) { min-width: 1.75rem; padding: 0; font-size: 0; }
+    .clear :global(.ui-icon), .bar .export :global(.ui-icon), .bar :global(button.share .ui-icon) { width: 1rem; height: 1rem; }    .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; mask-image: none; animation: none; }
     /* Closed by default in CSS and in the server HTML alike, so nothing moves when the page hydrates. */
     .sheet:not(.open) { display: none; }
-    .sheet-toggle {
-      display: flex; align-items: center; gap: var(--space-2); min-height: var(--tap); padding: 0; font: inherit;
-      font-weight: var(--weight-medium); color: var(--fg); background: none; border: 0; cursor: pointer;
-    }
-    .sheet-toggle::before { margin-left: var(--space-1); }
-    .sheet.open { margin-bottom: var(--space-4); }
+    .sheet.open { margin: var(--space-2) 0 var(--space-4); }
     /* At the screen's foot while any of the sheet is on it, over the chips that scroll under it, with the page's
        ground under its margin so nothing shows between it and the edge. */
     .show-results {
@@ -443,5 +540,20 @@
       box-shadow: 0 var(--space-2) 0 var(--bg);
     }
     .show-results:hover { border-color: var(--accent); }
+    /* In the dark the ink fill is a white slab across the screen's foot, the brightest thing on it: the raised surface
+       with ink words and a firm edge, still the sheet's one action, says it without the glare. */
+    @media (prefers-color-scheme: dark) {
+      .show-results, .show-results:hover { color: var(--fg); background: var(--bg-raised); border-color: var(--fg-muted); }
+    }
+  }
+  /* The search line's height and the gap under it: what scrolls away before the bar sticks. On the root, so the
+     document's scroll padding can use it too. Not while search has focus (the / shortcut, Shift+Tab, the last pill
+     removed), so the field being typed in is never off screen (WCAG 2.4.11). explore.astro's no-JS style sets it back
+     to 0, since the bar is then the count alone. */
+  @property --bar-top { syntax: "<length>"; inherits: true; initial-value: 0px; }
+  .bar { top: var(--bar-top); }
+  @media (max-width: 800px) and (min-height: 501px) {
+    :global(:root) { --bar-top: calc(-1 * (var(--tap) + var(--space-2))); }
+    :global(:root:has(.explorer .search input:focus)) { --bar-top: 0px; }
   }
 </style>
