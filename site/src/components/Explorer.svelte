@@ -5,7 +5,7 @@
   import { downloadText } from "../lib/download";
   import { exportName } from "../lib/export-name";
   import { isDated, isPast, lastDay } from "../lib/events";
-  import { facetCounts, keepGoing, matches, shownPreset } from "../lib/filter";
+  import { barPresets, facetCounts, keepGoing, matches, shownPreset } from "../lib/filter";
   import { formatDay } from "../lib/dates";
   import { groupResults, isTrailingGroup, PASSED_GROUP, resultEvents, SHORTLIST_GROUP } from "../lib/group";
   import { toIcs } from "../lib/ics";
@@ -126,7 +126,8 @@
     sheetOpen = !sheetOpen;
     if (!sheetOpen) return;
     await tick();
-    document.querySelector<HTMLElement>("#filter-sheet button")?.focus();
+    // The first shown: on phones the near date presets are the bar's, hidden in the sheet.
+    [...document.querySelectorAll<HTMLElement>("#filter-sheet button")].find((b) => b.offsetParent !== null)?.focus();
   }
 
   // The phone sheet's Show button: close the sheet, bring the results' top up under the bar, and focus them, so the
@@ -187,8 +188,10 @@
   // The date the URL leaves out (the week) is what the page opens on, not a filter the reader set: the count says it
   // ("97 events this week") rather than a pill whose removal would widen to every date, and Filters (n) leaves it out.
   let impliedWhen = $derived(isImpliedWhen(filters) ? allPills.find((p) => p.when === true) : undefined);
-  // The Don't miss toggle shows its own state beside them, so it has no pill (the empty state still names it).
-  let pills = $derived(allPills.filter((p) => p !== impliedWhen && p.without.dontMiss === filters.dontMiss));
+  let pills = $derived(allPills.filter((p) => p !== impliedWhen));
+  // The phone bar's date presets; the rest wait in the sheet.
+  let nearPresets = $derived(barPresets(today));
+  let pressedPreset = $derived(shownPreset(filters.when, today));
   let sliceText = $derived(impliedWhen === undefined ? countText : `${countText} ${impliedWhen.label.toLowerCase()}`);
   // The filters set in the sheet; search is in the bar, above it.
   let sheetCount = $derived(pills.filter((p) => p.without.q === filters.q).length);
@@ -251,16 +254,14 @@
     <!-- Rows are two Tab stops each, so a week is hundreds of stops from Keep going and the footer (audit 2026-10-21,
          A8): this one lands after the last dated row. -->
     {#if count > 0}<a class="skip" href="#past-results">Skip past results</a>{/if}
-    <!-- The picks are the first lens (the 2026-10-25 critique), in the bar beside search rather than a switch at the
-         rail's foot, named as the tag is, with what it would list. Pressed, it wears the tag's red. -->
-    <button type="button" class="picks" aria-pressed={filters.dontMiss} onclick={() => change({ ...filters, dontMiss: !filters.dontMiss })}>Don't miss<span class="n" aria-hidden="true">{counts.picks}</span><span class="visually-hidden">, {counts.picks} {counts.picks === 1 ? "event" : "events"}</span></button>
-    <!-- Beside the count it orders, not at the rail's foot, below a laptop's fold. -->
-    <label class="sort"><span class="visually-hidden">Sort</span><select value={filters.sort} onchange={(e) => change({ ...filters, sort: e.currentTarget.value === "venue" ? "venue" : "date" })}><option value="date">By date</option><option value="venue">By venue</option></select></label>
-    {#if filters.saved}
-      <ShareButton label="Share saved" data={shareSaved} disabled={upcomingSaves.length === 0} />
-      <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved to calendar</button>
-    {/if}
-    <!-- Phones: the sheet's button, a real control on the bar's second line with the lens and the sort. -->
+    <!-- Phones: the date is the lens, the question a shared link's visitor asks first (the 2026-10-25 critique, as Evan
+         turned it): the near presets (barPresets) on the bar's second line, Filters at its end; the rest, the
+         weekend's days and custom dates stay in the sheet. Wide windows have the rail's When group in view instead. -->
+    <div class="bar-when" role="group" aria-label="Dates">
+      {#each nearPresets as p (p)}
+        <button type="button" aria-pressed={pressedPreset === p} onclick={() => change({ ...filters, when: { preset: p } })}>{WHEN_LABELS[p]}</button>
+      {/each}
+    </div>
     <button type="button" class="control sheet-toggle" aria-expanded={sheetOpen} aria-controls="filter-sheet" onclick={toggleSheet}>Filters{#if sheetCount > 0}{` (${sheetCount})`}{/if}</button>
     <div class="slice">
       <p class="count" aria-hidden="true">{sliceText}</p>
@@ -274,8 +275,15 @@
       {/if}
     </div>
     <p role="status" class="visually-hidden">{announced}</p>
-    <!-- The bar's buttons are one kind (#181): base.css's small control, an icon and words, like Share saved. -->
-    {#if !isDefault(filters)}<button type="button" class="control small clear" onclick={() => change(DEFAULT_FILTERS)}><UiIcon name="x" />Clear filters</button>{/if}
+    <!-- Beside the count it orders, not at the rail's foot, below a laptop's fold. -->
+    <label class="sort"><span class="visually-hidden">Sort</span><select value={filters.sort} onchange={(e) => change({ ...filters, sort: e.currentTarget.value === "venue" ? "venue" : "date" })}><option value="date">By date</option><option value="venue">By venue</option></select></label>
+    {#if filters.saved}
+      <ShareButton label="Share saved" data={shareSaved} disabled={upcomingSaves.length === 0} />
+      <button type="button" class="control small export" disabled={!mounted || !upcomingSaves.some(isDated)} onclick={() => exportIcs("kc-this-week-saved.ics", upcomingSaves.filter(isDated), savedName)}><UiIcon name="calendar-plus" />Export saved to calendar</button>
+    {/if}
+    <!-- The bar's buttons are one kind (#181): base.css's small control, an icon and words, like Share saved. On phones
+         the words are sized out of sight beside the pills, the × and the name left. -->
+    {#if !isDefault(filters)}<button type="button" class="control small clear" onclick={() => change(DEFAULT_FILTERS)}><UiIcon name="x" /><span class="clear-words">Clear filters</span></button>{/if}
   </div>
 
   <aside class="rail" aria-label="Filters">
@@ -337,13 +345,11 @@
     {#each groups as g, i (g.key)}
       {#if i === moreAt}{@render keep()}{/if}
       {#if g.collapsed}
-        {@const picks = g.events.filter((e) => e.dontMiss).length}
         <!-- A native disclosure, so it opens without JS and announces its state; closed, it is one line. The summary is
              plain text, since some screen readers flatten a heading inside it (audit A15); the group's heading is inside
-             the group, for heading navigation once it is open. The picks inside are named, so a closed On now does not
-             hide them (the 2026-10-25 critique). -->
+             the group, for heading navigation once it is open. -->
         <details class="collapsed">
-          <summary data-group={g.key}><span class="heading">{g.heading}</span> · {g.events.length} {g.events.length === 1 ? "event" : "events"}{#if picks > 0}<span class="visually-hidden">{", "}</span><span class="dont-miss">{picks} Don't miss</span>{/if}</summary>
+          <summary data-group={g.key}><span class="heading">{g.heading}</span> · {g.events.length} {g.events.length === 1 ? "event" : "events"}</summary>
           <h2 class="visually-hidden">{g.heading}</h2>
           {@render rows(g)}
         </details>
@@ -393,20 +399,15 @@
   .search input::placeholder { color: var(--fg-faint); opacity: 1; }
   /* Chromium draws its clear button in its own blue, the one hue in the chrome that names no kind. */
   .search input::-webkit-search-cancel-button { filter: grayscale(1); }
-  /* The Don't miss lens: an outlined pill with the tag's red as a dot; pressed, it is the tag, solid red. */
-  .picks {
-    display: inline-flex; align-items: center; gap: 0.35em; min-height: 1.75rem; padding: 0 var(--space-3);
-    font: inherit; font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--fg);
-    background: var(--bg-raised); border: 1px solid var(--control-border); border-radius: 999px; cursor: pointer;
+  /* The phone bar's date presets: the rail's chips, outlined in muted ink, the grey pressed tint under ink. */
+  .bar-when { display: none; }
+  .bar-when button {
+    flex: none; min-height: 2rem; padding: 0 var(--space-3); font: inherit; font-size: var(--text-xs); color: var(--fg-muted);
+    background: none; border: 1px solid var(--control-border); border-radius: 999px; cursor: pointer;
   }
-  .picks::before { content: ""; width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--flag-red); }
-  .picks:hover { border-color: var(--fg-faint); }
-  .picks .n { color: var(--fg-faint); font-weight: var(--weight-regular); font-variant-numeric: tabular-nums; }
-  .picks[aria-pressed="true"] { color: var(--flag-red-fg); background: var(--flag-red); border-color: var(--flag-red); }
-  .picks[aria-pressed="true"]::before { background: currentColor; }
-  .picks[aria-pressed="true"] .n { color: inherit; }
+  .bar-when button[aria-pressed="true"] { color: var(--fg); background: var(--pressed-tint); border-color: var(--fg); font-weight: var(--weight-medium); }
   @media (forced-colors: active) {
-    .picks[aria-pressed="true"] { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }
+    .bar-when button[aria-pressed="true"] { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; }
   }
   .foot { margin: var(--space-8) 0 0; }
   /* The / shortcut, at the field's end (in the padding it keeps clear) while it is empty and unfocused; not where
@@ -453,7 +454,7 @@
   .keep-going:hover { border-color: var(--fg-faint); }
   .see-all { color: var(--fg-muted); }
   /* A collapsed group (On now with no when-filter): one line between hairlines, as light as a day heading, a full tap
-     target, with a chevron that turns when it opens and its picks named. Open, its line sticks under the bar like a
+     target, with a chevron that turns when it opens. Open, its line sticks under the bar like a
      day heading, so it can be closed from anywhere. */
   .collapsed { margin-top: var(--space-2); }
   /* A hundred-odd venues, half of them with a single event: their headings sit closer than the days'. */
@@ -464,7 +465,6 @@
     color: var(--fg-muted); font-size: var(--text-sm); cursor: pointer; list-style: none;
   }
   .collapsed summary::-webkit-details-marker { display: none; }
-  .collapsed summary .dont-miss { margin-left: var(--space-1); }
   /* A chevron that turns when its disclosure opens: On now's line, and the phone's Filters button. */
   .collapsed summary::before, .sheet-toggle::before {
     content: ""; width: 0.4em; height: 0.4em; margin-right: var(--space-1);
@@ -478,19 +478,21 @@
   @media (max-width: 800px) {
     /* No gap: the rail is empty but for the sheet, which spaces itself when it is open. */
     .explorer { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "bar" "rail" "results"; gap: 0; }
-    /* Three lines: search; the lens, the sort and Filters, each a 44 px target; then the count and the pills. The
-       first line scrolls away and the other two stick (the negative top), and the pills keep to one line, scrolled
-       sideways, so the stuck bar never grows past two lines (the 2026-10-25 critique). */
+    /* Three lines: search; the date presets (32 px chips, as the rail's on phones) and Filters (a 44 px action); then
+       the count and the pills, the sort and Clear. The first line scrolls away and the other two stick (the negative
+       top), and the chips and the pills each keep to one line, scrolled sideways, so the stuck bar never grows past two
+       lines (the 2026-10-25 critique). */
     .search { flex-basis: 100%; max-width: none; }
     .search input { min-height: var(--tap); font-size: var(--text-md); }
-    /* The lens is a filter chip, 32 px as the rail's are on phones; the sort and Filters are 44 px actions. */
-    .picks { min-height: 2rem; }
-    .sort select { min-height: var(--tap); }
-    .sort { margin-left: auto; }
+    .bar-when, .slice { min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -4px; padding: 4px; }
+    .bar-when { display: flex; align-items: center; gap: var(--space-1); flex: 1 1 60%; }
     .sheet-toggle { display: inline-flex; gap: var(--space-2); }
-    .slice { flex: 1 1 60%; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: -4px auto -4px -4px; padding: 4px; }
+    .slice { flex: 1 1 40%; margin-right: auto; }
     .count, .pills, .pill { flex: none; }
     .pills { flex-wrap: nowrap; }
+    /* Clear is its × beside the pills, its words its name (WCAG 2.5.3 holds: the name has no visible words to match). */
+    .clear { min-width: 1.75rem; padding: 0; }
+    .clear-words { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .rail { position: static; max-height: none; overflow: visible; padding: 0; margin: 0; mask-image: none; animation: none; }
     /* Closed by default in CSS and in the server HTML alike, so nothing moves when the page hydrates. */
     .sheet:not(.open) { display: none; }

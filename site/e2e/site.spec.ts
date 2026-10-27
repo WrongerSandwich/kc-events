@@ -172,12 +172,13 @@ test("the explorer honors the URL and writes it back", async ({ page }) => {
   await expect(page).toHaveURL("/explore");
 });
 
-test("the explorer's picks=1 shows only the picks, under a pressed Don't miss toggle, and writes it back (#185)", async ({ page }) => {
+test("the explorer's picks=1 shows only the picks, under a Don't miss pill, and writes it back (#185)", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore?when=all&picks=1");
   const rows = page.locator(".results article.row");
   await expect(rows.first()).toBeVisible();
   await expect(page.locator(".results article.row:not(.flagged)")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: /^Don't miss\b/ })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("list", { name: "Active filters" }).getByRole("button", { name: "Remove Don't miss" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Don't miss only", exact: true })).toBeChecked();
   await page.getByRole("button", { name: /^Comedy\b/ }).click();
   await expect(page).toHaveURL(/[?&]picks=1(&|$)/);
 });
@@ -217,12 +218,14 @@ test.describe("the explorer's active slice at 390 px", () => {
     await expect(page.getByRole("button", { name: /^Filters/ })).toHaveText("Filters (2)");
   });
 
-  test("scrolled, the bar keeps Don't miss, the sort and Filters at the top and lets search go (the 2026-10-25 critique)", async ({ page }) => {
+  test("scrolled, the bar keeps the dates, the sort and Filters at the top and lets search go (the 2026-10-25 critique)", async ({ page }) => {
     await on(page, BUILD_DAY, "/explore?when=all");
     await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await expect(page.getByRole("searchbox")).not.toBeInViewport();
-    for (const name of [/^Don't miss/, /^Filters/]) await expect(page.getByRole("button", { name })).toBeInViewport();
+    await expect(page.getByRole("group", { name: "Dates" }).getByRole("button").first()).toBeInViewport();
+    await expect(page.getByRole("button", { name: /^Filters/ })).toBeInViewport();
+    await expect(page.getByRole("combobox", { name: "Sort" })).toBeInViewport();
     // Stuck, it is two lines at most: the controls, then the count and the pills.
     expect(await page.locator(".bar").evaluate((el) => el.getBoundingClientRect().bottom)).toBeLessThan(120);
     // Focused from down the list (the / shortcut; Shift+Tab and a removed last pill likewise), search comes back.
@@ -239,7 +242,9 @@ test.describe("the explorer's active slice at 390 px", () => {
     await on(page, BUILD_DAY, "/explore?kind=music");
     await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
     await page.getByRole("button", { name: /^Filters/ }).click();
-    await expect(page.locator("#filter-sheet button").first()).toBeFocused();
+    // The first it shows: the near dates are the bar's on a phone, so it starts past them.
+    await expect(page.locator("#filter-sheet button").filter({ visible: true }).first()).toBeFocused();
+    await expect(page.locator("#filter-sheet .near").first()).toBeHidden();
   });
 
   test("never leaves a control tabbed to under the sheet's Show button (WCAG 2.4.11)", async ({ page }) => {
@@ -357,10 +362,10 @@ test("without JavaScript, a filtered link says the filters need it", async ({ br
   await expect(notice.locator("a[href^='/r/']")).toHaveCount(1);
   // Hidden by the <noscript> style, which the CSP lets through by its hash.
   await expect(page.getByRole("button", { name: /^Filters/ })).toBeHidden();
-  // So are the controls that would do nothing under it: search, sort, the Don't miss lens and export.
+  // So are the controls that would do nothing under it: search, sort, the phone bar's dates and export.
   await expect(page.getByRole("searchbox")).toBeHidden();
   await expect(page.getByRole("combobox", { name: "Sort" })).toBeHidden();
-  await expect(page.getByRole("button", { name: /^Don't miss/ })).toBeHidden();
+  await expect(page.locator(".bar-when")).toBeHidden();
   await expect(page.getByRole("button", { name: /^Export/ })).toBeHidden();
   expect(violations).toEqual([]);
   await context.close();

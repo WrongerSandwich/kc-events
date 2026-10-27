@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dateRange, dayPresets, facetCounts, keepGoing, matches, railPresets, shownPreset } from "../src/lib/filter";
+import { barPresets, dateRange, dayPresets, facetCounts, keepGoing, matches, railPresets, shownPreset } from "../src/lib/filter";
 import { DEFAULT_FILTERS, EVERY_DATE, type Filters } from "../src/lib/query";
 import { event } from "./fixtures/event";
 
@@ -46,6 +46,15 @@ describe("dayPresets", () => {
   });
 });
 
+describe("barPresets", () => {
+  it("offers the first three near presets of the day, short of Next 30 days and Every date", () => {
+    expect(barPresets("2026-10-05")).toEqual(["today", "fri-sun", "weekend"]); // Monday: Next 7 days is This week
+    expect(barPresets("2026-10-06")).toEqual(["today", "fri-sun", "weekend"]); // Tuesday: Next 7 days waits in the sheet
+    expect(barPresets("2026-10-09")).toEqual(["today", "fri-sun", "7d"]); // Friday: This week is This weekend
+    expect(barPresets("2026-10-11")).toEqual(["today", "7d"]); // Sunday: the week is today
+  });
+});
+
 describe("railPresets and shownPreset", () => {
   it("offers each span of days once, the first preset that names it: the week is This weekend from Friday, Today on Sunday", () => {
     expect(railPresets("2026-10-05")).toEqual(["today", "fri-sun", "weekend", "30d", "all"]); // Monday: 7 days is the week
@@ -75,17 +84,6 @@ describe("facetCounts", () => {
     const { kinds, regions } = facetCounts(events, f({ when: { preset: "weekend" }, kinds: ["music"], regions: ["Lawrence"] }), today, none);
     expect(Object.fromEntries(kinds)).toEqual({ music: 1, film: 1 }); // in Lawrence, this week
     expect(Object.fromEntries(regions)).toEqual({ "Central KC": 1, Lawrence: 1 }); // music, this week
-  });
-
-  it("counts the picks the rest of the filters list", () => {
-    const events = [
-      event({ id: "a", start: "2026-10-09T19:00:00-05:00", kind: "music", dontMiss: true }),
-      event({ id: "b", start: "2026-10-10", kind: "film", dontMiss: true }),
-      event({ id: "c", start: "2026-10-10", kind: "music" }),
-      event({ id: "d", start: "2026-11-20", kind: "music", dontMiss: true }), // past the week
-    ];
-    expect(facetCounts(events, f({ when: { preset: "weekend" }, kinds: ["music"] }), today, none).picks).toBe(1);
-    expect(facetCounts(events, f({ when: { preset: "weekend" }, dontMiss: true }), today, none).picks).toBe(2);
   });
 });
 

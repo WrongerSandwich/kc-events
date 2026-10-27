@@ -44,6 +44,14 @@ export function railPresets(today: string): WhenPreset[] {
   });
 }
 
+/**
+ * The near presets the phone bar offers as its lens (the 2026-10-25 critique): the first three of the rail's for today
+ * short of Next 30 days and Every date, so they fit a phone's line beside Filters. The sheet keeps the rest.
+ */
+export function barPresets(today: string): WhenPreset[] {
+  return railPresets(today).filter((p) => p !== "30d" && p !== "all").slice(0, 3);
+}
+
 /** The rail's preset for a date filter: itself, or the one it offers for the same days today; undefined for a range. */
 export function shownPreset(when: When, today: string): WhenPreset | undefined {
   if ("from" in when) return undefined;
@@ -89,22 +97,18 @@ export function keepGoing(events: readonly PublishedEvent[], f: Filters, today: 
 
 /**
  * What each kind's and each region's chip stands for: how many events the filters list with that one alone in its
- * group, the rest of the filters as they are. A kind or region missing from a map has none. `picks` is what the Don't
- * miss toggle would list with the rest as they are.
+ * group, the rest of the filters as they are. A kind or region missing from a map has none.
  */
-export function facetCounts(events: readonly PublishedEvent[], f: Filters, today: string, saved: ReadonlySet<string>): { kinds: Map<string, number>; regions: Map<string, number>; picks: number } {
+export function facetCounts(events: readonly PublishedEvent[], f: Filters, today: string, saved: ReadonlySet<string>): { kinds: Map<string, number>; regions: Map<string, number> } {
   const kinds = new Map<string, number>();
   const regions = new Map<string, number>();
-  let picks = 0;
   const anyKind: Filters = { ...f, kinds: [] };
   const anyRegion: Filters = { ...f, regions: [] };
-  const onlyPicks: Filters = { ...f, dontMiss: true };
   for (const e of events) {
     if (matches(e, anyKind, today, saved)) kinds.set(e.kind, (kinds.get(e.kind) ?? 0) + 1);
     if (matches(e, anyRegion, today, saved)) regions.set(e.region, (regions.get(e.region) ?? 0) + 1);
-    if (matches(e, onlyPicks, today, saved)) picks++;
   }
-  return { kinds, regions, picks };
+  return { kinds, regions };
 }
 
 /**

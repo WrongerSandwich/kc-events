@@ -62,7 +62,7 @@ describe("Explorer", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["On now", "Fri Oct 9", "Sat Oct 10"]);
     expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film"]);
     expect(screen.queryByText("Trivia")).toBeNull();
-    expect(screen.getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(screen.getByRole("group", { name: "When" })).getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "true");
     // The week the page opens on is said with the count, not shown as a filter the reader set.
     expect(document.querySelector(".count")).toHaveTextContent("3 events this week");
     expect(screen.queryByRole("button", { name: /^Remove / })).toBeNull();
@@ -87,8 +87,7 @@ describe("Explorer", () => {
       const onNow = screen.getByRole("heading", { level: 2, name: "On now" }).closest("details")!;
       expect(onNow).not.toHaveAttribute("open");
       const summary = onNow.querySelector("summary")!;
-      // Its picks are named, so a closed line does not hide them.
-      expect(summary).toHaveTextContent("On now · 7 events, 1 Don't miss");
+      expect(summary).toHaveTextContent("On now · 7 events");
       // Plain text: some screen readers flatten a heading inside a summary; the heading is in the group (#194).
       expect(summary.querySelector("h1, h2, h3, h4, h5, h6")).toBeNull();
       expect(within(onNow).getAllByRole("article")[0]).toHaveTextContent("Exhibition");
@@ -101,23 +100,23 @@ describe("Explorer", () => {
     }
   });
 
-  it("has the picks as a toggle in the bar, counted for the rest of the filters, with no pill of its own", async () => {
+  it("keeps Don't miss a switch in the rail's Show group, under a pill once set, for the front page's links", async () => {
     render(Explorer);
-    const bar = document.querySelector(".bar") as HTMLElement;
-    const picks = within(bar).getByRole("button", { name: "Don't miss, 1 event" });
-    expect(picks).toHaveAttribute("aria-pressed", "false");
+    const picks = screen.getByRole("checkbox", { name: "Don't miss only" });
     await fireEvent.click(picks);
     expect(location.search).toBe("?picks=1");
     expect(rows()).toEqual(["Exhibition"]);
-    expect(picks).toHaveAttribute("aria-pressed", "true");
-    expect(within(bar).queryByRole("button", { name: /^Remove / })).toBeNull();
-    // Not in the sheet, so Filters (n) leaves it out.
-    expect(screen.getByRole("button", { name: "Filters" })).toBeInTheDocument();
-    await fireEvent.click(screen.getByRole("button", { name: /^Film,/ }));
-    expect(within(bar).getByRole("button", { name: "Don't miss, 0 events" })).toHaveAttribute("aria-pressed", "true");
-    // The empty state still names it, and offers to drop it.
-    expect(screen.getByText(/No events match/, { selector: ".empty" })).toHaveTextContent("No events match This week · Film · Don't miss.");
-    expect(screen.getByRole("button", { name: "Without Don't miss, 1 event" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Active filters" })).toHaveTextContent("Don't miss");
+    expect(screen.getByRole("button", { name: "Filters (1)" })).toBeInTheDocument();
+  });
+
+  it("offers the near date presets in the bar for phones, the same filter as the rail's", async () => {
+    render(Explorer);
+    const bar = found(document.querySelector<HTMLElement>(".bar-when") ?? undefined, "the bar's dates");
+    expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Today", "This weekend", "This week"]);
+    expect(within(bar).getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "true");
+    await fireEvent.click(within(bar).getByRole("button", { name: "Today" }));
+    expect(location.search).toBe("?when=today");
   });
 
   it("keeps a short On now as an open day group, under any when-filter", () => {
@@ -198,10 +197,10 @@ describe("Explorer", () => {
 
   it("offers This weekend, Friday to Sunday, beside This week", async () => {
     render(Explorer);
-    await fireEvent.click(screen.getByRole("button", { name: "This weekend" }));
+    await fireEvent.click(within(screen.getByRole("group", { name: "When" })).getByRole("button", { name: "This weekend" }));
     expect(location.search).toBe("?when=fri-sun");
     expect(rows()).toEqual(["Exhibition", "Friday jazz", "Saturday film"]);
-    expect(screen.getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "false");
+    expect(within(screen.getByRole("group", { name: "When" })).getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "false");
   });
 
   it("filters by kind chip and writes the URL", async () => {
@@ -295,8 +294,8 @@ describe("Explorer", () => {
     history.replaceState(null, "", "/explore?when=7d");
     render(Explorer);
     expect(screen.getByRole("button", { name: "Remove This week" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.queryByRole("button", { name: "Next 7 days" })).toBeNull();
+    expect(within(screen.getByRole("group", { name: "When" })).getByRole("button", { name: "This week" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(screen.getByRole("group", { name: "When" })).queryByRole("button", { name: "Next 7 days" })).toBeNull();
   });
 
   it("keeps keyboard focus in the bar when a pill goes: on the next pill, else the one before, else search", async () => {
