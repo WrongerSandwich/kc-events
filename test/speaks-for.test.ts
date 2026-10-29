@@ -229,6 +229,17 @@ describe("the stored title across a re-reading", () => {
     expect(only(second.dataset)).toMatchObject({ title: "Pershing Lecture Series | The Wars Before the War" });
   });
 
+  // The 2026-10-26 run's KC Bonzo Blowout (#246): a second reading dropped "6th Annual" and started a second record.
+  it("is kept when the new one drops an annual's count in front, or adds it", async () => {
+    const first = await titled("6th Annual KC Bonzo Blowout");
+    const second = await titled("KC Bonzo Blowout", WEEK_2, first.dataset);
+    expect(only(second.dataset)).toMatchObject({ id: first.dataset.events[0]!.id, title: "6th Annual KC Bonzo Blowout", lastVerified: WEEK_2_ISO });
+
+    const bare = await titled("KC Bonzo Blowout");
+    const counted = await titled("The 6th Annual KC Bonzo Blowout", WEEK_2, bare.dataset);
+    expect(only(counted.dataset)).toMatchObject({ id: bare.dataset.events[0]!.id, title: "KC Bonzo Blowout" });
+  });
+
   // The title rules (#196) strip a venue and a sponsor and take the act over a bare presenter; a stored
   // form from before them gives way to the reading they make, whichever form came first (#217).
   it("takes the stored title without the venue behind it, and keeps it so", async () => {

@@ -317,8 +317,15 @@ const TITLE_SEPARATOR = /\||:|–|—|\s-\s/gu;
  * event in full one week ("A / Orchestra and Choirs") and give only its lead title the next.
  */
 function sameOrShortenedTitle(a: string, b: string): boolean {
-  const [shorter, longer] = byLength(normalizeName(a), normalizeName(b));
+  const [shorter, longer] = byLength(withoutAnnualCount(normalizeName(a)), withoutAnnualCount(normalizeName(b)));
   return shorter !== "" && sameOrCutShort(shorter, longer);
+}
+
+/** An annual's count in front of a normalized title ("6th annual", "sixth annual", "annual"), which one reading gives and another drops (#246). */
+const ANNUAL_COUNT = /^(?:(?:\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|seventh|eighth|ninth|tenth) )?annual (?=\S)/u;
+
+function withoutAnnualCount(name: string): string {
+  return name.replace(ANNUAL_COUNT, "");
 }
 
 /**

@@ -47,6 +47,15 @@ describe("event identity", () => {
     expect(findMatch({ ...short, title: "At the Heart" + "land" }, [full], {})).toBeUndefined();
   });
 
+  it("a title with an annual's count in front matches the title without it at the same venue and date (#246)", () => {
+    const counted = { ...known, title: "6th Annual KC Bonzo Blowout" };
+    for (const title of ["KC Bonzo Blowout", "Annual KC Bonzo Blowout", "Sixth Annual KC Bonzo Blowout", "The 7th Annual KC Bonzo Blowout"]) {
+      expect(findMatch({ ...known, title }, [counted], {})).toBe(counted);
+      expect(findMatch(counted, [{ ...known, title }], {})).toBeDefined();
+    }
+    expect(findMatch({ ...known, title: "Bonzo Blowout" }, [counted], {})).toBeUndefined();
+  });
+
   describe("a series name in front of the title", () => {
     // The 2026-10-05 dataset's WWI Museum twins (#32): one reading names the series, the other does not.
     const museum = { primaryUrl: "https://www.theworldwar.org/events", venue: "National WWI Museum and Memorial", start: "2026-10-21T18:30:00-05:00" };
