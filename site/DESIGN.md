@@ -92,6 +92,7 @@ spacing:
   "16": "4rem"
   tap: "2.75rem"
   measure: "42rem"
+  frame: "80rem"
 components:
   control:
     backgroundColor: "{colors.raised-surface}"
@@ -154,7 +155,7 @@ A reference you scan, not a feed you scroll. The interface is set in true greys,
 
 The system serves PRODUCT.md's "sleek, colorful, honest tool": the delight of a well-made instrument, closer to Fantastical's colour-coded calendar and Linear's exact chrome than to any magazine. Its one nod to the city is the header's fountain mark (five drops in kind colours, which play once on hover) and the flag's carmine, kept for the single state that is not a kind: don't miss. It rejects, by name, ad-laden local aggregators (thumbnails, sponsored slots, undifferentiated volume), ticketing marketplaces (big event images, countdowns, scarcity pressure, buy buttons), social feeds (infinite scroll, engagement bait), and the hand-written newsletter (serif voice type, a curator persona).
 
-Layout is two widths: a reading measure (42rem) for the front page, event pages and prose, and a wide frame (80rem, 86rem from 1440px) for the explorer's rail and one-line rows. Sections sit twice as far apart as the cards inside them (4rem between sections, 1rem between cards; 3rem between sections on phones). Motion is state feedback only: 150ms ease-out-quart transitions on controls, a 260ms cross-document view transition that glides a card's date tile and title into the event page's, and the fountain. All of it switches off under `prefers-reduced-motion`.
+Layout is two widths: a wide frame (80rem, 86rem from 1440px) for the header, the footer and the explorer's rail and one-line rows, and a reading measure (42rem) for every other page's content: the front page, event pages, landing pages and prose. The header keeps the frame on every page, and the measure starts at the frame's left edge rather than centring in the window, so a page's heading lines up under the wordmark and the open space on a wide screen falls to the right. Sections sit twice as far apart as the cards inside them (4rem between sections, 1rem between cards; 3rem between sections on phones). Motion is state feedback only: 150ms ease-out-quart transitions on controls, a 260ms cross-document view transition that glides a card's date tile and title into the event page's, and the fountain. All of it switches off under `prefers-reduced-motion`.
 
 **Key Characteristics:**
 - Monochrome chrome; colour arrives only with a kind or a state.

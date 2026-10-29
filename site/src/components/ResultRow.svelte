@@ -181,7 +181,7 @@
     .row.no-chip { --chip-width: 0px; }
     .row.with-day { --when-width: 13.5rem; }
   }
-  /* 1440 px and up the container is wider (base.css), so the title can take more. */
+  /* 1440 px and up the container is wider (--frame in tokens.css), so the title can take more. */
   @media (min-width: 1440px) {
     .row { --title-max: 22rem; }
   }
