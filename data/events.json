@@ -44164,7 +44164,8 @@
       "lastVerified": "2026-10-26T06:17:08-05:00",
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-10-26T06:17:08-05:00",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "promotion",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
