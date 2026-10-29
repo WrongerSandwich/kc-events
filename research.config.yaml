@@ -207,6 +207,8 @@ venueAliases:
   Nerman Museum of Contemporary Art: [Nerman Museum, Irma Starr Gallery, McCaffree Gallery, Oppenheimer New Media Gallery, Tony and Marti Oppenheimer Gallery, Dean E. Thompson Gallery, Kansas Focus Gallery, "The Richard I. and Jeanne S. Galamba Lobby, First Floor", "The Richard I. and Jeanne S. Galamba Lobby, First Floor and The Harrison Jedel Mezzanine, Second Floor"]
   # #197: its calendar gives some events the street address alone ("1801 East 18th Street"), and some the name in capitals.
   Zhou B Art Center KC: [Zhou B Art Center Kansas City, 1801 East 18th Street]
+  # Weekly audit 2026-10-26: some of its listings give the street address alone.
+  Liberty Hall: [644 Massachusetts St]
   # #197: Music Theater Heritage's Ruby Room, Suite 301 at Crown Center, as Crown Center's calendar gives it.
   Music Theater Heritage: [Ruby Room, "2450 Grand Blvd., Suite 301"]
   # #197: spellings as pages give them. A name with no other names files only the same words in other

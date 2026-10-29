@@ -8515,7 +8515,7 @@
       "title": "GloWild",
       "description": "A glowing nighttime expedition.",
       "start": "2026-10-01",
-      "end": "2026-10-31",
+      "end": "2026-12-27",
       "venue": "Kansas City Zoo & Aquarium",
       "neighborhood": "Swope Park",
       "primaryUrl": "https://kansascityzoo.org/events",
@@ -8535,7 +8535,7 @@
         "source": "Kansas City Zoo & Aquarium"
       },
       "evidence": {
-        "date": "October 1 - 31",
+        "date": "GloWild\nOctober 1 - 31\nPenguin March\nOctober 31 - 1\nNovember 2026\nGloWild\nNovember 1 - 30\nCub Scout Night at the Zoo\nNovember 6\nScouting America Day\nNovember 7\nPolar Bear Day\nNovember 7\nPenguin March\nNovember 27 - 29\nDecember 2026\nGloWild\nDecember 1 - 27",
         "venue": "Kansas City Zoo & Aquarium"
       }
     },
@@ -42429,7 +42429,9 @@
       "lastVerified": "2026-10-23T12:32:11-05:00",
       "lastChanged": "2026-10-23T12:32:11-05:00",
       "lastJudged": "2026-10-23T12:32:11-05:00",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_92accb4d207a",
       "verificationFailures": 1,
       "consecutiveOutages": 0,
       "lead": {
@@ -42741,7 +42743,9 @@
       "lastVerified": "2026-10-26T06:17:08-05:00",
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-10-26T06:17:08-05:00",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_f628b91ff60b",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -43256,7 +43260,9 @@
       "lastVerified": "2026-10-26T06:17:08-05:00",
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-10-26T06:17:08-05:00",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_affd609bf1f1",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -43850,7 +43856,9 @@
       "lastVerified": "2026-10-26T06:17:08-05:00",
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-10-26T06:17:08-05:00",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_185de5c79494",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -43878,7 +43886,9 @@
       "lastVerified": "2026-10-26T06:17:08-05:00",
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-10-26T06:17:08-05:00",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_185de5c79494",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -44126,7 +44136,8 @@
       "lastVerified": "2026-10-26T06:17:08-05:00",
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-10-26T06:17:08-05:00",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "promotion",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {

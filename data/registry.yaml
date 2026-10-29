@@ -515,7 +515,7 @@ sources:
     urls: [https://kansascityzoo.org/events]
     kind: outdoors/community
     neighborhood: Swope Park
-    checkHints: Zoo at 6800 Zoo Dr in Swope Park. Scout programs (Cub Scout Night at the Zoo) are for scout groups only, not the public.
+    checkHints: Zoo at 6800 Zoo Dr in Swope Park. Scout programs (Cub Scout Night at the Zoo) are for scout groups only, not the public. GloWild is listed again under each month's heading ("October 1 - 31", "November 1 - 30", "December 1 - 27"), but it is one run. Record it once, as a limited run from its first date to its last, with the month headings it is listed under quoted as its date evidence.
     status: active
 
   - name: Powell Gardens
