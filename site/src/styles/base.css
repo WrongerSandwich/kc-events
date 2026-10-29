@@ -37,10 +37,11 @@ p a, .prose a { text-decoration: underline; }
 /* Main takes focus only from the skip link; the next Tab rings the first control in it. */
 main:focus { outline: none; }
 
-.measure { max-width: var(--measure); margin-inline: auto; padding-inline: var(--gutter); }
+/* The reading measure starts where the wide frame does (#235), so a page's text lines up under the header's name: its
+   left margin is the centred frame's, and nothing once the frame fills the screen. */
+.measure { max-width: var(--measure); margin-inline: max(0px, (100% - var(--frame)) / 2) auto; padding-inline: var(--gutter); }
 /* The explorer's layout: a rail plus one-line result rows, which need the room (a 1280 px window fills it). */
-.wide { max-width: 80rem; margin-inline: auto; padding-inline: var(--gutter); }
-@media (min-width: 1440px) { .wide { max-width: 86rem; } }
+.wide { max-width: var(--frame); margin-inline: auto; padding-inline: var(--gutter); }
 
 .visually-hidden {
   position: absolute !important;

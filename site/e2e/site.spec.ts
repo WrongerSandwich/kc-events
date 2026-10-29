@@ -1104,6 +1104,30 @@ test("the About page turns the explorer's / shortcut off, and back on (WCAG 2.1.
   await expect(page.getByRole("searchbox", { name: "Search" })).toBeFocused();
 });
 
+test.describe("a measure page's column starts at the header's left edge, which no page moves (#235, #181)", () => {
+  const left = async (page: Page, selector: string) => (await page.locator(selector).first().boundingBox())!.x;
+  for (const width of [1024, 1280, 1440, 1920]) {
+    test(`at ${width} px each page's heading lines up under the wordmark, with no sideways scroll`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      // An event page's title sits beside its date tile, which takes the column's edge. A kind page is wide already.
+      const heads = { "/": "main h1", "/e/evt_e2e000000001": "main .head .tile", "/k/music": "main h1", "/about": "main h1" };
+      for (const [path, head] of Object.entries(heads)) {
+        await on(page, BUILD_DAY, path);
+        const gap = (await left(page, head)) - (await left(page, ".site-header .name"));
+        expect(Math.abs(gap), path).toBeLessThanOrEqual(1);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), path).toBe(0);
+      }
+    });
+  }
+  test("at 1440 px the wordmark sits where it does on the explorer", async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 800 });
+    await on(page, BUILD_DAY, "/");
+    const front = await left(page, ".site-header .name");
+    await on(page, BUILD_DAY, "/explore");
+    expect(await left(page, ".site-header .name")).toBe(front);
+  });
+});
+
 test("the header's Saved count follows a Save on the explorer, and a page with no island shows it without the Svelte runtime (#195)", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore");
   const saved = page.getByRole("navigation", { name: "Site" }).getByRole("link", { name: /^Saved/ });

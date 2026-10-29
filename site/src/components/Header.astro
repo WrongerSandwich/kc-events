@@ -6,7 +6,7 @@ import Mark from "./Mark.astro";
 import SavedLink from "./SavedLink.astro";
 
 // One width on every page (#181): the explorer's wide column, so the name and nav sit in the same place wherever the
-// reader goes, and a measure page's text sits centred under them.
+// reader goes, and a measure page's text starts under the name, at the frame's left edge (#235).
 const runDay = localDate(meta.lastSuccessfulRun);
 ---
 <header class="site-header">
