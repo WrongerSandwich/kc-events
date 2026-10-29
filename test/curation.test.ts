@@ -293,6 +293,8 @@ describe("a why-line that states its pick's end date (#234)", () => {
     "A retrospective that closes Dec. 13, its only stop in the region.",
     "A retrospective that closes 13 December, its only stop in the region.",
     "A retrospective that closes December 13th, its only stop in the region.",
+    "A retrospective on view December 1–13, its only stop in the region.",
+    "A retrospective on view Dec. 1 through 13, its only stop in the region.",
   ])("is named in the report, and the flag still stands: %s", async (why) => {
     const { dataset, report } = await judgedWith(why);
 
@@ -300,7 +302,7 @@ describe("a why-line that states its pick's end date (#234)", () => {
     expect(report.curation.datedWhyLines).toEqual([{ id: SHOW_ID, title: "Big Show", primaryUrl: CALENDAR_URL, whyLine: why }]);
   });
 
-  it.each(["A retrospective on its only stop in the region.", "A retrospective that opened December 1, its only stop here.", "Closing Dec 130 is no date."])(
+  it.each(["A retrospective on its only stop in the region.", "A retrospective that opened December 1, its only stop here.", "Closing Dec 130 is no date.", "Its last show is Dec 1 – 13 p.m. on the dot."])(
     "is not named when the line gives no date, or another day: %s",
     async (why) => {
       const { report } = await judgedWith(why);

@@ -185,7 +185,7 @@ describe("the run report", () => {
 
       - evt_1: flagged with no why-line
 
-      Why-lines that state their pick's end date, which the tile already shows (still flagged):
+      Why-lines that state their pick's end date, which the card already shows (still flagged):
 
       - evt_2 "Big Blue Pink": "A retrospective that closes December 13."
 

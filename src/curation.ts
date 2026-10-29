@@ -6,6 +6,7 @@
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import type { Event } from "./dataset.js";
+import { statesMonthDay } from "./date-span.js";
 import { sameMoment, sameName } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest } from "./ports.js";
@@ -198,28 +199,13 @@ export function cleanWhyLine(raw: string): string {
   }
 }
 
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
 /**
- * Whether a why-line states this end date as a month and day: "December 13", "Dec 13", "Dec. 13",
- * "December 13th", "13 December". A month is matched by its full name or its first three letters
- * (and "Sept"), so "Decided 13" is not one; a day is a whole number, so "Dec 130" is not the 13th.
- */
-function statesDate(line: string, date: string): boolean {
-  const [, month, day] = date.split("-").map(Number) as [number, number, number];
-  const name = MONTHS[month - 1]!;
-  const monthWord = `(?:${name}|${name.slice(0, 3)}${month === 9 ? "|Sept" : ""})\\.?`;
-  const dayWord = `0?${day}(?:st|nd|rd|th)?`;
-  return new RegExp(`(?<!\\w)(?:${monthWord}\\s+${dayWord}|${dayWord}\\s+(?:of\\s+)?${monthWord})(?!\\w)`, "i").test(line);
-}
-
-/**
- * The active picks whose why-line states their own end date (#234): the tile already shows it, so
+ * The active picks whose why-line states their own end date (#234): the card already shows it, so
  * the line spent its words on the date. Reported, not unflagged; an event with no end gets no line.
  */
 export function datedWhyLines(events: Event[]): RunReport["curation"]["datedWhyLines"] {
   return events
-    .filter((e) => e.status === "active" && e.dontMiss && e.whyLine !== undefined && e.end !== undefined && statesDate(e.whyLine, e.end.slice(0, 10)))
+    .filter((e) => e.status === "active" && e.dontMiss && e.whyLine !== undefined && e.end !== undefined && statesMonthDay(e.whyLine, e.end.slice(0, 10)))
     .map((e) => ({ id: e.id, title: e.title, primaryUrl: e.primaryUrl, whyLine: e.whyLine! }));
 }
 

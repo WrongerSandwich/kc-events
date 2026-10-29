@@ -432,7 +432,7 @@ ${plural(report.curation.judged, "event")} judged in ${plural(report.curation.ca
   report.curation.problems.length > 0 ? `\n\n${markdownList(report.curation.problems)}` : ""
 }${
   report.curation.datedWhyLines.length > 0
-    ? `\n\nWhy-lines that state their pick's end date, which the tile already shows (still flagged):\n\n${markdownList(
+    ? `\n\nWhy-lines that state their pick's end date, which the card already shows (still flagged):\n\n${markdownList(
         report.curation.datedWhyLines.map((d) => `${d.id} "${d.title}": "${d.whyLine}"`),
       )}`
     : ""

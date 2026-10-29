@@ -57,6 +57,22 @@ export function quotedSpan(quote: string, today: string): QuotedSpan | undefined
     .find((span) => span !== undefined && span.end >= today && span.start <= latestStart);
 }
 
+/**
+ * A month and day in words, either way round: "December 13", "Dec. 13th", "13 December", "13th of Dec",
+ * and the closing day of a span within one month, "Dec 1–13" or "December 1 through 13".
+ */
+const MONTH_DAY = new RegExp(String.raw`\b${MONTH}\s+${DAY}(?:${JOIN}${DAY}${NOT_A_TIME})?|\b${DAY}\s+(?:of\s+)?${MONTH}(?![a-z])`, "gi");
+
+/** Whether the text names this `YYYY-MM-DD` date by its month and day in words, a span's closing day included (#234). */
+export function statesMonthDay(text: string, date: string): boolean {
+  const [, month, day] = date.split("-").map(Number) as [number, number, number];
+  return [...text.matchAll(MONTH_DAY)].some(([, monthName, firstDay, closingDay, dayFirst, monthAfter]) =>
+    monthName !== undefined
+      ? monthNumber(monthName) === month && (Number(firstDay) === day || Number(closingDay) === day)
+      : monthNumber(monthAfter!) === month && Number(dayFirst) === day,
+  );
+}
+
 /** The `YYYY-MM-DD` date some months after another. */
 function monthsAhead(date: string, months: number): string {
   const [year, month, day] = date.split("-").map(Number) as [number, number, number];
