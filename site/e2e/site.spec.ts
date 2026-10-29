@@ -1109,7 +1109,7 @@ test.describe("a measure page's column starts at the header's left edge, which n
   for (const width of [1024, 1280, 1440, 1920]) {
     test(`at ${width} px each page's heading lines up under the wordmark, with no sideways scroll`, async ({ page }) => {
       await page.setViewportSize({ width, height: 800 });
-      // An event page's title sits beside its date tile, which takes the column's edge. A kind page is wide already.
+      // An event page's title sits beside its date tile, which takes the column's edge. A kind page uses the frame itself.
       const heads = { "/": "main h1", "/e/evt_e2e000000001": "main .head .tile", "/k/music": "main h1", "/about": "main h1" };
       for (const [path, head] of Object.entries(heads)) {
         await on(page, BUILD_DAY, path);
