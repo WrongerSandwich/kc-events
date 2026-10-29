@@ -40,7 +40,7 @@ describe("don't-miss curation", () => {
       whyLine: "A touring act that rarely plays a room this small.",
       lastJudged: WEEK_1_ISO,
     });
-    expect(report.curation).toEqual({ calls: 1, judged: 1, flagged: 1, problems: [] });
+    expect(report.curation).toEqual({ calls: 1, judged: 1, flagged: 1, problems: [], datedWhyLines: [] });
     expect(report.spend.totalUsd).toBeCloseTo(0.03);
   });
 });
@@ -71,7 +71,7 @@ describe("what is sent for curation", () => {
     const second = await runAt(WEEK_2, first.dataset, [extracted(candidate(), tour)]);
 
     expect(second.curationCalls).toEqual([]);
-    expect(second.report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, problems: [] });
+    expect(second.report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, problems: [], datedWhyLines: [] });
     expect(second.dataset.events[0]).toMatchObject({ dontMiss: true, whyLine: "Why.", lastJudged: WEEK_1_ISO, lastVerified: WEEK_2_ISO });
   });
 
@@ -280,5 +280,42 @@ describe("what counts as a change for curation (#79)", () => {
 
     const sent = JSON.parse(curationRequests[0]!.messages[1]!.content.slice(EVENTS_TO_JUDGE.length));
     expect(sent).toEqual([expect.objectContaining({ id: SHOW_ID, description })]);
+  });
+});
+
+describe("a why-line that states its pick's end date (#234)", () => {
+  const closing = candidate({ endDate: "2026-12-13", dateEvidence: "Oct 31 – Dec 13" });
+  const judgedWith = (why: string) => runAt(WEEK_1, emptyDataset(), [extracted(closing), judging(0.02, { id: SHOW_ID, dontMiss: true, why })]);
+
+  it.each([
+    "A retrospective that closes December 13, its only stop in the region.",
+    "A retrospective that closes Dec 13, its only stop in the region.",
+    "A retrospective that closes Dec. 13, its only stop in the region.",
+    "A retrospective that closes 13 December, its only stop in the region.",
+    "A retrospective that closes December 13th, its only stop in the region.",
+  ])("is named in the report, and the flag still stands: %s", async (why) => {
+    const { dataset, report } = await judgedWith(why);
+
+    expect(dataset.events[0]).toMatchObject({ id: SHOW_ID, end: expect.stringMatching(/^2026-12-13/), dontMiss: true, whyLine: why });
+    expect(report.curation.datedWhyLines).toEqual([{ id: SHOW_ID, title: "Big Show", primaryUrl: CALENDAR_URL, whyLine: why }]);
+  });
+
+  it.each(["A retrospective on its only stop in the region.", "A retrospective that opened December 1, its only stop here.", "Closing Dec 130 is no date."])(
+    "is not named when the line gives no date, or another day: %s",
+    async (why) => {
+      const { report } = await judgedWith(why);
+
+      expect(report.curation.datedWhyLines).toEqual([]);
+    },
+  );
+
+  it("is not named for a pick with no end date", async () => {
+    const { dataset, report } = await runAt(WEEK_1, emptyDataset(), [
+      extracted(candidate()),
+      judging(0.02, { id: SHOW_ID, dontMiss: true, why: "A touring act's one night here, October 31." }),
+    ]);
+
+    expect(dataset.events[0]).not.toHaveProperty("end");
+    expect(report.curation.datedWhyLines).toEqual([]);
   });
 });

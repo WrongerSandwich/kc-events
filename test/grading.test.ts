@@ -14,7 +14,7 @@ function report(overrides: Partial<RunReport> = {}): RunReport {
     spend: { totalUsd: 0.9, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0, ownPagesNotRead: 0 }, modelCalls: [] },
     discovery: { enabled: true, queries: 10, aggregatorPages: 4, pagesExtracted: 12, problems: [], leadsOnExcludedSources: [] },
     reverification: { problems: [] },
-    curation: { calls: 2, judged: 38, flagged: 5, problems: [] },
+    curation: { calls: 2, judged: 38, flagged: 5, problems: [], datedWhyLines: [] },
     sources: [],
     ownPages: [],
     failingSources: [],

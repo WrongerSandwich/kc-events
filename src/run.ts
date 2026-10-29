@@ -25,6 +25,7 @@ import {
   buildCurationRequest,
   cleanStoredWhyLine,
   cleanWhyLine,
+  datedWhyLines,
   markChanged,
   withLaterJudgment,
   unflagged,
@@ -220,7 +221,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     },
     discovery: discovery.report,
     reverification: { problems: reverified.problems },
-    curation: curation.report,
+    curation: { ...curation.report, datedWhyLines: datedWhyLines(events) },
     sources: sourceReports,
     ownPages: [...ownPages.report, ...picks.report],
     failingSources: registryLane.failingSources,
@@ -1981,7 +1982,7 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
   const due = events.filter(needsCuration);
   const judged = new Map<string, Event>();
   const unjudgedFlags = new Map<string, Event>();
-  const report: RunReport["curation"] = { calls: 0, judged: 0, flagged: 0, problems: [] };
+  const report: Omit<RunReport["curation"], "datedWhyLines"> = { calls: 0, judged: 0, flagged: 0, problems: [] };
   let notCurated = 0;
 
   for (let i = 0; i < due.length; i += CURATION_BATCH_SIZE) {

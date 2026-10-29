@@ -67,7 +67,7 @@ describe("run", () => {
     expect(report.unmappableNeighborhoods).toEqual([]);
     expect(report.offListNeighborhoods).toEqual([]);
     expect(report.discovery).toEqual({ enabled: false, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [], leadsOnExcludedSources: [] });
-    expect(report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, problems: [] });
+    expect(report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, problems: [], datedWhyLines: [] });
     expect(report.promotionSuggestions).toEqual([]);
     expect(report.heldForPromotion).toEqual([]);
     expect(report.releasedForPromotion).toEqual([]);

@@ -138,6 +138,8 @@ export interface RunReport {
     flagged: number;
     /** Replies that could not be read, events the model did not answer, and flags with no why-line. */
     problems: string[];
+    /** Active picks, judged this run or before, whose why-line states their own end date; still flagged (#234). */
+    datedWhyLines: (ChangeRef & { whyLine: string })[];
   };
   sources: SourceReport[];
   /** Own pages read for a time the list does not give, by flagged source (#123). */
@@ -293,7 +295,13 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     leadsOnExcludedSources: listSince(z.strictObject({ source: z.string(), reason: z.string(), leads: count })),
   }),
   reverification: z.strictObject({ problems: z.array(z.string()) }).default({ problems: [] }),
-  curation: z.strictObject({ calls: count, judged: count, flagged: count, problems: z.array(z.string()) }),
+  curation: z.strictObject({
+    calls: count,
+    judged: count,
+    flagged: count,
+    problems: z.array(z.string()),
+    datedWhyLines: listSince(changeRef.extend({ whyLine: z.string() })),
+  }),
   sources: z.array(z.strictObject({ name: z.string(), result: z.enum(["fetched", "failed", "blocked", "excluded"]), extracted: count, detail: z.string().optional() })),
   ownPages: listSince(
     z.strictObject({
@@ -422,6 +430,12 @@ ${markdownList(report.reverification.problems)}
 
 ${plural(report.curation.judged, "event")} judged in ${plural(report.curation.calls, "call")}, ${report.curation.flagged} flagged don't-miss.${
   report.curation.problems.length > 0 ? `\n\n${markdownList(report.curation.problems)}` : ""
+}${
+  report.curation.datedWhyLines.length > 0
+    ? `\n\nWhy-lines that state their pick's end date, which the tile already shows (still flagged):\n\n${markdownList(
+        report.curation.datedWhyLines.map((d) => `${d.id} "${d.title}": "${d.whyLine}"`),
+      )}`
+    : ""
 }
 
 ## Failing sources

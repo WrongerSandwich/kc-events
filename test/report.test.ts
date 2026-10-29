@@ -48,7 +48,13 @@ const full: RunReport = {
     leadsOnExcludedSources: [{ source: "Old Hall", reason: "closed for good", leads: 2 }],
   },
   reverification: { problems: ["https://venue.test/calendar: the model call threw"] },
-  curation: { calls: 2, judged: 14, flagged: 1, problems: ["evt_1: flagged with no why-line"] },
+  curation: {
+    calls: 2,
+    judged: 14,
+    flagged: 1,
+    problems: ["evt_1: flagged with no why-line"],
+    datedWhyLines: [{ id: "evt_2", title: "Big Blue Pink", primaryUrl: "https://museum.test/big-blue-pink", whyLine: "A retrospective that closes December 13." }],
+  },
   sources: [
     { name: "Knuckleheads", result: "fetched", extracted: 12 },
     { name: "Pipe | Hall", result: "failed", extracted: 0, detail: "HTTP 503 | retry later\n  then gave up" },
@@ -178,6 +184,10 @@ describe("the run report", () => {
       14 events judged in 2 calls, 1 flagged don't-miss.
 
       - evt_1: flagged with no why-line
+
+      Why-lines that state their pick's end date, which the tile already shows (still flagged):
+
+      - evt_2 "Big Blue Pink": "A retrospective that closes December 13."
 
       ## Failing sources
 
