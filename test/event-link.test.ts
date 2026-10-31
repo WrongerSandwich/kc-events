@@ -205,6 +205,20 @@ ${card("/program/null", "Nov 1", "Totally Tots")}
     expect(report.sources[0]!.detail).toContain("does not name it; no own page");
   });
 
+  it("a named link whose text names nothing gives way to the one link giving the title", async () => {
+    const body = `<html><body><div><a href="/shows/big-show">Big Show</a> Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM <a href="/shows/other">Game Details</a></div></body></html>`;
+    const { dataset, report } = await runAt(WEEK_1, emptyDataset(), [reply(candidate({ eventLink: 2 }))], { [CALENDAR_URL]: { status: 200, body } });
+    expect(dataset.events[0]!.eventUrl).toBe("https://knuckleheads.test/shows/big-show");
+    expect(report.sources[0]!.detail).toContain(`"Big Show" on ${CALENDAR_URL}: link 2 ("Game Details") does not name it; took link 1`);
+  });
+
+  it("another title is read with its link markers stripped", async () => {
+    const director = candidate({ title: "Director as Curator [1]", startDate: "2026-10-30", startTime: "18:00", dateEvidence: "Oct 30 · 6 PM", eventLink: 1 });
+    const matinee = candidate({ title: "Big Show Matinee", startTime: "18:00", dateEvidence: "Oct 31 · 6 PM", eventLink: 1 });
+    const { report } = await cardsAt(WEEK_1, emptyDataset(), [reply(matinee, director)]);
+    expect(report.counts).toMatchObject({ ownPageDropped: 1 });
+  });
+
   it("a generic label is taken as the model gave it", async () => {
     const body = `<html><body><div>Cheekface · Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM · Knuckleheads, 1 Main St <a href="/shows/cheekface">Buy tickets</a></div>
 <div><a href="/shows/other">Other Band</a> Sun, Nov 1</div></body></html>`;

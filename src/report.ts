@@ -50,7 +50,7 @@ export interface CandidateTally {
   unusableDates: number;
   /** Held unverified because a quote the model gave for the date or venue is not on the page (#74). */
   quoteNotOnPage: number;
-  /** Own pages taken from another link than the one the model named, whose text named another event (#250). */
+  /** Own pages taken from another link than the one the model named, whose text did not name the event (#250). */
   ownPageCorrected: number;
   /** Own pages not taken: the link the model named does not name the event, and no one link does (#250). */
   ownPageDropped: number;
@@ -386,7 +386,7 @@ Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.hor
 | Dropped: a field past its length cap | ${counts.overCap} |
 | Uncitable: a date or time that does not exist, or an end before the start | ${counts.unusableDates} |
 | Unverified: a quote not on its page | ${counts.quoteNotOnPage} |
-| Own page: the named link's text names another event | ${counts.ownPageCorrected} corrected, ${counts.ownPageDropped} dropped |
+| Own page: the named link's text does not name the event | ${counts.ownPageCorrected} corrected, ${counts.ownPageDropped} dropped |
 | Stored neighborhoods off the list, placed again | ${report.offListNeighborhoods.reduce((n, r) => n + r.events, 0)} |
 ${EXPIRY_REASONS.map((reason) => `| Expired: ${reason} | ${counts.expired[reason]} |`).join("\n")}
 | Archived: expired more than ${ARCHIVE_AFTER_WEEKS} weeks back | ${counts.archived} |

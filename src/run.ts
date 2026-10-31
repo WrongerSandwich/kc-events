@@ -16,6 +16,7 @@ import {
   quotedOn,
   readPage,
   sameQuote,
+  withoutLinkMarkers,
   type ExtractionContext,
   type PageOrigin,
   type Sighting,
@@ -691,7 +692,7 @@ export async function extractPage(
     pageUrl: normalizeUrl(pageUrl, pageUrl),
     links: reading.links,
     linkTexts: reading.linkTexts,
-    titles: parsed.data.events.map((candidate) => candidate.title),
+    titles: parsed.data.events.map((candidate) => withoutLinkMarkers(candidate.title, reading.links.length)),
     quotableText: quotableText(reading),
   };
   const sightings: Sighting[] = [];
@@ -730,7 +731,7 @@ export async function extractPage(
     if (sighting.spanNote !== undefined) problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.spanNote}`);
     if (sighting.ownPageNote !== undefined) {
       tally[sighting.ownPageNote.outcome === "corrected" ? "ownPageCorrected" : "ownPageDropped"]++;
-      problems.push(sighting.ownPageNote.note);
+      problems.push(`"${sighting.event.title}" on ${page.finalUrl}: ${sighting.ownPageNote.note}`);
     }
     sightings.push(sighting);
   }

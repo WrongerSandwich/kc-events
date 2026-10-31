@@ -650,7 +650,7 @@ function linkedPage(n: number | null, title: string, origin: CandidateOrigin, pl
   const othersTitle = origin.titles.some((other) => texts.some((text) => givesTitle(text, other)));
   if (giving.length !== 1 && !othersTitle) return asNamed;
   const says = texts.length === 0 ? "no text" : `"${clipped(texts.join(" / "), MAX_LINK_TEXT_IN_NOTE)}"`;
-  const said = `"${title}" on ${pageUrl}: link ${n} (${says}) does not name it`;
+  const said = `link ${n} (${says}) does not name it`;
   if (giving.length === 1) return { url: links[giving[0]! - 1]!, note: { outcome: "corrected", note: `${said}; took link ${giving[0]}` } };
   return { note: { outcome: "dropped", note: `${said}; no own page` } };
 }

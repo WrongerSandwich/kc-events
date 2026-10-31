@@ -139,7 +139,7 @@ describe("the run report", () => {
       | Dropped: a field past its length cap | 1 |
       | Uncitable: a date or time that does not exist, or an end before the start | 1 |
       | Unverified: a quote not on its page | 2 |
-      | Own page: the named link's text names another event | 1 corrected, 0 dropped |
+      | Own page: the named link's text does not name the event | 1 corrected, 0 dropped |
       | Stored neighborhoods off the list, placed again | 2 |
       | Expired: past | 12 |
       | Expired: two-strike | 3 |
