@@ -9,6 +9,7 @@ import {
   candidateToSighting,
   comparable,
   extractionReplySchema,
+  linksOwnPage,
   MAX_PAGE_CHARS,
   normalizeUrl,
   overCap,
@@ -20,6 +21,7 @@ import {
   type ExtractionContext,
   type PageOrigin,
   type Sighting,
+  type SightedPage,
 } from "./extraction.js";
 import {
   applyJudgment,
@@ -238,6 +240,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     cancellationsFromElsewhere: merged.cancellationsFromElsewhere,
     skippedAsExpired: merged.skippedAsExpired,
     identityChurn: identityChurn(dataset.events, events),
+    kindChanges: kindChanges(dataset.events, events),
     likelyDuplicates: likelyDuplicatesOf(events, config.venueAliases),
     changes: runChanges(dataset.events, events, dataset.lastSuccessfulRun, today),
   };
@@ -283,6 +286,15 @@ function identityChurn(previous: Event[], events: Event[]): RunReport["identityC
     const was = before.get(event.id);
     if (!was || (was.title === event.title && was.primaryUrl === event.primaryUrl)) return [];
     return [{ ...titleAndUrl(event), was: titleAndUrl(was) }];
+  });
+}
+
+/** Every event whose kind differs from what the run started with, before and now (#251). */
+function kindChanges(previous: Event[], events: Event[]): RunReport["kindChanges"] {
+  const before = new Map(previous.map((e) => [e.id, e]));
+  return events.flatMap((event) => {
+    const was = before.get(event.id);
+    return was && was.kind !== event.kind ? [{ ...titleAndUrl(event), was: was.kind, now: event.kind }] : [];
   });
 }
 
@@ -967,7 +979,7 @@ function applySighting(
   const confirmsOnly = rule === "month";
   const mayCancel = !confirmsOnly && (fromOwnPage || event.status === "active");
   if (cancelled && mayCancel) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
-  if (event.status === "active" && !confirmsOnly) return { event: refresh(known, event, rule), refreshed: true, uncitable: false };
+  if (event.status === "active" && !confirmsOnly) return { event: refresh(known, event, rule, { page: sighting.page, aliases }), refreshed: true, uncitable: false };
   const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
   if (known.status === "active" && fromOwnPage && !confirmsOnly) {
     if (keepsStoredCitation(known, sighting, aliases)) return { event: { ...listed, lastVerified: nowIso }, refreshed: false, uncitable: false, keptOn: sighting.quoteProblem!.phrase };
@@ -1111,10 +1123,11 @@ function firstMonthPair(events: Event[]): [Event, Event] | undefined {
  * not how a reading happened to spell it. A recurring event's stored schedule, with its quote, stands
  * over a new one from the same page that only repeats a title (#119, holdsSchedule). A limited run
  * matched by its end date alone keeps its stored start, with the page and quotes that cite it, over a
- * sighting giving another (#120, keepsStart).
+ * sighting giving another (#120, keepsStart). A verified re-reading from a page with standing (reread,
+ * #251) keeps more of what the model only re-worded on an unchanged page (stickyFields, withStoredQuotes).
  */
-function refresh(known: Event, sighting: Event, rule?: MatchRule): Event {
-  const refreshed = refreshReading(known, sighting);
+function refresh(known: Event, sighting: Event, rule?: MatchRule, reread?: Reread): Event {
+  const refreshed = refreshReading(known, sighting, reread);
   if (!keepsStart(known, sighting, rule)) return refreshed;
   const { eventUrl: _eventUrl, price: _price, ages: _ages, days: _days, ownPageRead: _ownPageRead, ...reading } = refreshed;
   // The class follows the span the record keeps, not the reading's: a list giving only a run's last days reads as a one-off.
@@ -1211,8 +1224,74 @@ function ownPageFields(known: Event, sighting: Event): Partial<Event> {
   };
 }
 
+/** A verified re-reading from a page with standing (#251): the page it was read from, when the sighting carries it, and the venue aliases. */
+interface Reread {
+  page: SightedPage | undefined;
+  aliases: VenueAliases;
+}
+
 /** The new reading under the known event's identity and curation, by the field rules refresh gives. */
-function refreshReading(known: Event, sighting: Event): Event {
+function refreshReading(known: Event, reading: Event, reread?: Reread): Event {
+  // The stored own page goes first: what an own page gave (#123, #133) is kept by it.
+  const sighting = reread?.page !== undefined ? withStoredOwnPage(known, reading, reread.page) : reading;
+  const record = refreshFields(known, sighting);
+  if (reread === undefined) return record;
+  return withStoredQuotes(known, { ...record, ...stickyFields(known, sighting, reread.aliases) }, reread.page);
+}
+
+/**
+ * What a verified re-reading from a page with standing keeps of the stored record (#251), since on an
+ * unchanged page a model re-words a description, re-files a kind and re-spells a venue from week to
+ * week (ADR 0005): the stored description, unless there is none or it is a listing line
+ * (LISTING_LINE_LENGTH) and the new one is longer, as an own page's read is kept (ownPageFields); the
+ * stored kind, unless it is "other" and the new one is not, or the title changed (neither the same
+ * name nor a variant of it), when the reading's stands and the report lists the change (kindChanges);
+ * and the stored spelling of the same venue (sameVenue). A different venue replaces it.
+ */
+function stickyFields(known: Event, sighting: Event, aliases: VenueAliases): Partial<Event> {
+  const { description } = known;
+  const listLineOutgrown = description !== undefined && description.length <= LISTING_LINE_LENGTH && (sighting.description?.length ?? 0) > description.length;
+  const sameTitle = sameName(known.title, sighting.title) || variantTitles(known.title, sighting.title);
+  const kindKept = sameTitle && !(known.kind === "other" && sighting.kind !== "other");
+  const venueKept = known.venue !== undefined && sighting.venue !== undefined && sameVenue(known.venue, sighting.venue, aliases);
+  return {
+    ...(description !== undefined && !listLineOutgrown ? { description } : {}),
+    ...(kindKept ? { kind: known.kind } : {}),
+    ...(venueKept ? { venue: known.venue! } : {}),
+  };
+}
+
+/**
+ * The reading with the stored own page when the page it was read from still links that page with text naming the event
+ * (#250, #251, linksOwnPage), whatever link the model named this time; otherwise the reading's own page, checked when it was read.
+ */
+function withStoredOwnPage(known: Event, sighting: Event, page: SightedPage): Event {
+  if (known.eventUrl === undefined || !linksOwnPage(known.eventUrl, [known.title, sighting.title], page)) return sighting;
+  return { ...sighting, eventUrl: known.eventUrl };
+}
+
+/**
+ * The record with the stored date and venue quotes that are still on the page this run read (#251), whatever the reading
+ * quoted, so a re-cut quote is not news. A date quote is kept only while the record keeps the stored start, end and schedule,
+ * and a venue quote only while it keeps the stored venue: a quote is kept for what it cites. With no page, the reading's stand.
+ */
+function withStoredQuotes(known: Event, record: Event, page: SightedPage | undefined): Event {
+  if (page === undefined) return record;
+  const onPage = (quote: string | undefined): quote is string => quote !== undefined && quotedOn(quote, page.quotable);
+  const { date, venue } = known.evidence;
+  const sameWhen = record.start === known.start && record.end === known.end && record.schedule === known.schedule;
+  return {
+    ...record,
+    evidence: {
+      ...record.evidence,
+      ...(sameWhen && onPage(date) ? { date } : {}),
+      ...(record.venue === known.venue && onPage(venue) ? { venue } : {}),
+    },
+  };
+}
+
+/** The reading under the known event's identity and curation, by the field rules every refresh applies. */
+function refreshFields(known: Event, sighting: Event): Event {
   const ownPageKept = keepsOwnPageRead(known, sighting);
   const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };
   /** The stored value under its field when the new one is the same by the given test, else nothing, so the new one stands. */

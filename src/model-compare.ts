@@ -11,7 +11,7 @@
  * stored dataset from them: `measureSetups`.
  */
 import type { Event, Weekday } from "./dataset.js";
-import { comparable, type ExtractionContext, type Sighting } from "./extraction.js";
+import { comparable, type ExtractionContext, type SightedPage, type Sighting } from "./extraction.js";
 import { pageKey } from "./hosts.js";
 import { sameName, type VenueAliases } from "./identity.js";
 import { likelyDuplicate } from "./likely-duplicates.js";
@@ -53,10 +53,10 @@ export interface Trial {
   sightings?: TrialSighting[];
 }
 
-/** A sighting as a trial saves it: the quote problem's phrase without the page's text, which the saved page gives again. */
-export type TrialSighting = Omit<Sighting, "quoteProblem"> & { quoteProblem?: string };
+/** A sighting as a trial saves it: the quote problem's phrase, without the page (#251), which the saved page gives again. */
+export type TrialSighting = Omit<Sighting, "quoteProblem" | "page"> & { quoteProblem?: string };
 
-export function trialSighting({ quoteProblem, ...rest }: Sighting): TrialSighting {
+export function trialSighting({ quoteProblem, page: _page, ...rest }: Sighting): TrialSighting {
   return { ...rest, ...(quoteProblem !== undefined ? { quoteProblem: quoteProblem.phrase } : {}) };
 }
 
@@ -437,13 +437,13 @@ export interface ReadSetup {
   models: [string] | [string, string];
 }
 
-/** A saved page as the measure needs it: its key in the trials, where it ended up, and its quotable text. */
+/** A saved page as the measure needs it: its key in the trials, where it ended up, and what a sighting keeps of it. */
 export interface MeasuredPage {
   key: string;
   /** Where it ended up, or the listing it is a page of (#226): the page its records cite. */
   finalUrl: string;
-  /** `quotableText(readPage(page))`, which a sighting held on a quote carries in the run (#124). */
-  quotable: string;
+  /** Its quotable text and links, which a sighting carries in the run (#124, #251). */
+  page: SightedPage;
 }
 
 export interface SetupScore {
@@ -506,9 +506,9 @@ function isChurn(record: Event, standing: Event[], storedIds: Set<string>, alias
   return standing.some((other) => other.id !== record.id && (storedIds.has(other.id) || earlier.includes(other)) && likelyDuplicate(other, record, aliases));
 }
 
-/** A saved sighting as the run made it, with its page's quotable text again (the inverse of `trialSighting`). */
-function savedSighting({ quoteProblem, ...rest }: TrialSighting, pageText: string): Sighting {
-  return { ...rest, ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText } } : {}) };
+/** A saved sighting as the run made it, with its page again (the inverse of `trialSighting`). */
+function savedSighting({ quoteProblem, ...rest }: TrialSighting, page: SightedPage): Sighting {
+  return { ...rest, ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText: page.quotable } } : {}), page };
 }
 
 /** What the run's merge and duplicate fold make of the stored dataset from one draw's readings of every saved page. */
@@ -523,7 +523,7 @@ function measureDraw(reads: Read[], trials: Trial[], dataset: Event[], storedOn:
     const trialsOfPage = reads.map((r) => trialOf.get(`${r.model} ${r.repeat} ${page.key}`)).filter((t): t is Trial => t !== undefined);
     for (const t of trialsOfPage) {
       costUsd += t.costUsd;
-      for (const s of t.sightings ?? []) sightings.push(savedSighting(s, page.quotable));
+      for (const s of t.sightings ?? []) sightings.push(savedSighting(s, page.page));
     }
     serialMs += trialsOfPage.reduce((sum, t) => sum + t.ms, 0);
     parallelMs += Math.max(0, ...trialsOfPage.map((t) => t.ms));

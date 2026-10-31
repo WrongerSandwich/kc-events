@@ -106,9 +106,16 @@ describe("the event's own page", () => {
     expect(second.report.counts).toMatchObject({ new: 0, updated: 1 });
   });
 
-  it("a re-reading that links nothing drops the eventUrl", async () => {
+  it("a re-reading that links nothing keeps the eventUrl the page still links under the event's title (#251)", async () => {
     const first = await runAt(WEEK_1);
     const second = await runAt(WEEK_2, first.dataset, [reply(candidate({ eventLink: null }))]);
+    expect(second.dataset.events[0]).toMatchObject({ eventUrl: "https://knuckleheads.test/shows/big-show", status: "active" });
+  });
+
+  it("a re-reading that links nothing, from a page that no longer links the eventUrl, drops it", async () => {
+    const first = await runAt(WEEK_1);
+    const unlinked = { status: 200, body: LISTING.body.replace(`<a href="/shows/big-show">Big Show</a>`, "Big Show") };
+    const second = await runAt(WEEK_2, first.dataset, [reply(candidate({ eventLink: null }))], { [CALENDAR_URL]: unlinked });
     expect(second.dataset.events[0]).not.toHaveProperty("eventUrl");
     expect(second.dataset.events[0]).toMatchObject({ id: first.dataset.events[0]!.id, status: "active" });
   });

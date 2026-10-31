@@ -36,7 +36,8 @@ describe("incremental update", () => {
 
     const second = await runAt(WEEK_2, first.dataset, { completions: [reply(candidate({ venue: "The KNUCKLEHEADS." }))] });
 
-    expect(second.dataset.events[0]).toMatchObject({ venue: "The KNUCKLEHEADS.", lastVerified: WEEK_2_ISO, lastChanged: WEEK_1_ISO });
+    // The stored spelling stands (#251).
+    expect(second.dataset.events[0]).toMatchObject({ venue: "Knuckleheads", lastVerified: WEEK_2_ISO, lastChanged: WEEK_1_ISO });
   });
 
   it("a date change keeps the id and marks the event as changed for curation", async () => {

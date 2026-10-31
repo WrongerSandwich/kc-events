@@ -188,7 +188,7 @@ describe("renderComparison", () => {
 describe("measureSetups", () => {
   const context: ExtractionContext = { config: testConfig(), rules: "", today: "2026-10-23", nowIso: "2026-10-23T12:00:00-05:00", neighborhoods: [] };
   const KEY = `Hall ${PAGE}`;
-  const pages = [{ key: KEY, finalUrl: PAGE, quotable: "nov 1 the hall" }];
+  const pages = [{ key: KEY, finalUrl: PAGE, page: { quotable: "nov 1 the hall", links: [], linkTexts: [] } }];
   const seen = (title: string, overrides: Partial<Event> = {}, quoteProblem?: string): TrialSighting => ({
     event: stored(title, { id: `evt_new_${title}`, firstSeen: context.nowIso, ...overrides }),
     cancelled: false,
@@ -298,8 +298,9 @@ describe("measureSetups", () => {
 });
 
 describe("trialSighting", () => {
-  it("keeps the sighting with the quote problem's phrase and not the page text", () => {
+  it("keeps the sighting with the quote problem's phrase and not the page text or the page (#251)", () => {
     const event = stored("A");
-    expect(trialSighting({ event, cancelled: false, quoteProblem: { phrase: "p", pageText: "long" } })).toEqual({ event, cancelled: false, quoteProblem: "p" });
+    const page = { quotable: "long", links: ["https://hall.test/a"], linkTexts: [["A"]] };
+    expect(trialSighting({ event, cancelled: false, quoteProblem: { phrase: "p", pageText: "long" }, page })).toEqual({ event, cancelled: false, quoteProblem: "p" });
   });
 });

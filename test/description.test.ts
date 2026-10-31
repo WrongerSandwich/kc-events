@@ -37,10 +37,17 @@ describe("the event's description", () => {
     expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], lastVerified: WEEK_2_ISO }]);
   });
 
-  it("a later reading with a description replaces the stored one, without a change for curation", async () => {
+  it("a later reading that words the description otherwise keeps the stored one (#251)", async () => {
     const first = await runAt(WEEK_1, emptyDataset(), [reply(candidate({ description: ABOUT }))]);
-    const second = await runAt(WEEK_2, first.dataset, [reply(candidate({ description: "A new description." }))]);
-    expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], description: "A new description.", lastVerified: WEEK_2_ISO, lastChanged: WEEK_1_ISO }]);
+    const second = await runAt(WEEK_2, first.dataset, [reply(candidate({ description: "A Lawrence trio playing their debut." }))]);
+    expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], lastVerified: WEEK_2_ISO }]);
+  });
+
+  it("a later reading with a longer description replaces a stored listing line, without a change for curation", async () => {
+    const fuller = `${ABOUT} They close the night with a set of covers, and the opener is a Kansas City duo.`;
+    const first = await runAt(WEEK_1, emptyDataset(), [reply(candidate({ description: ABOUT }))]);
+    const second = await runAt(WEEK_2, first.dataset, [reply(candidate({ description: fuller }))]);
+    expect(second.dataset.events).toEqual([{ ...first.dataset.events[0], description: fuller, lastVerified: WEEK_2_ISO, lastChanged: WEEK_1_ISO }]);
     expect(second.requests.filter((r) => r.model === "test/curation")).toEqual([]);
   });
 

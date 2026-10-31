@@ -201,6 +201,11 @@ export interface RunReport {
   /** Events whose title or primary page changed this run, as they are now and as they were (#82): a flap shows here the week it happens. */
   identityChurn: (EventRef & { was: EventRef })[];
   /**
+   * Events whose kind changed this run, the kind before and now (#251): a re-reading keeps the stored kind but over "other"
+   * or under a new title, so a wrong reading shows here, to be fixed by hand or by a checkHint.
+   */
+  kindChanges: (EventRef & { was: string; now: string })[];
+  /**
    * Pairs of active records, after the fold, that are likely one event no identity rule joined (#228;
    * `likelyDuplicate`), for a person to check. The run changes neither record.
    */
@@ -339,6 +344,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   cancellationsFromElsewhere: listSince(eventRef.extend({ reportedBy: z.string() })),
   skippedAsExpired: listSince(eventRef.extend({ reason: z.enum(SKIP_REASONS) })),
   identityChurn: listSince(eventRef.extend({ was: eventRef })),
+  kindChanges: listSince(eventRef.extend({ was: z.string(), now: z.string() })),
   likelyDuplicates: listSince(z.strictObject({ a: likelyDuplicateRecord, b: likelyDuplicateRecord })),
   changes: z
     .strictObject({
@@ -484,6 +490,10 @@ ${markdownList(report.skippedAsExpired.map((e) => `${e.title}: ${e.primaryUrl} (
 ## Identity churn
 
 ${markdownList(report.identityChurn.map((c) => `${c.was.title} (${c.was.primaryUrl}) is now ${c.title} (${c.primaryUrl})`))}
+
+## Kind changes
+
+${markdownList(report.kindChanges.map((c) => `${c.title} (${c.primaryUrl}): was ${c.was}, now ${c.now}`))}
 
 ## Likely duplicates
 

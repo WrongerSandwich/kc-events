@@ -108,6 +108,10 @@ _None._
 
 _None._
 
+## Kind changes
+
+_None._
+
 ## Likely duplicates
 
 _None._

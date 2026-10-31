@@ -192,8 +192,8 @@ describe("stable readings", () => {
     });
   });
 
-  it("takes a quote with other punctuation, which the page check would not take for the stored one", async () => {
-    const known = stored("Big Show");
+  it("takes a quote with other punctuation, which the page check would not take for the stored one, once the stored one is off the page (#251)", async () => {
+    const known = stored("Big Show", { evidence: { date: "Saturday, Oct 31", venue: "Knuckleheads, 1 Main St" } });
 
     const { dataset } = await reread(known, { dateEvidence: "Sat, Oct 31 Doors 7:00 PM Show 8:00 PM" });
 
@@ -209,7 +209,12 @@ describe("stable readings", () => {
   });
 
   it("takes the new values when the words change, or their case", async () => {
-    const known = stored("Big Show", { description: "A big show.", eventUrl: "https://knuckleheads.test/shows/old-page" });
+    // A stored listing line gives way to a longer one (#251), and a stored quote off the page to the reading's.
+    const known = stored("Big Show", {
+      description: "A big show.",
+      eventUrl: "https://knuckleheads.test/shows/old-page",
+      evidence: { date: "Saturday, Oct 31", venue: "Knuckleheads, 1 Main St" },
+    });
 
     const { dataset } = await reread(known, { title: "BIG SHOW", description: "A big show, late.", dateEvidence: "Sat, Oct 31 · Show 8:00 PM" });
 

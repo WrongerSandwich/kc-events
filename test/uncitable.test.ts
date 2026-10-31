@@ -37,7 +37,8 @@ describe("an uncitable re-reading", () => {
 
     const back = await runAt(week(3), hidden.dataset, { [CALENDAR_URL]: PAGE }, [reply(candidate({ venue: "Knuckleheads Saloon" })), reply()]);
 
-    expect(only(back.dataset)).toMatchObject({ id: first.dataset.events[0]!.id, status: "active", venue: "Knuckleheads Saloon", lastVerified: weekIso(3), lastChanged: weekIso(3) });
+    // The same venue keeps its stored spelling (#251).
+    expect(only(back.dataset)).toMatchObject({ id: first.dataset.events[0]!.id, status: "active", venue: "Knuckleheads", lastVerified: weekIso(3), lastChanged: weekIso(3) });
   });
   it("a sighting saying the event is cancelled expires it as cancelled, citable or not", async () => {
     const first = await seen();

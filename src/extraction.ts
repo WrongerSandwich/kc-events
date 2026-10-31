@@ -456,6 +456,18 @@ export interface Sighting {
   spanNote?: string;
   /** That the link the model named does not name the event (#250), so another was taken or none, with the source's line saying which. */
   ownPageNote?: { outcome: "corrected" | "dropped"; note: string };
+  /**
+   * The page this reading came from, against which a known event's stored quotes and own page are checked (#251).
+   * A sighting made elsewhere (a saved trial's, a test's) may have none, and then keeps no stored quote or own page on that account.
+   */
+  page?: SightedPage;
+}
+
+/** What a sighting keeps of its page (#251): the quotable text, and the numbered links with what each says. */
+export interface SightedPage {
+  quotable: string;
+  links: string[];
+  linkTexts: string[][];
 }
 
 /**
@@ -544,6 +556,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     ...(days.problem !== undefined ? { daysProblem: days.problem } : {}),
     ...(ownPage.note !== undefined ? { ownPageNote: ownPage.note } : {}),
     ...(span !== undefined ? { spanNote: `was given a schedule, but its date quote gives the span ${span.start.slice(0, 10)} to ${span.end.slice(0, 10)}; read as that span` } : {}),
+    page: { quotable: origin.quotableText, links: origin.links, linkTexts: origin.linkTexts },
   };
 }
 
@@ -653,6 +666,16 @@ function linkedPage(n: number | null, title: string, origin: CandidateOrigin, pl
   const said = `link ${n} (${says}) does not name it`;
   if (giving.length === 1) return { url: links[giving[0]! - 1]!, note: { outcome: "corrected", note: `${said}; took link ${giving[0]}` } };
   return { note: { outcome: "dropped", note: `${said}; no own page` } };
+}
+
+/**
+ * Whether a page still links an own page as the event's (#250, #251): one of its links goes there with text
+ * naming one of the event's titles, or a generic label, as linkedPage takes a named link.
+ */
+export function linksOwnPage(url: string, titles: string[], { links, linkTexts }: SightedPage): boolean {
+  return links.some(
+    (link, i) => samePage(link, url) && (linkTexts[i] ?? []).some((text) => GENERIC_LABEL.test(text) || titles.some((title) => namesTitle(text, title))),
+  );
 }
 
 /** A link text that is a label any event's link could carry and names none: "Tickets", "Buy tickets", "More info", "Details", "RSVP". */

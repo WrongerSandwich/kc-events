@@ -247,7 +247,10 @@ async function main() {
     const source = sources.find((s) => s.name === p.source);
     return source ? listingOf(source, p.page.finalUrl) : p.page.finalUrl;
   };
-  const measuredPages = saved.pages.map((p) => ({ key: p.key, finalUrl: listingAt(p), quotable: quotableText(readPage(p.page, config)) }));
+  const measuredPages = saved.pages.map((p) => {
+    const reading = readPage(p.page, config);
+    return { key: p.key, finalUrl: listingAt(p), page: { quotable: quotableText(reading), links: reading.links, linkTexts: reading.linkTexts } };
+  });
   const setupScores = measureSetups(setups, scored, dataset.events, measuredPages, context(first));
   const docDir = join(ROOT, "docs", "model-comparison");
   await mkdir(docDir, { recursive: true });
