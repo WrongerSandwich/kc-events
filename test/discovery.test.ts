@@ -511,6 +511,19 @@ describe("discovery lane", () => {
     expect(report.spend).toMatchObject({ capHit: true, shortfall: { queriesNotSearched: 0, leadsNotFollowed: 1 } });
   });
 
+  it("an aggregator after a lead that reaches the cap is not fetched, and is counted as one lead not followed (#252)", async () => {
+    const { calls, report } = await discoverAt(WEEK_1, emptyDataset(), {
+      searches: { [QUERY]: [lead(PROMOTER_PAGE), lead(LISTING)] },
+      pages: { [PROMOTER_PAGE]: PAGE, [LISTING]: { status: 200, body: `<a href="https://promoter.test/shows/other-show">Other</a>` } },
+      completions: [costing(0.06, candidateAt(PROMOTER))],
+      spendCapUsd: 0.05,
+    });
+
+    expect(calls).not.toContain(`fetch:${LISTING}`);
+    expect(report.discovery).toMatchObject({ aggregatorPages: 0 });
+    expect(report.spend).toMatchObject({ shortfall: { leadsNotFollowed: 1 } });
+  });
+
   describe("a lead that yields no reading is not one for re-verification", () => {
     const OTHER_SHOW = "https://promoter.test/shows/other-show";
     const OTHER = source("Other", { urls: [OTHER_SHOW], neighborhood: "Westport" });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { run } from "../src/run.js";
 import { emptyDataset, type Dataset } from "../src/dataset.js";
-import type { ModelPort, Ports, SearchResult } from "../src/ports.js";
+import type { FetchPort, ModelPort, SearchResult } from "../src/ports.js";
 import type { Source } from "../src/registry.js";
 import { fakePorts, type CannedPage, type ScriptedReply } from "./fakes/ports.js";
 import { TEST_MODELS, testConfig, testPrompts } from "./fakes/config.js";
@@ -33,19 +33,20 @@ function timed(model: ModelPort) {
   return { port, seen };
 }
 
-async function runAt(concurrency: number, { sources, pages, completions, dataset = emptyDataset(), ports: more = {}, searches }: {
+async function runAt(concurrency: number, { sources, pages, completions, dataset = emptyDataset(), fetcher = (f) => f, searches }: {
   sources: Source[];
   searches?: Record<string, SearchResult[]>;
   pages: Record<string, CannedPage>;
   completions: ScriptedReply[];
   dataset?: Dataset;
-  ports?: Partial<Ports>;
+  /** The fake fetcher as the run gets it: slowed, say. */
+  fetcher?: (fetcher: FetchPort) => FetchPort;
 }) {
   const fakes = fakePorts(WEEK_1, { pages, completions, ...(searches ? { searches } : {}) });
   const { port, seen } = timed(fakes.ports.model);
   const base = testConfig({ concurrency });
   const config = searches ? { ...base, discovery: { ...base.discovery, enabled: true, aggregatorHosts: ["listings.test"] } } : base;
-  const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: { ...fakes.ports, ...more, model: port } });
+  const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: { ...fakes.ports, fetcher: fetcher(fakes.ports.fetcher), model: port } });
   return { ...result, seen, calls: fakes.calls };
 }
 
@@ -100,6 +101,22 @@ describe("pages read several at once (#252)", () => {
     expect(several.seen.most).toBe(3);
     expect(written(several)).toEqual(written(one));
     expect(several.dataset.events.map((e) => [e.title, e.verificationFailures])).toEqual(venues.map((_, i) => [`Show ${i + 1}`, i === 2 ? 1 : 0]));
+  });
+
+  it("re-verification: a page that comes back last still has its call made first, so its reply is its own", async () => {
+    const { dataset: stored } = await runAt(1, { sources: venues, pages: calendars, completions: showsAt });
+    const firstPage = venues[0]!.urls[0]!;
+    const slowingFirst = (plain: FetchPort): FetchPort => ({
+      fetch: async (url, options) => {
+        if (url === firstPage) for (let n = 0; n < 20; n++) await settle();
+        return plain.fetch(url, options);
+      },
+    });
+    const later = showsAt.map((shows, i) => (i === 2 ? reply() : shows));
+    const one = await runAt(1, { sources: [], pages: calendars, completions: later, dataset: stored });
+    const several = await runAt(3, { sources: [], pages: calendars, completions: later, dataset: stored, fetcher: slowingFirst });
+
+    expect(written(several)).toEqual(written(one));
   });
 
   it("own pages: their reads overlap, and the report's lines and problems come out as one page at a time", async () => {

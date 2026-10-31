@@ -50,8 +50,7 @@ describe("inOrder", () => {
     const called: number[] = [];
     const results = inOrder([0, 1], 2, async (i, turn) => {
       await fetched[i]!.opened;
-      await turn();
-      called.push(i);
+      await turn(async () => void called.push(i));
     });
     fetched[1]!.open();
     await settle();
@@ -61,13 +60,26 @@ describe("inOrder", () => {
     expect(called).toEqual([0, 1]);
   });
 
+  it("starts each call before the next item's, however much longer the earlier item's work after its turn takes", async () => {
+    const started: number[] = [];
+    await inOrder([0, 1], 2, async (i, turn) => {
+      const call = turn(async () => {
+        started.push(i);
+        await settle();
+      });
+      // What the first item does after its turn is slower; its call has gone out all the same.
+      if (i === 0) for (let n = 0; n < 5; n++) await settle();
+      await call;
+    });
+    expect(started).toEqual([0, 1]);
+  });
+
   it("passes an item's turn when it finishes without taking it, or throws", async () => {
     const called: number[] = [];
     const results = inOrder([0, 1, 2], 3, async (i, turn) => {
       if (i === 0) return;
       if (i === 1) throw new Error("no page");
-      await turn();
-      called.push(i);
+      await turn(async () => void called.push(i));
     });
     await expect(results).rejects.toThrow("no page");
     await settle();

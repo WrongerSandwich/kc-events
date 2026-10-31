@@ -64,7 +64,7 @@ import {
 import { listingOf, type ExcludedSource, type Registry, type Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
-import { inOrder } from "./pool.js";
+import { inOrder, type Turn } from "./pool.js";
 import type { CandidateTally, EventRef, LikelyDuplicateRecord, OwnPagesReport, RunReport, SourceReport } from "./report.js";
 import { likelyDuplicatePairs } from "./likely-duplicates.js";
 import { awayGame, SKIP_REASONS, skipReason, type SkipReason } from "./skip.js";
@@ -534,10 +534,10 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   const lastDay = horizonEnd(context.today, context.config.horizonWeeks);
   // The reads go out several pages at once (#252) and are taken up below one page at a time in registry order, so what the
   // merge and the report see does not depend on which page came back first.
-  const settledReads = await inOrder(pages, context.config.concurrency, ({ source, page }) =>
+  const settledReads = await inOrder(pages, context.config.concurrency, ({ source, page }, turn) =>
     isIndexPage(page.finalUrl, context.config)
       ? Promise.resolve(undefined)
-      : Promise.allSettled(Array.from({ length: context.config.extractionReads }, () => extractPage(page, { lane: "registry", source }, model, context))),
+      : turn(() => Promise.allSettled(Array.from({ length: context.config.extractionReads }, () => extractPage(page, { lane: "registry", source }, model, context)))),
   );
 
   for (const [index, { source, page }] of pages.entries()) {
@@ -1401,7 +1401,7 @@ async function reverify(
     const key = pageKey(url);
     const origin = origins[i]!;
     if (excludedSourceOf(origin, url, registry) || lane.attempts.outages.has(key) || lane.attempts.tried.has(key)) return undefined;
-    if (ports.model.exhausted()) return "cap" as const;
+    if (ports.model.exhausted()) return "cap";
     // The page is fetched the way its source's pages are; a discovered page always plainly.
     return fetchAndRead(url, origin.lane === "registry" ? fetcherFor(origin.source, ports) : plainly(ports), origin, ports.model, context, turn);
   });
@@ -1632,17 +1632,22 @@ async function readPicks(
 
   let notRead = 0;
   let picks = 0;
-  const plans = events.map((event) => {
-    if (!isPick(event)) return undefined;
+  const plans: ({ route: FetchRoute; line: OwnPagesReport } | undefined)[] = [];
+  for (const event of events) {
+    if (!isPick(event)) {
+      plans.push(undefined);
+      continue;
+    }
     picks++;
     if (event.ownPageRead !== undefined && samePage(event.ownPageRead.page, event.eventUrl!)) {
       line.kept++;
-      return undefined;
+      plans.push(undefined);
+      continue;
     }
     const { lead } = event;
     const source = lead.lane === "registry" ? registry.sources.find((s): s is Source => s.name === lead.source && s.status === "active") : undefined;
-    return { route: source ? ownPageFetcherFor(source, ports) : plainly(ports), line };
-  });
+    plans.push({ route: source ? ownPageFetcherFor(source, ports) : plainly(ports), line });
+  }
   const outcomes = await readOwnPagesTogether(events, plans, ports, context, rules);
   const out = events.map((event, i) => {
     const outcome = outcomes[i];
@@ -1677,11 +1682,14 @@ async function readOwnPagesTogether(
   });
 }
 
-/** One own-pages line's counts and problems added to another's. */
+/** One own-pages line's counts and problems added to another's; the counts are every number a line starts with. */
 function addOwnPagesLine(into: OwnPagesReport, from: OwnPagesReport) {
-  for (const key of ["read", "timed", "priced", "aged", "dayed", "described", "kept", "dateDisagreements", "failed"] as const) into[key] += from[key];
+  const counts = Object.keys(ownPagesLine("")).filter((key): key is OwnPagesCount => typeof from[key as keyof OwnPagesReport] === "number");
+  for (const key of counts) into[key] += from[key];
   into.problems.push(...from.problems);
 }
+
+type OwnPagesCount = { [K in keyof OwnPagesReport]: OwnPagesReport[K] extends number ? K : never }[keyof OwnPagesReport];
 
 /** A line of the report's own pages, with nothing read yet. */
 function ownPagesLine(source: string): OwnPagesReport {
@@ -1707,7 +1715,7 @@ async function readOwnPage(
   context: ExtractionContext,
   rules: string,
   line: OwnPagesReport,
-  turn: () => Promise<void>,
+  turn: Turn,
 ): Promise<Event | "not-read"> {
   const { config, today } = context;
   const url = event.eventUrl!;
@@ -1720,10 +1728,9 @@ async function readOwnPage(
   const fetched = await fetchReadable(url, ...route);
   if (!("page" in fetched)) return failed(`${fetched.problem}; nothing taken`);
   const reading = readPage(fetched.page, config);
-  await turn();
   let reply: Awaited<ReturnType<ModelPort["complete"]>>;
   try {
-    reply = await ports.model.complete(buildOwnPageRequest(event, fetched.page, reading, rules, config, today));
+    reply = await turn(() => ports.model.complete(buildOwnPageRequest(event, fetched.page, reading, rules, config, today)));
   } catch (error) {
     if (error instanceof SpendCapReached) return "not-read";
     return failed(`${url} not read: ${modelFailed(error)}`);
@@ -1913,16 +1920,15 @@ async function fetchAndRead(
   origin: PageOrigin,
   model: ModelPort,
   context: ExtractionContext,
-  turn: () => Promise<void>,
+  turn: Turn,
   leave: (page: FetchResult) => boolean = () => false,
 ): Promise<PageRead> {
   const fetched = await fetchReadable(url, ...route);
   if (!("page" in fetched)) return { kind: "not-fetched", ...fetched };
   const { page } = fetched;
   if (leave(page)) return { kind: "left", page };
-  await turn();
   try {
-    return { kind: "read", page, read: await extractPage(page, origin, model, context) };
+    return { kind: "read", page, read: await turn(() => extractPage(page, origin, model, context)) };
   } catch (error) {
     return { kind: "failed", page, error };
   }
@@ -2031,7 +2037,7 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
    * A lead's page fetched and, unless its redirects end on an index page or an excluded host, read once its turn
    * comes; nothing when it is not followed. What it did is taken up afterwards, in lead order (takeUp).
    */
-  const readLead = async (url: string, query: string, turn: () => Promise<void>): Promise<PageRead | undefined> => {
+  const readLead = async (url: string, query: string, turn: Turn): Promise<PageRead | undefined> => {
     if (!toFollow(url)) return undefined;
     const leave = (page: FetchResult) => isIndexPage(page.finalUrl, config) || excludedSourceOnHost(page.finalUrl, registry) !== undefined;
     return fetchAndRead(url, plainly(ports), { lane: "discovery", query }, ports.model, context, turn, leave);
@@ -2098,17 +2104,24 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
       continue;
     }
     report.queries++;
-    // An aggregator's links stand in its place among the query's leads; then the leads are read several at once (#252)
-    // and taken up in that order, so the lane's sightings and report do not depend on which page came back first.
-    const leads: string[] = [];
+    // The query's leads are read several at once (#252) and taken up in order, so the lane's sightings and report do not
+    // depend on which page came back first. The leads before an aggregator are read before it is fetched, as one at a
+    // time would, so the cap they reach keeps it from being fetched; its links then join the leads after it.
+    let leads: string[] = [];
+    const readLeads = async () => {
+      const done = await inOrder(leads, config.concurrency, (url, turn) => readLead(url, query, turn));
+      for (const [i, url] of leads.entries()) takeUp(url, done[i]);
+      leads = [];
+    };
     for (const result of results.slice(0, config.discovery.resultsPerQuery)) {
       const url = normalizeUrl(result.url, "");
       if (!isLead(url, config)) continue;
-      if (isIndexPage(url, config)) leads.push(...(await linksOn(url)));
-      else leads.push(url);
+      if (isIndexPage(url, config)) {
+        await readLeads();
+        leads.push(...(await linksOn(url)));
+      } else leads.push(url);
     }
-    const done = await inOrder(leads, config.concurrency, (url, turn) => readLead(url, query, turn));
-    for (const [i, url] of leads.entries()) takeUp(url, done[i]);
+    await readLeads();
   }
   return outcome;
 }
