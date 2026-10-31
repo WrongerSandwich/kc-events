@@ -10,7 +10,7 @@ function report(overrides: Partial<RunReport> = {}): RunReport {
     startedAt: "2026-10-03T16:00:00-05:00",
     finishedAt: "2026-10-03T16:04:00-05:00",
     horizonWeeks: 3,
-    counts: { found: 40, new: 40, updated: 0, reverified: 0, heldUnverified: 2, heldThroughOutage: 0, heldSourceExcluded: 0, beyondHorizonUnstruck: 0, beyondListingUnstruck: 0, unverifiedByOutageLimit: 0, unverifiedByUncitableReading: 0, keptOnStoredCitation: 0, venuelessAmbiguous: 0, heldForPromotion: 0, releasedForPromotion: 0, outsideGeography: 1, skippedPromotion: 0, skippedNotPublic: 0, overCap: 0, unusableDates: 0, quoteNotOnPage: 0, expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0, promotion: 0, "not-public": 0, stale: 0 }, archived: 0 },
+    counts: { found: 40, new: 40, updated: 0, reverified: 0, heldUnverified: 2, heldThroughOutage: 0, heldSourceExcluded: 0, beyondHorizonUnstruck: 0, beyondListingUnstruck: 0, unverifiedByOutageLimit: 0, unverifiedByUncitableReading: 0, keptOnStoredCitation: 0, venuelessAmbiguous: 0, heldForPromotion: 0, releasedForPromotion: 0, outsideGeography: 1, skippedPromotion: 0, skippedNotPublic: 0, overCap: 0, unusableDates: 0, quoteNotOnPage: 0, ownPageCorrected: 0, ownPageDropped: 0, expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0, promotion: 0, "not-public": 0, stale: 0 }, archived: 0 },
     spend: { totalUsd: 0.9, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0, ownPagesNotRead: 0 }, modelCalls: [] },
     discovery: { enabled: true, queries: 10, aggregatorPages: 4, pagesExtracted: 12, problems: [], leadsOnExcludedSources: [] },
     reverification: { problems: [] },

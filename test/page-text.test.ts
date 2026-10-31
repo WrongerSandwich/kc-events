@@ -36,6 +36,12 @@ describe("page reading with links", () => {
     const reading = readPage(page('<html><body><a href="/shows/a#top"><img src="a.jpg"></a><a href="/shows/a">A</a><a href="/shows/b">B</a><a href="/shows/a">Tickets</a></body></html>'), config);
     expect(reading.text).toBe("[1] A [1] B [2] Tickets [1]");
     expect(reading.links).toEqual(["https://venue.test/shows/a", "https://venue.test/shows/b"]);
+    expect(reading.linkTexts).toEqual([["A", "Tickets"], ["B"]]);
+  });
+
+  it("keeps each link's text on one line, an image's alt text where the anchor has none (#250)", () => {
+    const reading = readPage(page('<html><body><a href="/p/a"><span>Oct 30 · 6 PM</span>\n<h3>Director &amp; Curator</h3></a><a href="/p/b"><img src="b.jpg" alt="Open Drawing+"></a></body></html>'), config);
+    expect(reading.linkTexts).toEqual([["Oct 30 · 6 PM Director & Curator"], ["Open Drawing+"]]);
   });
 
   it("numbers no link to the page itself, a static asset, a non-http scheme, or an ignored or aggregator host", () => {
@@ -74,7 +80,7 @@ describe("page reading with links", () => {
 
   it("leaves a feed as it is: no markers, no links", () => {
     const feed = "BEGIN:VCALENDAR\nURL:https://venue.test/shows/a\nEND:VCALENDAR";
-    expect(readPage(page(feed), config)).toEqual({ text: feed, links: [] });
+    expect(readPage(page(feed), config)).toEqual({ text: feed, links: [], linkTexts: [] });
   });
 });
 
@@ -88,7 +94,7 @@ describe("page reading of a JSON answer carrying HTML", () => {
 
   it("reads the HTML: links numbered, text unescaped, the other fields left out", () => {
     const reading = readPage(page(JSON.stringify({ html: listing, total: 56, page_size: "21" }).replaceAll("/", "\\/").replace("é", "\\u00e9")), config);
-    expect(reading).toEqual({ text: "Ceramics Night [1]\nEnsemble Ibérica · Fri, Nov 06 @ 6:00 pm", links: ["https://venue.test/calendar?ceramics-night&event_id=7"] });
+    expect(reading).toEqual({ text: "Ceramics Night [1]\nEnsemble Ibérica · Fri, Nov 06 @ 6:00 pm", links: ["https://venue.test/calendar?ceramics-night&event_id=7"], linkTexts: [["Ceramics Night"]] });
   });
 
   it("reads every top-level string holding HTML, in order", () => {
@@ -98,7 +104,7 @@ describe("page reading of a JSON answer carrying HTML", () => {
 
   it("leaves JSON with no HTML in it as it is", () => {
     const json = '{"events": [{"name": "Big Show"}]}';
-    expect(readPage(page(json), config)).toEqual({ text: json, links: [] });
+    expect(readPage(page(json), config)).toEqual({ text: json, links: [], linkTexts: [] });
   });
 
   it("reads a page that only looks like JSON at the start as the HTML it is", () => {

@@ -603,7 +603,16 @@ function widestYield(yields: PageYield[]): PageYield {
   return { listed, ...(latestStart !== undefined ? { latestStart } : {}) };
 }
 
-const noTally = (): CandidateTally => ({ outsideGeography: 0, skippedPromotion: 0, skippedNotPublic: 0, overCap: 0, unusableDates: 0, quoteNotOnPage: 0 });
+const noTally = (): CandidateTally => ({
+  outsideGeography: 0,
+  skippedPromotion: 0,
+  skippedNotPublic: 0,
+  overCap: 0,
+  unusableDates: 0,
+  quoteNotOnPage: 0,
+  ownPageCorrected: 0,
+  ownPageDropped: 0,
+});
 
 /** The tally each reason to skip a candidate counts under (#81). */
 const SKIPPED_AS: Record<SkipReason, keyof CandidateTally> = { promotion: "skippedPromotion", "not-public": "skippedNotPublic" };
@@ -677,7 +686,14 @@ export async function extractPage(
     };
   }
   const pageUrl = origin.lane === "registry" ? listingOf(origin.source, page.finalUrl) : page.finalUrl;
-  const candidateOrigin = { ...origin, pageUrl: normalizeUrl(pageUrl, pageUrl), links: reading.links, quotableText: quotableText(reading) };
+  const candidateOrigin = {
+    ...origin,
+    pageUrl: normalizeUrl(pageUrl, pageUrl),
+    links: reading.links,
+    linkTexts: reading.linkTexts,
+    titles: parsed.data.events.map((candidate) => candidate.title),
+    quotableText: quotableText(reading),
+  };
   const sightings: Sighting[] = [];
   const problems: string[] = [...cut];
   const tally = noTally();
@@ -712,6 +728,10 @@ export async function extractPage(
     }
     if (sighting.daysProblem !== undefined) problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.daysProblem}`);
     if (sighting.spanNote !== undefined) problems.push(`"${sighting.event.title}" on ${page.finalUrl} ${sighting.spanNote}`);
+    if (sighting.ownPageNote !== undefined) {
+      tally[sighting.ownPageNote.outcome === "corrected" ? "ownPageCorrected" : "ownPageDropped"]++;
+      problems.push(sighting.ownPageNote.note);
+    }
     sightings.push(sighting);
   }
   return { sightings, extracted: parsed.data.events.length, tally, problems, ...(reading.truncated ? { truncated: true as const } : {}) };

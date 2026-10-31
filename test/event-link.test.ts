@@ -139,3 +139,90 @@ describe("the same own page on one date (#66)", () => {
     expect(matinee.dataset.events.map((e) => e.title)).toEqual(["Big Show", "An Evening with Big Show"]);
   });
 });
+
+/**
+ * A card layout where the whole card is one anchor, as the Kemper Museum's is (#250): the link marker
+ * lands after the card's text, so the next card's title sits between [n] and [n+1], and a model taking
+ * the marker before a title names the previous card's link. The job holds the number to the link's text.
+ */
+describe("an own page is the link whose text names the event (#250)", () => {
+  const card = (href: string, date: string, title: string) => `<a href="${href}"><span>${date} · 6 PM</span><h3>${title}</h3></a>`;
+  const CARDS = {
+    status: 200,
+    body: `<html><body><h1>Knuckleheads, 1 Main St</h1>
+${card("/program/director-curator", "Oct 30", "Director as Curator")}
+${card("/program/open-drawing", "Oct 31", "Open Drawing+")}
+${card("/program/null", "Nov 1", "Totally Tots")}
+</body></html>`,
+  };
+  const openDrawing = (eventLink: number | null) => candidate({ title: "Open Drawing+", startTime: "18:00", dateEvidence: "Oct 31 · 6 PM", eventLink });
+  const cardsAt = (now: Date, dataset = emptyDataset(), completions = [reply(openDrawing(1))]) => runAt(now, dataset, completions, { [CALENDAR_URL]: CARDS });
+
+  it("the model naming the previous card's link stores the link whose text is the title, with a line on the source's report", async () => {
+    const { dataset, report } = await cardsAt(WEEK_1);
+    expect(dataset.events[0]).toMatchObject({ title: "Open Drawing+", eventUrl: "https://knuckleheads.test/program/open-drawing" });
+    expect(report.sources[0]!.detail).toContain(`"Open Drawing+" on ${CALENDAR_URL}: link 1 ("Oct 30 · 6 PM Director as Curator") does not name it; took link 2`);
+    expect(report.counts).toMatchObject({ ownPageCorrected: 1, ownPageDropped: 0 });
+  });
+
+  it("the link the model named is taken when its text names the event", async () => {
+    const { dataset, report } = await cardsAt(WEEK_1, emptyDataset(), [reply(openDrawing(2))]);
+    expect(dataset.events[0]!.eventUrl).toBe("https://knuckleheads.test/program/open-drawing");
+    expect(report.counts).toMatchObject({ ownPageCorrected: 0, ownPageDropped: 0 });
+  });
+
+  it("a named link giving another event's title, where no card's text gives this one, leaves no own page, with a line", async () => {
+    const matinee = candidate({ title: "Big Show Matinee", startTime: "18:00", dateEvidence: "Oct 31 · 6 PM", eventLink: 2 });
+    const { dataset, report } = await cardsAt(WEEK_1, emptyDataset(), [reply(matinee, openDrawing(2))]);
+    const event = dataset.events.find((e) => e.title === "Big Show Matinee")!;
+    expect(event).toMatchObject({ status: "active" });
+    expect(event).not.toHaveProperty("eventUrl");
+    expect(report.sources[0]!.detail).toContain(`"Big Show Matinee" on ${CALENDAR_URL}: link 2 ("Oct 31 · 6 PM Open Drawing+") does not name it; no own page`);
+    expect(report.counts).toMatchObject({ ownPageCorrected: 0, ownPageDropped: 1 });
+  });
+
+  it.each([
+    ["a team's label", `<a href="/games/11-06">Game Details</a>`],
+    ["an image's description", `<a href="/games/11-06"><img src="/a.jpg" alt="A forward skating past the boards"></a>`],
+  ])("a link whose text names no event the model read stands as the model gave it: %s", async (_, anchor) => {
+    const body = `<html><body><div>Big Show · Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM ${anchor}</div></body></html>`;
+    const { dataset, report } = await runAt(WEEK_1, emptyDataset(), [reply(candidate({ eventLink: 1 }))], { [CALENDAR_URL]: { status: 200, body } });
+    expect(dataset.events[0]!.eventUrl).toBe("https://knuckleheads.test/games/11-06");
+    expect(report.counts).toMatchObject({ ownPageCorrected: 0, ownPageDropped: 0 });
+  });
+
+  it("a link whose last path segment is null or undefined is no own page", async () => {
+    const tots = candidate({ title: "Totally Tots", startDate: "2026-11-01", startTime: "18:00", dateEvidence: "Nov 1 · 6 PM", eventLink: 3 });
+    const { dataset } = await cardsAt(WEEK_1, emptyDataset(), [reply(tots)]);
+    expect(dataset.events[0]).not.toHaveProperty("eventUrl");
+  });
+
+  it("two cards with the title leave no own page when the named link names neither", async () => {
+    const twice = { status: 200, body: CARDS.body.replace("Totally Tots", "Open Drawing+").replace("/program/null", "/program/open-drawing-2") };
+    const director = candidate({ title: "Director as Curator", startDate: "2026-10-30", startTime: "18:00", dateEvidence: "Oct 30 · 6 PM", eventLink: 1 });
+    const { dataset, report } = await runAt(WEEK_1, emptyDataset(), [reply(openDrawing(1), director)], { [CALENDAR_URL]: twice });
+    expect(dataset.events.find((e) => e.title === "Open Drawing+")).not.toHaveProperty("eventUrl");
+    expect(report.sources[0]!.detail).toContain("does not name it; no own page");
+  });
+
+  it("a generic label is taken as the model gave it", async () => {
+    const body = `<html><body><div>Cheekface · Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM · Knuckleheads, 1 Main St <a href="/shows/cheekface">Buy tickets</a></div>
+<div><a href="/shows/other">Other Band</a> Sun, Nov 1</div></body></html>`;
+    const { dataset, report } = await runAt(WEEK_1, emptyDataset(), [reply(candidate({ title: "Cheekface", eventLink: 1 }))], { [CALENDAR_URL]: { status: 200, body } });
+    expect(dataset.events[0]!.eventUrl).toBe("https://knuckleheads.test/shows/cheekface");
+    expect(report.counts).toMatchObject({ ownPageCorrected: 0, ownPageDropped: 0 });
+  });
+
+  it("an image link's alt text names the event", async () => {
+    const body = `<html><body><div><a href="/shows/big-show"><img src="/a.jpg" alt="Big Show"></a> Sat, Oct 31 · Doors 7:00 PM · Show 8:00 PM</div></body></html>`;
+    const { dataset } = await runAt(WEEK_1, emptyDataset(), [reply(candidate({ eventLink: 1 }))], { [CALENDAR_URL]: { status: 200, body } });
+    expect(dataset.events[0]!.eventUrl).toBe("https://knuckleheads.test/shows/big-show");
+  });
+
+  it("a refresh replaces a stored own page the page links under another event's text", async () => {
+    const first = await cardsAt(WEEK_1, emptyDataset(), [reply(openDrawing(2))]);
+    const wrong = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, eventUrl: "https://knuckleheads.test/program/director-curator" })) };
+    const second = await cardsAt(WEEK_2, wrong, [reply(openDrawing(1))]);
+    expect(second.dataset.events[0]).toMatchObject({ id: first.dataset.events[0]!.id, eventUrl: "https://knuckleheads.test/program/open-drawing" });
+  });
+});

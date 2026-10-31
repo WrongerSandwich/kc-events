@@ -29,6 +29,8 @@ const full: RunReport = {
     overCap: 1,
     unusableDates: 1,
     quoteNotOnPage: 2,
+    ownPageCorrected: 1,
+    ownPageDropped: 0,
     expired: { past: 12, "two-strike": 3, cancelled: 1, "index-page": 1, duplicate: 2, promotion: 1, "not-public": 1, stale: 1 },
     archived: 7,
   },
@@ -137,6 +139,7 @@ describe("the run report", () => {
       | Dropped: a field past its length cap | 1 |
       | Uncitable: a date or time that does not exist, or an end before the start | 1 |
       | Unverified: a quote not on its page | 2 |
+      | Own page: the named link's text names another event | 1 corrected, 0 dropped |
       | Stored neighborhoods off the list, placed again | 2 |
       | Expired: past | 12 |
       | Expired: two-strike | 3 |

@@ -27,6 +27,7 @@ Started 2026-10-02T22:15:00-05:00, finished 2026-10-02T22:15:00-05:00. Horizon 8
 | Dropped: a field past its length cap | 0 |
 | Uncitable: a date or time that does not exist, or an end before the start | 0 |
 | Unverified: a quote not on its page | 0 |
+| Own page: the named link's text names another event | 0 corrected, 0 dropped |
 | Stored neighborhoods off the list, placed again | 0 |
 | Expired: past | 0 |
 | Expired: two-strike | 0 |

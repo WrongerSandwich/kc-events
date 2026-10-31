@@ -8,7 +8,7 @@ import type { RunConfig } from "./config.js";
 import { citedDate, ownPageAllowed, WEEKDAYS, type Event, type Weekday } from "./dataset.js";
 import { linkTarget } from "./discovery.js";
 import { samePage } from "./hosts.js";
-import { calendarDate } from "./identity.js";
+import { calendarDate, givesTitle, namesTitle } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
 import type { Source } from "./registry.js";
@@ -168,6 +168,8 @@ export interface PageReading {
   text: string;
   /** Link n on the page is `links[n - 1]`. */
   links: string[];
+  /** What link n says, each distinct text it is linked under (#250): `linkTexts[n - 1]`, empty for a link with no text. */
+  linkTexts: string[][];
   /** The text ran past `MAX_PAGE_CHARS` and was cut, so the run report can name the page (#226). */
   truncated?: true;
 }
@@ -183,22 +185,36 @@ export interface PageReading {
  */
 export function readPage(page: FetchResult, config: RunConfig): PageReading {
   const body = htmlInJson(page.body) ?? page.body;
-  if (!isHtml(body)) return cappedReading(body, []);
+  if (!isHtml(body)) return cappedReading(body, [], []);
   const links: string[] = [];
-  const linkNumber: LinkNumber = (href) => {
+  const linkTexts: string[][] = [];
+  const linkNumber: LinkNumber = (href, text) => {
     const link = linkTarget(href, page, config);
     if (link === undefined || samePage(link, page.url) || samePage(link, page.finalUrl)) return undefined;
-    const n = links.indexOf(link) + 1;
-    return n === 0 ? links.push(link) : n;
+    let n = links.indexOf(link) + 1;
+    if (n === 0) {
+      links.push(link);
+      n = linkTexts.push([]);
+    }
+    if (text !== "" && !linkTexts[n - 1]!.includes(text)) linkTexts[n - 1]!.push(text);
+    return n;
   };
   const marked = withoutScripts(body).replace(ANCHOR, (_, attributes: string, content: string) => {
     const href = attributes.match(HREF);
-    const n = href ? linkNumber(href[1] ?? href[2] ?? href[3] ?? "") : undefined;
+    const n = href ? linkNumber(href[1] ?? href[2] ?? href[3] ?? "", anchorText(content)) : undefined;
     // Spaced as the tags were, so adjacent anchors do not run together once the tags are gone.
     return n === undefined ? ` ${content} ` : ` ${content} [${n}] `;
   });
   const section = eventDataSection(body, linkNumber, config.timezone);
-  return cappedReading(section ? `${htmlText(marked)}\n\n${section}` : htmlText(marked), links);
+  return cappedReading(section ? `${htmlText(marked)}\n\n${section}` : htmlText(marked), links, linkTexts);
+}
+
+/** What an anchor says, on one line: its text, or, for an image with no text, the image's alt text. */
+function anchorText(content: string): string {
+  const text = htmlText(content).replace(/\s+/g, " ");
+  if (text !== "") return text;
+  const alts = [...content.matchAll(/<img\b[^>]*?\salt\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)].map((m) => decoded(m[1] ?? m[2] ?? ""));
+  return alts.join(" ").replace(/\s+/g, " ").trim();
 }
 
 /**
@@ -220,12 +236,12 @@ function htmlInJson(body: string): string | undefined {
 }
 
 /** A reading of this text, capped, marked truncated when the cap cut it. */
-function cappedReading(text: string, links: string[]): PageReading {
-  return text.length > MAX_PAGE_CHARS ? { text: capped(text), links, truncated: true } : { text, links };
+function cappedReading(text: string, links: string[], linkTexts: string[][]): PageReading {
+  return text.length > MAX_PAGE_CHARS ? { text: capped(text), links, linkTexts, truncated: true } : { text, links, linkTexts };
 }
 
-/** The number a link to this href is marked with, given the first time it is asked for; undefined for a link not marked. */
-type LinkNumber = (href: string) => number | undefined;
+/** The number a link to this href is marked with, given the first time it is asked for, with what the link says kept beside it; undefined for a link not marked. */
+type LinkNumber = (href: string, text: string) => number | undefined;
 
 function isHtml(body: string): boolean {
   return /<\s*(!doctype|html|body|div)\b/i.test(body);
@@ -318,7 +334,7 @@ function eventDataLine(event: Record<string, unknown>, linkNumber: LinkNumber, t
   const name = plainText(event.name);
   const start = localDateTime(plainText(event.startDate), timeZone);
   if (!name || !start) return undefined;
-  const n = typeof event.url === "string" ? linkNumber(event.url) : undefined;
+  const n = typeof event.url === "string" ? linkNumber(event.url, name) : undefined;
   const end = localDateTime(plainText(event.endDate), timeZone);
   const place = placeText(event.location);
   const description = clipped(plainText(event.description), MAX_EVENT_DATA_DESCRIPTION);
@@ -410,6 +426,10 @@ export type CandidateOrigin = PageOrigin & {
   pageUrl: string;
   /** What the page's numbered links lead to, as `readPage` gave them. */
   links: string[];
+  /** What each numbered link says, as `readPage` gave it. */
+  linkTexts: string[][];
+  /** The titles the model read on the page, every candidate's, so a link naming another of them is known for that one's (#250). */
+  titles: string[];
   /** The page's text as quotes are compared with it, from `quotableText`. */
   quotableText: string;
 };
@@ -434,6 +454,8 @@ export interface Sighting {
   daysProblem?: string;
   /** That a reading given a schedule was read as the span its date quote gives instead (#218), for the source's line. */
   spanNote?: string;
+  /** That the link the model named does not name the event (#250), so another was taken or none, with the source's line saying which. */
+  ownPageNote?: { outcome: "corrected" | "dropped"; note: string };
 }
 
 /**
@@ -455,9 +477,10 @@ export interface Sighting {
 export function candidateToSighting(candidate: Candidate, origin: CandidateOrigin, context: ExtractionContext): Sighting {
   const { timezone } = context.config;
   const primaryUrl = origin.pageUrl;
-  const eventUrl = linkedPage(candidate.eventLink, origin.links, primaryUrl, context.config.discovery.platformHosts);
   const unmarked = (text: string | null) => nonEmpty(text === null ? null : withoutLinkMarkers(text, origin.links.length));
   const title = unmarked(candidate.title) ?? candidate.title.trim();
+  const ownPage = linkedPage(candidate.eventLink, title, origin, context.config.discovery.platformHosts);
+  const eventUrl = ownPage.url;
   const startAt = localIso(candidate.startDate, candidate.startTime, timezone);
   const endAt = localIso(candidate.endDate, candidate.endTime, timezone);
   const start = startAt.iso;
@@ -519,6 +542,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     ...(dateProblem !== undefined ? { dateProblem } : {}),
     ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText: origin.quotableText } } : {}),
     ...(days.problem !== undefined ? { daysProblem: days.problem } : {}),
+    ...(ownPage.note !== undefined ? { ownPageNote: ownPage.note } : {}),
     ...(span !== undefined ? { spanNote: `was given a schedule, but its date quote gives the span ${span.start.slice(0, 10)} to ${span.end.slice(0, 10)}; read as that span` } : {}),
   };
 }
@@ -601,17 +625,45 @@ export function comparable(text: string): string {
 }
 
 /**
- * Link number n on the page, when there is one, it is not the primary page itself, and it stays on
- * the primary page's site or goes to a ticketing platform (#75). A link anywhere else is no event
- * page: the site would send its readers wherever a page the job found chose, so the event falls
- * back to its primary page instead.
+ * The event's own page: link number n on the page, checked against what the link says (#250). A card
+ * that is one whole anchor puts the marker after the card's text, so the next card's title sits
+ * between [n] and [n+1] and a model may name the card before. Link n stands when its text names the
+ * event (namesTitle) or is a generic label ("Buy tickets"), since the text beside it is what the model
+ * read. Otherwise, when exactly one of the page's links gives the title in full (givesTitle), that link
+ * is the own page; when none or several do and link n gives another title the model read on the page,
+ * there is none; either way with a line for the source's report. A link whose text says neither (a
+ * team's "Game Details", an image's description, a tour's name) stands as the model gave it. The page
+ * taken is never the primary page itself; it stays on the primary page's site or goes to a ticketing
+ * platform (#75), since a link anywhere else would send the site's readers wherever a page the job
+ * found chose; and it does not end in a script's empty value ("/program/null"). The event falls back
+ * to its primary page otherwise.
  */
-function linkedPage(n: number | null, links: string[], primaryUrl: string, platformHosts: readonly string[]): string | undefined {
-  if (n === null || !Number.isInteger(n) || n < 1 || n > links.length) return undefined;
-  const link = links[n - 1]!;
-  if (samePage(link, primaryUrl) || !ownPageAllowed(link, primaryUrl, platformHosts)) return undefined;
-  return link;
+function linkedPage(n: number | null, title: string, origin: CandidateOrigin, platformHosts: readonly string[]): { url?: string; note?: Sighting["ownPageNote"] } {
+  const { links, linkTexts, pageUrl } = origin;
+  if (n === null || !Number.isInteger(n) || n < 1 || n > links.length) return {};
+  const usable = (link: string) => !samePage(link, pageUrl) && ownPageAllowed(link, pageUrl, platformHosts) && !EMPTY_VALUE_PATH.test(new URL(link).pathname);
+  const named = links[n - 1]!;
+  const asNamed = usable(named) ? { url: named } : {};
+  const texts = linkTexts[n - 1] ?? [];
+  if (texts.some((text) => namesTitle(text, title) || GENERIC_LABEL.test(text))) return asNamed;
+  const giving = links.flatMap((link, i) => ((linkTexts[i] ?? []).some((text) => givesTitle(text, title)) && usable(link) ? [i + 1] : []));
+  const othersTitle = origin.titles.some((other) => texts.some((text) => givesTitle(text, other)));
+  if (giving.length !== 1 && !othersTitle) return asNamed;
+  const says = texts.length === 0 ? "no text" : `"${clipped(texts.join(" / "), MAX_LINK_TEXT_IN_NOTE)}"`;
+  const said = `"${title}" on ${pageUrl}: link ${n} (${says}) does not name it`;
+  if (giving.length === 1) return { url: links[giving[0]! - 1]!, note: { outcome: "corrected", note: `${said}; took link ${giving[0]}` } };
+  return { note: { outcome: "dropped", note: `${said}; no own page` } };
 }
+
+/** A link text that is a label any event's link could carry and names none: "Tickets", "Buy tickets", "More info", "Details", "RSVP". */
+const GENERIC_LABEL =
+  /^[^\p{L}\p{N}]*(?:(?:buy|get|book|purchase|find|view|see|read|learn|click|sign|more|event|details?|info(?:rmation)?|tickets?|rsvp|register|registration|here|now|up|and|out)[^\p{L}\p{N}]*)+$/iu;
+
+/** A path ending in a script's empty value, which a page links where it had no page to give (#250). */
+const EMPTY_VALUE_PATH = /\/(?:null|undefined)\/?$/i;
+
+/** How much of a link's text the report line about it quotes. */
+const MAX_LINK_TEXT_IN_NOTE = 80;
 
 /** The URL in canonical form, or the fallback when it does not parse. */
 export function normalizeUrl(url: string, fallback: string): string {

@@ -352,6 +352,23 @@ export function variantTitles(a: string, b: string): boolean {
 }
 
 /**
+ * Whether a text gives a title in full (#250), word for word as titles are compared (normalizeName),
+ * among whatever else it says: a card linked whole gives its date and venue around its title.
+ */
+export function givesTitle(text: string, title: string): boolean {
+  const name = normalizeName(title);
+  return name !== "" && ` ${normalizeName(text)} `.includes(` ${name} `);
+}
+
+/**
+ * Whether what a link says names an event by its title (#250): the text gives the title, the title
+ * gives the text, as a link on the lead title alone does, or the two are forms of one title (variantTitles).
+ */
+export function namesTitle(text: string, title: string): boolean {
+  return givesTitle(text, title) || givesTitle(title, text) || variantTitles(text, title);
+}
+
+/**
  * Of two forms of one title, the one cut short of the other, the form the title rules in
  * prompts/extraction-rules.md prefer (#196, #217) when the words the longer adds are what those rules
  * strip: the event's venue at its end, with at most one word before it ("… Exhibition at Union

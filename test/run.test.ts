@@ -58,6 +58,8 @@ describe("run", () => {
       overCap: 0,
       unusableDates: 0,
       quoteNotOnPage: 0,
+      ownPageCorrected: 0,
+      ownPageDropped: 0,
       expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0, promotion: 0, "not-public": 0, stale: 0 },
       archived: 0,
     });
