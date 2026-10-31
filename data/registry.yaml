@@ -387,7 +387,7 @@ sources:
     urls: [https://kclibrary.org/events]
     kind: talks/readings
     neighborhood: Downtown
-    checkHints: Author talks and programs across branches; the Central Library is at 14 W 10th St. Storytimes and regular classes are recurring. Read the branch from each listing.
+    checkHints: Author talks and programs across branches; the Central Library is at 14 W 10th St. Read the branch from each listing. Skip storytimes and rhyme times; they are routine branch programming, not events. A regular class is recurring only when the page states its schedule; otherwise each listing is a one-off on its date.
     status: active
 
   - name: Rainy Day Books
@@ -398,12 +398,17 @@ sources:
     status: active
 
   - name: Johnson County Library
-    urls: [https://jocolibrary.bibliocommons.com/v2/events]
+    urls:
+      - https://jocolibrary.bibliocommons.com/v2/events?types=5f6e0b39cafcc124001b143b,5ed14cce04cef73a006d9640,624319730bf5b93700524b17
+      - https://jocolibrary.bibliocommons.com/v2/events?types=5f6e0b39cafcc124001b143b,5ed14cce04cef73a006d9640,624319730bf5b93700524b17&page=2
+      - https://jocolibrary.bibliocommons.com/v2/events?types=5f6e0b39cafcc124001b143b,5ed14cce04cef73a006d9640,624319730bf5b93700524b17&page=3
+      - https://jocolibrary.bibliocommons.com/v2/events?types=5f6e0b39cafcc124001b143b,5ed14cce04cef73a006d9640,624319730bf5b93700524b17&page=4
+    listedAt: https://jocolibrary.bibliocommons.com/v2/events
     kind: talks/readings
     neighborhood: Overland Park
-    checkHints: Branches across Johnson County, so read the venue (the branch) from each listing. Skip online events. Author talks, lectures and workshops are the events; a weekly storytime is recurring. Appointments and equipment sessions are services, not events, such as One-on-One Basic Genealogy Help (arranged by email) and Memory Lab Sessions (digitizing your own photos and tapes).
+    checkHints: Branches across Johnson County, so read the venue (the branch) from each listing. Each listing is one session at one branch, a one-off on its date, never a schedule, even when it says "View all dates". Skip storytimes and rhyme times; they are routine branch programming, not events. Skip online events. Author talks, lectures and workshops are the events. Appointments and equipment sessions are services, not events, such as One-on-One Basic Genealogy Help (arranged by email) and Memory Lab Sessions (digitizing your own photos and tapes).
     status: active
-    notes: jocolibrary.org/events redirects here. The page is long; the first weeks of listings are what fit.
+    notes: jocolibrary.org/events redirects here. The unfiltered page shows 20 of about 490 listings, half of them storytimes, so its first page covered a day and a half (#247). The urls are that page filtered to three event types, Author Event, Arts and Culture and History (a comma ORs the type ids; if one stops working, the ids are the for= attributes beside each type's checkbox label on the events page), 20 a page in date order; one listing at the bare events URL, which the records cite. On 2026-10-31 pages 1-4 ran Oct 31-Nov 6, Nov 7-13, Nov 14-23 and Nov 24-Dec 5, about 20,000 characters of text each, with no storytime among them. Add page 5 when the report says page 4 lists through a day inside the horizon (#229).
 
   - name: Truman Library
     urls: [https://www.trumanlibrary.gov/events]
