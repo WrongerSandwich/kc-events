@@ -155,6 +155,16 @@ describe("sticky fields on a re-reading", () => {
 
       expect(dataset.events[0]).toMatchObject({ start: "2026-11-07T20:00:00-06:00", evidence: { date: "Sat, Nov 7 · Show 8:00 PM", venue: VENUE_QUOTE } });
     });
+
+    it("keeps a recurring event's stored date quote while it is on the page, though the schedule is worded otherwise", async () => {
+      const { start: _start, ...rest } = stored();
+      const known: Event = { ...rest, recurrence: "recurring", schedule: "Sundays", evidence: { date: "Every Sunday night", venue: VENUE_QUOTE } };
+      const page = { status: 200, body: `<html><body><a href="/shows/big-show">Big Show</a><p>Every Sunday night</p><p>${VENUE_QUOTE}</p></body></html>` };
+
+      const { dataset } = await reread(known, { startDate: null, startTime: null, schedule: "Every Sunday", dateEvidence: "Sunday night" }, page);
+
+      expect(dataset.events[0]).toMatchObject({ schedule: "Every Sunday", evidence: { date: "Every Sunday night" }, lastVerified: WEEK_2_ISO });
+    });
   });
 
   describe("own page", () => {
@@ -172,6 +182,24 @@ describe("sticky fields on a re-reading", () => {
       const { dataset } = await reread(stored(), { eventLink: 2 }, page);
 
       expect(dataset.events[0]!.eventUrl).toBe("https://knuckleheads.test/shows/big-show-2");
+    });
+
+    it("takes the reading's own page when the stored one is linked only by a generic label, which any card could carry", async () => {
+      const page = listing({ links: `<a href="/shows/big-show">Learn more</a> <a href="/shows/big-show-2">Big Show</a>` });
+
+      const { dataset } = await reread(stored(), { eventLink: 2 }, page);
+
+      expect(dataset.events[0]!.eventUrl).toBe("https://knuckleheads.test/shows/big-show-2");
+    });
+
+    it("drops the stickiness of a description its own page gave once the reading has another own page", async () => {
+      const known = stored({ ownPageRead: { page: "https://knuckleheads.test/shows/big-show", on: "2026-10-24" } });
+      const page = listing({ links: `<a href="/shows/big-show">Late Laughs</a> <a href="/shows/big-show-2">Big Show</a>` });
+
+      const { dataset } = await reread(known, { eventLink: 2, description: "A band." }, page);
+
+      expect(dataset.events[0]).toMatchObject({ eventUrl: "https://knuckleheads.test/shows/big-show-2", description: "A band." });
+      expect(dataset.events[0]).not.toHaveProperty("ownPageRead");
     });
   });
 

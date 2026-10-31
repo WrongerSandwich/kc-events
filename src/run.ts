@@ -1231,31 +1231,33 @@ interface Reread {
 }
 
 /** The new reading under the known event's identity and curation, by the field rules refresh gives. */
-function refreshReading(known: Event, reading: Event, reread?: Reread): Event {
+function refreshReading(known: Event, sighting: Event, reread?: Reread): Event {
   // The stored own page goes first: what an own page gave (#123, #133) is kept by it.
-  const sighting = reread?.page !== undefined ? withStoredOwnPage(known, reading, reread.page) : reading;
-  const record = refreshFields(known, sighting);
+  const reading = reread?.page !== undefined ? withStoredOwnPage(known, sighting, reread.page) : sighting;
+  const record = refreshFields(known, reading);
   if (reread === undefined) return record;
-  return withStoredQuotes(known, { ...record, ...stickyFields(known, sighting, reread.aliases) }, reread.page);
+  return withStoredQuotes(known, { ...record, ...stickyFields(known, reading, reread.aliases) }, reread.page);
 }
 
 /**
  * What a verified re-reading from a page with standing keeps of the stored record (#251), since on an
  * unchanged page a model re-words a description, re-files a kind and re-spells a venue from week to
- * week (ADR 0005): the stored description, unless there is none or it is a listing line
- * (LISTING_LINE_LENGTH) and the new one is longer, as an own page's read is kept (ownPageFields); the
- * stored kind, unless it is "other" and the new one is not, or the title changed (neither the same
- * name nor a variant of it), when the reading's stands and the report lists the change (kindChanges);
- * and the stored spelling of the same venue (sameVenue). A different venue replaces it.
+ * week: the stored description, unless there is none or it is a listing line (LISTING_LINE_LENGTH) and
+ * the new one is longer, or it may be an own page's read that the reading no longer keeps
+ * (keepsOwnPageRead: another own page or date), when the reading's stands as before; the stored kind,
+ * unless it is "other" and the new one is not, or the title changed (neither the same name nor a
+ * variant of it), when the reading's stands and the report lists the change (kindChanges); and the
+ * stored spelling of the same venue (sameVenue). A different venue replaces it.
  */
 function stickyFields(known: Event, sighting: Event, aliases: VenueAliases): Partial<Event> {
   const { description } = known;
+  const ownPageDropped = known.ownPageRead !== undefined && !keepsOwnPageRead(known, sighting);
   const listLineOutgrown = description !== undefined && description.length <= LISTING_LINE_LENGTH && (sighting.description?.length ?? 0) > description.length;
   const sameTitle = sameName(known.title, sighting.title) || variantTitles(known.title, sighting.title);
   const kindKept = sameTitle && !(known.kind === "other" && sighting.kind !== "other");
   const venueKept = known.venue !== undefined && sighting.venue !== undefined && sameVenue(known.venue, sighting.venue, aliases);
   return {
-    ...(description !== undefined && !listLineOutgrown ? { description } : {}),
+    ...(description !== undefined && !listLineOutgrown && !ownPageDropped ? { description } : {}),
     ...(kindKept ? { kind: known.kind } : {}),
     ...(venueKept ? { venue: known.venue! } : {}),
   };
@@ -1272,14 +1274,15 @@ function withStoredOwnPage(known: Event, sighting: Event, page: SightedPage): Ev
 
 /**
  * The record with the stored date and venue quotes that are still on the page this run read (#251), whatever the reading
- * quoted, so a re-cut quote is not news. A date quote is kept only while the record keeps the stored start, end and schedule,
- * and a venue quote only while it keeps the stored venue: a quote is kept for what it cites. With no page, the reading's stand.
+ * quoted, so a re-cut quote is not news. A date quote is kept only while the record keeps the stored class, start and end
+ * (a recurring event's schedule is the model's own wording, as keepsStoredCitation holds, #220), and a venue quote only while
+ * it keeps the stored venue: a quote is kept for what it cites. With no page, the reading's stand.
  */
 function withStoredQuotes(known: Event, record: Event, page: SightedPage | undefined): Event {
   if (page === undefined) return record;
   const onPage = (quote: string | undefined): quote is string => quote !== undefined && quotedOn(quote, page.quotable);
   const { date, venue } = known.evidence;
-  const sameWhen = record.start === known.start && record.end === known.end && record.schedule === known.schedule;
+  const sameWhen = record.recurrence === known.recurrence && record.start === known.start && record.end === known.end;
   return {
     ...record,
     evidence: {

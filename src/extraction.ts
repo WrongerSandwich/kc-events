@@ -670,12 +670,11 @@ function linkedPage(n: number | null, title: string, origin: CandidateOrigin, pl
 
 /**
  * Whether a page still links an own page as the event's (#250, #251): one of its links goes there with text
- * naming one of the event's titles, or a generic label, as linkedPage takes a named link.
+ * naming one of the event's titles. A generic label is not enough here: linkedPage takes one the model named
+ * beside the event, but a stored page linked "Learn more" from some card may be another card's.
  */
 export function linksOwnPage(url: string, titles: string[], { links, linkTexts }: SightedPage): boolean {
-  return links.some(
-    (link, i) => samePage(link, url) && (linkTexts[i] ?? []).some((text) => GENERIC_LABEL.test(text) || titles.some((title) => namesTitle(text, title))),
-  );
+  return links.some((link, i) => samePage(link, url) && (linkTexts[i] ?? []).some((text) => titles.some((title) => namesTitle(text, title))));
 }
 
 /** A link text that is a label any event's link could carry and names none: "Tickets", "Buy tickets", "More info", "Details", "RSVP". */
