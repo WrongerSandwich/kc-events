@@ -4,6 +4,7 @@ import { parseRunReport, renderReportMarkdown, type RunReport } from "../src/rep
 /** A report with every section holding something, so the snapshot pins each one's wording. */
 const full: RunReport = {
   runDate: "2026-10-16",
+  mode: "weekly",
   startedAt: "2026-10-16T22:15:00-05:00",
   finishedAt: "2026-10-16T22:41:07-05:00",
   horizonWeeks: 8,
@@ -49,7 +50,7 @@ const full: RunReport = {
     problems: ["https://lead.test/a: HTTP 403"],
     leadsOnExcludedSources: [{ source: "Old Hall", reason: "closed for good", leads: 2 }],
   },
-  reverification: { problems: ["https://venue.test/calendar: the model call threw"] },
+  reverification: { pagesRead: 3, problems: ["https://venue.test/calendar: the model call threw"] },
   curation: {
     calls: 2,
     judged: 14,
@@ -180,6 +181,8 @@ describe("the run report", () => {
       - https://lead.test/a: HTTP 403
 
       ## Re-verification
+
+      3 pages re-read.
 
       - https://venue.test/calendar: the model call threw
 

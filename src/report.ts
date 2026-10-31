@@ -62,10 +62,22 @@ export interface EventRef {
   primaryUrl: string;
 }
 
+export const RUN_MODES = ["weekly", "reverify-only"] as const;
+export type RunMode = (typeof RUN_MODES)[number];
+
+/** The one-line heading of a report: a weekly run's, or a midweek pass's (#253). */
+export function reportTitle(report: Pick<RunReport, "mode" | "runDate">): string {
+  return report.mode === "reverify-only" ? `Midweek re-verification ${report.runDate}` : `Run report ${report.runDate}`;
+}
+
 /** The record of one run, committed as Markdown with a JSON twin. */
 export interface RunReport {
   /** Local calendar date of the run; reports are named by it. */
   runDate: string;
+  /** A weekly run, or a midweek pass that only re-verifies the events of the next few days (#253). */
+  mode: RunMode;
+  /** For a midweek pass, the days after today its window reaches. */
+  windowDays?: number;
   startedAt: string;
   finishedAt: string;
   horizonWeeks: number;
@@ -131,7 +143,11 @@ export interface RunReport {
    * their events as they were; pages read as listing nothing where several active events cite them,
    * counted as an outage; and excluded sources whose events were not fetched (#78).
    */
-  reverification: { problems: string[] };
+  reverification: {
+    /** Pages fetched and read by re-verification itself; a page a lane read this run is not counted. */
+    pagesRead: number;
+    problems: string[];
+  };
   /** Don't-miss curation this run: only events new or changed since last judged are sent, so a quiet run makes no calls. */
   curation: {
     /** Curation model calls made; events go in batches. */
@@ -255,6 +271,8 @@ const servedBy = z.strictObject({ model: z.string(), provider: z.string().option
  */
 export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   runDate: z.iso.date(),
+  mode: z.enum(RUN_MODES).default("weekly"),
+  windowDays: z.number().int().positive().optional(),
   startedAt: z.iso.datetime({ offset: true }),
   finishedAt: z.iso.datetime({ offset: true }),
   horizonWeeks: z.number().int().positive(),
@@ -305,7 +323,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     problems: z.array(z.string()),
     leadsOnExcludedSources: listSince(z.strictObject({ source: z.string(), reason: z.string(), leads: count })),
   }),
-  reverification: z.strictObject({ problems: z.array(z.string()) }).default({ problems: [] }),
+  reverification: z.strictObject({ pagesRead: countSince, problems: z.array(z.string()) }).default({ pagesRead: 0, problems: [] }),
   curation: z.strictObject({
     calls: count,
     judged: count,
@@ -363,9 +381,13 @@ export function parseRunReport(raw: unknown): RunReport {
 
 export function renderReportMarkdown(report: RunReport): string {
   const { counts, spend } = report;
-  return `# Run report ${report.runDate}
+  return `# ${reportTitle(report)}
 
-Started ${report.startedAt}, finished ${report.finishedAt}. Horizon ${report.horizonWeeks} weeks.
+Started ${report.startedAt}, finished ${report.finishedAt}. ${
+    report.mode === "reverify-only"
+      ? `Re-verified the events of today and the next ${plural(report.windowDays ?? 0, "day")} only: no list read, no search made, nothing created, no own page read.`
+      : `Horizon ${report.horizonWeeks} weeks.`
+  }
 
 ## Counts
 
@@ -436,6 +458,8 @@ ${
 }
 
 ## Re-verification
+
+${plural(report.reverification.pagesRead, "page")} re-read.
 
 ${markdownList(report.reverification.problems)}
 

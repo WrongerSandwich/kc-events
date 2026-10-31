@@ -25,6 +25,14 @@
 # past week that scripts/daily-deploy.sh could not start a rebuild, which it tells no one about itself.
 #
 #   scripts/weekly-run.sh [--no-discovery]
+#   scripts/weekly-run.sh --reverify-only [--days N]
+#
+# With --reverify-only it is the midweek pass instead (#253, Thursdays on the same cron): `pnpm
+# research --reverify-only` re-reads the primary pages of the next ten days' events and creates
+# nothing, and the commit is "Midweek re-verification <run date>". It refuses a day origin/main already
+# has a midweek pass for, or a weekly run for, since its report would take that run's file. The build,
+# the checks, the wait on Vercel, the health comment and the healthchecks.io pings are the weekly run's;
+# a midweek success pings the check up as a weekly one does, so its one-week period is unchanged.
 #
 # Secrets come from the clone's gitignored .env (OPENROUTER_API_KEY, TAVILY_API_KEY, and GH_TOKEN, a
 # fine-grained token for this repository alone that the push, the health issue, and the wait on
@@ -43,6 +51,19 @@ LOG="$LOG_DIR/run-$(date +%Y-%m-%dT%H-%M).log"
 exec > >(tee -a "$LOG") 2>&1
 
 cd "$ROOT"
+
+# A midweek pass (#253) when --reverify-only is among the arguments, which go to pnpm research as given.
+MIDWEEK=
+for arg in "$@"; do
+  if [[ "$arg" == --reverify-only ]]; then MIDWEEK=1; fi
+done
+if [[ -n "$MIDWEEK" ]]; then
+  RUN_NAME="midweek re-verification"
+  COMMIT_PREFIX="Midweek re-verification"
+else
+  RUN_NAME="weekly run"
+  COMMIT_PREFIX="Weekly research run"
+fi
 
 HEALTH_LABEL=weekly-run-health
 # The fine-grained token the push uses too (through scripts/git-credential-env.sh), read once here.
@@ -118,7 +139,7 @@ redact() {
 fail() {
   trap - ERR TERM HUP INT
   local why=$1
-  echo "weekly run failed: $why"
+  echo "$RUN_NAME failed: $why"
   # tee is still writing the log; give it a moment so the tail holds the error.
   sleep 1
   sync
@@ -127,10 +148,10 @@ fail() {
     committed="The run's data was committed and pushed as $PUSHED, so the site still shows the last deploy that built until it is fixed and deployed."
   fi
   # shellcheck disable=SC2016 # the backticks are Markdown
-  report "$(redact "$(printf '**%s: failed.** %s\n\n%s Last lines of `%s`:\n\n```\n%s\n```\n%s' \
-    "$TODAY" "$why" "$committed" "$LOG" "$(tail -n 40 "$LOG")" "$(deploy_note)")")"
+  report "$(redact "$(printf '**%s %s: failed.** %s\n\n%s Last lines of `%s`:\n\n```\n%s\n```\n%s' \
+    "$TODAY" "$RUN_NAME" "$why" "$committed" "$LOG" "$(tail -n 40 "$LOG")" "$(deploy_note)")")"
   # The alert's body is what healthchecks.io shows: what failed, and the comment holding the log's tail.
-  ping_check /fail "$(redact "$(printf 'KC This Week weekly run %s failed: %s\n%s\n' "$TODAY" "$why" \
+  ping_check /fail "$(redact "$(printf 'KC This Week %s %s failed: %s\n%s\n' "$RUN_NAME" "$TODAY" "$why" \
     "${REPORT_URL:-The health issue comment could not be posted; the log is $LOG}")")"
   exit 1
 }
@@ -144,7 +165,7 @@ if ! flock -n 9; then
   fail "another weekly run holds the lock ($LOG_DIR/run.lock)"
 fi
 
-echo "weekly run starting $(date --iso-8601=seconds) in $ROOT"
+echo "$RUN_NAME starting $(date --iso-8601=seconds) in $ROOT"
 if [[ -z "$HC_URL" ]]; then echo "no HEALTHCHECKS_URL in .env; a failure goes on the health issue and alerts no one"; fi
 ping_check /start
 find "$LOG_DIR" -maxdepth 1 -name 'run-*.log' -mtime +90 -delete
@@ -163,8 +184,12 @@ git clean --quiet -fd -- data
 # The manual workflow refuses on the same check, so neither starts for a date the other has
 # committed. Two started within the same run time can still both commit; the later one wins.
 recent=$(git log --format=%s -n 100 origin/main)
-if grep -q -E "^Weekly research run $TODAY( |$)" <<<"$recent"; then
-  fail "origin/main already has a weekly research run for $TODAY"
+if grep -q -E "^$COMMIT_PREFIX $TODAY( |$)" <<<"$recent"; then
+  fail "origin/main already has a $RUN_NAME for $TODAY"
+fi
+# A run's report is named by its day, so a midweek pass on a weekly run's day would write over that run's.
+if [[ -n "$MIDWEEK" ]] && grep -q -E "^Weekly research run $TODAY( |$)" <<<"$recent"; then
+  fail "origin/main already has a weekly research run for $TODAY, whose report a midweek re-verification would write over"
 fi
 
 pnpm install --frozen-lockfile --silent
@@ -219,7 +244,7 @@ if [[ -n "$site_warnings" ]]; then
   printf '\n## Site checks\n\n%s\n' "$(sed 's/^/- /' <<<"$site_warnings")" >>"data/runs/$run_date.md"
   git add "data/runs/$run_date.md"
 fi
-message="Weekly research run $run_date"
+message="$COMMIT_PREFIX $run_date"
 git commit --quiet -m "$message"
 
 # Someone may have pushed while the run was going. The run touches only its own files (the dataset,
@@ -276,12 +301,15 @@ summary=$(node -e '
   const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
   const c = r.counts;
   const expired = Object.values(c.expired).reduce((a, b) => a + b, 0);
-  console.log(`${c.found} found, ${c.new} new, ${c.updated} updated, ${c.reverified} re-verified, ${expired} expired; ` +
+  const read = r.mode === "reverify-only" ? `${r.reverification.pagesRead} page(s) re-read, ` : `${c.found} found, ${c.new} new, ${c.updated} updated, `;
+  console.log(`${read}${c.reverified} re-verified, ${expired} expired; ` +
     `spend $${r.spend.totalUsd.toFixed(2)} of $${r.spend.capUsd}${r.spend.capHit ? " (cap hit)" : ""}`);
 ' "data/runs/$run_date.json") || summary="(could not read the run report)"
-echo "weekly run $run_date committed and pushed $(date --iso-8601=seconds): $summary"
+echo "$RUN_NAME $run_date committed and pushed $(date --iso-8601=seconds): $summary"
 warning_note=
 if [[ -n "$site_warnings" ]]; then warning_note=$(printf '\n\n%s' "$(sed 's/^/- /' <<<"$site_warnings")"); fi
-report "$(redact "$(printf '%s: ok, %s (%s, deployed)%s%s' "$run_date" "$summary" "$PUSHED" "$warning_note" "$(deploy_note)")")"
+label=$run_date
+if [[ -n "$MIDWEEK" ]]; then label="$run_date midweek re-verification"; fi
+report "$(redact "$(printf '%s: ok, %s (%s, deployed)%s%s' "$label" "$summary" "$PUSHED" "$warning_note" "$(deploy_note)")")"
 # Silent: the success ping only marks the check up for another week.
-ping_check "" "$run_date: ok"
+ping_check "" "$label: ok"

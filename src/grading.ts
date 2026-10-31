@@ -35,6 +35,9 @@ export interface GradingInput {
  * blocks in the existing document are replaced and everything Evan wrote around them is kept.
  */
 export function renderGrading({ report, dataset, existing }: GradingInput): string {
+  if (report.mode !== "weekly") {
+    throw new Error(`run ${report.runDate} is a midweek re-verification; the milestone run is a weekly run`);
+  }
   if (report.horizonWeeks !== MILESTONE.horizonWeeks) {
     throw new Error(`run ${report.runDate} has horizon ${report.horizonWeeks} weeks; the milestone run has ${MILESTONE.horizonWeeks}`);
   }

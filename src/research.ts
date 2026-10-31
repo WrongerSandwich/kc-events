@@ -28,26 +28,40 @@ import { createTavilySearch } from "./adapters/tavily.js";
 
 type Env = Record<string, string | undefined>;
 
+/** The days a midweek pass's window reaches past today unless `--days` says otherwise (#253). */
+const REVERIFY_DAYS = 10;
+
+const positiveWhole = (value: string) => Number.isInteger(Number(value)) && Number(value) > 0;
+
 /**
  * The run's config: the file's, with the command line's overrides (`--horizon-weeks N`,
- * `--no-discovery`). Throws on an argument it does not know, a horizon that is not a positive whole
- * number, and discovery left on with no Tavily key, since every search would then fail one by one.
+ * `--no-discovery`), and whether it is a midweek pass (`--reverify-only [--days N]`, #253), which
+ * turns discovery off. Throws on an argument it does not know, a horizon or window that is not a
+ * positive whole number, `--days` without `--reverify-only`, and discovery left on with no Tavily key,
+ * since every search would then fail one by one.
  */
-export function configFromArgs(fileConfig: RunConfig, args: string[], env: Env): RunConfig {
-  const { values } = parseArgs({ args, options: { "horizon-weeks": { type: "string" }, "no-discovery": { type: "boolean" } } });
+export function runOptionsFromArgs(fileConfig: RunConfig, args: string[], env: Env): { config: RunConfig; reverifyOnly?: { days: number } } {
+  const { values } = parseArgs({
+    args,
+    options: { "horizon-weeks": { type: "string" }, "no-discovery": { type: "boolean" }, "reverify-only": { type: "boolean" }, days: { type: "string" } },
+  });
   const horizon = values["horizon-weeks"];
-  if (horizon !== undefined && !(Number.isInteger(Number(horizon)) && Number(horizon) > 0)) {
+  if (horizon !== undefined && !positiveWhole(horizon)) {
     throw new Error(`--horizon-weeks must be a positive whole number, got "${horizon}"`);
   }
+  const days = values.days;
+  if (days !== undefined && !values["reverify-only"]) throw new Error("--days is the window of a --reverify-only run; give both or neither");
+  if (days !== undefined && !positiveWhole(days)) throw new Error(`--days must be a positive whole number, got "${days}"`);
+  const reverifyOnly = values["reverify-only"] ? { days: days !== undefined ? Number(days) : REVERIFY_DAYS } : undefined;
   const config = {
     ...fileConfig,
     ...(horizon !== undefined ? { horizonWeeks: Number(horizon) } : {}),
-    ...(values["no-discovery"] ? { discovery: { ...fileConfig.discovery, enabled: false } } : {}),
+    ...(values["no-discovery"] || reverifyOnly ? { discovery: { ...fileConfig.discovery, enabled: false } } : {}),
   };
   if (config.discovery.enabled && !env.TAVILY_API_KEY) {
     throw new Error("discovery is on but TAVILY_API_KEY is not set; put it in the environment or a gitignored .env");
   }
-  return config;
+  return { config, ...(reverifyOnly && { reverifyOnly }) };
 }
 
 /** The ports a run talks to the world through, and how to let go of them once it is done. */
@@ -135,7 +149,7 @@ export async function research({ root, args, env, adapters = realAdapters }: Res
   const runsDir = join(dataDir, "runs");
 
   const fileConfig = parseConfig(parseYaml(await readFile(join(root, "research.config.yaml"), "utf8")) ?? {});
-  const config = configFromArgs(fileConfig, args, env);
+  const { config, reverifyOnly } = runOptionsFromArgs(fileConfig, args, env);
 
   const prompts = {
     extractionRules: await readFile(join(root, "prompts", "extraction-rules.md"), "utf8"),
@@ -146,7 +160,7 @@ export async function research({ root, args, env, adapters = realAdapters }: Res
   const dataset = existsSync(datasetPath) ? parseDataset(JSON.parse(await readFile(datasetPath, "utf8")), config) : emptyDataset();
 
   const { ports, close } = adapters(config, env);
-  const result = await run({ config, prompts, dataset, registry, ports }).finally(close);
+  const result = await run({ config, prompts, dataset, registry, ports, ...(reverifyOnly && { reverifyOnly }) }).finally(close);
 
   const reportBase = join(runsDir, result.report.runDate);
 

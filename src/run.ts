@@ -71,7 +71,7 @@ import { awayGame, SKIP_REASONS, skipReason, type SkipReason } from "./skip.js";
 import { deriveRecurrence } from "./recurrence.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList, placeStored } from "./taxonomy.js";
-import { hasTime, horizonEnd, toLocalDate, toLocalIso } from "./time.js";
+import { hasTime, horizonEnd, shiftDate, toLocalDate, toLocalIso } from "./time.js";
 
 /** Consecutive failed runs after which a source is flagged in the report. */
 const FAILING_SOURCE_THRESHOLD = 3;
@@ -95,6 +95,11 @@ export interface RunInput {
   dataset: Dataset;
   registry: Registry;
   ports: Ports;
+  /**
+   * A midweek pass (#253): no list read and no search made; the events whose span covers a day from today
+   * through today + `days` have their primary pages re-read, and nothing is created.
+   */
+  reverifyOnly?: { days: number };
 }
 
 export interface RunOutput {
@@ -108,7 +113,9 @@ export interface RunOutput {
  * One run of the research job: a function over values and ports that returns the new
  * dataset and the run report. It performs no I/O of its own.
  */
-export async function run({ config, prompts, dataset, registry, ports }: RunInput): Promise<RunOutput> {
+export async function run({ config: givenConfig, prompts, dataset, registry, ports, reverifyOnly }: RunInput): Promise<RunOutput> {
+  // A midweek pass searches nothing, whatever the config says.
+  const config = reverifyOnly ? { ...givenConfig, discovery: { ...givenConfig.discovery, enabled: false } } : givenConfig;
   const startedAt = ports.clock.now();
   const startedIso = toLocalIso(startedAt, config.timezone);
 
@@ -117,8 +124,9 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const neighborhoods = neighborhoodList(config, registry);
   // Every model call goes through the cap, whatever stage makes it, and is counted for the fuse.
   const model = countOutcomes(capSpend(ports.model, config.spendCapUsd));
-  const registryLane = await checkRegistry(registry, dataset.sourceState, ports);
-  assertSomethingFetched(registryLane.sourceReports);
+  // A midweek pass reads no list, so it leaves the sources' state as it was.
+  const registryLane = reverifyOnly ? idleRegistryLane(dataset.sourceState) : await checkRegistry(registry, dataset.sourceState, ports);
+  if (!reverifyOnly) assertSomethingFetched(registryLane.sourceReports);
   const extractionContext: ExtractionContext = {
     config,
     rules: prompts.extractionRules,
@@ -152,12 +160,19 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
     released: held.released,
     attempts: combineAttempts(registryLane.attempts, extraction.attempts, discovery.attempts),
   };
-  const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext);
-  // A record no reading ever verified goes stale when no lane has sighted it for four runs that could have (#82).
+  const inWindow = reverifyOnly ? (e: Event) => coversDays(e, today, shiftDate(today, reverifyOnly.days)) : undefined;
+  const reverified = await reverify(current, laneOutcome, registry, { ...ports, model }, extractionContext, inWindow);
+  if (reverifyOnly) assertSomethingReverified(reverified);
+  // A record no reading ever verified goes stale when no lane has sighted it for four runs that could have (#82);
+  // a midweek pass is not one of them, so the four stay weekly.
   const sighted = new Set([...touched, ...reverified.sighted]);
-  const aged = reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: couldHaveSighted(e, laneOutcome.attempts, registry, config) }));
-  // A flagged source's events its list dates but does not time have their own page read for the time (#123).
-  const ownPages = await readOwnPages(aged, sighted, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
+  const aged = reverifyOnly
+    ? reverified.events
+    : reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: couldHaveSighted(e, laneOutcome.attempts, registry, config) }));
+  // A flagged source's events its list dates but does not time have their own page read for the time (#123); not midweek.
+  const ownPages = reverifyOnly
+    ? { events: aged, report: [], notRead: 0, read: new Set<string>() }
+    : await readOwnPages(aged, sighted, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   // A mapped venue places every event at it, read this run or not (#150); a reading places the rest from its page,
   // and one no page placed this run is placed from what is stored. The map goes first: its neighborhoods are on the
   // list (the config checks), so the off-list placement leaves them be and reports only what the map did not place.
@@ -172,7 +187,9 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
   const changed = markChanged(dataset.events, placed.events, startedIso);
   const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
   // Each pick has its own page read for the time, price and age limit, once per date and own page (#133).
-  const picks = await readPicks(curation.events, ownPages.read, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
+  const picks = reverifyOnly
+    ? { events: curation.events, report: [], notRead: 0 }
+    : await readPicks(curation.events, ownPages.read, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   assertModelReached(model);
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = picks.events.map(cleanStoredWhyLine);
@@ -192,6 +209,8 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
 
   const report: RunReport = {
     runDate: today,
+    mode: reverifyOnly ? "reverify-only" : "weekly",
+    ...(reverifyOnly && { windowDays: reverifyOnly.days }),
     startedAt: startedIso,
     finishedAt: finishedIso,
     horizonWeeks: config.horizonWeeks,
@@ -224,7 +243,7 @@ export async function run({ config, prompts, dataset, registry, ports }: RunInpu
       modelCalls: model.calls(),
     },
     discovery: discovery.report,
-    reverification: { problems: reverified.problems },
+    reverification: { pagesRead: reverified.pagesRead, problems: reverified.problems },
     curation: { ...curation.report, datedWhyLines: datedWhyLines(events) },
     sources: sourceReports,
     ownPages: [...ownPages.report, ...picks.report],
@@ -368,6 +387,29 @@ function assertSomethingFetched(sourceReports: SourceReport[]): void {
 }
 
 /** A capped model that also counts how its calls ended, for the fuse. */
+/** The registry lane of a midweek pass (#253): nothing fetched, the sources' state kept. */
+function idleRegistryLane(sourceState: Dataset["sourceState"]): Awaited<ReturnType<typeof checkRegistry>> {
+  return { sourceReports: [], sourceState, failingSources: [], pages: [], attempts: noAttempts() };
+}
+
+/**
+ * A midweek pass that fetched pages and got none of them back stops before any write, as a weekly run
+ * that fetches no source does, so a dead network cannot count an outage against every event in the window.
+ */
+function assertSomethingReverified({ pagesTried, pagesFetched }: { pagesTried: number; pagesFetched: number }): void {
+  if (pagesTried > 0 && pagesFetched === 0) {
+    throw new Error(`no page could be fetched for re-verification (${plural(pagesTried, "page")} tried); nothing was written`);
+  }
+}
+
+/** Whether an event's span covers a day from `from` through `to`: it starts in that range, or started before it and has not ended (#151, #253). */
+function coversDays(e: Event, from: string, to: string): boolean {
+  const date = calendarDate(e.start);
+  if (date === undefined || date > to) return false;
+  const end = calendarDate(e.end);
+  return date >= from || (end !== undefined && end >= from);
+}
+
 interface CountedModel extends CappedModel {
   outcomes(): { succeeded: number; failed: number; lastError?: string };
 }
@@ -1369,10 +1411,13 @@ async function reverify(
   registry: Registry,
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
+  /** For a midweek pass, the events to re-verify: those whose span covers a day of its window (#253). */
+  inWindow?: (e: Event) => boolean,
 ) {
   const problems: string[] = [];
   const sighted = (e: Event) => lane.touched.has(e.id);
   const pending = events.filter((e) => {
+    if (inWindow && !inWindow(e)) return false;
     if (e.heldForPromotion || lane.attempts.unread.has(pageKey(e.primaryUrl))) return false;
     if (e.status === "active") return !sighted(e);
     return (hiddenSinceVerified(e) || lane.released.has(e.id)) && !(sighted(e) && lane.attempts.tried.has(pageKey(e.primaryUrl)));
@@ -1393,6 +1438,10 @@ async function reverify(
   const listedHere = new Set<string>();
   const tally = noTally();
   let notReverified = 0;
+  /** Pages this stage asked for, those that came back (read, gone or disallowed), and those it read. */
+  let pagesTried = 0;
+  let pagesFetched = 0;
+  let pagesRead = 0;
 
   const urls = [...new Set(pending.map((e) => e.primaryUrl))];
   const origins = urls.map((url) => originFor(onPage(url)[0]!, url, registry));
@@ -1427,6 +1476,10 @@ async function reverify(
       continue;
     }
     const page = done[i];
+    if (page !== undefined && page !== "cap" && !(page.kind === "failed" && page.error instanceof SpendCapReached)) {
+      pagesTried++;
+      if (page.kind !== "not-fetched" || page.failure !== "outage") pagesFetched++;
+    }
     // Past the cap, before the fetch or (with pages read together) by the time its call came up, the page is left alone.
     if (page === "cap" || (page?.kind === "failed" && page.error instanceof SpendCapReached)) {
       notReverified += onPage(url).length;
@@ -1446,6 +1499,7 @@ async function reverify(
       continue;
     }
     const { read } = page;
+    pagesRead++;
     addTally(tally, read.tally);
     problems.push(...read.problems);
     if (read.sightings) {
@@ -1519,6 +1573,9 @@ async function reverify(
     reverified: refreshed.size,
     sighted: listedHere,
     notReverified,
+    pagesTried,
+    pagesFetched,
+    pagesRead,
     tally,
     heldThroughOutage,
     heldSourceExcluded,
@@ -1622,13 +1679,7 @@ async function readPicks(
   const { config, today } = context;
   const lastDay = horizonEnd(today, config.horizonWeeks);
   const line = ownPagesLine("Picks");
-  const coversHorizon = (e: Event) => {
-    const date = calendarDate(e.start);
-    if (date === undefined || date > lastDay) return false;
-    const end = calendarDate(e.end);
-    return date >= today || (end !== undefined && end >= today);
-  };
-  const isPick = (e: Event) => e.status === "active" && e.dontMiss && e.eventUrl !== undefined && !alreadyRead.has(e.id) && coversHorizon(e);
+  const isPick = (e: Event) => e.status === "active" && e.dontMiss && e.eventUrl !== undefined && !alreadyRead.has(e.id) && coversDays(e, today, lastDay);
 
   let notRead = 0;
   let picks = 0;

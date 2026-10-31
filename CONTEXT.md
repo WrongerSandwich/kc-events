@@ -102,6 +102,10 @@ The part of the metro a venue is in, from a controlled list, shown on the site i
 **Run**:
 One execution of the research job: check sources, discover, extract, verify, curate, publish.
 
+**Midweek re-verification**:
+A run that only re-verifies (#253, `pnpm research --reverify-only`, Thursdays): no registry list is read and no search made; each active event, and each hidden since verified, whose span covers a day from today through the next ten has its primary page fetched the source's way and read once, and what the reading says applies as re-verification's always does (refresh, cancellation, date move, strike, outage). Nothing is created and no own page is read, so "New this week" stays weekly; the sources' state and the four runs of staleness are the weekly run's alone. Its report says `mode: "reverify-only"` and is headed "Midweek re-verification <date>"; its changes compare with the run before, weekly or midweek.
+_Avoid_: midweek run (when meaning the weekly run on another day)
+
 **Run report**:
 The committed record of one run: counts, spend against the cap, per-source results, sources failing repeatedly, unmappable neighborhoods, and promotion suggestions. Since #135 its JSON twin also records the run's changes against the run its dataset came from: new picks, moves, and events gone, which the changes page shows.
 

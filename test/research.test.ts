@@ -3,11 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stringify } from "yaml";
-import { configFromArgs, research } from "../src/research.js";
-import { emptyDataset, parseDataset, type Event } from "../src/dataset.js";
+import { research, runOptionsFromArgs } from "../src/research.js";
+import { emptyDataset, parseDataset, type Dataset, type Event } from "../src/dataset.js";
 import { fakePorts, type FakePortOptions } from "./fakes/ports.js";
 import { testConfig, TEST_MODELS } from "./fakes/config.js";
-import { candidateAt, knuckleheads, PAGE, reply, WEEK_1 } from "./fakes/fixtures.js";
+import { candidateAt, knuckleheads, PAGE, reply, source, WEEK_1 } from "./fakes/fixtures.js";
 
 // The run guards every invariant the schema holds, so the test of a refused dataset bends one record of
 // the real run's output: `corrupt.event`, when a test sets it, is applied to each event the run returns.
@@ -32,31 +32,51 @@ const withDiscovery = () => {
 
 describe("the command line's config", () => {
   it("is the file's when no argument is given", () => {
-    expect(configFromArgs(testConfig(), [], {})).toEqual(testConfig());
+    expect(runOptionsFromArgs(testConfig(), [], {}).config).toEqual(testConfig());
   });
 
   it("takes the horizon from --horizon-weeks", () => {
-    expect(configFromArgs(testConfig(), ["--horizon-weeks", "3"], {}).horizonWeeks).toBe(3);
-    expect(configFromArgs(testConfig(), ["--horizon-weeks=12"], {}).horizonWeeks).toBe(12);
+    expect(runOptionsFromArgs(testConfig(), ["--horizon-weeks", "3"], {}).config.horizonWeeks).toBe(3);
+    expect(runOptionsFromArgs(testConfig(), ["--horizon-weeks=12"], {}).config.horizonWeeks).toBe(12);
   });
 
   it.each(["0", "-2", "abc", "2.5", ""])("refuses --horizon-weeks %j", (value) => {
-    expect(() => configFromArgs(testConfig(), [`--horizon-weeks=${value}`], {})).toThrow(`--horizon-weeks must be a positive whole number, got "${value}"`);
+    expect(() => runOptionsFromArgs(testConfig(), [`--horizon-weeks=${value}`], {}).config).toThrow(`--horizon-weeks must be a positive whole number, got "${value}"`);
   });
 
   it("refuses an argument it does not know", () => {
-    expect(() => configFromArgs(testConfig(), ["--horizon", "3"], {})).toThrow(/Unknown option '--horizon'/);
+    expect(() => runOptionsFromArgs(testConfig(), ["--horizon", "3"], {}).config).toThrow(/Unknown option '--horizon'/);
   });
 
   it("turns discovery off with --no-discovery, keeping the rest of its settings", () => {
-    const config = configFromArgs(withDiscovery(), ["--no-discovery"], {});
+    const config = runOptionsFromArgs(withDiscovery(), ["--no-discovery"], {}).config;
     expect(config.discovery).toEqual({ ...withDiscovery().discovery, enabled: false });
   });
 
   it("refuses discovery with no Tavily key, before anything runs", () => {
-    expect(() => configFromArgs(withDiscovery(), [], {})).toThrow("discovery is on but TAVILY_API_KEY is not set");
-    expect(configFromArgs(withDiscovery(), [], { TAVILY_API_KEY: "key" }).discovery.enabled).toBe(true);
-    expect(configFromArgs(withDiscovery(), ["--no-discovery"], {}).discovery.enabled).toBe(false);
+    expect(() => runOptionsFromArgs(withDiscovery(), [], {}).config).toThrow("discovery is on but TAVILY_API_KEY is not set");
+    expect(runOptionsFromArgs(withDiscovery(), [], { TAVILY_API_KEY: "key" }).config.discovery.enabled).toBe(true);
+    expect(runOptionsFromArgs(withDiscovery(), ["--no-discovery"], {}).config.discovery.enabled).toBe(false);
+  });
+
+  it("is a weekly run unless --reverify-only is given (#253)", () => {
+    expect(runOptionsFromArgs(testConfig(), [], {}).reverifyOnly).toBeUndefined();
+  });
+
+  it("makes a midweek pass of ten days with --reverify-only, or of --days N, with discovery off and no Tavily key needed (#253)", () => {
+    const tenDays = runOptionsFromArgs(withDiscovery(), ["--reverify-only"], {});
+    expect(tenDays.reverifyOnly).toEqual({ days: 10 });
+    expect(tenDays.config.discovery.enabled).toBe(false);
+    expect(runOptionsFromArgs(testConfig(), ["--reverify-only", "--days", "4"], {}).reverifyOnly).toEqual({ days: 4 });
+    expect(runOptionsFromArgs(testConfig(), ["--reverify-only", "--days=14"], {}).reverifyOnly).toEqual({ days: 14 });
+  });
+
+  it.each(["0", "-1", "abc", "1.5", ""])("refuses --days %j", (value) => {
+    expect(() => runOptionsFromArgs(testConfig(), ["--reverify-only", `--days=${value}`], {})).toThrow(`--days must be a positive whole number, got "${value}"`);
+  });
+
+  it("refuses --days without --reverify-only", () => {
+    expect(() => runOptionsFromArgs(testConfig(), ["--days", "4"], {})).toThrow("--days is the window of a --reverify-only run");
   });
 });
 
@@ -90,15 +110,16 @@ describe("a research run's files", () => {
     return entries.filter((e) => e.isFile()).map((e) => join(e.parentPath, e.name).slice(data.length + 1)).sort();
   };
 
-  const researchWith = (options: FakePortOptions) => {
+  const researchWith = (options: FakePortOptions, { now = WEEK_1, args = [] }: { now?: Date; args?: string[] } = {}) => {
     let closed = false;
+    const fakes = fakePorts(now, options);
     const done = research({
       root,
-      args: [],
+      args,
       env: {},
-      adapters: () => ({ ports: fakePorts(WEEK_1, options).ports, close: async () => void (closed = true) }),
+      adapters: () => ({ ports: fakes.ports, close: async () => void (closed = true) }),
     });
-    return { done, closed: () => closed };
+    return { done, closed: () => closed, calls: fakes.calls };
   };
 
   it("writes exactly the dataset and the report's two files, and lets go of the adapters", async () => {
@@ -134,6 +155,39 @@ describe("a research run's files", () => {
     evidence: {},
   });
   const readJson = async (path: string) => JSON.parse(await readFile(join(root, "data", path), "utf8"));
+
+  it("a midweek pass re-reads only the pages of the window's events, strikes what its page no longer lists, creates nothing, and says so in its report (#253)", async () => {
+    const elsewhere = source("Elsewhere");
+    await writeFile(join(root, "data", "registry.yaml"), stringify({ sources: [knuckleheads, elsewhere] }));
+    const near = candidateAt(knuckleheads, { title: "Near Show", startDate: "2026-10-08", dateEvidence: "Thu, Oct 8" });
+    const late = candidateAt(knuckleheads, { title: "Late Show", startDate: "2026-11-21", dateEvidence: "Sat, Nov 21" });
+    const far = candidateAt(elsewhere, { title: "Far Show", startDate: "2026-11-20", dateEvidence: "Fri, Nov 20" });
+    const pages = { [CALENDAR_URL]: PAGE, [elsewhere.urls[0]!]: PAGE };
+    await researchWith({ pages, completions: [reply(near, late), reply(far)] }).done;
+    const weekly = parseDataset(await readJson("events.json"), testConfig());
+    // Three days on, with a window of ten: Near Show is in it, Late Show and Far Show are not.
+    const midweek = new Date(WEEK_1.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const brandNew = candidateAt(knuckleheads, { title: "Brand New", startDate: "2026-10-09", dateEvidence: "Fri, Oct 9" });
+
+    const { done, calls } = researchWith({ pages, completions: [reply(brandNew, late)] }, { now: midweek, args: ["--reverify-only"] });
+    const { report, written } = await done;
+
+    expect(calls.filter((c) => c.startsWith("fetch:"))).toEqual([`fetch:${CALENDAR_URL}`]);
+    expect(calls.some((c) => c.startsWith("search:"))).toBe(false);
+    const after = parseDataset(await readJson("events.json"), testConfig());
+    expect(after.events.map((e) => e.title)).toEqual(weekly.events.map((e) => e.title));
+    const titled = (dataset: Dataset, title: string) => dataset.events.find((e) => e.title === title)!;
+    expect(titled(after, "Near Show").verificationFailures).toBe(1);
+    expect(titled(after, "Late Show")).toEqual(titled(weekly, "Late Show"));
+    expect(titled(after, "Far Show")).toEqual(titled(weekly, "Far Show"));
+    expect(after.sourceState).toEqual(weekly.sourceState);
+    expect(written).toEqual([join(root, "data", "events.json"), join(root, "data", "runs", "2026-10-05.json"), join(root, "data", "runs", "2026-10-05.md")]);
+    expect(report).toMatchObject({ runDate: "2026-10-05", mode: "reverify-only", windowDays: 10, sources: [], reverification: { pagesRead: 1 } });
+    expect((await readJson("runs/2026-10-05.json")).mode).toBe("reverify-only");
+    const markdown = await readFile(join(root, "data", "runs", "2026-10-05.md"), "utf8");
+    expect(markdown.split("\n")[0]).toBe("# Midweek re-verification 2026-10-05");
+    expect(markdown).toContain("1 page re-read.");
+  });
 
   it("moves long-expired records to the archive file for their year, adding to what is there, and the live file loads alone (#82)", async () => {
     await writeFile(join(root, "data", "events.json"), JSON.stringify({ ...emptyDataset(), events: [longGone("evt_a", "2026-06-01"), longGone("evt_b", "2025-11-01")] }));

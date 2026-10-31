@@ -115,7 +115,7 @@ describe("a model call that throws", () => {
     expect(second.dataset.events.find((e) => e.title === "Bravo Show")).toEqual(first.dataset.events.find((e) => e.title === "Bravo Show"));
     expect(second.report.counts).toMatchObject({ reverified: 0, expired: { "two-strike": 0 } });
     expect(second.report.reverification.problems).toEqual([`${BRAVO_URL} not re-read: the model call failed (terminated); 1 event left unchanged`]);
-    expect(renderReportMarkdown(second.report)).toContain(`## Re-verification\n\n- ${BRAVO_URL} not re-read`);
+    expect(renderReportMarkdown(second.report)).toContain(`## Re-verification\n\n0 pages re-read.\n\n- ${BRAVO_URL} not re-read`);
   });
 
   it("on curation leaves that batch unjudged and says why in the curation problems", async () => {

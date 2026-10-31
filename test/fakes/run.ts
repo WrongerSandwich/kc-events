@@ -10,7 +10,7 @@ import { testConfig, testPrompts } from "./config.js";
 /**
  * One run over these registry sources with canned pages and scripted model replies, under the test
  * config unless another is given, and with these search results by query when the config turns
- * discovery on, and with curation's unscripted replies from `curate` when given. The dataset it returns must parse; the fake ports' calls come back
+ * discovery on, and with curation's unscripted replies from `curate` when given, and as a midweek pass when `reverifyOnly` is given. The dataset it returns must parse; the fake ports' calls come back
  * and model requests come back with the run's output. Each canned page carries the quotes the
  * scripted replies make, as a real page carries what the model quotes from it, unless
  * `pagesCarryQuotes` is false.
@@ -26,6 +26,7 @@ export async function runWith(
     searches,
     pagesCarryQuotes = true,
     curate,
+    reverifyOnly,
   }: {
     sources: Source[];
     pages: Record<string, CannedPage>;
@@ -34,10 +35,11 @@ export async function runWith(
     searches?: Record<string, SearchResult[] | Error>;
     pagesCarryQuotes?: boolean;
     curate?: (request: CompletionRequest) => CompletionResult;
+    reverifyOnly?: { days: number };
   },
 ) {
   const fakes = fakePorts(now, { pages, completions, pagesCarryQuotes, ...(searches ? { searches } : {}), ...(curate ? { curate } : {}) });
-  const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports });
+  const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports, ...(reverifyOnly && { reverifyOnly }) });
   expect(parseDataset(result.dataset, config)).toEqual(result.dataset);
   return { ...result, calls: fakes.calls, requests: fakes.requests };
 }

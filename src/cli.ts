@@ -5,6 +5,7 @@
  * BROWSER_CHANNEL=chrome has the browser fetcher use an installed Chrome instead of Playwright's Chromium.
  *
  *   pnpm research [--horizon-weeks N] [--no-discovery]
+ *   pnpm research --reverify-only [--days N]    (the midweek re-verification, #253)
  */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -18,6 +19,9 @@ async function main() {
 
   const { counts, spend, discovery, curation, promotionSuggestions } = report;
   const expired = Object.values(counts.expired).reduce((sum, n) => sum + n, 0);
+  if (report.mode === "reverify-only") {
+    console.log(`Midweek re-verification ${report.runDate}, the next ${report.windowDays} days: ${report.reverification.pagesRead} page(s) re-read.`);
+  }
   console.log(
     `Run ${report.runDate}: ${counts.found} found, ${counts.new} new, ${counts.updated} updated, ${counts.reverified} re-verified, ` +
       `${counts.heldUnverified} held unverified, ${counts.heldForPromotion} held for promotion, ${counts.releasedForPromotion} released by promotion, ${expired} expired; ` +
