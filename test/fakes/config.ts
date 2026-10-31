@@ -12,6 +12,8 @@ export function testConfig(overrides: Partial<RunConfig> = {}): RunConfig {
       spendCapUsd: 5,
       // One read of each page, so a test scripts one reply per page; the two-read tests set 2 (#224).
       extractionReads: 1,
+      // One page at a time, so a test's scripted replies, fetches and calls keep their order; the concurrency tests set more (#252).
+      concurrency: 1,
       models: { ...TEST_MODELS },
       kinds: ["music", "other"],
       neighborhoods: { "Central KC": ["Westport", "East Bottoms", "Crossroads"], Lawrence: ["Lawrence"] },

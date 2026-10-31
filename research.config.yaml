@@ -20,6 +20,13 @@ spendCapUsd: 5
 # fail; its counts come from the first read that worked, and the source's report line says how many
 # sightings the second read added. Discovery leads, re-verification and own pages are read once.
 extractionReads: 2
+# How many pages each stage reads at once (#252): registry pages (a page's two reads together, so up
+# to twice this many model calls in flight), discovery leads, re-verified pages and own pages. The
+# calls go out in page order and each is checked against spendCapUsd before it goes, so a run can end
+# up to about 2 x concurrency calls past the cap (a few cents against a 5 USD cap). The fetch policy's
+# pause is per origin, so pages on one host are still fetched a crawl delay apart. 1 reads one page at
+# a time.
+concurrency: 4
 
 models:
   extraction: openai/gpt-6-luna

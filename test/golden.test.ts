@@ -81,10 +81,14 @@ function flaggingBigShow(model: ModelPort): ModelPort {
   };
 }
 
-async function weekly(now: Date, dataset: Dataset, { pages, completions, searches = {} }: { pages: Record<string, CannedPage>; completions: CompletionResult[]; searches?: Record<string, SearchResult[]> }) {
+async function weekly(
+  now: Date,
+  dataset: Dataset,
+  { pages, completions, searches = {}, concurrency }: { pages: Record<string, CannedPage>; completions: CompletionResult[]; searches?: Record<string, SearchResult[]>; concurrency: number },
+) {
   const fakes = fakePorts(now, { pages, completions, searches });
   const ports = { ...fakes.ports, model: flaggingBigShow(fakes.ports.model) };
-  const result = await run({ config, prompts: testPrompts(), dataset, registry, ports });
+  const result = await run({ config: { ...config, concurrency }, prompts: testPrompts(), dataset, registry, ports });
   expect(parseDataset(result.dataset, config)).toEqual(result.dataset);
   expect(parseRunReport(JSON.parse(JSON.stringify(result.report)))).toEqual(result.report);
   return result;
@@ -95,7 +99,8 @@ async function pin(week: number, { dataset, report }: { dataset: Dataset; report
   await expect(renderReportMarkdown(report)).toMatchFileSnapshot(`__snapshots__/golden/week-${week}.md`);
 }
 
-describe("golden three-week scenario", () => {
+// The same snapshots at one page at a time and at several (#252): reading pages together changes nothing a run writes.
+describe.each([1, 4])("golden three-week scenario, %i page(s) at once", (concurrency) => {
   it("pins each week's dataset and report", async () => {
     const calendars = (midlandPage: CannedPage): Record<string, CannedPage> => ({
       [knuckleheads.urls[0]!]: KNUCKLEHEADS_PAGE,
@@ -106,6 +111,7 @@ describe("golden three-week scenario", () => {
     });
 
     const week1 = await weekly(WEEK_1, emptyDataset(), {
+      concurrency,
       pages: calendars(PAGE),
       searches: { [queryAt(WEEK_1)]: [{ url: PROMOTER_PAGE, title: "Promoter Night", snippet: "Live at The Truman" }] },
       completions: [reply(bigShow, goneShow, closer), reply(bigShow, goneShow, closer), reply(lateSet), reply(lateSet), reply(arenaNight), reply(arenaNight), reply(promoterNight), bigShowPage],
@@ -113,12 +119,14 @@ describe("golden three-week scenario", () => {
     await pin(1, week1);
 
     const week2 = await weekly(WEEK_2, week1.dataset, {
+      concurrency,
       pages: calendars(new Error("connect ECONNREFUSED")),
       completions: [reply(bigShow, closer), reply(bigShow, closer), reply(lateSet), reply(lateSet)],
     });
     await pin(2, week2);
 
     const week3 = await weekly(WEEK_3, week2.dataset, {
+      concurrency,
       pages: calendars(PAGE),
       completions: [reply(bigShow, closer), reply(bigShow, closer), reply(lateSet), reply(lateSet), reply(arenaNight), reply(arenaNight)],
     });

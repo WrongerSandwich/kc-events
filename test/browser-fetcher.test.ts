@@ -218,6 +218,20 @@ describe("browser fetcher", () => {
     }
   });
 
+  it("reads two pages fetched at once through one launch, each in its own context, closed after (#252)", async () => {
+    const browser = browserRunning();
+    const fetcher = createBrowserFetcher(plainFetcher());
+
+    const [calendar, films, again] = await Promise.all([fetcher.fetch(CALENDAR), fetcher.fetch("https://cinema.test/films"), fetcher.fetch(CALENDAR)]);
+
+    for (const read of [calendar, films, again]) expect(read).toMatchObject({ status: 200, robotsAllowed: true, body: expect.stringContaining("Big Show") });
+    expect([calendar.finalUrl, films.finalUrl]).toEqual([CALENDAR, "https://cinema.test/films"]);
+    expect(launch).toHaveBeenCalledOnce();
+    // The calendar asked for twice at once is loaded once.
+    expect(browser.contexts).toHaveLength(2);
+    for (const context of browser.contexts) expect(context.closed).toBe(true);
+  });
+
   it("closes without launching when no page needed the browser", async () => {
     const fetcher = createBrowserFetcher(plainFetcher());
 

@@ -122,6 +122,13 @@ export const configSchema = z.strictObject({
    * pages are read once either way.
    */
   extractionReads: z.union([z.literal(1), z.literal(2)]).default(2),
+  /**
+   * How many pages each stage reads at once (#252): registry pages, discovery leads, re-verified pages
+   * and own pages. A registry page's two reads count as one page. Their model calls go out in page
+   * order, each checked against the spend cap, so up to about two calls for each page in flight can
+   * end past the cap. At 1, one page at a time.
+   */
+  concurrency: z.number().int().positive().default(4),
   models: z
     .strictObject({
       extraction: z.string().min(1).default(DEFAULT_MODELS.extraction),

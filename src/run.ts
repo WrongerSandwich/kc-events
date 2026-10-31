@@ -64,6 +64,7 @@ import {
 import { listingOf, type ExcludedSource, type Registry, type Source } from "./registry.js";
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
+import { inOrder } from "./pool.js";
 import type { CandidateTally, EventRef, LikelyDuplicateRecord, OwnPagesReport, RunReport, SourceReport } from "./report.js";
 import { likelyDuplicatePairs } from "./likely-duplicates.js";
 import { awayGame, SKIP_REASONS, skipReason, type SkipReason } from "./skip.js";
@@ -531,8 +532,15 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   const tally = noTally();
   let pagesNotExtracted = 0;
   const lastDay = horizonEnd(context.today, context.config.horizonWeeks);
+  // The reads go out several pages at once (#252) and are taken up below one page at a time in registry order, so what the
+  // merge and the report see does not depend on which page came back first.
+  const settledReads = await inOrder(pages, context.config.concurrency, ({ source, page }) =>
+    isIndexPage(page.finalUrl, context.config)
+      ? Promise.resolve(undefined)
+      : Promise.allSettled(Array.from({ length: context.config.extractionReads }, () => extractPage(page, { lane: "registry", source }, model, context))),
+  );
 
-  for (const { source, page } of pages) {
+  for (const [index, { source, page }] of pages.entries()) {
     const outcome = bySource.get(source.name) ?? { extracted: 0, problems: [] };
     bySource.set(source.name, outcome);
     // The page as fetched, as it redirected, and the listing it is a page of (#226).
@@ -548,9 +556,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
       outcome.problems.push(`${page.finalUrl} is an index page and was not extracted`);
       continue;
     }
-    const settled = await Promise.allSettled(
-      Array.from({ length: context.config.extractionReads }, () => extractPage(page, { lane: "registry", source }, model, context)),
-    );
+    const settled = settledReads[index]!;
     const reads = settled.flatMap((s) => (s.status === "fulfilled" ? [s.value] : []));
     const failures = settled.flatMap((s, i) => (s.status === "rejected" ? [{ read: i, error: s.reason as unknown }] : []));
     // The reading the page's counts come from: the first that was read, else the first that came back.
@@ -1388,11 +1394,22 @@ async function reverify(
   const tally = noTally();
   let notReverified = 0;
 
-  for (const url of new Set(pending.map((e) => e.primaryUrl))) {
+  const urls = [...new Set(pending.map((e) => e.primaryUrl))];
+  const origins = urls.map((url) => originFor(onPage(url)[0]!, url, registry));
+  // The pages no lane read are fetched and read several at once (#252); below, each page is taken up in order.
+  const done = await inOrder(urls, context.config.concurrency, async (url, turn, i): Promise<PageRead | "cap" | undefined> => {
     const key = pageKey(url);
-    const origin = originFor(onPage(url)[0]!, url, registry);
+    const origin = origins[i]!;
+    if (excludedSourceOf(origin, url, registry) || lane.attempts.outages.has(key) || lane.attempts.tried.has(key)) return undefined;
+    if (ports.model.exhausted()) return "cap" as const;
+    // The page is fetched the way its source's pages are; a discovered page always plainly.
+    return fetchAndRead(url, origin.lane === "registry" ? fetcherFor(origin.source, ports) : plainly(ports), origin, ports.model, context, turn);
+  });
+
+  for (const [i, url] of urls.entries()) {
+    const key = pageKey(url);
     // An excluded source's page holds its events whoever read it this run: the exclusion was a decision about the source.
-    const excluded = excludedSourceOf(origin, url, registry);
+    const excluded = excludedSourceOf(origins[i]!, url, registry);
     if (excluded) {
       excludedAt.set(url, excluded);
       outageAt.add(url);
@@ -1409,14 +1426,14 @@ async function reverify(
       if (yielded) yieldAt.set(url, yielded);
       continue;
     }
-    if (ports.model.exhausted()) {
+    const page = done[i];
+    // Past the cap, before the fetch or (with pages read together) by the time its call came up, the page is left alone.
+    if (page === "cap" || (page?.kind === "failed" && page.error instanceof SpendCapReached)) {
       notReverified += onPage(url).length;
       continue;
     }
-    // The page is fetched the way its source's pages are; a discovered page always plainly.
-    const fetched = await fetchReadable(url, ...(origin.lane === "registry" ? fetcherFor(origin.source, ports) : plainly(ports)));
-    if (!("page" in fetched)) {
-      if (fetched.failure === "outage") {
+    if (page?.kind === "not-fetched") {
+      if (page.failure === "outage") {
         outageAt.add(url);
         continue;
       }
@@ -1424,15 +1441,11 @@ async function reverify(
       sightingsAt.set(url, []);
       continue;
     }
-    const { page } = fetched;
-    let read: Awaited<ReturnType<typeof extractPage>>;
-    try {
-      read = await extractPage(page, origin, ports.model, context);
-    } catch (error) {
-      if (error instanceof SpendCapReached) throw error;
-      problems.push(`${url} not re-read: ${modelFailed(error)}; ${plural(onPage(url).length, "event")} left unchanged`);
+    if (page?.kind !== "read") {
+      if (page?.kind === "failed") problems.push(`${url} not re-read: ${modelFailed(page.error)}; ${plural(onPage(url).length, "event")} left unchanged`);
       continue;
     }
+    const { read } = page;
     addTally(tally, read.tally);
     problems.push(...read.problems);
     if (read.sightings) {
@@ -1575,19 +1588,19 @@ async function readOwnPages(
 
   let notRead = 0;
   const read = new Set<string>();
-  const out = [];
-  for (const event of events) {
+  const plans = events.map((event) => {
     const { lead } = event;
     const flaggedSource = lead.lane === "registry" ? flagged.get(lead.source) : undefined;
-    if (!flaggedSource || !wantsTime(event)) {
-      out.push(event);
-      continue;
-    }
-    const outcome = await readOwnPage(event, ownPageFetcherFor(flaggedSource.source, ports), ports, context, rules, flaggedSource.line);
+    return flaggedSource && wantsTime(event) ? { route: ownPageFetcherFor(flaggedSource.source, ports), line: flaggedSource.line } : undefined;
+  });
+  const outcomes = await readOwnPagesTogether(events, plans, ports, context, rules);
+  const out = events.map((event, i) => {
+    const outcome = outcomes[i];
+    if (outcome === undefined) return event;
     if (outcome === "not-read") notRead++;
     else read.add(event.id);
-    out.push(outcome === "not-read" ? event : outcome);
-  }
+    return outcome === "not-read" ? event : outcome;
+  });
   return { events: out, report: [...flagged.values()].map((f) => f.line), notRead, read };
 }
 
@@ -1619,25 +1632,55 @@ async function readPicks(
 
   let notRead = 0;
   let picks = 0;
-  const out = [];
-  for (const event of events) {
-    if (!isPick(event)) {
-      out.push(event);
-      continue;
-    }
+  const plans = events.map((event) => {
+    if (!isPick(event)) return undefined;
     picks++;
     if (event.ownPageRead !== undefined && samePage(event.ownPageRead.page, event.eventUrl!)) {
       line.kept++;
-      out.push(event);
-      continue;
+      return undefined;
     }
     const { lead } = event;
     const source = lead.lane === "registry" ? registry.sources.find((s): s is Source => s.name === lead.source && s.status === "active") : undefined;
-    const outcome = await readOwnPage(event, source ? ownPageFetcherFor(source, ports) : plainly(ports), ports, context, rules, line);
+    return { route: source ? ownPageFetcherFor(source, ports) : plainly(ports), line };
+  });
+  const outcomes = await readOwnPagesTogether(events, plans, ports, context, rules);
+  const out = events.map((event, i) => {
+    const outcome = outcomes[i];
     if (outcome === "not-read") notRead++;
-    out.push(outcome === "not-read" ? event : outcome);
-  }
+    return outcome === undefined || outcome === "not-read" ? event : outcome;
+  });
   return { events: out, report: picks > 0 ? [line] : [], notRead };
+}
+
+/**
+ * The own pages planned for these events read several at once (#252) by readOwnPage, an event with no plan left
+ * unread (undefined). Each read reports into a line of its own, added to its plan's line in event order, so the
+ * counts and problems come out as reading one page at a time gives them.
+ */
+async function readOwnPagesTogether(
+  events: Event[],
+  plans: ({ route: FetchRoute; line: OwnPagesReport } | undefined)[],
+  ports: Ports & { model: CappedModel },
+  context: ExtractionContext,
+  rules: string,
+): Promise<(Event | "not-read" | undefined)[]> {
+  const done = await inOrder(events, context.config.concurrency, async (event, turn, i) => {
+    const plan = plans[i];
+    if (!plan) return undefined;
+    const own = ownPagesLine(plan.line.source);
+    return { outcome: await readOwnPage(event, plan.route, ports, context, rules, own, turn), own };
+  });
+  return done.map((read, i) => {
+    if (!read) return undefined;
+    addOwnPagesLine(plans[i]!.line, read.own);
+    return read.outcome;
+  });
+}
+
+/** One own-pages line's counts and problems added to another's. */
+function addOwnPagesLine(into: OwnPagesReport, from: OwnPagesReport) {
+  for (const key of ["read", "timed", "priced", "aged", "dayed", "described", "kept", "dateDisagreements", "failed"] as const) into[key] += from[key];
+  into.problems.push(...from.problems);
 }
 
 /** A line of the report's own pages, with nothing read yet. */
@@ -1653,7 +1696,9 @@ function ownPagesLine(source: string): OwnPagesReport {
  * replaces only none, or one a list line's length (LISTING_LINE_LENGTH) when the page's is longer.
  * Another date is left for a person and reported. Any failure, a fetch or a model call, costs only
  * the read: the event stays as it was, with no strike or outage, and the line says why. Once the
- * spend cap is reached the page is not read, and the caller counts it.
+ * spend cap is reached the page is not read, and the caller counts it. The call waits for its turn
+ * (see inOrder), so with pages read together the own pages' calls go out in event order; a ticket
+ * page's call (readTicketPage) follows its own page's reply and keeps no turn.
  */
 async function readOwnPage(
   event: Event,
@@ -1662,6 +1707,7 @@ async function readOwnPage(
   context: ExtractionContext,
   rules: string,
   line: OwnPagesReport,
+  turn: () => Promise<void>,
 ): Promise<Event | "not-read"> {
   const { config, today } = context;
   const url = event.eventUrl!;
@@ -1674,6 +1720,7 @@ async function readOwnPage(
   const fetched = await fetchReadable(url, ...route);
   if (!("page" in fetched)) return failed(`${fetched.problem}; nothing taken`);
   const reading = readPage(fetched.page, config);
+  await turn();
   let reply: Awaited<ReturnType<ModelPort["complete"]>>;
   try {
     reply = await ports.model.complete(buildOwnPageRequest(event, fetched.page, reading, rules, config, today));
@@ -1842,16 +1889,51 @@ const plainly = (ports: Ports): FetchRoute => [ports.fetcher];
 /** HTTP statuses that say a page is gone, which is a reading of it; any other failure is an outage. */
 const GONE_STATUSES = new Set([404, 410]);
 
+type NotFetched = { problem: string; failure: "outage" | "gone" | "disallowed" };
+type Fetched = { page: FetchResult } | NotFetched;
+
+/**
+ * A page fetched and, when it came back readable, read once (fetchAndRead): the fetch's failure, the page left
+ * unread, its reading, or the model's error. A stage reading pages together (#252) gets these back from the pool
+ * and takes them up in its own order.
+ */
+type PageRead =
+  | ({ kind: "not-fetched" } & NotFetched)
+  | { kind: "left"; page: FetchResult }
+  | { kind: "read"; page: FetchResult; read: Awaited<ReturnType<typeof extractPage>> }
+  | { kind: "failed"; page: FetchResult; error: unknown };
+
+/**
+ * A page fetched by the route given and read once its turn comes (see inOrder), unless `leave` says to leave it
+ * unread. A model call that throws, the spend cap's refusal included, is the read's failure, for the caller to judge.
+ */
+async function fetchAndRead(
+  url: string,
+  route: FetchRoute,
+  origin: PageOrigin,
+  model: ModelPort,
+  context: ExtractionContext,
+  turn: () => Promise<void>,
+  leave: (page: FetchResult) => boolean = () => false,
+): Promise<PageRead> {
+  const fetched = await fetchReadable(url, ...route);
+  if (!("page" in fetched)) return { kind: "not-fetched", ...fetched };
+  const { page } = fetched;
+  if (leave(page)) return { kind: "left", page };
+  await turn();
+  try {
+    return { kind: "read", page, read: await extractPage(page, origin, model, context) };
+  } catch (error) {
+    return { kind: "failed", page, error };
+  }
+}
+
 /**
  * A page that came back readable, or the problem with it and what kind of failure it was: an
  * outage (it could not be loaded: a thrown network error, which includes a robots.txt that could
  * not be reached, or a failing status), gone (404, 410), or disallowed by robots.txt.
  */
-async function fetchReadable(
-  url: string,
-  fetcher: FetchPort,
-  options?: FetchOptions,
-): Promise<{ page: FetchResult } | { problem: string; failure: "outage" | "gone" | "disallowed" }> {
+async function fetchReadable(url: string, fetcher: FetchPort, options?: FetchOptions): Promise<Fetched> {
   try {
     const page = await fetcher.fetch(url, options);
     if (!page.robotsAllowed) return { problem: `robots.txt disallows ${url}`, failure: "disallowed" };
@@ -1914,57 +1996,78 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     return true;
   };
 
-  /** The page behind a lead not yet followed this run, or nothing: already followed, an excluded host, the cap, or a problem fetching it. */
-  const follow = async (url: string): Promise<FetchResult | undefined> => {
-    if (followed.has(pageKey(url)) || registryTried.has(pageKey(url))) return undefined;
+  /** Whether a lead is to be fetched: not when already followed this run, on an excluded host, or once the cap is reached. */
+  const toFollow = (url: string): boolean => {
+    if (followed.has(pageKey(url)) || registryTried.has(pageKey(url))) return false;
     followed.add(pageKey(url));
-    if (onExcludedHost(url)) return undefined;
+    if (onExcludedHost(url)) return false;
     if (ports.model.exhausted()) {
       outcome.leadsNotFollowed++;
-      return undefined;
+      return false;
     }
-    const fetched = await fetchReadable(url, ports.fetcher);
-    if ("page" in fetched) return fetched.page;
-    if (fetched.failure === "outage") attempts.outages.add(pageKey(url));
+    return true;
+  };
+
+  /** A lead whose fetch failed: an outage or a page gone, and the problem said. */
+  const notFetched = (url: string, { failure, problem }: NotFetched) => {
+    if (failure === "outage") attempts.outages.add(pageKey(url));
     else attempts.gone.add(pageKey(url));
-    report.problems.push(fetched.problem);
-    return undefined;
+    report.problems.push(problem);
+  };
+
+  /** An aggregator's page fetched for its outbound links, each a lead; none when it is not followed or could not be fetched. */
+  const linksOn = async (url: string): Promise<string[]> => {
+    if (!toFollow(url)) return [];
+    const fetched = await fetchReadable(url, ports.fetcher);
+    if (!("page" in fetched)) {
+      notFetched(url, fetched);
+      return [];
+    }
+    report.aggregatorPages++;
+    return outboundLinks(fetched.page, config);
   };
 
   /**
-   * A lead's page read as a primary page. A lead counts as tried only once its fetch has said
+   * A lead's page fetched and, unless its redirects end on an index page or an excluded host, read once its turn
+   * comes; nothing when it is not followed. What it did is taken up afterwards, in lead order (takeUp).
+   */
+  const readLead = async (url: string, query: string, turn: () => Promise<void>): Promise<PageRead | undefined> => {
+    if (!toFollow(url)) return undefined;
+    const leave = (page: FetchResult) => isIndexPage(page.finalUrl, config) || excludedSourceOnHost(page.finalUrl, registry) !== undefined;
+    return fetchAndRead(url, plainly(ports), { lane: "discovery", query }, ports.model, context, turn, leave);
+  };
+
+  /**
+   * A lead's page taken up as a primary page. A lead counts as tried only once its fetch has said
    * something about the page: it loaded, or it is gone. One the cap skipped is no reading, so
    * re-verification is left to judge it, and one that could not be loaded is an outage. One whose
    * redirects end on an index page cannot be read as a primary page either; it is an outage too, so
    * the events citing it are held up to the outage limit rather than struck.
    */
-  const readPrimaryPage = async (url: string, query: string) => {
-    const page = await follow(url);
-    if (!page) {
-      if (attempts.gone.has(pageKey(url))) attempts.tried.add(pageKey(url));
+  const takeUp = (url: string, done: PageRead | undefined) => {
+    if (!done) return;
+    if (done.kind === "not-fetched") {
+      notFetched(url, done);
+      if (done.failure !== "outage") attempts.tried.add(pageKey(url));
+      return;
+    }
+    const { page } = done;
+    if (done.kind === "left") {
+      attempts.outages.add(pageKey(url));
+      if (isIndexPage(page.finalUrl, config)) report.problems.push(`${url} led to an index page and was not extracted`);
+      // A lead whose redirects end on an excluded host is not read either (ADR 0012); like one that could not be read, it says nothing about its events.
+      else onExcludedHost(page.finalUrl);
       return;
     }
     const pageUrls = [url, page.finalUrl].map(pageKey);
-    if (isIndexPage(page.finalUrl, config)) {
-      attempts.outages.add(pageKey(url));
-      report.problems.push(`${url} led to an index page and was not extracted`);
-      return;
-    }
-    // A lead whose redirects end on an excluded host is not read either (ADR 0012); like one that could not be read, it says nothing about its events.
-    if (onExcludedHost(page.finalUrl)) {
-      attempts.outages.add(pageKey(url));
-      return;
-    }
     for (const u of pageUrls) attempts.tried.add(u);
-    let read: Awaited<ReturnType<typeof extractPage>>;
-    try {
-      read = await extractPage(page, { lane: "discovery", query }, ports.model, context);
-    } catch (error) {
+    if (done.kind === "failed") {
       for (const u of pageUrls) attempts.unread.add(u);
-      if (error instanceof SpendCapReached) outcome.pagesNotExtracted++;
-      else report.problems.push(`${url} not extracted: ${modelFailed(error)}`);
+      if (done.error instanceof SpendCapReached) outcome.pagesNotExtracted++;
+      else report.problems.push(`${url} not extracted: ${modelFailed(done.error)}`);
       return;
     }
+    const { read } = done;
     report.pagesExtracted++;
     addTally(outcome.tally, read.tally);
     report.problems.push(...read.problems);
@@ -1974,13 +2077,6 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     outcome.sightings.push(...read.sightings);
     const host = hostOf(page.finalUrl);
     if (host && !outcome.hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) outcome.hosts.set(host, normalizeUrl(page.finalUrl, url));
-  };
-
-  const readIndex = async (url: string, query: string) => {
-    const page = await follow(url);
-    if (!page) return;
-    report.aggregatorPages++;
-    for (const link of outboundLinks(page, config)) await readPrimaryPage(link, query);
   };
 
   const queries = config.discovery.enabled ? discoveryQueries(config, context.today) : [];
@@ -2002,11 +2098,17 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
       continue;
     }
     report.queries++;
+    // An aggregator's links stand in its place among the query's leads; then the leads are read several at once (#252)
+    // and taken up in that order, so the lane's sightings and report do not depend on which page came back first.
+    const leads: string[] = [];
     for (const result of results.slice(0, config.discovery.resultsPerQuery)) {
       const url = normalizeUrl(result.url, "");
       if (!isLead(url, config)) continue;
-      await (isIndexPage(url, config) ? readIndex(url, query) : readPrimaryPage(url, query));
+      if (isIndexPage(url, config)) leads.push(...(await linksOn(url)));
+      else leads.push(url);
     }
+    const done = await inOrder(leads, config.concurrency, (url, turn) => readLead(url, query, turn));
+    for (const [i, url] of leads.entries()) takeUp(url, done[i]);
   }
   return outcome;
 }
