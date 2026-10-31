@@ -79,6 +79,20 @@ describe("a midweek re-verification pass", () => {
     expect(titled(dataset, "Late Show")).toEqual(titled(before, "Late Show"));
   });
 
+  it("counts a page that reads as listing nothing as an outage when three active events cite it, in its window or not", async () => {
+    const later = (title: string, startDate: string) => candidateAt(knuckleheads, { title, startDate, dateEvidence: title });
+    const result = await runWith(WEEK_1, emptyDataset(), {
+      sources: [knuckleheads, elsewhere],
+      pages: PAGES,
+      completions: [reply(near, late, later("Later Show", "2026-11-14"), later("Last Show", "2026-11-28")), reply(far)],
+    });
+
+    const { dataset, report } = await midweek(result.dataset, [reply()]);
+
+    expect(titled(dataset, "Near Show")).toEqual({ ...titled(result.dataset, "Near Show"), consecutiveOutages: 1 });
+    expect(report.reverification.problems).toEqual([`${CALENDAR_URL} loaded but read as listing nothing where 4 active events cite it; counted as an outage for them, not 4 strikes`]);
+  });
+
   it("expires an event its page now says is cancelled, and the report's changes list it as gone", async () => {
     const before = await weekly();
 

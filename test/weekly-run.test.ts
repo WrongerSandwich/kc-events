@@ -42,6 +42,10 @@ case "$1 $2" in
 esac
 `;
 
+const FAKE_CURL = `#!/usr/bin/env bash
+printf '%s\\n' "\${@: -1}" >> "$FAKE_PINGS"
+`;
+
 const git = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, encoding: "utf8", env: { ...process.env, ...GIT_ENV } });
 
 /** An origin holding the scripts and a dataset, a clone of it to run in, and a PATH with the fakes. */
@@ -63,22 +67,23 @@ async function clone() {
   git(work, "add", ".");
   git(work, "commit", "--quiet", "-m", "Start");
   git(work, "push", "--quiet", "origin", "HEAD:main");
-  await writeFile(join(work, ".env"), "GH_TOKEN=github_pat_test\n");
+  await writeFile(join(work, ".env"), "GH_TOKEN=github_pat_test\nHEALTHCHECKS_URL=https://hc.test/ping/abc\n");
 
   const bin = join(dir, "bin");
   await mkdir(bin);
   await writeFile(join(bin, "pnpm"), FAKE_PNPM);
   await writeFile(join(bin, "gh"), FAKE_GH);
-  await chmod(join(bin, "pnpm"), 0o755);
-  await chmod(join(bin, "gh"), 0o755);
+  await writeFile(join(bin, "curl"), FAKE_CURL);
+  for (const fake of ["pnpm", "gh", "curl"]) await chmod(join(bin, fake), 0o755);
   const calls = join(dir, "pnpm-calls");
   const comments = join(dir, "comments");
+  const pings = join(dir, "pings");
 
   const run = (...args: string[]) => {
     try {
       const output = execFileSync("bash", [join(work, "scripts", "weekly-run.sh"), ...args], {
         cwd: work,
-        env: { ...process.env, ...GIT_ENV, PATH: `${bin}:${process.env.PATH}`, XDG_STATE_HOME: join(dir, "state"), FAKE_CALLS: calls, FAKE_COMMENTS: comments },
+        env: { ...process.env, ...GIT_ENV, PATH: `${bin}:${process.env.PATH}`, XDG_STATE_HOME: join(dir, "state"), FAKE_CALLS: calls, FAKE_COMMENTS: comments, FAKE_PINGS: pings },
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -101,6 +106,7 @@ async function clone() {
     landed,
     researchCalls: async () => (await read(calls)).split("\n").filter((line) => line.startsWith("research")),
     comments: () => read(comments),
+    pings: async () => (await read(pings)).split("\n").filter(Boolean),
     subjects: () => git(origin, "log", "--format=%s", "main").trim().split("\n"),
   };
 }
@@ -115,6 +121,7 @@ describe("the weekly run script", () => {
     expect(await c.researchCalls()).toEqual(["research --no-discovery"]);
     expect(c.subjects()[0]).toBe(`Weekly research run ${TODAY}`);
     expect(await c.comments()).toContain(`${TODAY}: ok, 0 found, 0 new, 0 updated, 3 re-verified, 1 expired`);
+    expect(await c.pings()).toEqual(["https://hc.test/ping/abc/start", "https://hc.test/ping/abc"]);
   });
 
   it("with --reverify-only passes the flag through and commits as the midweek re-verification (#253)", async () => {
@@ -126,6 +133,8 @@ describe("the weekly run script", () => {
     expect(await c.researchCalls()).toEqual(["research --reverify-only --days 7"]);
     expect(c.subjects()[0]).toBe(`Midweek re-verification ${TODAY}`);
     expect(await c.comments()).toContain(`${TODAY} midweek re-verification: ok, 41 page(s) re-read, 3 re-verified, 1 expired`);
+    // A midweek success marks the check up for no one, so a missed weekly run still alerts.
+    expect(await c.pings()).toEqual([]);
   });
 
   it("refuses a midweek pass on a day origin/main already has one, running nothing", async () => {
@@ -138,6 +147,7 @@ describe("the weekly run script", () => {
     expect(output).toContain(`origin/main already has a midweek re-verification for ${TODAY}`);
     expect(await c.researchCalls()).toEqual([]);
     expect(await c.comments()).toContain(`**${TODAY} midweek re-verification: failed.**`);
+    expect(await c.pings()).toEqual(["https://hc.test/ping/abc/fail"]);
   });
 
   it("refuses a midweek pass on a weekly run's day, whose report it would write over", async () => {

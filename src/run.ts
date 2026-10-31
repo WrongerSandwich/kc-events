@@ -386,7 +386,6 @@ function assertSomethingFetched(sourceReports: SourceReport[]): void {
   throw new Error(`none of the ${checked.length} active registry sources could be fetched; the run stops so no event is struck:\n${details}`);
 }
 
-/** A capped model that also counts how its calls ended, for the fuse. */
 /** The registry lane of a midweek pass (#253): nothing fetched, the sources' state kept. */
 function idleRegistryLane(sourceState: Dataset["sourceState"]): Awaited<ReturnType<typeof checkRegistry>> {
   return { sourceReports: [], sourceState, failingSources: [], pages: [], attempts: noAttempts() };
@@ -410,6 +409,7 @@ function coversDays(e: Event, from: string, to: string): boolean {
   return date >= from || (end !== undefined && end >= from);
 }
 
+/** A capped model that also counts how its calls ended, for the fuse. */
 interface CountedModel extends CappedModel {
   outcomes(): { succeeded: number; failed: number; lastError?: string };
 }
@@ -1476,14 +1476,14 @@ async function reverify(
       continue;
     }
     const page = done[i];
-    if (page !== undefined && page !== "cap" && !(page.kind === "failed" && page.error instanceof SpendCapReached)) {
-      pagesTried++;
-      if (page.kind !== "not-fetched" || page.failure !== "outage") pagesFetched++;
-    }
     // Past the cap, before the fetch or (with pages read together) by the time its call came up, the page is left alone.
     if (page === "cap" || (page?.kind === "failed" && page.error instanceof SpendCapReached)) {
       notReverified += onPage(url).length;
       continue;
+    }
+    if (page !== undefined) {
+      pagesTried++;
+      if (page.kind !== "not-fetched" || page.failure !== "outage") pagesFetched++;
     }
     if (page?.kind === "not-fetched") {
       if (page.failure === "outage") {
@@ -1513,7 +1513,10 @@ async function reverify(
   // events, is a wobble (the model's, or a page that rendered empty), not news about each of them.
   for (const [url, yielded] of yieldAt) {
     if (yielded.listed > 0 || !sightingsAt.has(url) || goneAt.has(url) || partlyReadAt.has(url)) continue;
-    const wouldStrike = onPage(url).filter((e) => e.status === "active" && !startsAfterHorizon(e, lastDay)).length;
+    // A midweek pass re-reads the page for its window's events alone, but the reading is as empty for every event
+    // citing it, so the guard counts them all, as a weekly run's would (#253).
+    const citing = inWindow ? events.filter((e) => e.primaryUrl === url) : onPage(url);
+    const wouldStrike = citing.filter((e) => e.status === "active" && !startsAfterHorizon(e, lastDay)).length;
     if (wouldStrike < EMPTY_READING_GUARD) continue;
     sightingsAt.delete(url);
     outageAt.add(url);

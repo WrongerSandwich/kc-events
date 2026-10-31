@@ -31,8 +31,10 @@
 # research --reverify-only` re-reads the primary pages of the next ten days' events and creates
 # nothing, and the commit is "Midweek re-verification <run date>". It refuses a day origin/main already
 # has a midweek pass for, or a weekly run for, since its report would take that run's file. The build,
-# the checks, the wait on Vercel, the health comment and the healthchecks.io pings are the weekly run's;
-# a midweek success pings the check up as a weekly one does, so its one-week period is unchanged.
+# the checks, the wait on Vercel and the health comment are the weekly run's. Of the healthchecks.io
+# pings it sends only the failure: a start or a success would mark the check up, and a Thursday success
+# each week would keep a weekly run that stopped for good from ever alerting, so the check's one-week
+# period still counts from the last weekly run.
 #
 # Secrets come from the clone's gitignored .env (OPENROUTER_API_KEY, TAVILY_API_KEY, and GH_TOKEN, a
 # fine-grained token for this repository alone that the push, the health issue, and the wait on
@@ -162,12 +164,12 @@ trap 'fail "the script was stopped by a signal"' TERM HUP INT
 # says so, since a lock that stays busy for a week means something is stuck holding it.
 exec 9>"$LOG_DIR/run.lock"
 if ! flock -n 9; then
-  fail "another weekly run holds the lock ($LOG_DIR/run.lock)"
+  fail "another run holds the lock ($LOG_DIR/run.lock)"
 fi
 
 echo "$RUN_NAME starting $(date --iso-8601=seconds) in $ROOT"
 if [[ -z "$HC_URL" ]]; then echo "no HEALTHCHECKS_URL in .env; a failure goes on the health issue and alerts no one"; fi
-ping_check /start
+if [[ -z "$MIDWEEK" ]]; then ping_check /start; fi
 find "$LOG_DIR" -maxdepth 1 -name 'run-*.log' -mtime +90 -delete
 
 # This clone only ever holds data commits, so it starts each run exactly at origin/main: a rebase a
@@ -311,5 +313,5 @@ if [[ -n "$site_warnings" ]]; then warning_note=$(printf '\n\n%s' "$(sed 's/^/- 
 label=$run_date
 if [[ -n "$MIDWEEK" ]]; then label="$run_date midweek re-verification"; fi
 report "$(redact "$(printf '%s: ok, %s (%s, deployed)%s%s' "$label" "$summary" "$PUSHED" "$warning_note" "$(deploy_note)")")"
-# Silent: the success ping only marks the check up for another week.
-ping_check "" "$label: ok"
+# Silent: the success ping only marks the check up for another week; a midweek pass's would hide a missed one.
+if [[ -z "$MIDWEEK" ]]; then ping_check "" "$label: ok"; fi
