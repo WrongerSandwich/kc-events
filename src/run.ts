@@ -39,7 +39,17 @@ import {
   WHY_LINE_CAP,
   type CurationContext,
 } from "./curation.js";
-import { discoveryQueries, excludedSourceOnHost, isIndexPage, isLead, onAdmittedHost, outboundLinks, trackDiscoveryHosts } from "./discovery.js";
+import {
+  discoveryQueries,
+  discoveryThisRun,
+  excludedSourceOnHost,
+  isIndexPage,
+  isLead,
+  onAdmittedHost,
+  outboundLinks,
+  suggestedHosts,
+  trackDiscoveryHosts,
+} from "./discovery.js";
 import { hostOf, onHost, pageKey, samePage, sameSite } from "./hosts.js";
 import {
   calendarDate,
@@ -114,12 +124,14 @@ export interface RunOutput {
  * dataset and the run report. It performs no I/O of its own.
  */
 export async function run({ config: givenConfig, prompts, dataset, registry, ports, reverifyOnly }: RunInput): Promise<RunOutput> {
-  // A midweek pass searches nothing, whatever the config says.
-  const config = reverifyOnly ? { ...givenConfig, discovery: { ...givenConfig.discovery, enabled: false } } : givenConfig;
   const startedAt = ports.clock.now();
+  const today = toLocalDate(startedAt, givenConfig.timezone);
+  // A midweek pass searches nothing, whatever the config says, and a monthly lane only in a month's first run (#255).
+  const lane = discoveryThisRun(givenConfig, { lastRan: dataset.discoveryLastRan, today, midweek: reverifyOnly !== undefined });
+  const config = lane.runs ? givenConfig : { ...givenConfig, discovery: { ...givenConfig.discovery, enabled: false } };
   const startedIso = toLocalIso(startedAt, config.timezone);
-
-  const today = toLocalDate(startedAt, config.timezone);
+  // What a lane that ran before suggested for promotion, whose leads this one leaves (#255).
+  const suggested = suggestedHosts(dataset.discoveryState, registry, config);
   // Before any fetch: a registry source in no region is a config error.
   const neighborhoods = neighborhoodList(config, registry);
   // Every model call goes through the cap, whatever stage makes it, and is counted for the fuse.
@@ -137,7 +149,8 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   const extraction = await extractFromPages(registryLane.pages, model, extractionContext);
   const sourceReports = registryLane.sourceReports.map((report) => withExtraction(report, extraction.bySource.get(report.name)));
   // Discovery runs after the registry lane, so a page the registry already read is not read again.
-  const discovery = await discover({ ...ports, model }, extractionContext, registry, registryLane.attempts.tried);
+  const discovery = await discover({ ...ports, model }, extractionContext, registry, registryLane.attempts.tried, suggested);
+  if (!lane.runs) discovery.report.notRun = lane.notRun;
   // Registry sightings merge first: an event both lanes found keeps its registry lead.
   const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], extractionContext);
   // Past events, events citing an index page as their primary page, and promotions or non-public events
@@ -168,7 +181,7 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   const sighted = new Set([...touched, ...reverified.sighted]);
   const aged = reverifyOnly
     ? reverified.events
-    : reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: couldHaveSighted(e, laneOutcome.attempts, registry, config) }));
+    : reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: couldHaveSighted(e, laneOutcome.attempts, registry, config, suggested) }));
   // Every upcoming event's own page is read once, before curation so it judges the fuller description (#254); not midweek.
   const ownPages = reverifyOnly
     ? { events: aged, report: [], notRead: 0, covered: new Set<string>() }
@@ -193,7 +206,7 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   assertModelReached(model);
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = picks.events.map(cleanStoredWhyLine);
-  const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, { registry, config }, startedIso, events);
+  const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, discovery.skippedHosts, { registry, config }, startedIso, events);
   // What expired long enough ago that nothing will revive it leaves the live dataset (#82).
   const { live, archived } = splitArchived(events, today);
   const shortfall = {
@@ -271,6 +284,7 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
       events: live,
       sourceState: registryLane.sourceState,
       discoveryState: promotion.discoveryState,
+      ...(lane.runs && { discoveryLastRan: today }),
       generatedAt: finishedIso,
       lastSuccessfulRun: finishedIso,
     },
@@ -281,12 +295,13 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
 
 /**
  * Whether this run's lanes could have sighted a record (#82): a discovery-led one only with discovery
- * on; a registry-led one unless its source is excluded or its page was not read (an outage, the spend
+ * on and its page on no host already suggested for promotion, whose leads the lane leaves (#255); a
+ * registry-led one unless its source is excluded or its page was not read (an outage, the spend
  * cap, a reply that could not be read), which says nothing about it, as an outage says nothing for a strike.
  */
-function couldHaveSighted(event: Event, attempts: PageAttempts, registry: Registry, config: RunConfig): boolean {
+function couldHaveSighted(event: Event, attempts: PageAttempts, registry: Registry, config: RunConfig, suggested: readonly string[]): boolean {
   const { lead } = event;
-  if (lead.lane === "discovery") return config.discovery.enabled;
+  if (lead.lane === "discovery") return config.discovery.enabled && !onHost(event.primaryUrl, suggested);
   const key = pageKey(event.primaryUrl);
   const excluded = registry.sources.some((s) => s.name === lead.source && s.status === "excluded");
   return !excluded && !attempts.outages.has(key) && !attempts.unread.has(key);
@@ -2090,6 +2105,8 @@ interface DiscoveryLaneOutcome {
   attempts: PageAttempts;
   /** Host to an example page, for every host whose page yielded a verified sighting this run, held for promotion or not. */
   hosts: Map<string, string>;
+  /** Host already suggested for promotion to the first lead on it the lane left unfetched this run (#255). */
+  skippedHosts: Map<string, string>;
   report: RunReport["discovery"];
   tally: CandidateTally;
   pagesNotExtracted: number;
@@ -2105,17 +2122,25 @@ interface DiscoveryLaneOutcome {
  * registry lane, with the query as the lead of what it finds. A URL is followed once a run, and
  * not at all when the registry lane already tried it, nor when its host is an excluded registry
  * source's (ADR 0012): a person took that host out of the run, whichever lane reaches it, and the
- * report counts the leads by source. Once the spend cap is reached, searches and leads still to go
+ * report counts the leads by source. Nor is a lead on a host already suggested for promotion (#255):
+ * promotion would read its pages anyway, so the report only counts them. Once the spend cap is reached, searches and leads still to go
  * are skipped and counted, so nothing is fetched that could not be read. What the lane finds on a host
  * no one admitted is held for promotion after merging (holdForPromotion), not here.
  */
-async function discover(ports: Ports & { model: CappedModel }, context: ExtractionContext, registry: Registry, registryTried: Set<string>): Promise<DiscoveryLaneOutcome> {
+async function discover(
+  ports: Ports & { model: CappedModel },
+  context: ExtractionContext,
+  registry: Registry,
+  registryTried: Set<string>,
+  suggested: readonly string[],
+): Promise<DiscoveryLaneOutcome> {
   const { config } = context;
   const outcome: DiscoveryLaneOutcome = {
     sightings: [],
     attempts: noAttempts(),
     hosts: new Map(),
-    report: { enabled: config.discovery.enabled, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [], leadsOnExcludedSources: [] },
+    skippedHosts: new Map(),
+    report: { enabled: config.discovery.enabled, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [], leadsOnExcludedSources: [], leadsOnSuggestedHosts: 0 },
     tally: noTally(),
     pagesNotExtracted: 0,
     queriesNotSearched: 0,
@@ -2135,11 +2160,20 @@ async function discover(ports: Ports & { model: CappedModel }, context: Extracti
     return true;
   };
 
-  /** Whether a lead is to be fetched: not when already followed this run, on an excluded host, or once the cap is reached. */
+  /** Whether a lead is on a host already suggested for promotion; counted for the report, with the host's first such lead. */
+  const onSuggestedHost = (url: string): boolean => {
+    const host = suggested.find((h) => onHost(url, [h]));
+    if (host === undefined) return false;
+    report.leadsOnSuggestedHosts++;
+    if (!outcome.skippedHosts.has(host)) outcome.skippedHosts.set(host, url);
+    return true;
+  };
+
+  /** Whether a lead is to be fetched: not when already followed this run, on an excluded or already suggested host, or once the cap is reached. */
   const toFollow = (url: string): boolean => {
     if (followed.has(pageKey(url)) || registryTried.has(pageKey(url))) return false;
     followed.add(pageKey(url));
-    if (onExcludedHost(url)) return false;
+    if (onExcludedHost(url) || onSuggestedHost(url)) return false;
     if (ports.model.exhausted()) {
       outcome.leadsNotFollowed++;
       return false;

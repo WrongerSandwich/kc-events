@@ -35,7 +35,7 @@ const positiveWhole = (value: string) => Number.isInteger(Number(value)) && Numb
 
 /**
  * The run's config: the file's, with the command line's overrides (`--horizon-weeks N`,
- * `--no-discovery`), and whether it is a midweek pass (`--reverify-only [--days N]`, #253), which
+ * `--no-discovery`, `--discovery` to run the lane whatever its cadence, #255), and whether it is a midweek pass (`--reverify-only [--days N]`, #253), which
  * turns discovery off. Throws on an argument it does not know, a horizon or window that is not a
  * positive whole number, `--days` without `--reverify-only`, and discovery left on with no Tavily key,
  * since every search would then fail one by one.
@@ -43,8 +43,16 @@ const positiveWhole = (value: string) => Number.isInteger(Number(value)) && Numb
 export function runOptionsFromArgs(fileConfig: RunConfig, args: string[], env: Env): { config: RunConfig; reverifyOnly?: { days: number } } {
   const { values } = parseArgs({
     args,
-    options: { "horizon-weeks": { type: "string" }, "no-discovery": { type: "boolean" }, "reverify-only": { type: "boolean" }, days: { type: "string" } },
+    options: {
+      "horizon-weeks": { type: "string" },
+      discovery: { type: "boolean" },
+      "no-discovery": { type: "boolean" },
+      "reverify-only": { type: "boolean" },
+      days: { type: "string" },
+    },
   });
+  if (values.discovery && values["no-discovery"]) throw new Error("--discovery and --no-discovery say opposite things; give one");
+  if (values.discovery && values["reverify-only"]) throw new Error("--discovery has no place here: a --reverify-only run searches nothing");
   const horizon = values["horizon-weeks"];
   if (horizon !== undefined && !positiveWhole(horizon)) {
     throw new Error(`--horizon-weeks must be a positive whole number, got "${horizon}"`);
@@ -57,6 +65,8 @@ export function runOptionsFromArgs(fileConfig: RunConfig, args: string[], env: E
     ...fileConfig,
     ...(horizon !== undefined ? { horizonWeeks: Number(horizon) } : {}),
     ...(values["no-discovery"] || reverifyOnly ? { discovery: { ...fileConfig.discovery, enabled: false } } : {}),
+    // A hand run that forces the lane runs it whatever its cadence (#255).
+    ...(values.discovery ? { discovery: { ...fileConfig.discovery, enabled: true, cadence: "weekly" as const } } : {}),
   };
   if (config.discovery.enabled && !env.TAVILY_API_KEY) {
     throw new Error("discovery is on but TAVILY_API_KEY is not set; put it in the environment or a gitignored .env");

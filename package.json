@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit",
     "research": "tsx src/cli.ts",
     "grade": "tsx src/grade-cli.ts",
+    "promote": "tsx src/promote-cli.ts",
     "test:all": "pnpm -r test",
     "typecheck:all": "pnpm -r typecheck",
     "compare-models": "tsx src/model-compare-cli.ts"

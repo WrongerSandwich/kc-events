@@ -4,7 +4,7 @@
  * (Markdown plus JSON twin): only a dataset that validates, and none of the three truncated.
  * BROWSER_CHANNEL=chrome has the browser fetcher use an installed Chrome instead of Playwright's Chromium.
  *
- *   pnpm research [--horizon-weeks N] [--no-discovery]
+ *   pnpm research [--horizon-weeks N] [--no-discovery | --discovery]   (--discovery: the lane whatever its cadence, #255)
  *   pnpm research --reverify-only [--days N]    (the midweek re-verification, #253)
  */
 import { existsSync } from "node:fs";
@@ -35,8 +35,11 @@ async function main() {
   if (discovery.enabled) {
     console.log(
       `Discovery: ${discovery.queries} search(es), ${discovery.aggregatorPages} index page(s) read for links, ` +
-        `${discovery.pagesExtracted} primary page(s) extracted; ${promotionSuggestions.length} promotion suggestion(s).`,
+        `${discovery.pagesExtracted} primary page(s) extracted, ${discovery.leadsOnSuggestedHosts} lead(s) skipped on suggested hosts; ` +
+        `${promotionSuggestions.length} promotion suggestion(s).`,
     );
+  } else if (discovery.notRun?.reason === "cadence") {
+    console.log(`Discovery: not run; it runs in a month's first run and last ran ${discovery.notRun.lastRan}.`);
   }
   console.log(
     `Curation: ${curation.calls} call(s), ${curation.judged} event(s) judged, ${curation.flagged} flagged don't-miss` +

@@ -87,6 +87,11 @@ export const DEFAULT_PLATFORM_INDEX_PATHS: Record<string, string[]> = {
 
 const discoverySchema = z.strictObject({
   enabled: z.boolean().default(false),
+  /**
+   * How often the lane runs when it is on (#255): every run, or only in the first run of a calendar month, the
+   * dataset's `discoveryLastRan` saying when it last did. `pnpm research --discovery` runs it whatever this says.
+   */
+  cadence: z.enum(["weekly", "monthly"]).default("weekly"),
   /** The geography in the few words a search engine wants; queries are built from it. */
   place: z.string().min(1).default("Kansas City"),
   resultsPerQuery: z.number().int().positive().default(5),

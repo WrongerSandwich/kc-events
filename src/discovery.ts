@@ -139,18 +139,47 @@ export function excludedSourceOnHost(url: string, registry: Registry): ExcludedS
 }
 
 /**
+ * Whether the lane runs this run (#255), and why not when it does not: never in a midweek pass or when the
+ * config turns it off, and under a monthly cadence only when it has not yet run this calendar month.
+ */
+export function discoveryThisRun(
+  config: RunConfig,
+  { lastRan, today, midweek }: { lastRan: string | undefined; today: string; midweek: boolean },
+): { runs: true } | { runs: false; notRun: NonNullable<RunReport["discovery"]["notRun"]> } {
+  if (midweek) return { runs: false, notRun: { reason: "midweek" } };
+  if (!config.discovery.enabled) return { runs: false, notRun: { reason: "off" } };
+  if (config.discovery.cadence === "monthly" && lastRan !== undefined && lastRan.slice(0, 7) === today.slice(0, 7)) {
+    return { runs: false, notRun: { reason: "cadence", lastRan } };
+  }
+  return { runs: true };
+}
+
+/**
+ * The hosts already suggested for promotion as the run starts (#255): seen in enough runs, and still on no
+ * admitted host. A lead on one is not followed, since promotion would read its pages anyway.
+ */
+export function suggestedHosts(previous: Dataset["discoveryState"], registry: Registry, config: RunConfig): string[] {
+  return Object.entries(previous)
+    .filter(([host, state]) => state.runsSeen >= PROMOTION_THRESHOLD && !onAdmittedHost(`https://${host}/`, registry, config))
+    .map(([host]) => host);
+}
+
+/**
  * Folds this run's discovery hosts (those whose pages yielded a verified sighting, held or not) into the state
  * carried between runs, and lists as promotion suggestions every host seen this run that has now
  * been seen in at least two runs, each with how many events held for promotion (ADR 0012) promoting
  * it would release. A host the registry already checks, a ticketing platform that is no one source, or
  * an aggregator, whose pages are never read as primary pages, is neither counted nor suggested, and
  * what was stored for one before is dropped (#82). A host not seen in eight runs with discovery on is
- * forgotten; a run with discovery off could not have seen it, so it counts for nothing. Suggestions
- * are only ever suggestions: nothing here touches the registry.
+ * forgotten; a run with discovery off could not have seen it, so it counts for nothing, and nor does a run
+ * that skipped the host's leads because it was already suggested (#255): that host stays as it was and is
+ * suggested again with the count it had, its example the first lead skipped. Suggestions are only ever
+ * suggestions: nothing here touches the registry.
  */
 export function trackDiscoveryHosts(
   previous: Dataset["discoveryState"],
   seenThisRun: Map<string, string>,
+  skippedThisRun: Map<string, string>,
   { registry, config }: { registry: Registry; config: RunConfig },
   runIso: string,
   events: readonly Event[],
@@ -159,7 +188,7 @@ export function trackDiscoveryHosts(
   const discoveryState: Dataset["discoveryState"] = {};
   for (const [host, was] of Object.entries(previous)) {
     if (onHost(`https://${host}/`, neverSuggested)) continue;
-    if (!config.discovery.enabled || seenThisRun.has(host)) {
+    if (!config.discovery.enabled || seenThisRun.has(host) || skippedThisRun.has(host)) {
       discoveryState[host] = was;
       continue;
     }
@@ -173,8 +202,17 @@ export function trackDiscoveryHosts(
     const runsSeen = was?.lastSeen === runIso ? was.runsSeen : (was?.runsSeen ?? 0) + 1;
     discoveryState[host] = { runsSeen, lastSeen: runIso };
     if (runsSeen < PROMOTION_THRESHOLD) continue;
-    const heldEvents = events.filter((e) => e.heldForPromotion && onHost(e.primaryUrl, [host])).length;
-    promotionSuggestions.push({ host, runsSeen, exampleUrl, heldEvents });
+    promotionSuggestions.push({ host, runsSeen, exampleUrl, heldEvents: heldOn(host, events) });
+  }
+  for (const [host, exampleUrl] of skippedThisRun) {
+    const was = discoveryState[host];
+    if (was === undefined || seenThisRun.has(host)) continue;
+    promotionSuggestions.push({ host, runsSeen: was.runsSeen, exampleUrl, heldEvents: heldOn(host, events) });
   }
   return { discoveryState, promotionSuggestions };
+}
+
+/** How many events held for promotion are on the host. */
+function heldOn(host: string, events: readonly Event[]): number {
+  return events.filter((e) => e.heldForPromotion && onHost(e.primaryUrl, [host])).length;
 }

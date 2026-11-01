@@ -49,6 +49,7 @@ const full: RunReport = {
     pagesExtracted: 4,
     problems: ["https://lead.test/a: HTTP 403"],
     leadsOnExcludedSources: [{ source: "Old Hall", reason: "closed for good", leads: 2 }],
+    leadsOnSuggestedHosts: 0,
   },
   reverification: { pagesRead: 3, problems: ["https://venue.test/calendar: the model call threw"] },
   curation: {

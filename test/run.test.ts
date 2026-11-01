@@ -68,7 +68,16 @@ describe("run", () => {
     expect(report.failingSources).toEqual([]);
     expect(report.unmappableNeighborhoods).toEqual([]);
     expect(report.offListNeighborhoods).toEqual([]);
-    expect(report.discovery).toEqual({ enabled: false, queries: 0, aggregatorPages: 0, pagesExtracted: 0, problems: [], leadsOnExcludedSources: [] });
+    expect(report.discovery).toEqual({
+      enabled: false,
+      queries: 0,
+      aggregatorPages: 0,
+      pagesExtracted: 0,
+      problems: [],
+      leadsOnExcludedSources: [],
+      leadsOnSuggestedHosts: 0,
+      notRun: { reason: "off" },
+    });
     expect(report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, problems: [], datedWhyLines: [] });
     expect(report.promotionSuggestions).toEqual([]);
     expect(report.heldForPromotion).toEqual([]);

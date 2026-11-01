@@ -119,10 +119,14 @@ neighborhoods:
 # platform listing under `platformIndexPaths`) is read only for its links: they are followed, its own
 # text never reaches extraction, and an event citing one as its primary page is expired as index-page.
 # A host discovery finds events on in two runs is suggested for promotion in the run report, never
-# added here.
-# `pnpm research --no-discovery` turns it off for one run.
+# added here; `pnpm promote <host>` drafts its registry stanza. A lead on a host already suggested is
+# not followed, since promotion would read its pages anyway (#255).
+# `cadence: monthly` runs the lane only in a calendar month's first run (#255: since ADR 0012 its one
+# output is the promotion queue, and it cost a third of a run's model calls); `weekly` runs it every run.
+# `pnpm research --no-discovery` turns it off for one run, `--discovery` runs it whatever the cadence.
 discovery:
   enabled: true
+  cadence: monthly
   place: Kansas City # the geography in the few words a search engine wants
   resultsPerQuery: 5
   linksPerAggregatorPage: 10

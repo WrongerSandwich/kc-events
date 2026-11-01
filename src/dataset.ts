@@ -268,6 +268,8 @@ export const datasetSchemaFor = (platformHosts: readonly string[]) =>
     sourceState: z.record(z.string(), sourceStateSchema),
     /** Keyed by host, without "www.". */
     discoveryState: z.record(z.string(), discoveryHostStateSchema).default({}),
+    /** The day of the last run the discovery lane ran in, which its monthly cadence goes by (#255); absent before one has. */
+    discoveryLastRan: z.iso.date().optional(),
   });
 
 const datasetSchema = datasetSchemaFor(DEFAULT_PLATFORM_HOSTS);

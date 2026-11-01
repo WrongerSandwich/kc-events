@@ -144,6 +144,13 @@ export interface RunReport {
     problems: string[];
     /** Leads not followed because their host is an excluded registry source's (ADR 0012): the source, its reason, and how many. */
     leadsOnExcludedSources: { source: string; reason: string; leads: number }[];
+    /** Leads not fetched because their host is already suggested for promotion (#255): promotion would read its pages anyway. */
+    leadsOnSuggestedHosts: number;
+    /**
+     * Why the lane did not run, when it did not (#255): turned off for the run, a midweek pass, or its monthly
+     * cadence, with the day it last ran. Absent when it ran.
+     */
+    notRun?: { reason: "off" | "midweek" } | { reason: "cadence"; lastRan: string };
   };
   /**
    * Re-verification this run: pages re-fetched and not re-read because the model call threw, leaving
@@ -329,6 +336,13 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     pagesExtracted: count,
     problems: z.array(z.string()),
     leadsOnExcludedSources: listSince(z.strictObject({ source: z.string(), reason: z.string(), leads: count })),
+    leadsOnSuggestedHosts: countSince,
+    notRun: z
+      .discriminatedUnion("reason", [
+        z.strictObject({ reason: z.enum(["off", "midweek"]) }),
+        z.strictObject({ reason: z.literal("cadence"), lastRan: z.iso.date() }),
+      ])
+      .optional(),
   }),
   reverification: z.strictObject({ pagesRead: countSince, problems: z.array(z.string()) }).default({ pagesRead: 0, problems: [] }),
   curation: z.strictObject({
@@ -458,11 +472,13 @@ ${markdownList(
 ${
   report.discovery.enabled
     ? `${plural(report.discovery.queries, "search", "searches")}, ${plural(report.discovery.aggregatorPages, "index page")} read for links, ${plural(report.discovery.pagesExtracted, "primary page")} extracted.${
+        report.discovery.leadsOnSuggestedHosts > 0 ? ` ${plural(report.discovery.leadsOnSuggestedHosts, "lead")} skipped on hosts already suggested for promotion.` : ""
+      }${
         report.discovery.leadsOnExcludedSources.length > 0
           ? `\n\n${markdownList(report.discovery.leadsOnExcludedSources.map((l) => `${plural(l.leads, "lead")} not followed: ${l.source} is excluded (${l.reason})`))}`
           : ""
       }${report.discovery.problems.length > 0 ? `\n\n${markdownList(report.discovery.problems)}` : ""}`
-    : "_Disabled._"
+    : discoveryNotRun(report.discovery.notRun)
 }
 
 ## Re-verification
@@ -542,6 +558,13 @@ ${markdownList([
 
 ${markdownList(report.promotionSuggestions.map((p) => `${p.host}: events found in ${p.runsSeen} runs, ${plural(p.heldEvents, "held event")} promotion would release, e.g. ${p.exampleUrl}`))}
 ${report.changes === undefined ? "" : changesSection(report.changes)}`;
+}
+
+/** Why the discovery lane did not run (#255); a report from before the reason was kept says only that it was off. */
+function discoveryNotRun(notRun: RunReport["discovery"]["notRun"]): string {
+  if (notRun === undefined) return "_Disabled._";
+  if (notRun.reason !== "cadence") return notRun.reason === "off" ? "_Not run: discovery is off for this run._" : "_Not run: a midweek pass searches nothing._";
+  return `_Not run: the lane runs in a month's first run, and last ran ${notRun.lastRan}._`;
 }
 
 /** The site's changes page in words (#135): new picks, moves with the start they had, and what went. */

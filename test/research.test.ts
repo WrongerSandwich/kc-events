@@ -53,6 +53,14 @@ describe("the command line's config", () => {
     expect(config.discovery).toEqual({ ...withDiscovery().discovery, enabled: false });
   });
 
+  it("runs discovery with --discovery whatever its cadence or the file says, and refuses it beside --no-discovery or --reverify-only (#255)", () => {
+    const monthlyOff = testConfig({ discovery: { ...testConfig().discovery, enabled: false, cadence: "monthly" } });
+    const forced = runOptionsFromArgs(monthlyOff, ["--discovery"], { TAVILY_API_KEY: "key" }).config;
+    expect(forced.discovery).toEqual({ ...monthlyOff.discovery, enabled: true, cadence: "weekly" });
+    expect(() => runOptionsFromArgs(monthlyOff, ["--discovery", "--no-discovery"], { TAVILY_API_KEY: "key" })).toThrow("--discovery and --no-discovery");
+    expect(() => runOptionsFromArgs(monthlyOff, ["--discovery", "--reverify-only"], { TAVILY_API_KEY: "key" })).toThrow("a --reverify-only run searches nothing");
+  });
+
   it("refuses discovery with no Tavily key, before anything runs", () => {
     expect(() => runOptionsFromArgs(withDiscovery(), [], {}).config).toThrow("discovery is on but TAVILY_API_KEY is not set");
     expect(runOptionsFromArgs(withDiscovery(), [], { TAVILY_API_KEY: "key" }).config.discovery.enabled).toBe(true);
