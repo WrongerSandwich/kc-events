@@ -27,7 +27,7 @@ export interface PromotionDraft {
 
 /**
  * The draft for a host: its held events, its discovery state, and a stanza named for the most common venue
- * among them (else the host), its URLs the distinct primary pages with the most held events first, its kind
+ * among them (else the host, as when another source has that name), its URLs the distinct primary pages with the most held events first, its kind
  * the most common, and its neighborhood the most common one the config lists (else the catch-all). Throws
  * for a host already a registry source's, an aggregator, a ticketing platform, or one with nothing held.
  */
@@ -48,12 +48,15 @@ export function promotionDraft(
   const urls = byCount(held.map((e) => e.primaryUrl));
   const listed = new Map(Object.values(config.neighborhoods).flat().map((n) => [normalizeName(n), n]));
   const neighborhoods = held.map((e) => listed.get(normalizeName(e.neighborhood))).filter((n): n is string => n !== undefined);
+  const venue = byCount(held.map((e) => e.venue?.trim() ?? "").filter((v) => v !== ""))[0];
+  // Source names are unique: a venue another source is already named for (Union Station, for a festival held there) gives way to the host.
+  const named = venue !== undefined && !registry.sources.some((s) => s.name === venue);
   return {
     host,
     held,
     state: dataset.discoveryState[host],
     stanza: {
-      name: byCount(held.map((e) => e.venue?.trim() ?? "").filter((v) => v !== ""))[0] ?? host,
+      name: named ? venue : host,
       urls,
       kind: byCount(held.map((e) => e.kind))[0]!,
       neighborhood: byCount(neighborhoods)[0] ?? ELSEWHERE_IN_THE_METRO,

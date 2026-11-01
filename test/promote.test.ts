@@ -84,6 +84,11 @@ describe("pnpm promote's draft (#255)", () => {
     expect(() => draft("nothing.test")).toThrow("no events held for promotion on nothing.test");
   });
 
+  it("names the stanza for its host when the venue is already a source's name, so the registry still parses", () => {
+    const winery = { ...knuckleheads, name: "The Winery", urls: ["https://elsewhere.test/calendar"], status: "excluded" as const, reason: "closed" };
+    expect(draft("winery.test", { sources: [winery] }).stanza.name).toBe("winery.test");
+  });
+
   it("drafts a host a source is on only a subdomain of, since that source admits none of its pages", () => {
     const tickets = { ...knuckleheads, name: "Winery Tickets", urls: ["https://tickets.winery.test/calendar"] };
     expect(draft("winery.test", { sources: [tickets] }).held).toHaveLength(4);

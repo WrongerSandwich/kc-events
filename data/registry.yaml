@@ -592,3 +592,34 @@ sources:
     status: excluded
     reason: Even rendered in a browser, the list shows only one day's events with no dates on them (exhibitions, shows, the planetarium), and nothing beyond that day (checked 2026-10-08). City Stage productions come in through their presenters.
     notes: Its RSS feed carries no event dates.
+
+  # --- Promoted from discovery
+
+  - name: Kansas City Art Institute
+    urls:
+      - https://kcai.edu/calendar/
+      - https://kcai.edu/kcai-exhibitions/
+    kind: art/exhibitions
+    neighborhood: Plaza & Museum District
+    checkHints: >-
+      The art school's campus at 4415 Warwick Blvd. The calendar labels each listing: keep Visiting Artist
+      events (the Current Perspectives lectures are public talks, talks/readings) and Student Exhibition
+      openings and sales, which are open to the public. Skip every Admissions listing (open houses, National
+      Portfolio Days, Open Studio, which are for prospective students and often out of town), and anything
+      for students, faculty or alumni only. The exhibitions page lists each show with its date span; a show
+      is a limited run at the gallery it names (KCAI Gallery, or the Emily & Todd Voth Artspace), and the
+      page also lists past shows, which are not events.
+    status: active
+    notes: "Promoted 2026-11-01 from discovery: 4 held events on 1 page. kcai.edu/kcai-exhibitions/ added by hand for the gallery shows (2026 Charlotte Street Visual Artist Awards, 10.16–12.12, was in no record); its first page lists current and upcoming shows."
+
+  - name: Kansas City Brew Fest
+    urls:
+      - https://www.kansascitybrewfest.com/
+    kind: food/drink
+    neighborhood: Crown Center
+    checkHints: >-
+      One annual beer festival, at Union Station Kansas City. Early Admission (an hour before) and General
+      Admission (1 to 4 p.m. in 2027) on the same day are one event: give the General Admission start, and
+      never list a ticket tier as its own event.
+    status: active
+    notes: "Promoted 2026-11-01 from discovery: 2 held events on 1 page (one festival, read as two by entry time). A single-event site, as the Renaissance Festival is: once the page carries no date for the next festival, exclude it with the month to activate it again."
