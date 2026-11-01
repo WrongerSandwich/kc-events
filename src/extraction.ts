@@ -10,7 +10,7 @@ import { linkTarget } from "./discovery.js";
 import { samePage } from "./hosts.js";
 import { calendarDate, givesTitle, namesTitle } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
-import type { CompletionRequest, FetchResult } from "./ports.js";
+import type { CompletionRequest, FetchResult, ModelStage } from "./ports.js";
 import type { Source } from "./registry.js";
 import { deriveRecurrence } from "./recurrence.js";
 import { toKind, toNeighborhood } from "./taxonomy.js";
@@ -133,7 +133,16 @@ export interface ExtractionContext {
 /** Where a page came from: a registry source, or a discovery search that led to it. */
 export type PageOrigin = { lane: "registry"; source: Source } | { lane: "discovery"; query: string };
 
-export function buildExtractionRequest(page: FetchResult, reading: PageReading, origin: PageOrigin, context: ExtractionContext): CompletionRequest {
+/** The stages that read a page for its events: the registry lane, a discovery lead, a re-verification. */
+export type ExtractionStage = Extract<ModelStage, "extraction" | "discovery" | "reverification">;
+
+export function buildExtractionRequest(
+  page: FetchResult,
+  reading: PageReading,
+  origin: PageOrigin,
+  context: ExtractionContext,
+  stage: ExtractionStage,
+): CompletionRequest {
   const { config, rules, today, neighborhoods } = context;
   const sourceLines =
     origin.lane === "registry"
@@ -154,6 +163,7 @@ export function buildExtractionRequest(page: FetchResult, reading: PageReading, 
   const user = `Page URL: ${page.finalUrl}\n\n${reading.text}`;
   return {
     model: config.models.extraction,
+    stage,
     messages: [
       { role: "system", content: system },
       { role: "user", content: user },

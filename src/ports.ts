@@ -16,8 +16,13 @@ export interface ToolDefinition {
   parameters: Record<string, unknown>;
 }
 
+/** The run stage a model call is made for, so its spend and time can be told apart in the report (#257). */
+export const MODEL_STAGES = ["extraction", "discovery", "reverification", "own-page", "ticket-page", "curation"] as const;
+export type ModelStage = (typeof MODEL_STAGES)[number];
+
 export interface CompletionRequest {
   model: string;
+  stage: ModelStage;
   messages: ChatMessage[];
   tools?: ToolDefinition[];
   /** Strict JSON-schema response format; the reply is parsed against it. */

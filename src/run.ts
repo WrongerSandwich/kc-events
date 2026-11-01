@@ -19,6 +19,7 @@ import {
   sameQuote,
   withoutLinkMarkers,
   type ExtractionContext,
+  type ExtractionStage,
   type PageOrigin,
   type Sighting,
   type SightedPage,
@@ -137,7 +138,7 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   // Before any fetch: a registry source in no region is a config error.
   const neighborhoods = neighborhoodList(config, registry);
   // Every model call goes through the cap, whatever stage makes it, and is counted for the fuse.
-  const model = countOutcomes(capSpend(ports.model, config.spendCapUsd));
+  const model = countOutcomes(capSpend(ports.model, config.spendCapUsd, ports.clock));
   // A midweek pass reads no list, so it leaves the sources' state as it was.
   const registryLane = reverifyOnly ? idleRegistryLane(dataset.sourceState) : await checkRegistry(registry, dataset.sourceState, ports);
   if (!reverifyOnly) assertSomethingFetched(registryLane.sourceReports);
@@ -604,7 +605,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   const settledReads = await inOrder(pages, context.config.concurrency, ({ source, page }, turn) =>
     isIndexPage(page.finalUrl, context.config)
       ? Promise.resolve(undefined)
-      : turn(() => Promise.allSettled(Array.from({ length: context.config.extractionReads }, () => extractPage(page, { lane: "registry", source }, model, context)))),
+      : turn(() => Promise.allSettled(Array.from({ length: context.config.extractionReads }, () => extractPage(page, { lane: "registry", source }, model, context, "extraction")))),
   );
 
   for (const [index, { source, page }] of pages.entries()) {
@@ -759,10 +760,11 @@ export async function extractPage(
   origin: PageOrigin,
   model: ModelPort,
   context: ExtractionContext,
+  stage: ExtractionStage,
 ): Promise<{ sightings?: Sighting[]; extracted: number; tally: CandidateTally; problems: string[]; truncated?: true }> {
   const reading = readPage(page, context.config);
   const cut = reading.truncated ? [`${page.finalUrl} was cut at the ${MAX_PAGE_CHARS}-character cap`] : [];
-  const reply = await model.complete(buildExtractionRequest(page, reading, origin, context));
+  const reply = await model.complete(buildExtractionRequest(page, reading, origin, context, stage));
   const parsed = extractionReplySchema.safeParse(reply.value);
   if (!parsed.success) {
     return {
@@ -1478,7 +1480,7 @@ async function reverify(
     if (excludedSourceOf(origin, url, registry) || lane.attempts.outages.has(key) || lane.attempts.tried.has(key)) return undefined;
     if (ports.model.exhausted()) return "cap";
     // The page is fetched the way its source's pages are; a discovered page always plainly.
-    return fetchAndRead(url, origin.lane === "registry" ? fetcherFor(origin.source, ports) : plainly(ports), origin, ports.model, context, turn);
+    return fetchAndRead(url, origin.lane === "registry" ? fetcherFor(origin.source, ports) : plainly(ports), origin, "reverification", ports.model, context, turn);
   });
 
   for (const [i, url] of urls.entries()) {
@@ -2077,6 +2079,7 @@ async function fetchAndRead(
   url: string,
   route: FetchRoute,
   origin: PageOrigin,
+  stage: ExtractionStage,
   model: ModelPort,
   context: ExtractionContext,
   turn: Turn,
@@ -2087,7 +2090,7 @@ async function fetchAndRead(
   const { page } = fetched;
   if (leave(page)) return { kind: "left", page };
   try {
-    return { kind: "read", page, read: await turn(() => extractPage(page, origin, model, context)) };
+    return { kind: "read", page, read: await turn(() => extractPage(page, origin, model, context, stage)) };
   } catch (error) {
     return { kind: "failed", page, error };
   }
@@ -2219,7 +2222,7 @@ async function discover(
     if (!toFollow(url)) return undefined;
     const leave = (page: FetchResult) =>
       isIndexPage(page.finalUrl, config) || excludedSourceOnHost(page.finalUrl, registry) !== undefined || onHost(page.finalUrl, suggested);
-    return fetchAndRead(url, plainly(ports), { lane: "discovery", query }, ports.model, context, turn, leave);
+    return fetchAndRead(url, plainly(ports), { lane: "discovery", query }, "discovery", ports.model, context, turn, leave);
   };
 
   /**

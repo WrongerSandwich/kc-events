@@ -148,6 +148,7 @@ export function buildCurationRequest(events: Event[], context: CurationContext):
   }));
   return {
     model: config.models.curation,
+    stage: "curation",
     messages: [
       { role: "system", content: system },
       { role: "user", content: `${EVENTS_TO_JUDGE}\n\n${JSON.stringify(listed, null, 2)}` },

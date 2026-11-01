@@ -158,6 +158,7 @@ describe("the weekdays a limited run plays, from its own page (#143)", () => {
       const { dataset, calls, requests, report } = await runAt(WEEK_1, { pages: { [OWN_URL]: SPAN_ONLY }, completions: followed() });
       expect(calls).toContain(`browser:${TICKETS_URL} waiting for .ot_eventDateTitle`);
       expect(requests[3]!.messages[0]!.content).toContain("ticket page");
+      expect(requests.slice(2).map((r) => r.stage)).toEqual(["own-page", "ticket-page"]);
       expect(dataset.events[0]).toMatchObject({
         days: ["Fri", "Sat", "Sun"],
         evidence: { days: { page: TICKETS_URL, quote: TICKET_QUOTE } },

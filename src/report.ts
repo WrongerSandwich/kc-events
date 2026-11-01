@@ -3,7 +3,11 @@ import { EXPIRY_REASONS, type ExpiryReason } from "./dataset.js";
 import { ARCHIVE_AFTER_WEEKS } from "./archive.js";
 import { markdownList, plural, tableCell } from "./markdown.js";
 import { SKIP_REASONS, type SkipReason } from "./skip.js";
+import { MODEL_STAGES, type ModelStage } from "./ports.js";
 import type { ModelCall } from "./spend.js";
+
+/** A model call as a report records it: one from a run before #257 has no stage or duration. */
+export type RecordedModelCall = ModelCall extends infer C ? (C extends ModelCall ? Omit<C, "stage" | "ms"> & Partial<Pick<C, "stage" | "ms">> : never) : never;
 
 export type SourceResult = "fetched" | "failed" | "blocked" | "excluded";
 
@@ -128,8 +132,8 @@ export interface RunReport {
      * discovery searches never made and leads never followed, and events due for curation never judged.
      */
     shortfall: { pagesNotExtracted: number; eventsNotReverified: number; queriesNotSearched: number; leadsNotFollowed: number; eventsNotCurated: number; ownPagesNotRead: number };
-    /** Every model call that went out, with what OpenRouter's activity page lists it by; the JSON twin only. */
-    modelCalls: ModelCall[];
+    /** Every model call that went out, with what OpenRouter's activity page lists it by; the Markdown shows them by stage. */
+    modelCalls: RecordedModelCall[];
   };
   /** The discovery lane this run; all zero when it is disabled. */
   discovery: {
@@ -279,6 +283,7 @@ const changeRef = eventRef.extend({ id: z.string() });
 const likelyDuplicateRecord = changeRef.extend({ firstDay: z.iso.date().nullable(), end: z.iso.date().nullable() });
 const hostEvents = z.strictObject({ host: z.string(), events: count });
 const servedBy = z.strictObject({ model: z.string(), provider: z.string().optional(), generationId: z.string() });
+const callMade = { model: z.string(), stage: z.enum(MODEL_STAGES).optional(), ms: z.number().nonnegative().optional() };
 
 /**
  * The JSON twin as committed in `data/runs/`. A field added after the first run defaults to zero or
@@ -326,8 +331,8 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     shortfall: z.strictObject({ pagesNotExtracted: count, eventsNotReverified: count, queriesNotSearched: count, leadsNotFollowed: count, eventsNotCurated: count, ownPagesNotRead: countSince }),
     modelCalls: listSince(
       z.union([
-        z.strictObject({ model: z.string(), servedBy: servedBy.optional(), costUsd: z.number().nonnegative() }),
-        z.strictObject({ model: z.string(), servedBy: servedBy.optional(), costUsd: z.number().nonnegative().optional(), error: z.string() }),
+        z.strictObject({ ...callMade, servedBy: servedBy.optional(), costUsd: z.number().nonnegative() }),
+        z.strictObject({ ...callMade, servedBy: servedBy.optional(), costUsd: z.number().nonnegative().optional(), error: z.string() }),
       ]),
     ),
   }),
@@ -399,6 +404,35 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     .optional(),
 });
 
+/**
+ * The Spend section's table: for each stage that made a call, how many, how many threw, what they
+ * cost and how long they took added up (calls side by side overlap, so the minutes can sum past the
+ * run's). Nothing when no call went out.
+ */
+function spendByStage(calls: RecordedModelCall[]): string {
+  if (calls.length === 0) return "";
+  const rows = new Map<ModelStage | undefined, { calls: number; failed: number; usd: number; ms: number }>();
+  for (const call of calls) {
+    const row = rows.get(call.stage) ?? { calls: 0, failed: 0, usd: 0, ms: 0 };
+    row.calls++;
+    if ("error" in call) row.failed++;
+    row.usd += call.costUsd ?? 0;
+    row.ms += call.ms ?? 0;
+    rows.set(call.stage, row);
+  }
+  const order: (ModelStage | undefined)[] = [...MODEL_STAGES, undefined];
+  return [
+    "",
+    "",
+    "| Stage | Calls | Failed | USD | Minutes |",
+    "| --- | ---: | ---: | ---: | ---: |",
+    ...order.flatMap((stage) => {
+      const row = rows.get(stage);
+      return row ? [`| ${stage ?? "not recorded"} | ${row.calls} | ${row.failed} | ${row.usd.toFixed(4)} | ${(row.ms / 60_000).toFixed(1)} |`] : [];
+    }),
+  ].join("\n");
+}
+
 /** Reads a committed JSON twin, filling the fields it predates. */
 export function parseRunReport(raw: unknown): RunReport {
   return runReportSchema.parse(raw);
@@ -447,7 +481,7 @@ ${EXPIRY_REASONS.map((reason) => `| Expired: ${reason} | ${counts.expired[reason
 
 ## Spend
 
-${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified, ${plural(spend.shortfall.queriesNotSearched, "discovery search", "discovery searches")} not made, ${plural(spend.shortfall.leadsNotFollowed, "discovery lead")} not followed, ${plural(spend.shortfall.eventsNotCurated, "event")} not curated, ${plural(spend.shortfall.ownPagesNotRead, "own page")} not read; they stay as they were and are checked next run.` : ""}
+${spend.totalUsd.toFixed(4)} USD of a ${spend.capUsd} USD cap.${spend.capHit ? ` **Cap hit: no model calls were made after it.** Shortfall: ${plural(spend.shortfall.pagesNotExtracted, "page")} not extracted, ${plural(spend.shortfall.eventsNotReverified, "event")} not re-verified, ${plural(spend.shortfall.queriesNotSearched, "discovery search", "discovery searches")} not made, ${plural(spend.shortfall.leadsNotFollowed, "discovery lead")} not followed, ${plural(spend.shortfall.eventsNotCurated, "event")} not curated, ${plural(spend.shortfall.ownPagesNotRead, "own page")} not read; they stay as they were and are checked next run.` : ""}${spendByStage(spend.modelCalls)}
 
 ## Sources
 

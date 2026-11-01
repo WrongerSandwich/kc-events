@@ -5,6 +5,7 @@ import { extractionResponseFormat } from "../src/extraction.js";
 
 const REQUEST: CompletionRequest = {
   model: "vendor/model",
+  stage: "extraction",
   messages: [{ role: "user", content: "Read this page" }],
   responseFormat: { name: "extracted_events", schema: { type: "object" } },
   timeoutMs: 120_000,

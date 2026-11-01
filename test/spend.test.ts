@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { run } from "../src/run.js";
 import { emptyDataset, parseDataset, type Dataset } from "../src/dataset.js";
 import { renderReportMarkdown } from "../src/report.js";
-import { ModelReplyUnusable, type CompletionResult } from "../src/ports.js";
+import { ModelReplyUnusable, type Clock, type CompletionRequest, type CompletionResult, type ModelPort } from "../src/ports.js";
+import { capSpend } from "../src/spend.js";
 import type { Source } from "../src/registry.js";
 import { fakePorts, type CannedPage, type ScriptedReply } from "./fakes/ports.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
@@ -31,6 +32,49 @@ async function runAt(
   return { ...result, calls: fakes.calls };
 }
 
+/** A clock that moves on by `stepMs` each time it is read. */
+function steppingClock(stepMs: number): Clock {
+  let t = Date.parse("2026-11-02T12:00:00Z");
+  return { now: () => new Date((t += stepMs) - stepMs) };
+}
+
+const requestFor = (stage: CompletionRequest["stage"]): CompletionRequest => ({
+  model: "test/extraction",
+  stage,
+  messages: [],
+  responseFormat: { name: "r", schema: {} },
+  timeoutMs: 1000,
+});
+
+describe("capSpend", () => {
+  it("records each call's stage and how long it took, from the clock before and after", async () => {
+    const model: ModelPort = { complete: async () => ({ value: {}, costUsd: 0.01 }) };
+    const capped = capSpend(model, 5, steppingClock(1500));
+    await capped.complete(requestFor("discovery"));
+    await capped.complete(requestFor("curation"));
+    expect(capped.calls()).toEqual([
+      { model: "test/extraction", stage: "discovery", ms: 1500, costUsd: 0.01 },
+      { model: "test/extraction", stage: "curation", ms: 1500, costUsd: 0.01 },
+    ]);
+  });
+
+  it("records the stage and duration of a call that threw, unusable reply or not", async () => {
+    const replies = [new Error("Request timed out."), new ModelReplyUnusable("refused", { model: "m", generationId: "g" }, 0.002)];
+    const model: ModelPort = {
+      complete: async () => {
+        throw replies.shift();
+      },
+    };
+    const capped = capSpend(model, 5, steppingClock(250));
+    await expect(capped.complete(requestFor("own-page"))).rejects.toThrow("timed out");
+    await expect(capped.complete(requestFor("ticket-page"))).rejects.toThrow("refused");
+    expect(capped.calls()).toEqual([
+      { model: "test/extraction", stage: "own-page", ms: 250, error: "Request timed out." },
+      { model: "test/extraction", stage: "ticket-page", ms: 250, servedBy: { model: "m", generationId: "g" }, costUsd: 0.002, error: "refused" },
+    ]);
+  });
+});
+
 describe("spend cap", () => {
   it("records every call that went out: who served it and its cost, or the error it threw", async () => {
     const servedBy = { model: "vendor/model-v2", provider: "Vendor", generationId: "gen-1" };
@@ -47,9 +91,9 @@ describe("spend cap", () => {
     });
 
     expect(report.spend.modelCalls.slice(0, 3)).toEqual([
-      { model: "test/extraction", servedBy, costUsd: 0.02 },
-      { model: "test/extraction", error: "Request timed out." },
-      { model: "test/extraction", servedBy: unusableBy, costUsd: 0.005, error: "test/extraction refused: no" },
+      { model: "test/extraction", stage: "extraction", ms: 0, servedBy, costUsd: 0.02 },
+      { model: "test/extraction", stage: "extraction", ms: 0, error: "Request timed out." },
+      { model: "test/extraction", stage: "extraction", ms: 0, servedBy: unusableBy, costUsd: 0.005, error: "test/extraction refused: no" },
     ]);
     // A reply that came back unusable was billed, so it counts against the cap.
     expect(report.spend.totalUsd).toBeCloseTo(0.025 + report.spend.modelCalls.slice(3).reduce((sum, c) => sum + (c.costUsd ?? 0), 0));
@@ -72,8 +116,8 @@ describe("spend cap", () => {
       capHit: true,
       shortfall: { pagesNotExtracted: 1, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 2, ownPagesNotRead: 0 },
       modelCalls: [
-        { model: "test/extraction", costUsd: 0.03 },
-        { model: "test/extraction", costUsd: 0.03 },
+        { model: "test/extraction", stage: "extraction", ms: 0, costUsd: 0.03 },
+        { model: "test/extraction", stage: "extraction", ms: 0, costUsd: 0.03 },
       ],
     });
     expect(report.sources.find((s) => s.name === "Charlie")).toMatchObject({
@@ -125,6 +169,25 @@ describe("spend cap", () => {
     expect(bravo).toMatchObject({ status: "active", verificationFailures: 0, lastVerified: WEEK_1_ISO });
     expect(second.report.counts.reverified).toBe(0);
     expect(second.report.spend).toMatchObject({ capHit: true, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 1 } });
+  });
+
+  it("records each call under the stage that made it: a list's read, a re-verification, curation", async () => {
+    const first = await runAt(WEEK_1, emptyDataset(), {
+      sources: [ALPHA, BRAVO],
+      pages: pagesOf(ALPHA, BRAVO),
+      completions: [costing(0.01, show(ALPHA)), costing(0.01, show(BRAVO))],
+      spendCapUsd: 5,
+    });
+    expect(first.report.spend.modelCalls.map((c) => c.stage)).toEqual(["extraction", "extraction", "curation"]);
+
+    // Bravo has left the registry, so its show is re-verified against its own page.
+    const second = await runAt(WEEK_2, first.dataset, {
+      sources: [ALPHA],
+      pages: pagesOf(ALPHA, BRAVO),
+      completions: [costing(0.01, show(ALPHA)), costing(0.01, show(BRAVO))],
+      spendCapUsd: 5,
+    });
+    expect(second.report.spend.modelCalls.map((c) => c.stage)).toEqual(["extraction", "reverification"]);
   });
 
   it("a run under the cap reports its spend and that the cap was not hit", async () => {

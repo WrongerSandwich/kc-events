@@ -44,6 +44,10 @@ Started 2026-10-09T22:15:00-05:00, finished 2026-10-09T22:15:00-05:00. Horizon 8
 
 0.0400 USD of a 5 USD cap.
 
+| Stage | Calls | Failed | USD | Minutes |
+| --- | ---: | ---: | ---: | ---: |
+| extraction | 4 | 0 | 0.0400 | 0.0 |
+
 ## Sources
 
 | Source | Result | Extracted | Detail |

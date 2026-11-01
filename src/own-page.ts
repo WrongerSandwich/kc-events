@@ -74,6 +74,7 @@ export function buildOwnPageRequest(
   ].join("\n");
   return {
     model: config.models.extraction,
+    stage: kind === "ticket" ? "ticket-page" : "own-page",
     messages: [
       { role: "system", content: system },
       { role: "user", content: `Page URL: ${page.finalUrl}\n\n${reading.text}` },

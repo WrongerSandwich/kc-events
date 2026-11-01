@@ -28,6 +28,7 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 import { parse as parseYaml } from "yaml";
 import { createOpenRouterModel } from "./adapters/openrouter.js";
+import { systemClock } from "./adapters/system.js";
 import { parseConfig, type RunConfig } from "./config.js";
 import { parseDataset } from "./dataset.js";
 import { quotableText, readPage, type ExtractionContext } from "./extraction.js";
@@ -176,7 +177,7 @@ async function main() {
     trials.push(trial);
     await appendFile(trialsPath, `${JSON.stringify(trial)}\n`);
   };
-  const capped = capSpend(createOpenRouterModel({ apiKey: process.env.OPENROUTER_API_KEY }), capUsd);
+  const capped = capSpend(createOpenRouterModel({ apiKey: process.env.OPENROUTER_API_KEY }), capUsd, systemClock);
   const sourceByName = new Map(sources.map((s) => [s.name, s]));
   let capHit = false;
 
@@ -196,7 +197,7 @@ async function main() {
           // Timed from the last attempt's start, so a rate limit's pauses are not the model's time.
           const result = await rateLimited(() => {
             started = Date.now();
-            return extractPage(task.page, { lane: "registry", source }, meter.port, ctx);
+            return extractPage(task.page, { lane: "registry", source }, meter.port, ctx, "extraction");
           });
           const ms = Date.now() - started;
           await record(

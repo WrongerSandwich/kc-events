@@ -40,7 +40,12 @@ const full: RunReport = {
     capUsd: 5,
     capHit: true,
     shortfall: { pagesNotExtracted: 2, eventsNotReverified: 1, queriesNotSearched: 3, leadsNotFollowed: 1, eventsNotCurated: 4, ownPagesNotRead: 0 },
-    modelCalls: [{ model: "test/extraction", servedBy: { model: "test/extraction", provider: "Test", generationId: "gen-1" }, costUsd: 0.01 }, { model: "test/curation", error: "timed out" }],
+    modelCalls: [
+      { model: "test/extraction", stage: "extraction", ms: 40_000, servedBy: { model: "test/extraction", provider: "Test", generationId: "gen-1" }, costUsd: 0.01 },
+      { model: "test/extraction", stage: "extraction", ms: 50_000, costUsd: 0.0234 },
+      { model: "test/extraction", stage: "own-page", ms: 12_000, costUsd: 0.002 },
+      { model: "test/curation", stage: "curation", ms: 180_000, error: "timed out" },
+    ],
   },
   discovery: {
     enabled: true,
@@ -161,6 +166,12 @@ describe("the run report", () => {
 
       5.0123 USD of a 5 USD cap. **Cap hit: no model calls were made after it.** Shortfall: 2 pages not extracted, 1 event not re-verified, 3 discovery searches not made, 1 discovery lead not followed, 4 events not curated, 0 own pages not read; they stay as they were and are checked next run.
 
+      | Stage | Calls | Failed | USD | Minutes |
+      | --- | ---: | ---: | ---: | ---: |
+      | extraction | 2 | 0 | 0.0334 | 1.5 |
+      | own-page | 1 | 0 | 0.0020 | 0.2 |
+      | curation | 1 | 1 | 0.0000 | 3.0 |
+
       ## Sources
 
       | Source | Result | Extracted | Detail |
@@ -275,6 +286,13 @@ describe("the run report", () => {
 
     expect(parsed.counts).toMatchObject({ archived: 0, heldThroughOutage: 0, quoteNotOnPage: 0, keptOnStoredCitation: 0, expired: { ...expiredBefore, stale: 0 } });
     expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], venueNeighborhoods: [], identityChurn: [], kindChanges: [], likelyDuplicates: [], keptOnStoredCitation: [], skippedAsExpired: [], spend: { modelCalls: [] } });
+  });
+
+  it("reads a model call from before stages were recorded, and shows it on a row of its own", () => {
+    const parsed = parseRunReport({ ...full, spend: { ...full.spend, modelCalls: [{ model: "test/extraction", costUsd: 0.01 }] } });
+
+    expect(parsed.spend.modelCalls).toEqual([{ model: "test/extraction", costUsd: 0.01 }]);
+    expect(renderReportMarkdown(parsed)).toContain("| not recorded | 1 | 0 | 0.0100 | 0.0 |");
   });
 
   it("refuses a key it does not name", () => {
