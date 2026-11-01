@@ -173,13 +173,13 @@ export function suggestedHosts(previous: Dataset["discoveryState"], registry: Re
  * what was stored for one before is dropped (#82). A host not seen in eight runs with discovery on is
  * forgotten; a run with discovery off could not have seen it, so it counts for nothing, and nor does a run
  * that skipped the host's leads because it was already suggested (#255): that host stays as it was and is
- * suggested again with the count it had, its example the first lead skipped. Suggestions are only ever
- * suggestions: nothing here touches the registry.
+ * suggested again with the count it had, its example the first lead skipped; a weekly run the lane sat
+ * out relists every suggested host so. Suggestions are only ever suggestions: nothing here touches the registry.
  */
 export function trackDiscoveryHosts(
   previous: Dataset["discoveryState"],
   seenThisRun: Map<string, string>,
-  skippedThisRun: Map<string, string>,
+  relistedThisRun: Map<string, string>,
   { registry, config }: { registry: Registry; config: RunConfig },
   runIso: string,
   events: readonly Event[],
@@ -188,7 +188,7 @@ export function trackDiscoveryHosts(
   const discoveryState: Dataset["discoveryState"] = {};
   for (const [host, was] of Object.entries(previous)) {
     if (onHost(`https://${host}/`, neverSuggested)) continue;
-    if (!config.discovery.enabled || seenThisRun.has(host) || skippedThisRun.has(host)) {
+    if (!config.discovery.enabled || seenThisRun.has(host) || relistedThisRun.has(host)) {
       discoveryState[host] = was;
       continue;
     }
@@ -204,7 +204,7 @@ export function trackDiscoveryHosts(
     if (runsSeen < PROMOTION_THRESHOLD) continue;
     promotionSuggestions.push({ host, runsSeen, exampleUrl, heldEvents: heldOn(host, events) });
   }
-  for (const [host, exampleUrl] of skippedThisRun) {
+  for (const [host, exampleUrl] of relistedThisRun) {
     const was = discoveryState[host];
     if (was === undefined || seenThisRun.has(host)) continue;
     promotionSuggestions.push({ host, runsSeen: was.runsSeen, exampleUrl, heldEvents: heldOn(host, events) });

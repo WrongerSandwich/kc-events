@@ -84,6 +84,11 @@ describe("pnpm promote's draft (#255)", () => {
     expect(() => draft("nothing.test")).toThrow("no events held for promotion on nothing.test");
   });
 
+  it("drafts a host a source is on only a subdomain of, since that source admits none of its pages", () => {
+    const tickets = { ...knuckleheads, name: "Winery Tickets", urls: ["https://tickets.winery.test/calendar"] };
+    expect(draft("winery.test", { sources: [tickets] }).held).toHaveLength(4);
+  });
+
   it("--write appends the stanza under one heading, and the registry still parses", () => {
     const registryText = "# The registry\nsources:\n  - name: Knuckleheads\n    urls: [https://knuckleheads.test/calendar]\n    kind: music\n    neighborhood: East Bottoms\n    status: active\n";
     const once = withPromoted(registryText, draft("winery.test").stanza);

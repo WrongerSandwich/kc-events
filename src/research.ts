@@ -35,8 +35,8 @@ const positiveWhole = (value: string) => Number.isInteger(Number(value)) && Numb
 
 /**
  * The run's config: the file's, with the command line's overrides (`--horizon-weeks N`,
- * `--no-discovery`, `--discovery` to run the lane whatever its cadence, #255), and whether it is a midweek pass (`--reverify-only [--days N]`, #253), which
- * turns discovery off. Throws on an argument it does not know, a horizon or window that is not a
+ * `--no-discovery`, `--discovery` to run the lane whatever its cadence, #255), and whether it is a
+ * midweek pass (`--reverify-only [--days N]`, #253), which turns discovery off. Throws on an argument it does not know, a horizon or window that is not a
  * positive whole number, `--days` without `--reverify-only`, and discovery left on with no Tavily key,
  * since every search would then fail one by one.
  */

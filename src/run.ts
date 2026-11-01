@@ -206,7 +206,9 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   assertModelReached(model);
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = picks.events.map(cleanStoredWhyLine);
-  const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, discovery.skippedHosts, { registry, config }, startedIso, events);
+  // A weekly run the lane sat out lists the hosts already suggested as they stand, so the queue shows every week (#255).
+  const relisted = lane.runs || reverifyOnly ? discovery.skippedHosts : new Map(suggested.map((host) => [host, exampleOn(host, events)]));
+  const promotion = trackDiscoveryHosts(dataset.discoveryState, discovery.hosts, relisted, { registry, config }, startedIso, events);
   // What expired long enough ago that nothing will revive it leaves the live dataset (#82).
   const { live, archived } = splitArchived(events, today);
   const shortfall = {
@@ -284,7 +286,8 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
       events: live,
       sourceState: registryLane.sourceState,
       discoveryState: promotion.discoveryState,
-      ...(lane.runs && { discoveryLastRan: today }),
+      // A lane that made no search (a spent quota, every search failed) has not had its month (#255).
+      ...(discovery.report.queries > 0 && { discoveryLastRan: today }),
       generatedAt: finishedIso,
       lastSuccessfulRun: finishedIso,
     },
@@ -305,6 +308,11 @@ function couldHaveSighted(event: Event, attempts: PageAttempts, registry: Regist
   const key = pageKey(event.primaryUrl);
   const excluded = registry.sources.some((s) => s.name === lead.source && s.status === "excluded");
   return !excluded && !attempts.outages.has(key) && !attempts.unread.has(key);
+}
+
+/** A page on the host for its promotion suggestion: the first held event's there, else the host's root. */
+function exampleOn(host: string, events: Event[]): string {
+  return events.find((e) => e.heldForPromotion && onHost(e.primaryUrl, [host]))?.primaryUrl ?? `https://${host}/`;
 }
 
 /** The pairs of active records likely one event (#228), each with its days, for the report; the records are left as they are. */
@@ -2206,7 +2214,8 @@ async function discover(
    */
   const readLead = async (url: string, query: string, turn: Turn): Promise<PageRead | undefined> => {
     if (!toFollow(url)) return undefined;
-    const leave = (page: FetchResult) => isIndexPage(page.finalUrl, config) || excludedSourceOnHost(page.finalUrl, registry) !== undefined;
+    const leave = (page: FetchResult) =>
+      isIndexPage(page.finalUrl, config) || excludedSourceOnHost(page.finalUrl, registry) !== undefined || onHost(page.finalUrl, suggested);
     return fetchAndRead(url, plainly(ports), { lane: "discovery", query }, ports.model, context, turn, leave);
   };
 
@@ -2229,7 +2238,8 @@ async function discover(
       attempts.outages.add(pageKey(url));
       if (isIndexPage(page.finalUrl, config)) report.problems.push(`${url} led to an index page and was not extracted`);
       // A lead whose redirects end on an excluded host is not read either (ADR 0012); like one that could not be read, it says nothing about its events.
-      else onExcludedHost(page.finalUrl);
+      // Nor one whose redirects end on a host already suggested (#255), which is counted with the leads skipped there.
+      else if (!onExcludedHost(page.finalUrl)) onSuggestedHost(page.finalUrl);
       return;
     }
     const pageUrls = [url, page.finalUrl].map(pageKey);

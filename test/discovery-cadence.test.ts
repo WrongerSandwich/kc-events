@@ -21,12 +21,18 @@ const queryOn = (now: Date) => discoveryQueries(testConfig(), toLocalDate(now, "
 async function discoverAt(
   now: Date,
   dataset: Dataset,
-  { cadence, leads = [], pages = {}, completions = [] }: { cadence: RunConfig["discovery"]["cadence"]; leads?: string[]; pages?: Record<string, CannedPage>; completions?: CompletionResult[] },
+  {
+    cadence,
+    leads = [],
+    pages = {},
+    completions = [],
+    searchFails = false,
+  }: { cadence: RunConfig["discovery"]["cadence"]; leads?: string[]; pages?: Record<string, CannedPage>; completions?: CompletionResult[]; searchFails?: boolean },
 ) {
   const fakes = fakePorts(now, {
     pages: { [knuckleheads.urls[0]!]: PAGE, ...pages },
     completions: [costing(0.01), ...completions],
-    searches: { [queryOn(now)]: leads.map(lead) },
+    searches: { [queryOn(now)]: searchFails ? new Error("HTTP 500") : leads.map(lead) },
   });
   const config = testConfig();
   const discovering = { ...config, discovery: { ...config.discovery, enabled: true, cadence } };
@@ -54,6 +60,32 @@ describe("discovery cadence (#255)", () => {
     const november = await discoverAt(week(6), second.dataset, { cadence: "monthly" });
     expect(searched(november.calls)).toEqual([`search:${queryOn(week(6))}`]);
     expect(november.dataset.discoveryLastRan).toBe("2026-11-06");
+  });
+
+  it("a lane that made no search has not had its month: the next run tries again", async () => {
+    const failed = await discoverAt(week(1), emptyDataset(), { cadence: "monthly", searchFails: true });
+    expect(failed.report.discovery.problems).toHaveLength(1);
+    expect(failed.dataset.discoveryLastRan).toBeUndefined();
+
+    const retried = await discoverAt(week(2), failed.dataset, { cadence: "monthly" });
+    expect(searched(retried.calls)).toEqual([`search:${queryOn(week(2))}`]);
+    expect(retried.dataset.discoveryLastRan).toBe("2026-10-09");
+  });
+
+  it("a run the lane sits out still lists the hosts already suggested, with their counts", async () => {
+    const first = await discoverAt(week(1), emptyDataset(), {
+      cadence: "monthly",
+      leads: [PROMOTER_PAGE],
+      pages: { [PROMOTER_PAGE]: PAGE },
+      completions: [costing(0.01, candidateAt(PROMOTER, { title: "Big Show", venue: "The Truman" }))],
+    });
+    const dataset = { ...first.dataset, discoveryState: { "promoter.test": { runsSeen: 4, lastSeen: "2026-10-02T22:15:00-05:00" } } };
+
+    const quiet = await discoverAt(week(2), dataset, { cadence: "monthly" });
+
+    expect(quiet.report.discovery.notRun).toEqual({ reason: "cadence", lastRan: "2026-10-02" });
+    expect(quiet.report.promotionSuggestions).toEqual([{ host: "promoter.test", runsSeen: 4, exampleUrl: PROMOTER_PAGE, heldEvents: 1 }]);
+    expect(quiet.dataset.discoveryState).toEqual(dataset.discoveryState);
   });
 
   it("weekly: the lane runs every run", async () => {
@@ -93,6 +125,16 @@ describe("leads on hosts already suggested for promotion (#255)", () => {
     expect(report.promotionSuggestions).toEqual([{ host: "promoter.test", runsSeen: 3, exampleUrl: PROMOTER_PAGE, heldEvents: 1 }]);
     expect(after.discoveryState["promoter.test"]).toEqual(seen);
     expect(renderReportMarkdown(report)).toContain("2 leads skipped on hosts already suggested for promotion.");
+  });
+
+  it("a lead whose redirects end on a suggested host is not extracted, and counts with them", async () => {
+    const shortLink = "https://short.test/abc";
+    const dataset = { ...emptyDataset(), discoveryState: { "promoter.test": { runsSeen: 2, lastSeen: "2026-09-25T06:17:00-05:00" } } };
+
+    const { calls, report } = await discoverAt(week(1), dataset, { cadence: "weekly", leads: [shortLink], pages: { [shortLink]: { ...PAGE, finalUrl: PROMOTER_PAGE } } });
+
+    expect(calls.filter((c) => c.startsWith("model:test/extraction"))).toHaveLength(1);
+    expect(report.discovery).toMatchObject({ pagesExtracted: 0, leadsOnSuggestedHosts: 1 });
   });
 
   it("a held event on a suggested host does not age toward stale, since no lane could sight it", async () => {

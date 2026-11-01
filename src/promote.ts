@@ -13,6 +13,7 @@ import type { Registry, Source } from "./registry.js";
 /** The heading the drafted stanzas go under at the registry's end, once. */
 export const PROMOTED_HEADING = "# --- Promoted from discovery";
 
+/** What `pnpm promote` prints for a host, and the stanza `--write` appends. */
 export interface PromotionDraft {
   /** The host, without "www." and lowercased. */
   host: string;
@@ -20,6 +21,7 @@ export interface PromotionDraft {
   held: Event[];
   /** What the discovery lane remembers of it, if anything. */
   state: Dataset["discoveryState"][string] | undefined;
+  /** The registry source that would admit the host, its check hints left for a person to write. */
   stanza: Source & { status: "active" };
 }
 
@@ -35,7 +37,8 @@ export function promotionDraft(
 ): PromotionDraft {
   const host = hostOf(`https://${hostArg.replace(/^https?:\/\//i, "")}`) ?? hostArg;
   const url = `https://${host}/`;
-  const source = registry.sources.find((s) => s.urls.some((u) => onHost(url, [hostOf(u) ?? u]) || onHost(u, [host])));
+  // A source on the host or a parent of it admits it already; one only on a subdomain does not (onAdmittedHost).
+  const source = registry.sources.find((s) => onHost(url, s.urls.map((u) => hostOf(u) ?? u)));
   if (source) throw new Error(`${host} is already a registry source's host (${source.name}, ${source.status})`);
   if (onHost(url, config.discovery.aggregatorHosts)) throw new Error(`${host} is an aggregator: its pages are read only for their links`);
   if (onHost(url, config.discovery.platformHosts)) throw new Error(`${host} is a ticketing platform: its event pages are primary pages already, and it is no one source`);
