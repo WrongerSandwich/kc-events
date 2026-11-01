@@ -8,8 +8,8 @@ import type { CannedPage, ScriptedReply } from "./fakes/ports.js";
 import type { Source } from "../src/registry.js";
 import { runWith } from "./fakes/run.js";
 
-/** A source flagged to read each event's own page for the time its list does not give (#123). */
-const lied = source("Lied", { neighborhood: "Lawrence", readEventPages: true });
+/** A source whose list gives dates and no times, and each event's own page the time (#123), read by the own-page pass (#254). */
+const lied = source("Lied", { neighborhood: "Lawrence" });
 const LIST_URL = lied.urls[0]!;
 const OWN_URL = "https://lied.test/event/music-and-mental-health/";
 const LIST = {
@@ -46,7 +46,7 @@ const timed = (overrides: Record<string, unknown> = {}): ScriptedReply => ({
 
 const runAt = (
   now: Date,
-  { sources = [lied], pages = {}, completions = [listed(), timed()], dataset = emptyDataset(), config = testConfig() }: {
+  { sources = [lied], pages = {}, completions = [listed(), timed()], dataset = emptyDataset(), config = testConfig({ ownPageReadsPerRun: 150 }) }: {
     sources?: Source[];
     pages?: Record<string, CannedPage>;
     completions?: ScriptedReply[];
@@ -56,7 +56,7 @@ const runAt = (
 ) => runWith(now, dataset, { sources, pages: { [LIST_URL]: LIST, [OWN_URL]: OWN_PAGE, ...pages }, completions, config });
 
 describe("an event's own page read for its time (#123)", () => {
-  it("a flagged source's event with a date only takes the time its own page gives on that date, quoted from that page", async () => {
+  it("an event with a date only takes the time its own page gives on that date, quoted from that page", async () => {
     const { dataset, calls, report } = await runAt(WEEK_1);
 
     expect(calls).toContain(`fetch:${OWN_URL}`);
@@ -69,7 +69,7 @@ describe("an event's own page read for its time (#123)", () => {
       evidence: { date: "Monday, October 12", venue: "Lied Center", time: { page: OWN_URL, quote: TIME_QUOTE } },
     });
     expect(report.ownPages).toEqual([
-      { source: "Lied", read: 1, timed: 1, priced: 0, aged: 0, dayed: 0, described: 0, kept: 0, dateDisagreements: 0, failed: 0, problems: [] },
+      { source: "Upcoming events", read: 1, timed: 1, priced: 0, aged: 0, dayed: 0, described: 0, kept: 0, left: 0, dateDisagreements: 0, failed: 0, problems: [] },
     ]);
   });
 
@@ -122,15 +122,6 @@ describe("an event's own page read for its time (#123)", () => {
     expect(report.ownPages[0]!.problems).toHaveLength(1);
   });
 
-  it("an unflagged source's own pages are never fetched", async () => {
-    const { readEventPages: _, ...unflagged } = lied;
-    const { calls, dataset, report } = await runAt(WEEK_1, { sources: [unflagged], completions: [listed(unflagged)] });
-
-    expect(calls.filter((c) => c.includes(OWN_URL))).toEqual([]);
-    expect(dataset.events[0]).toMatchObject({ start: "2026-10-12", eventUrl: OWN_URL });
-    expect(report.ownPages).toEqual([]);
-  });
-
   it("a time quote that is not on the own page is dropped, and the event stays untimed", async () => {
     const { dataset, report } = await runAt(WEEK_1, { completions: [listed(), timed({ timeEvidence: "Monday, October 12 at 7:00 pm" })] });
 
@@ -157,13 +148,12 @@ describe("an event's own page read for its time (#123)", () => {
     expect(report.ownPages[0]).toMatchObject({ read: 1, timed: 0, dateDisagreements: 0 });
   });
 
-  it("no own page is read for an event the list already times, one with no own page, or one past the horizon", async () => {
+  it("no own page is read for an event with no own page, or one past the horizon", async () => {
     const { calls } = await runAt(WEEK_1, {
       completions: [
         {
           value: {
             events: [
-              candidateAt(lied, { title: "Timed", startDate: "2026-10-12", startTime: "19:30", eventLink: 1, dateEvidence: "Monday, October 12", venueEvidence: "Lied Center" }),
               candidateAt(lied, { title: "Linkless", startDate: "2026-10-14", startTime: null, eventLink: null, dateEvidence: "Monday, October 12", venueEvidence: "Lied Center" }),
               candidateAt(lied, { title: "Far Off", startDate: "2027-03-01", startTime: null, eventLink: 1, dateEvidence: "Monday, October 12", venueEvidence: "Lied Center" }),
             ],
@@ -202,7 +192,7 @@ describe("an event's own page read for its time (#123)", () => {
   });
 
   it("once the spend cap is reached no own page is read, and the shortfall counts it", async () => {
-    const { calls, dataset, report } = await runAt(WEEK_1, { config: testConfig({ spendCapUsd: 0.005 }), completions: [listed()] });
+    const { calls, dataset, report } = await runAt(WEEK_1, { config: testConfig({ spendCapUsd: 0.005, ownPageReadsPerRun: 150 }), completions: [listed()] });
     expect(calls.filter((c) => c.includes(OWN_URL))).toEqual([]);
     expect(dataset.events[0]).toMatchObject({ status: "active", start: "2026-10-12" });
     expect(report.spend.shortfall.ownPagesNotRead).toBe(1);

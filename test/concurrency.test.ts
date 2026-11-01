@@ -44,7 +44,7 @@ async function runAt(concurrency: number, { sources, pages, completions, dataset
 }) {
   const fakes = fakePorts(WEEK_1, { pages, completions, ...(searches ? { searches } : {}) });
   const { port, seen } = timed(fakes.ports.model);
-  const base = testConfig({ concurrency });
+  const base = testConfig({ concurrency, ownPageReadsPerRun: 150 });
   const config = searches ? { ...base, discovery: { ...base.discovery, enabled: true, aggregatorHosts: ["listings.test"] } } : base;
   const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: { ...fakes.ports, fetcher: fetcher(fakes.ports.fetcher), model: port } });
   return { ...result, seen, calls: fakes.calls };
@@ -120,7 +120,7 @@ describe("pages read several at once (#252)", () => {
   });
 
   it("own pages: their reads overlap, and the report's lines and problems come out as one page at a time", async () => {
-    const lied = source("Lied", { neighborhood: "Lawrence", readEventPages: true });
+    const lied = source("Lied", { neighborhood: "Lawrence" });
     const slugs = ["one", "two", "three", "four", "five"];
     const ownUrl = (slug: string) => `https://lied.test/event/${slug}/`;
     const list: CannedPage = { status: 200, body: `<html><body>${slugs.map((s) => `<div><a href="/event/${s}/">Talk ${s}</a> Monday, October 12 · Lied Center</div>`).join("")}</body></html>` };

@@ -35,15 +35,15 @@
           "quote": "21+ only"
         }
       },
-      "lastChanged": "2026-10-02T22:15:00-05:00",
-      "whyLine": "A rare club date from a band that plays arenas.",
-      "lastJudged": "2026-10-02T22:15:00-05:00",
       "price": "$30 advance",
       "ages": "21+",
       "ownPageRead": {
         "page": "https://knuckleheads.test/events/big-show",
         "on": "2026-10-02"
-      }
+      },
+      "lastChanged": "2026-10-02T22:15:00-05:00",
+      "whyLine": "A rare club date from a band that plays arenas.",
+      "lastJudged": "2026-10-02T22:15:00-05:00"
     },
     {
       "id": "evt_e98d443bf1c5",

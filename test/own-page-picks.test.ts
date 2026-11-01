@@ -7,7 +7,7 @@ import type { CannedPage, ScriptedReply } from "./fakes/ports.js";
 import type { Source } from "../src/registry.js";
 import { runWith } from "./fakes/run.js";
 
-/** An unflagged source: its own pages are read only for a pick (#133). */
+/** Under the test config, which turns the own-page pass off (#254), an own page is read only for a pick (#133). */
 const granada = source("Granada", { neighborhood: "Lawrence" });
 const LIST_URL = granada.urls[0]!;
 const OWN_URL = "https://granada.test/event/black-country-new-road/";
@@ -114,7 +114,7 @@ describe("a pick's own page read for its time, price, and ages (#133)", () => {
       },
     });
     expect(report.ownPages).toEqual([
-      { source: "Picks", read: 1, timed: 1, priced: 1, aged: 1, dayed: 0, described: 1, kept: 0, dateDisagreements: 0, failed: 0, problems: [] },
+      { source: "Picks", read: 1, timed: 1, priced: 1, aged: 1, dayed: 0, described: 1, kept: 0, left: 0, dateDisagreements: 0, failed: 0, problems: [] },
     ]);
     expect(renderReportMarkdown(report)).toContain("Picks: 1 own page read, 1 time, 1 price, 1 age limit, 0 runs' days, 1 description filled, 0 kept");
   });
@@ -266,14 +266,6 @@ describe("a pick's own page read for its time, price, and ages (#133)", () => {
     const waiting = await runAt(WEEK_1, { sources: [both], completions: [listed({}, both), ownPage()] });
     expect(waiting.calls).toContain(`browser:${LIST_URL} waiting for .list-item`);
     expect(waiting.calls).toContain(`browser:${OWN_URL} waiting for .showtime`);
-  });
-
-  it("a pick a flagged source's own-page read already read this run is not read twice", async () => {
-    const lied = { ...granada, readEventPages: true };
-    const { calls, dataset, report } = await runAt(WEEK_1, { sources: [lied], completions: [listed({}, lied), ownPage()] });
-    expect(calls.filter((c) => c === `fetch:${OWN_URL}`)).toHaveLength(1);
-    expect(dataset.events[0]).toMatchObject({ start: "2026-10-17T20:00:00-05:00", price: "$25 – $45", ages: "All Ages" });
-    expect(report.ownPages.map((o) => o.source)).toEqual(["Granada"]);
   });
 
   describe("on a later run", () => {

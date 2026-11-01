@@ -65,7 +65,7 @@ const full: RunReport = {
   ],
   ownPages: [
     {
-      source: "Lied",
+      source: "Upcoming events",
       read: 3,
       timed: 2,
       priced: 0,
@@ -73,11 +73,12 @@ const full: RunReport = {
       dayed: 0,
       described: 0,
       kept: 0,
+      left: 5,
       dateDisagreements: 1,
       failed: 0,
       problems: ["\"Show\": https://lied.test/event/show gives 2026-10-13, the list 2026-10-12; nothing taken"],
     },
-    { source: "Picks", read: 2, timed: 0, priced: 2, aged: 1, dayed: 1, described: 1, kept: 4, dateDisagreements: 0, failed: 0, problems: [] },
+    { source: "Picks", read: 2, timed: 0, priced: 2, aged: 1, dayed: 1, described: 1, kept: 4, left: 0, dateDisagreements: 0, failed: 0, problems: [] },
   ],
   failingSources: ["Pipe | Hall"],
   offListNeighborhoods: [{ stored: "Downtown East", placed: "Crossroads", events: 2 }],
@@ -168,8 +169,8 @@ describe("the run report", () => {
 
       ## Own pages
 
-      - Lied: 3 own pages read, 2 times, 0 prices, 0 age limits, 0 runs' days, 0 descriptions filled, 0 kept from an earlier read, 1 date disagreement, 0 failures
-      - Lied: "Show": https://lied.test/event/show gives 2026-10-13, the list 2026-10-12; nothing taken
+      - Upcoming events: 3 own pages read, 2 times, 0 prices, 0 age limits, 0 runs' days, 0 descriptions filled, 0 kept from an earlier read, 5 left for next run, 1 date disagreement, 0 failures
+      - Upcoming events: "Show": https://lied.test/event/show gives 2026-10-13, the list 2026-10-12; nothing taken
       - Picks: 2 own pages read, 0 times, 2 prices, 1 age limit, 1 run's days, 1 description filled, 4 kept from an earlier read, 0 date disagreements, 0 failures
 
       ## Discovery

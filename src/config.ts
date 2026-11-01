@@ -129,6 +129,11 @@ export const configSchema = z.strictObject({
    * end past the cap. At 1, one page at a time.
    */
   concurrency: z.number().int().positive().default(4),
+  /**
+   * The most own pages the pass before curation reads in a run (#254), nearest start first; the rest are read
+   * at a later run, nearest first again, and the report counts them. At 0 only the picks' pass after curation reads.
+   */
+  ownPageReadsPerRun: z.number().int().nonnegative().default(150),
   models: z
     .strictObject({
       extraction: z.string().min(1).default(DEFAULT_MODELS.extraction),

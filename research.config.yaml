@@ -28,6 +28,11 @@ extractionReads: 2
 # a time.
 concurrency: 4
 
+# The most own pages a run reads before curation (#254): every upcoming event's own page is read once,
+# nearest start first, for its time, price, age limit, days and description; what this leaves is read at
+# the next run, and the report says how many were left.
+ownPageReadsPerRun: 150
+
 models:
   extraction: openai/gpt-6-luna
   curation: anthropic/claude-sonnet-5.5

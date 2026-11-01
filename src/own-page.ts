@@ -1,7 +1,6 @@
 /**
- * An event's own page read (#123, #133; ADR 0009 amended): for a registry source flagged
- * `readEventPages`, an event its list dates but does not time, and every pick, has its own page read
- * for the time, the price, the age limit, and a description. The list stays the primary page; the own
+ * An event's own page read (#123, #133, #254; ADR 0009 amended): every upcoming event with an own page
+ * has it read once, before curation, for the time, the price, the age limit, and a description. The list stays the primary page; the own
  * page's quotes are kept beside the date and venue quotes.
  */
 import { z } from "zod";

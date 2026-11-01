@@ -13,8 +13,6 @@ const sourceFields = {
   waitFor: z.string().min(1).optional(),
   /** A CSS selector the browser waits for on an event's own page, which never renders the list's `waitFor` (#153); browser fetch only. */
   eventPageWaitFor: z.string().min(1).optional(),
-  /** Read each listed event's own page for the time the list does not give (#123, ADR 0009 amended); only the time is taken. */
-  readEventPages: z.boolean().optional(),
   /**
    * The calendar's own URL when its `urls` are the pages of the feed its script pages through (#226):
    * they are one listing at this URL, which every sighting from them cites and which is never fetched.

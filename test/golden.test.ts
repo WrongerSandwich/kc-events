@@ -16,8 +16,8 @@ import { candidateAt, PAGE, reply, source, WEEK_1, WEEK_2, WEEK_3 } from "./fake
  * lists a show that drops off its page while a later one stays (struck in week 2, expired two-strike in
  * week 3); Recordbar's calendar redirects to its events page; the Midland's page is down in week 2 and back
  * in week 3. Discovery finds a promoter's page in week 1 (held for promotion; `promoter` is not in the
- * registry, only what candidateAt cites), and curation flags one show, whose own page is read for its price
- * and age limit in week 1 and kept from that read after (#133). Each registry page is read twice (#224), alike.
+ * registry, only what candidateAt cites), and curation flags one show, whose own page the own-page pass reads
+ * for its price and age limit in week 1, before curation, and keeps from that read after (#133, #254). Each registry page is read twice (#224), alike.
  */
 const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms" });
 const recordbar = source("Recordbar", { neighborhood: "Crossroads" });
@@ -56,7 +56,7 @@ const arenaNight = candidateAt(midland, { title: "Arena Night", startDate: "2026
 const promoterNight = candidateAt(promoter, { title: "Promoter Night", startDate: "2026-11-01", venue: "The Truman", venueEvidence: "The Truman, 801 Westport Rd" });
 
 const config = (() => {
-  const base = testConfig({ extractionReads: 2 });
+  const base = testConfig({ extractionReads: 2, ownPageReadsPerRun: 150 });
   return { ...base, discovery: { ...base.discovery, enabled: true } };
 })();
 const registry = { sources: [knuckleheads, recordbar, midland] };

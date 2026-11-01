@@ -65,7 +65,7 @@ import { listingOf, type ExcludedSource, type Registry, type Source } from "./re
 import { SearchQuotaExhausted, type FetchOptions, type FetchPort, type FetchResult, type ModelPort, type Ports } from "./ports.js";
 import { plural } from "./markdown.js";
 import { inOrder, type Turn } from "./pool.js";
-import type { CandidateTally, EventRef, LikelyDuplicateRecord, OwnPagesReport, RunReport, SourceReport } from "./report.js";
+import { UPCOMING_OWN_PAGES, type CandidateTally, type EventRef, type LikelyDuplicateRecord, type OwnPagesReport, type RunReport, type SourceReport } from "./report.js";
 import { likelyDuplicatePairs } from "./likely-duplicates.js";
 import { awayGame, SKIP_REASONS, skipReason, type SkipReason } from "./skip.js";
 import { deriveRecurrence } from "./recurrence.js";
@@ -169,10 +169,10 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   const aged = reverifyOnly
     ? reverified.events
     : reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: couldHaveSighted(e, laneOutcome.attempts, registry, config) }));
-  // A flagged source's events its list dates but does not time have their own page read for the time (#123); not midweek.
+  // Every upcoming event's own page is read once, before curation so it judges the fuller description (#254); not midweek.
   const ownPages = reverifyOnly
-    ? { events: aged, report: [], notRead: 0, read: new Set<string>() }
-    : await readOwnPages(aged, sighted, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
+    ? { events: aged, report: [], notRead: 0, covered: new Set<string>() }
+    : await readOwnPages(aged, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   // A mapped venue places every event at it, read this run or not (#150); a reading places the rest from its page,
   // and one no page placed this run is placed from what is stored. The map goes first: its neighborhoods are on the
   // list (the config checks), so the off-list placement leaves them be and reports only what the map did not place.
@@ -186,10 +186,10 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   const kept = placed.events.filter((e) => keptOn.has(e.id) && e.status === "active");
   const changed = markChanged(dataset.events, placed.events, startedIso);
   const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
-  // Each pick has its own page read for the time, price and age limit, once per date and own page (#133).
+  // A pick the pass did not read this run (its ceiling left it) has its own page read now, once per date and own page (#133).
   const picks = reverifyOnly
     ? { events: curation.events, report: [], notRead: 0 }
-    : await readPicks(curation.events, ownPages.read, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
+    : await readPicks(curation.events, ownPages.covered, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   assertModelReached(model);
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = picks.events.map(cleanStoredWhyLine);
@@ -1619,61 +1619,123 @@ function sightingFor(event: Event, sightings: Sighting[], aliases: VenueAliases)
 }
 
 /**
- * The own-page time (#123, ADR 0009 amended). For an active registry source flagged `readEventPages`,
- * every active dated event of it that a page with standing read this run, that starts from today
- * through the horizon on a date with no time, and that has an own page, has that page read the
- * source's way (readOwnPage). A time once read is kept while the list gives the same date with no time
- * and the same own page (refresh), so a page is read again only when one of those changes.
+ * The own-page pass (#254; ADR 0009 amended by #123, #133). Before curation, every active event with an own page whose
+ * span covers a day from today through the horizon (coversDays) has that page read (readOwnPage), the way its source's
+ * pages are fetched, unless a run read it before on the date and own page the list still gives (refresh keeps that
+ * read), which the line counts as kept. Nearest start first, at most `ownPageReadsPerRun` of them; the rest are left
+ * for a later run, nearest first again, and counted, never as a shortfall of the spend cap. A host whose robots.txt
+ * refused one of them is not fetched again this run (robotsGate). `covered` holds every event the pass kept a read
+ * for or tried, read or not, so the picks' pass neither counts nor tries it again.
  */
 async function readOwnPages(
   events: Event[],
-  sighted: Set<string>,
   registry: Registry,
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
   rules: string,
-): Promise<{ events: Event[]; report: OwnPagesReport[]; notRead: number; read: Set<string> }> {
+): Promise<{ events: Event[]; report: OwnPagesReport[]; notRead: number; covered: Set<string> }> {
   const { config, today } = context;
+  // At a ceiling of 0 the pass is off, and only the picks' pass reads.
+  if (config.ownPageReadsPerRun === 0) return { events, report: [], notRead: 0, covered: new Set() };
   const lastDay = horizonEnd(today, config.horizonWeeks);
-  /** Each flagged source by name, with its line in the report. */
-  const flagged = new Map(
-    registry.sources.filter((s) => s.status === "active" && s.readEventPages).map((source) => [source.name, { source, line: ownPagesLine(source.name) }]),
-  );
-  const wantsTime = (e: Event) => {
-    const date = calendarDate(e.start);
-    return (
-      e.status === "active" && sighted.has(e.id) && e.eventUrl !== undefined && date !== undefined && !hasTime(e.start) && date >= today && date <= lastDay
-    );
-  };
+  const line = ownPagesLine(UPCOMING_OWN_PAGES);
+  const due: number[] = [];
+  const covered = new Set<string>();
+  events.forEach((event, i) => {
+    if (event.status !== "active" || event.eventUrl === undefined || !coversDays(event, today, lastDay)) return;
+    if (event.ownPageRead !== undefined && samePage(event.ownPageRead.page, event.eventUrl)) {
+      line.kept++;
+      covered.add(event.id);
+    } else due.push(i);
+  });
+  // Nearest start first; a stable sort keeps the dataset's order among events starting together.
+  const nearest = due.sort((a, b) => compareStarts(events[a]!, events[b]!));
+  const planned = nearest.slice(0, config.ownPageReadsPerRun);
+  line.left = nearest.length - planned.length;
+
+  const gate = robotsGate();
+  const chosen = planned.map((i) => events[i]!);
+  const plans = chosen.map((event) => ({ route: ownPageRouteFor(event, registry, ports), line, gate }));
+  const outcomes = await readOwnPagesTogether(chosen, plans, ports, context, rules);
+  line.problems.push(...gate.lines());
 
   let notRead = 0;
-  const read = new Set<string>();
-  const plans = events.map((event) => {
-    const { lead } = event;
-    const flaggedSource = lead.lane === "registry" ? flagged.get(lead.source) : undefined;
-    return flaggedSource && wantsTime(event) ? { route: ownPageFetcherFor(flaggedSource.source, ports), line: flaggedSource.line } : undefined;
-  });
-  const outcomes = await readOwnPagesTogether(events, plans, ports, context, rules);
-  const out = events.map((event, i) => {
-    const outcome = outcomes[i];
-    if (outcome === undefined) return event;
+  const out = [...events];
+  planned.forEach((index, k) => {
+    const outcome = outcomes[k]!;
     if (outcome === "not-read") notRead++;
-    else read.add(event.id);
-    return outcome === "not-read" ? event : outcome;
+    else {
+      covered.add(events[index]!.id);
+      out[index] = outcome;
+    }
   });
-  return { events: out, report: [...flagged.values()].map((f) => f.line), notRead, read };
+  return { events: out, report: line.kept + nearest.length > 0 ? [line] : [], notRead, covered };
+}
+
+/** Two events by start, the earlier first; a date-only start sorts as that day's first moment. */
+function compareStarts(a: Event, b: Event): number {
+  const [x, y] = [a.start ?? "", b.start ?? ""];
+  return x < y ? -1 : x > y ? 1 : 0;
+}
+
+/** The way an event's own page is fetched: its active registry source's way (ownPageFetcherFor), else plainly. */
+function ownPageRouteFor(event: Event, registry: Registry, ports: Ports): FetchRoute {
+  const { lead } = event;
+  const source = lead.lane === "registry" ? registry.sources.find((s): s is Source => s.name === lead.source && s.status === "active") : undefined;
+  return source ? ownPageFetcherFor(source, ports) : plainly(ports);
+}
+
+/**
+ * Own pages fetched one host at a time, in the order their reads start (#254), so once robots.txt refuses one,
+ * the host's later own pages are held back for the rest of the pass: no fetch and no call. The fetch policy
+ * already pauses between pages of one origin, so taking a host's pages in turn costs no time. `lines` gives one
+ * report line per refusing host, naming the page refused and counting those held back.
+ */
+interface RobotsGate {
+  /** The fetch made in its host's turn, or "held" when robots.txt refused an earlier own page there. */
+  fetch(url: string, title: string, fetch: () => Promise<Fetched>): Promise<Fetched | "held">;
+  lines(): string[];
+}
+
+function robotsGate(): RobotsGate {
+  const last = new Map<string, Promise<void>>();
+  const refused = new Map<string, { url: string; title: string; held: number }>();
+  return {
+    async fetch(url, title, fetch) {
+      const host = hostOf(url) ?? url;
+      const before = last.get(host) ?? Promise.resolve();
+      let done!: () => void;
+      last.set(host, new Promise((resolve) => (done = resolve)));
+      await before;
+      try {
+        const refusal = refused.get(host);
+        if (refusal) {
+          refusal.held++;
+          return "held";
+        }
+        const fetched = await fetch();
+        if (!("page" in fetched) && fetched.failure === "disallowed") refused.set(host, { url, title, held: 0 });
+        return fetched;
+      } finally {
+        done();
+      }
+    },
+    lines: () =>
+      [...refused].map(([host, r]) => `${host}: robots.txt disallows ${r.url} ("${r.title}")${r.held > 0 ? `; ${plural(r.held, "more own page")} on it not fetched this run` : ""}`),
+  };
 }
 
 /**
  * The second reading for picks (#133). After curation, every active pick with an own page whose span
  * covers a day from today through the horizon (it starts in that range, or started before today and
  * has not ended, #151) has that page read (readOwnPage), the way its source's pages are
- * fetched, unless the own-page time already read it this run, or a run read it before on the date and
- * own page the list still gives (refresh keeps that read), which the report counts as kept.
+ * fetched, unless the own-page pass covered it this run (#254: kept a read for it or tried it), or a run
+ * read it before on the date and own page the list still gives (refresh keeps that read), which the
+ * report counts as kept. So with the pass on it reads only a pick the pass's ceiling left.
  */
 async function readPicks(
   events: Event[],
-  alreadyRead: Set<string>,
+  covered: Set<string>,
   registry: Registry,
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
@@ -1682,11 +1744,11 @@ async function readPicks(
   const { config, today } = context;
   const lastDay = horizonEnd(today, config.horizonWeeks);
   const line = ownPagesLine("Picks");
-  const isPick = (e: Event) => e.status === "active" && e.dontMiss && e.eventUrl !== undefined && !alreadyRead.has(e.id) && coversDays(e, today, lastDay);
+  const isPick = (e: Event) => e.status === "active" && e.dontMiss && e.eventUrl !== undefined && !covered.has(e.id) && coversDays(e, today, lastDay);
 
   let notRead = 0;
   let picks = 0;
-  const plans: ({ route: FetchRoute; line: OwnPagesReport } | undefined)[] = [];
+  const plans: (OwnPagePlan | undefined)[] = [];
   for (const event of events) {
     if (!isPick(event)) {
       plans.push(undefined);
@@ -1698,9 +1760,7 @@ async function readPicks(
       plans.push(undefined);
       continue;
     }
-    const { lead } = event;
-    const source = lead.lane === "registry" ? registry.sources.find((s): s is Source => s.name === lead.source && s.status === "active") : undefined;
-    plans.push({ route: source ? ownPageFetcherFor(source, ports) : plainly(ports), line });
+    plans.push({ route: ownPageRouteFor(event, registry, ports), line });
   }
   const outcomes = await readOwnPagesTogether(events, plans, ports, context, rules);
   const out = events.map((event, i) => {
@@ -1718,7 +1778,7 @@ async function readPicks(
  */
 async function readOwnPagesTogether(
   events: Event[],
-  plans: ({ route: FetchRoute; line: OwnPagesReport } | undefined)[],
+  plans: (OwnPagePlan | undefined)[],
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
   rules: string,
@@ -1727,13 +1787,20 @@ async function readOwnPagesTogether(
     const plan = plans[i];
     if (!plan) return undefined;
     const own = ownPagesLine(plan.line.source);
-    return { outcome: await readOwnPage(event, plan.route, ports, context, rules, own, turn), own };
+    return { outcome: await readOwnPage(event, plan, ports, context, rules, own, turn), own };
   });
   return done.map((read, i) => {
     if (!read) return undefined;
     addOwnPagesLine(plans[i]!.line, read.own);
     return read.outcome;
   });
+}
+
+/** How one event's own page is read: the way it is fetched, the line it reports into, and the pass's robots gate, if any. */
+interface OwnPagePlan {
+  route: FetchRoute;
+  line: OwnPagesReport;
+  gate?: RobotsGate;
 }
 
 /** One own-pages line's counts and problems added to another's; the counts are every number a line starts with. */
@@ -1747,7 +1814,7 @@ type OwnPagesCount = { [K in keyof OwnPagesReport]: OwnPagesReport[K] extends nu
 
 /** A line of the report's own pages, with nothing read yet. */
 function ownPagesLine(source: string): OwnPagesReport {
-  return { source, read: 0, timed: 0, priced: 0, aged: 0, dayed: 0, described: 0, kept: 0, dateDisagreements: 0, failed: 0, problems: [] };
+  return { source, read: 0, timed: 0, priced: 0, aged: 0, dayed: 0, described: 0, kept: 0, left: 0, dateDisagreements: 0, failed: 0, problems: [] };
 }
 
 /**
@@ -1760,11 +1827,13 @@ function ownPagesLine(source: string): OwnPagesReport {
  * the read: the event stays as it was, with no strike or outage, and the line says why. Once the
  * spend cap is reached the page is not read, and the caller counts it. The call waits for its turn
  * (see inOrder), so with pages read together the own pages' calls go out in event order; a ticket
- * page's call (readTicketPage) follows its own page's reply and keeps no turn.
+ * page's call (readTicketPage) follows its own page's reply and keeps no turn. Through a robots gate
+ * (the pass's, #254), a page its host's robots.txt already refused this run is neither fetched nor
+ * counted, and a refusal is counted as a failure whose line the gate gives.
  */
 async function readOwnPage(
   event: Event,
-  route: FetchRoute,
+  { route, gate }: OwnPagePlan,
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
   rules: string,
@@ -1779,7 +1848,12 @@ async function readOwnPage(
     return event;
   };
   if (ports.model.exhausted()) return "not-read";
-  const fetched = await fetchReadable(url, ...route);
+  const fetched = gate ? await gate.fetch(url, event.title, () => fetchReadable(url, ...route)) : await fetchReadable(url, ...route);
+  if (fetched === "held") return event;
+  if (!("page" in fetched) && gate && fetched.failure === "disallowed") {
+    line.failed++;
+    return event;
+  }
   if (!("page" in fetched)) return failed(`${fetched.problem}; nothing taken`);
   const reading = readPage(fetched.page, config);
   let reply: Awaited<ReturnType<ModelPort["complete"]>>;

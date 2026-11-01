@@ -14,6 +14,8 @@ export function testConfig(overrides: Partial<RunConfig> = {}): RunConfig {
       extractionReads: 1,
       // One page at a time, so a test's scripted replies, fetches and calls keep their order; the concurrency tests set more (#252).
       concurrency: 1,
+      // No own-page pass before curation, so a test's scripted replies are the lists' and the picks'; the pass's tests set it (#254).
+      ownPageReadsPerRun: 0,
       models: { ...TEST_MODELS },
       kinds: ["music", "other"],
       neighborhoods: { "Central KC": ["Westport", "East Bottoms", "Crossroads"], Lawrence: ["Lawrence"] },

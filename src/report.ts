@@ -16,10 +16,15 @@ export interface SourceReport {
   detail?: string;
 }
 
+/** The source of the own-page pass's line (#254), the one that counts what its ceiling left. */
+export const UPCOMING_OWN_PAGES = "Upcoming events";
+
 /**
- * One flagged source's own-page reads this run (#123), or the picks' (#133, source "Picks"): pages
- * read, times, prices, age limits and descriptions filled, picks kept from an earlier read, dates that
- * disagreed with the list, reads that failed, and a line for each of the last two and for any value not taken.
+ * The own-page pass's reads this run (#254, source UPCOMING_OWN_PAGES; a flagged source's in reports
+ * before it, #123), or the picks' (#133, source "Picks"): pages read, times, prices, age limits and
+ * descriptions filled, reads kept from an earlier run, events the ceiling left, dates that disagreed
+ * with the list, reads that failed, and a line for each of the last two, for any value not taken, and
+ * for each host whose robots.txt refused an own page.
  */
 export interface OwnPagesReport {
   source: string;
@@ -31,6 +36,8 @@ export interface OwnPagesReport {
   dayed: number;
   described: number;
   kept: number;
+  /** Events the per-run ceiling left for a later run (#254); 0 on any other line. */
+  left: number;
   dateDisagreements: number;
   failed: number;
   problems: string[];
@@ -342,6 +349,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
       dayed: countSince,
       described: countSince,
       kept: countSince,
+      left: countSince,
       dateDisagreements: count,
       failed: count,
       problems: z.array(z.string()),
@@ -440,7 +448,7 @@ ${
 
 ${markdownList(
   report.ownPages.flatMap((o) => [
-    `${o.source}: ${plural(o.read, "own page")} read, ${plural(o.timed, "time")}, ${plural(o.priced, "price")}, ${plural(o.aged, "age limit")}, ${plural(o.dayed, "run's days", "runs' days")}, ${plural(o.described, "description")} filled, ${o.kept} kept from an earlier read, ${plural(o.dateDisagreements, "date disagreement")}, ${plural(o.failed, "failure")}`,
+    `${o.source}: ${plural(o.read, "own page")} read, ${plural(o.timed, "time")}, ${plural(o.priced, "price")}, ${plural(o.aged, "age limit")}, ${plural(o.dayed, "run's days", "runs' days")}, ${plural(o.described, "description")} filled, ${o.kept} kept from an earlier read, ${o.source === UPCOMING_OWN_PAGES ? `${o.left} left for next run, ` : ""}${plural(o.dateDisagreements, "date disagreement")}, ${plural(o.failed, "failure")}`,
     ...o.problems.map((p) => `${o.source}: ${p}`),
   ]),
 )}

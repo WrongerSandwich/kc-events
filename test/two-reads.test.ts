@@ -192,7 +192,7 @@ describe("reads that stay single at two reads (#224)", () => {
   });
 
   it("an own page is read once", async () => {
-    const lied = source("Lied", { neighborhood: "Lawrence", readEventPages: true });
+    const lied = source("Lied", { neighborhood: "Lawrence" });
     const LIST_URL = lied.urls[0]!;
     const OWN_URL = "https://lied.test/event/music-and-mental-health/";
     const TIME_QUOTE = "Monday • October 12, 2026 • 7:00 pm";
@@ -211,7 +211,7 @@ describe("reads that stay single at two reads (#224)", () => {
         [OWN_URL]: { status: 200, body: `<html><body><h1>Music and Mental Health</h1><p>${TIME_QUOTE}</p></body></html>` },
       },
       completions: [listed, listed, timed],
-      config: twice,
+      config: { ...twice, ownPageReadsPerRun: 150 },
     });
 
     expect(readsOf(requests, LIST_URL)).toHaveLength(2);
