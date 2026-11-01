@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { emptyDataset, type Dataset, type Event } from "../src/dataset.js";
 import { renderReportMarkdown } from "../src/report.js";
-import { testConfig } from "./fakes/config.js";
+import { TEST_PROMPT_HASH, testConfig } from "./fakes/config.js";
 import { runWith } from "./fakes/run.js";
 import { candidateAt, knuckleheads, PAGE, reply, source, WEEK_1, WEEK_1_ISO, WEEK_2 } from "./fakes/fixtures.js";
 
@@ -38,6 +38,7 @@ function event(title: string, venue: string | undefined, primaryUrl: string, sta
     ...(verified ? { lastVerified: RUN_ONE } : {}),
     lastChanged: RUN_ONE,
     lastJudged: RUN_ONE,
+    judgedWith: TEST_PROMPT_HASH,
     status: verified ? "active" : "unverified",
     verificationFailures: 0,
     consecutiveOutages: 0,
@@ -168,6 +169,17 @@ describe("folding duplicates", () => {
     expect(byId(keeps.dataset).get(keptLater.id)).toMatchObject({ status: "active", dontMiss: false, lastJudged: RUN_TWO });
     expect(byId(keeps.dataset).get(keptLater.id)).not.toHaveProperty("whyLine");
     expect(byId(fromUnjudged.dataset).get(neverJudged.id)).toMatchObject({ status: "active", ...flag, lastJudged: RUN_ONE });
+  });
+
+  it("carries the later judgment's prompt hash with it, so a kept record judged before the hash is not judged again (#256)", async () => {
+    const flag = { dontMiss: true, whyLine: "The festival's only Kansas City stop this year." };
+    const [kept, duplicate] = hand().college;
+    const { judgedWith: _, ...unstamped } = kept;
+
+    const { dataset, report } = await quietRun(withEvents([unstamped, { ...duplicate, ...flag, lastJudged: RUN_TWO }]));
+
+    expect(byId(dataset).get(kept.id)).toMatchObject({ status: "active", ...flag, lastJudged: RUN_TWO, judgedWith: TEST_PROMPT_HASH });
+    expect(report.curation.calls).toBe(0);
   });
 
   it("folds nothing that does not match: two venues, a venue-less record with two candidates on other hosts, or two events in one series", async () => {

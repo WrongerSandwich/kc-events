@@ -1,4 +1,5 @@
 import { parseConfig, type RunConfig } from "../../src/config.js";
+import { promptHash } from "../../src/curation.js";
 
 /** The model ids the test config names; the fake model routes scripted replies by them. */
 export const TEST_MODELS = { extraction: "test/extraction", curation: "test/curation" } as const;
@@ -27,3 +28,6 @@ export function testConfig(overrides: Partial<RunConfig> = {}): RunConfig {
 export function testPrompts() {
   return { extractionRules: "TEST EXTRACTION RULES", curationPrompt: "TEST CURATION PROMPT", eventPageRules: "TEST EVENT PAGE RULES" };
 }
+
+/** The hash a judgment made under the test curation prompt carries (judgedWith, #256), so a hand-built record judged under it is not judged again. */
+export const TEST_PROMPT_HASH = promptHash(testPrompts().curationPrompt);

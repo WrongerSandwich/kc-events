@@ -3,6 +3,7 @@
  * go to the curation model with the curation prompt, and come back with a don't-miss flag and a
  * why-line each. Recurring events are never eligible (ADR 0005).
  */
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import type { Event } from "./dataset.js";
@@ -54,14 +55,29 @@ export interface CurationContext {
 }
 
 /**
- * Whether an event is due for curation: it is publishable, it is not recurring, and it is new
- * or has changed since it was last judged. A run cut short by the spend cap leaves events
- * unjudged, so they come up again next run.
+ * The curation prompt's version, stamped on every judgment as judgedWith (#256): the first 12 hex
+ * digits of the sha256 of its text as read, so any edit, whitespace included, re-judges everything.
  */
-export function needsCuration(event: Event): boolean {
-  if (event.status !== "active" || event.recurrence === "recurring" || event.lastChanged === undefined) return false;
-  return event.lastJudged === undefined || Date.parse(event.lastChanged) > Date.parse(event.lastJudged);
+export function promptHash(curationPrompt: string): string {
+  return createHash("sha256").update(curationPrompt).digest("hex").slice(0, 12);
 }
+
+/**
+ * Whether an event is due for curation: it is publishable, it is not recurring, and it is new,
+ * has changed since it was last judged, or was judged under another prompt than the current one
+ * (judgedWith, #256; absent on a judgment made before it was kept). A run cut short by the spend
+ * cap leaves events unjudged, so they come up again next run.
+ */
+export function needsCuration(event: Event, judgedWith: string): boolean {
+  return eligible(event) && (changedSinceJudged(event) || event.judgedWith !== judgedWith);
+}
+
+/** Whether an event is due for curation on its facts alone, whatever prompt judged it. */
+export function changedSinceJudged(event: Event): boolean {
+  return eligible(event) && (event.lastJudged === undefined || Date.parse(event.lastChanged!) > Date.parse(event.lastJudged));
+}
+
+const eligible = (event: Event) => event.status === "active" && event.recurrence !== "recurring" && event.lastChanged !== undefined;
 
 /**
  * Stamps last-changed on every event that is new this run or whose title, date (a recurring event's
@@ -133,9 +149,9 @@ export function buildCurationRequest(events: Event[], context: CurationContext):
   };
 }
 
-/** The event with a judgment applied and stamped as judged now; the why-line is kept only with the flag. */
-export function applyJudgment(event: Event, judgment: Judgment, nowIso: string): Event {
-  return withJudgment(event, { dontMiss: judgment.dontMiss, whyLine: cleanWhyLine(judgment.why), lastJudged: nowIso });
+/** The event with a judgment applied and stamped as judged now under this prompt; the why-line is kept only with the flag. */
+export function applyJudgment(event: Event, judgment: Judgment, nowIso: string, judgedWith: string): Event {
+  return withJudgment(event, { dontMiss: judgment.dontMiss, whyLine: cleanWhyLine(judgment.why), lastJudged: nowIso, judgedWith });
 }
 
 /**
@@ -146,13 +162,16 @@ export function applyJudgment(event: Event, judgment: Judgment, nowIso: string):
 export function withLaterJudgment(kept: Event, duplicate: Event): Event {
   if (kept.recurrence === "recurring" || duplicate.lastJudged === undefined) return kept;
   if (kept.lastJudged !== undefined && Date.parse(kept.lastJudged) >= Date.parse(duplicate.lastJudged)) return kept;
-  return withJudgment(kept, { dontMiss: duplicate.dontMiss, whyLine: duplicate.whyLine, lastJudged: duplicate.lastJudged });
+  return withJudgment(kept, { dontMiss: duplicate.dontMiss, whyLine: duplicate.whyLine, lastJudged: duplicate.lastJudged, judgedWith: duplicate.judgedWith });
 }
 
-/** The event carrying this judgment in place of its own; the why-line is kept only with the flag. */
-function withJudgment(event: Event, { dontMiss, whyLine, lastJudged }: { dontMiss: boolean; whyLine: string | undefined; lastJudged: string }): Event {
-  const { whyLine: _, ...rest } = event;
-  return { ...rest, dontMiss, ...(dontMiss && whyLine !== undefined ? { whyLine } : {}), lastJudged };
+/** The event carrying this judgment, and the prompt it was made under, in place of its own; the why-line is kept only with the flag. */
+function withJudgment(
+  event: Event,
+  { dontMiss, whyLine, lastJudged, judgedWith }: { dontMiss: boolean; whyLine: string | undefined; lastJudged: string; judgedWith: string | undefined },
+): Event {
+  const { whyLine: _, judgedWith: __, ...rest } = event;
+  return { ...rest, dontMiss, ...(dontMiss && whyLine !== undefined ? { whyLine } : {}), lastJudged, ...(judgedWith !== undefined ? { judgedWith } : {}) };
 }
 
 /** A sentence end followed, after a space, by another: the second is the stray. A spaced ellipsis (". . .") is no sentence end. */

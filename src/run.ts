@@ -35,6 +35,8 @@ import {
   CURATION_BATCH_SIZE,
   curationReplySchema,
   needsCuration,
+  changedSinceJudged,
+  promptHash,
   whyLineOverCap,
   WHY_LINE_CAP,
   type CurationContext,
@@ -1398,6 +1400,7 @@ function refreshFields(known: Event, sighting: Event): Event {
     ...curated,
     ...(known.lastChanged !== undefined ? { lastChanged: known.lastChanged } : {}),
     ...(known.lastJudged !== undefined ? { lastJudged: known.lastJudged } : {}),
+    ...(known.judgedWith !== undefined ? { judgedWith: known.judgedWith } : {}),
   };
 }
 
@@ -2374,10 +2377,11 @@ function placeOffList(events: Event[], list: string[], config: RunConfig, regist
  * the spend cap is reached, events still to judge are not sent and are counted as not curated.
  */
 async function curate(events: Event[], model: CappedModel, context: CurationContext, nowIso: string) {
-  const due = events.filter(needsCuration);
+  const judgedWith = promptHash(context.curationPrompt);
+  const due = events.filter((e) => needsCuration(e, judgedWith));
   const judged = new Map<string, Event>();
   const unjudgedFlags = new Map<string, Event>();
-  const report: Omit<RunReport["curation"], "datedWhyLines"> = { calls: 0, judged: 0, flagged: 0, problems: [] };
+  const report: Omit<RunReport["curation"], "datedWhyLines"> = { calls: 0, judged: 0, flagged: 0, rejudgedForPrompt: 0, problems: [] };
   let notCurated = 0;
 
   for (let i = 0; i < due.length; i += CURATION_BATCH_SIZE) {
@@ -2420,7 +2424,9 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
         report.problems.push(`"${event.title}" was flagged with a why-line past the ${WHY_LINE_CAP}-character cap and was left unjudged`);
         continue;
       }
-      judged.set(event.id, applyJudgment(event, judgment, nowIso));
+      judged.set(event.id, applyJudgment(event, judgment, nowIso, judgedWith));
+      // Due only because another prompt judged it, or none recorded one (#256).
+      if (!changedSinceJudged(event)) report.rejudgedForPrompt++;
     }
     if (unknown > 0) report.problems.push(`${unknown} judgment(s) named no event in the batch and were ignored`);
     const unanswered = batch.length - answered.size;

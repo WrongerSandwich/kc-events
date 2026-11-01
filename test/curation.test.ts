@@ -16,9 +16,9 @@ const SHOW_ID = newEventId(CALENDAR_URL, "Big Show", WEEK_1_ISO, "2026-10-31");
 const tour = candidate({ title: "Gallery Tour", startDate: null, startTime: null, schedule: "every Tuesday", dateEvidence: "Gallery Tour every Tuesday" });
 
 /** One run over the recordBar calendar with one scripted extraction reply and, when given, one scripted curation reply. */
-async function runAt(now: Date, dataset: Dataset, [extraction, curation]: [CompletionResult, CompletionResult?], spendCapUsd = 5) {
+async function runAt(now: Date, dataset: Dataset, [extraction, curation]: [CompletionResult, CompletionResult?], spendCapUsd = 5, curationPrompt = testPrompts().curationPrompt) {
   const fakes = fakePorts(now, { pages: { [CALENDAR_URL]: PAGE }, completions: [extraction], curations: curation ? [curation] : [] });
-  const result = await run({ config: testConfig({ spendCapUsd }), prompts: testPrompts(), dataset, registry: { sources: [recordbar] }, ports: fakes.ports });
+  const result = await run({ config: testConfig({ spendCapUsd }), prompts: { ...testPrompts(), curationPrompt }, dataset, registry: { sources: [recordbar] }, ports: fakes.ports });
   expect(parseDataset(result.dataset)).toEqual(result.dataset);
   const curationCalls = fakes.calls.filter((c) => c === "model:test/curation");
   const curationRequests = fakes.requests.filter((r) => r.model === "test/curation");
@@ -40,7 +40,7 @@ describe("don't-miss curation", () => {
       whyLine: "A touring act that rarely plays a room this small.",
       lastJudged: WEEK_1_ISO,
     });
-    expect(report.curation).toEqual({ calls: 1, judged: 1, flagged: 1, problems: [], datedWhyLines: [] });
+    expect(report.curation).toEqual({ calls: 1, judged: 1, flagged: 1, rejudgedForPrompt: 0, problems: [], datedWhyLines: [] });
     expect(report.spend.totalUsd).toBeCloseTo(0.03);
   });
 });
@@ -71,7 +71,7 @@ describe("what is sent for curation", () => {
     const second = await runAt(WEEK_2, first.dataset, [extracted(candidate(), tour)]);
 
     expect(second.curationCalls).toEqual([]);
-    expect(second.report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, problems: [], datedWhyLines: [] });
+    expect(second.report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, rejudgedForPrompt: 0, problems: [], datedWhyLines: [] });
     expect(second.dataset.events[0]).toMatchObject({ dontMiss: true, whyLine: "Why.", lastJudged: WEEK_1_ISO, lastVerified: WEEK_2_ISO });
   });
 
@@ -114,6 +114,54 @@ describe("what is sent for curation", () => {
     const second = await runAt(WEEK_2, first.dataset, [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
     expect(second.curationCalls).toHaveLength(1);
     expect(second.dataset.events[0]).toMatchObject({ dontMiss: true, whyLine: "Why.", lastJudged: WEEK_2_ISO });
+  });
+});
+
+describe("the prompt a judgment was made under (#256)", () => {
+  const REVISED = "TEST CURATION PROMPT, revised";
+  const flaggedFirst = () => runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+
+  it("stamps a judgment with the curation prompt's hash: the first 12 hex digits of its sha256", async () => {
+    const { dataset } = await flaggedFirst();
+
+    // sha256("TEST CURATION PROMPT"), computed outside the code under test.
+    expect(dataset.events[0]).toMatchObject({ lastJudged: WEEK_1_ISO, judgedWith: "f4a91bd160cd" });
+  });
+
+  it("an unchanged event judged under an earlier prompt is judged again, and the report counts it", async () => {
+    const first = await flaggedFirst();
+
+    const second = await runAt(WEEK_2, first.dataset, [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: false, why: "" })], 5, REVISED);
+
+    expect(second.curationRequests[0]!.messages[0]!.content).toContain(REVISED);
+    expect(second.dataset.events[0]).toMatchObject({ dontMiss: false, lastChanged: WEEK_1_ISO, lastJudged: WEEK_2_ISO });
+    expect(second.dataset.events[0]!.judgedWith).not.toBe(first.dataset.events[0]!.judgedWith);
+    expect(second.report.curation).toMatchObject({ calls: 1, judged: 1, rejudgedForPrompt: 1 });
+  });
+
+  it("an event judged before judgments carried a prompt hash is judged again", async () => {
+    const first = await flaggedFirst();
+    const { judgedWith: _, ...unstamped } = first.dataset.events[0]!;
+
+    const second = await runAt(WEEK_2, { ...first.dataset, events: [unstamped] }, [extracted(candidate()), judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." })]);
+
+    expect(second.curationCalls).toHaveLength(1);
+    expect(second.dataset.events[0]).toMatchObject({ lastJudged: WEEK_2_ISO, judgedWith: "f4a91bd160cd" });
+    expect(second.report.curation.rejudgedForPrompt).toBe(1);
+  });
+
+  it("an event judged under the current prompt is not judged again, and a re-judge for a change is not counted as one for the prompt", async () => {
+    const first = await flaggedFirst();
+
+    const same = await runAt(WEEK_2, first.dataset, [extracted(candidate())]);
+    const moved = await runAt(WEEK_2, first.dataset, [
+      extracted(candidate({ startDate: "2026-11-07", dateEvidence: "Sat, Nov 7 · Show 8:00 PM" })),
+      judging(0.02, { id: SHOW_ID, dontMiss: true, why: "Why." }),
+    ], 5, REVISED);
+
+    expect(same.curationCalls).toEqual([]);
+    expect(same.report.curation.rejudgedForPrompt).toBe(0);
+    expect(moved.report.curation).toMatchObject({ judged: 1, rejudgedForPrompt: 0 });
   });
 });
 

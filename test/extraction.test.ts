@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { run } from "../src/run.js";
 import { emptyDataset, parseDataset } from "../src/dataset.js";
 import { fakePorts } from "./fakes/ports.js";
-import { testConfig, testPrompts } from "./fakes/config.js";
+import { TEST_PROMPT_HASH, testConfig, testPrompts } from "./fakes/config.js";
 import { candidateAt, costing, source, WEEK_1, WEEK_1_ISO, WEEK_2, WEEK_2_ISO } from "./fakes/fixtures.js";
 
 const knuckleheads = source("Knuckleheads", { neighborhood: "East Bottoms", checkHints: "Doors and show times are listed per show." });
@@ -36,6 +36,7 @@ describe("extraction over the registry lane", () => {
         lastVerified: WEEK_1_ISO,
         lastChanged: WEEK_1_ISO,
         lastJudged: WEEK_1_ISO,
+        judgedWith: TEST_PROMPT_HASH,
         status: "active",
         verificationFailures: 0,
         consecutiveOutages: 0,

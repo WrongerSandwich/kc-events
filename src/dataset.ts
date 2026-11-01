@@ -99,6 +99,8 @@ const eventFields = z.strictObject({
   lastChanged: isoDateTime.optional(),
   /** The run that last judged the event for don't-miss; absent until curation has seen it. */
   lastJudged: isoDateTime.optional(),
+  /** The curation prompt's hash (promptHash in curation) the last judgment was made under; absent on one made before #256. */
+  judgedWith: z.string().regex(/^[0-9a-f]{12}$/).optional(),
   status: z.enum(EVENT_STATUSES),
   /** Present exactly when the event is expired. */
   expiryReason: z.enum(EXPIRY_REASONS).optional(),
