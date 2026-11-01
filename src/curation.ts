@@ -69,15 +69,23 @@ export function promptHash(curationPrompt: string): string {
  * cap leaves events unjudged, so they come up again next run.
  */
 export function needsCuration(event: Event, judgedWith: string): boolean {
-  return eligible(event) && (changedSinceJudged(event) || event.judgedWith !== judgedWith);
+  return curationEligible(event) && (changedSince(event) || event.judgedWith !== judgedWith);
 }
 
 /** Whether an event is due for curation on its facts alone, whatever prompt judged it. */
 export function changedSinceJudged(event: Event): boolean {
-  return eligible(event) && (event.lastJudged === undefined || Date.parse(event.lastChanged!) > Date.parse(event.lastJudged));
+  return curationEligible(event) && changedSince(event);
 }
 
-const eligible = (event: Event) => event.status === "active" && event.recurrence !== "recurring" && event.lastChanged !== undefined;
+/** Whether curation may judge the event at all: publishable, not recurring, and marked by markChanged. */
+function curationEligible(event: Event): event is Event & { lastChanged: string } {
+  return event.status === "active" && event.recurrence !== "recurring" && event.lastChanged !== undefined;
+}
+
+/** Whether an eligible event is new or has changed since it was last judged. */
+function changedSince(event: Event & { lastChanged: string }): boolean {
+  return event.lastJudged === undefined || Date.parse(event.lastChanged) > Date.parse(event.lastJudged);
+}
 
 /**
  * Stamps last-changed on every event that is new this run or whose title, date (a recurring event's
