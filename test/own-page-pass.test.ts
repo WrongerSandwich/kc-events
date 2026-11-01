@@ -68,13 +68,23 @@ const runAt = (
     dataset = emptyDataset(),
     ceiling = 150,
     flag = false,
-  }: { pages?: Record<string, CannedPage>; completions?: ScriptedReply[]; dataset?: ReturnType<typeof emptyDataset>; ceiling?: number; flag?: boolean } = {},
+    concurrency = 1,
+    spendCapUsd = 5,
+  }: {
+    pages?: Record<string, CannedPage>;
+    completions?: ScriptedReply[];
+    dataset?: ReturnType<typeof emptyDataset>;
+    ceiling?: number;
+    flag?: boolean;
+    concurrency?: number;
+    spendCapUsd?: number;
+  } = {},
 ) =>
   runWith(now, dataset, {
     sources: [granada],
     pages: { [LIST_URL]: LIST, [NEAR_URL]: ownPageBody("Black Country, New Road"), [FAR_URL]: ownPageBody("Second Show"), ...pages },
     completions,
-    config: testConfig({ ownPageReadsPerRun: ceiling }),
+    config: testConfig({ ownPageReadsPerRun: ceiling, concurrency, spendCapUsd }),
     ...(flag ? { curate: flagAll } : {}),
   });
 
@@ -142,10 +152,11 @@ describe("every upcoming event's own page read once (#254)", () => {
     expect(second.report.ownPages).toEqual([line({ read: 1, timed: 1, priced: 1, described: 1, kept: 1 })]);
   });
 
-  it("a host whose robots.txt refuses an own page is tried once a run: one line for it, and no model call", async () => {
+  it.each([1, 4])("a host whose robots.txt refuses an own page is tried once a run: one line for it, and no model call (%i at once)", async (concurrency) => {
     const { calls, requests, dataset, report } = await runAt(WEEK_1, {
       pages: { [NEAR_URL]: "robots-blocked", [FAR_URL]: "robots-blocked" },
       completions: [listed(far, near())],
+      concurrency,
     });
 
     expect(calls.filter((c) => c.startsWith("robots-blocked:"))).toEqual([`robots-blocked:${NEAR_URL}`]);
@@ -154,6 +165,34 @@ describe("every upcoming event's own page read once (#254)", () => {
     expect(report.ownPages).toEqual([
       line({ failed: 1, problems: [`granada.test: robots.txt disallows ${NEAR_URL} ("Black Country, New Road"); 1 more own page on it not fetched this run`] }),
     ]);
+  });
+
+  it("an event already judged is judged again once its own page gives it a description", async () => {
+    const first = await runAt(WEEK_1, { pages: { [NEAR_URL]: "gone" } });
+    expect(first.dataset.events[0]).not.toHaveProperty("description");
+    expect(first.dataset.events[0]!.lastJudged).toBeDefined();
+
+    const { requests, dataset } = await runAt(WEEK_2, { dataset: first.dataset });
+    const curation = requests.filter((r) => r.model === "test/curation");
+    expect(curation).toHaveLength(1);
+    expect(curation[0]!.messages[1]!.content).toContain(DESCRIPTION);
+    expect(dataset.events[0]).toMatchObject({ description: DESCRIPTION, lastChanged: dataset.events[0]!.lastJudged });
+  });
+
+  it("an event running since before today is as near as today, not nearer", async () => {
+    const tonight = near({ startDate: "2026-10-02", dateEvidence: "Friday, October 2" });
+    const running = { ...far, startDate: "2026-09-28", endDate: "2026-10-31", dateEvidence: "Sep 28 – Oct 31" };
+    const { calls } = await runAt(WEEK_1, { ceiling: 1, completions: [listed(tonight, running), ownPage("2026-10-02")] });
+
+    expect(calls).toContain(`fetch:${NEAR_URL}`);
+    expect(calls).not.toContain(`fetch:${FAR_URL}`);
+  });
+
+  it("a pick the spend cap kept the pass from reading counts once in the shortfall", async () => {
+    const { calls, report } = await runAt(WEEK_1, { flag: true, spendCapUsd: 0.005, completions: [listed(near())] });
+
+    expect(calls).not.toContain(`fetch:${NEAR_URL}`);
+    expect(report.spend.shortfall.ownPagesNotRead).toBe(1);
   });
 
   it("a pick the pass read is not read again after curation", async () => {

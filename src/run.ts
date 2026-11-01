@@ -1625,7 +1625,8 @@ function sightingFor(event: Event, sightings: Sighting[], aliases: VenueAliases)
  * read), which the line counts as kept. Nearest start first, at most `ownPageReadsPerRun` of them; the rest are left
  * for a later run, nearest first again, and counted, never as a shortfall of the spend cap. A host whose robots.txt
  * refused one of them is not fetched again this run (robotsGate). `covered` holds every event the pass kept a read
- * for or tried, read or not, so the picks' pass neither counts nor tries it again.
+ * for or planned, read or not (the spend cap's shortfall counts one it did not reach), so the picks' pass neither
+ * counts nor tries it again.
  */
 async function readOwnPages(
   events: Event[],
@@ -1648,8 +1649,8 @@ async function readOwnPages(
       covered.add(event.id);
     } else due.push(i);
   });
-  // Nearest start first; a stable sort keeps the dataset's order among events starting together.
-  const nearest = due.sort((a, b) => compareStarts(events[a]!, events[b]!));
+  // Nearest first; a stable sort keeps the dataset's order among events as near.
+  const nearest = due.sort((a, b) => compareNearness(events[a]!, events[b]!, today));
   const planned = nearest.slice(0, config.ownPageReadsPerRun);
   line.left = nearest.length - planned.length;
 
@@ -1663,19 +1664,21 @@ async function readOwnPages(
   const out = [...events];
   planned.forEach((index, k) => {
     const outcome = outcomes[k]!;
+    covered.add(events[index]!.id);
     if (outcome === "not-read") notRead++;
-    else {
-      covered.add(events[index]!.id);
-      out[index] = outcome;
-    }
+    else out[index] = outcome;
   });
   return { events: out, report: line.kept + nearest.length > 0 ? [line] : [], notRead, covered };
 }
 
-/** Two events by start, the earlier first; a date-only start sorts as that day's first moment. */
-function compareStarts(a: Event, b: Event): number {
-  const [x, y] = [a.start ?? "", b.start ?? ""];
-  return x < y ? -1 : x > y ? 1 : 0;
+/**
+ * Two events by how soon they are on, the sooner first: by start, an event running since before today
+ * as on today, so a long run does not go ahead of tonight's shows; a date-only start sorts as that day's
+ * first moment.
+ */
+function compareNearness(a: Event, b: Event, today: string): number {
+  const [x, y] = [a, b].map((e) => (e.start === undefined || e.start < today ? today : e.start));
+  return x! < y! ? -1 : x! > y! ? 1 : 0;
 }
 
 /** The way an event's own page is fetched: its active registry source's way (ownPageFetcherFor), else plainly. */
@@ -1685,18 +1688,20 @@ function ownPageRouteFor(event: Event, registry: Registry, ports: Ports): FetchR
   return source ? ownPageFetcherFor(source, ports) : plainly(ports);
 }
 
-/**
- * Own pages fetched one host at a time, in the order their reads start (#254), so once robots.txt refuses one,
- * the host's later own pages are held back for the rest of the pass: no fetch and no call. The fetch policy
- * already pauses between pages of one origin, so taking a host's pages in turn costs no time. `lines` gives one
- * report line per refusing host, naming the page refused and counting those held back.
- */
+/** The own-page pass's hold on hosts whose robots.txt refused an own page this run (robotsGate). */
 interface RobotsGate {
   /** The fetch made in its host's turn, or "held" when robots.txt refused an earlier own page there. */
   fetch(url: string, title: string, fetch: () => Promise<Fetched>): Promise<Fetched | "held">;
   lines(): string[];
 }
 
+/**
+ * Own pages fetched one host at a time, in the order their reads start (#254), so once robots.txt refuses one,
+ * the host's later own pages are held back for the rest of the pass: no fetch and no call. A host, not a path,
+ * as the refusals met so far are a whole site's (Kauffman's own pages all pass through queue-it). The fetch policy
+ * already pauses between pages of one origin, so taking a host's pages in turn costs no time. `lines` gives one
+ * report line per refusing host, naming the page refused and counting those held back.
+ */
 function robotsGate(): RobotsGate {
   const last = new Map<string, Promise<void>>();
   const refused = new Map<string, { url: string; title: string; held: number }>();

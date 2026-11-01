@@ -9,6 +9,7 @@ import type { Event } from "./dataset.js";
 import { statesMonthDay } from "./date-span.js";
 import { sameMoment, sameName } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
+import { LISTING_LINE_LENGTH } from "./own-page.js";
 import type { CompletionRequest } from "./ports.js";
 import type { RunReport } from "./report.js";
 
@@ -64,8 +65,11 @@ export function needsCuration(event: Event): boolean {
 
 /**
  * Stamps last-changed on every event that is new this run or whose title, date (a recurring event's
- * schedule), venue, or status differs from the dataset it started from, so curation knows what to
- * re-judge. A title or venue spelled with different case or punctuation is the same name. A date is
+ * schedule), venue, or status differs from the dataset it started from, or whose own page, read this
+ * run, filled out its description (filledOut, #254), so curation knows what to re-judge. A list's
+ * reading giving a new description is no change: the wording a model picks moves from week to week,
+ * while an own page is read once per date and own page. A title or venue spelled with different case
+ * or punctuation is the same name. A date is
  * compared as a calendar date, and by its time of day only when both readings carry one: one page
  * giving a time and another none, or a reading that drops it, is no change (#79).
  */
@@ -80,9 +84,20 @@ export function markChanged(previous: Event[], events: Event[], nowIso: string):
       !sameMoment(was.end, event.end) ||
       was.schedule !== event.schedule ||
       !sameName(was.venue, event.venue) ||
-      was.status !== event.status;
+      was.status !== event.status ||
+      filledOut(was, event);
     return changed ? { ...event, lastChanged: nowIso } : event;
   });
+}
+
+/**
+ * Whether an own page read this run (a read on another date than the stored one) gave a fuller description: there
+ * was none, or one a list line's length (LISTING_LINE_LENGTH), and the new one is longer.
+ */
+function filledOut(was: Event, event: Event): boolean {
+  const freshRead = event.ownPageRead !== undefined && event.ownPageRead.on !== was.ownPageRead?.on;
+  const [before, now] = [was.description, event.description];
+  return freshRead && now !== undefined && (before === undefined || (before.length <= LISTING_LINE_LENGTH && now.length > before.length));
 }
 
 /** The line that opens the user message of a curation request; the events follow as a JSON array. */
