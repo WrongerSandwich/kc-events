@@ -172,6 +172,8 @@ describe("the run report", () => {
       | own-page | 1 | 0 | 0.0020 | 0.2 |
       | curation | 1 | 1 | 0.0000 | 3.0 |
 
+      Minutes add up each call's own time; calls made side by side overlap, so they can sum past the run's.
+
       ## Sources
 
       | Source | Result | Extracted | Detail |

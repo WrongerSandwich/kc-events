@@ -3,11 +3,12 @@ import { EXPIRY_REASONS, type ExpiryReason } from "./dataset.js";
 import { ARCHIVE_AFTER_WEEKS } from "./archive.js";
 import { markdownList, plural, tableCell } from "./markdown.js";
 import { SKIP_REASONS, type SkipReason } from "./skip.js";
-import { MODEL_STAGES, type ModelStage } from "./ports.js";
-import type { ModelCall } from "./spend.js";
+import { MODEL_STAGES, type ModelStage, type ServedBy } from "./ports.js";
 
-/** A model call as a report records it: one from a run before #257 has no stage or duration. */
-export type RecordedModelCall = ModelCall extends infer C ? (C extends ModelCall ? Omit<C, "stage" | "ms"> & Partial<Pick<C, "stage" | "ms">> : never) : never;
+/** A model call (`ModelCall`) as a report records it: one from a run before #257 has no stage or duration. */
+export type RecordedModelCall =
+  | { model: string; stage?: ModelStage; ms?: number; servedBy?: ServedBy; costUsd: number }
+  | { model: string; stage?: ModelStage; ms?: number; servedBy?: ServedBy; costUsd?: number; error: string };
 
 export type SourceResult = "fetched" | "failed" | "blocked" | "excluded";
 
@@ -288,7 +289,8 @@ const callMade = { model: z.string(), stage: z.enum(MODEL_STAGES).optional(), ms
 /**
  * The JSON twin as committed in `data/runs/`. A field added after the first run defaults to zero or
  * empty, as a report written before it would have counted it, so every committed report parses into
- * today's `RunReport`; a key this does not name is refused, so a renamed field fails here first.
+ * today's `RunReport`; a key this does not name is refused, so a renamed field fails here first. A
+ * model call's stage and duration (#257) have no honest default, so a call from before them has none.
  */
 export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   runDate: z.iso.date(),
@@ -403,35 +405,6 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     })
     .optional(),
 });
-
-/**
- * The Spend section's table: for each stage that made a call, how many, how many threw, what they
- * cost and how long they took added up (calls side by side overlap, so the minutes can sum past the
- * run's). Nothing when no call went out.
- */
-function spendByStage(calls: RecordedModelCall[]): string {
-  if (calls.length === 0) return "";
-  const rows = new Map<ModelStage | undefined, { calls: number; failed: number; usd: number; ms: number }>();
-  for (const call of calls) {
-    const row = rows.get(call.stage) ?? { calls: 0, failed: 0, usd: 0, ms: 0 };
-    row.calls++;
-    if ("error" in call) row.failed++;
-    row.usd += call.costUsd ?? 0;
-    row.ms += call.ms ?? 0;
-    rows.set(call.stage, row);
-  }
-  const order: (ModelStage | undefined)[] = [...MODEL_STAGES, undefined];
-  return [
-    "",
-    "",
-    "| Stage | Calls | Failed | USD | Minutes |",
-    "| --- | ---: | ---: | ---: | ---: |",
-    ...order.flatMap((stage) => {
-      const row = rows.get(stage);
-      return row ? [`| ${stage ?? "not recorded"} | ${row.calls} | ${row.failed} | ${row.usd.toFixed(4)} | ${(row.ms / 60_000).toFixed(1)} |`] : [];
-    }),
-  ].join("\n");
-}
 
 /** Reads a committed JSON twin, filling the fields it predates. */
 export function parseRunReport(raw: unknown): RunReport {
@@ -597,6 +570,36 @@ ${markdownList([
 
 ${markdownList(report.promotionSuggestions.map((p) => `${p.host}: events found in ${p.runsSeen} runs, ${plural(p.heldEvents, "held event")} promotion would release, e.g. ${p.exampleUrl}`))}
 ${report.changes === undefined ? "" : changesSection(report.changes)}`;
+}
+
+/**
+ * The Spend section's table: for each stage that made a call, how many, how many threw, what they
+ * cost and how long they took added up. Nothing when no call went out.
+ */
+function spendByStage(calls: RecordedModelCall[]): string {
+  if (calls.length === 0) return "";
+  const rows = new Map<ModelStage | undefined, { calls: number; failed: number; usd: number; ms: number }>();
+  for (const call of calls) {
+    const row = rows.get(call.stage) ?? { calls: 0, failed: 0, usd: 0, ms: 0 };
+    row.calls++;
+    if ("error" in call) row.failed++;
+    row.usd += call.costUsd ?? 0;
+    row.ms += call.ms ?? 0;
+    rows.set(call.stage, row);
+  }
+  const order: (ModelStage | undefined)[] = [...MODEL_STAGES, undefined];
+  return [
+    "",
+    "",
+    "| Stage | Calls | Failed | USD | Minutes |",
+    "| --- | ---: | ---: | ---: | ---: |",
+    ...order.flatMap((stage) => {
+      const row = rows.get(stage);
+      return row ? [`| ${stage ?? "not recorded"} | ${row.calls} | ${row.failed} | ${row.usd.toFixed(4)} | ${(row.ms / 60_000).toFixed(1)} |`] : [];
+    }),
+    "",
+    "Minutes add up each call's own time; calls made side by side overlap, so they can sum past the run's.",
+  ].join("\n");
 }
 
 /** Why the discovery lane did not run (#255); a report from before the reason was kept says only that it was off. */

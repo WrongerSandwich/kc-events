@@ -51,6 +51,8 @@ Started 2026-10-02T22:15:00-05:00, finished 2026-10-02T22:15:00-05:00. Horizon 8
 | own-page | 1 | 0 | 0.0020 | 0.0 |
 | curation | 1 | 0 | 0.0020 | 0.0 |
 
+Minutes add up each call's own time; calls made side by side overlap, so they can sum past the run's.
+
 ## Sources
 
 | Source | Result | Extracted | Detail |
