@@ -287,15 +287,29 @@ describe("a recurring reading whose date quote gives a month-day span is that sp
     expect(report.sources[0]!.detail ?? "").not.toContain("read as that span");
   });
 
-  it("a monthly show billed over dated years is a run between them, with no days", async () => {
+  // A week of the month is not something days can say, so a run between the dates would be on every night of them (#266).
+  it("a monthly show billed over dated years stays recurring on its schedule (#266)", async () => {
     const quote = "Fri , October 2, 2026 – Fri , February 5, 2027";
-    const { dataset } = await runAt(WEEK_1, {
+    const { dataset, report } = await runAt(WEEK_1, {
       pages: { [LIST_URL]: pageWith(quote) },
       completions: [scheduled("First Friday of the month", quote)],
     });
-    expect(dataset.events[0]).toMatchObject({ recurrence: "limited-run", start: "2026-10-02", end: "2027-02-05" });
-    expect(dataset.events[0]).not.toHaveProperty("days");
+    expect(dataset.events[0]).toMatchObject({ status: "active", recurrence: "recurring", schedule: "First Friday of the month", evidence: { date: quote } });
+    expect(dataset.events[0]).not.toHaveProperty("start");
+    expect(dataset.events[0]).not.toHaveProperty("end");
+    expect(report.sources[0]!.detail ?? "").not.toContain("read as that span");
   });
+
+  it.each(["every second Saturday", "The last Sunday of each month", "3rd Thursdays, 7pm", "First & Third Fridays"])(
+    "a schedule naming a week of the month, %s, stays recurring over a dated span (#266)",
+    async (schedule) => {
+      const { dataset } = await runAt(WEEK_1, {
+        pages: { [LIST_URL]: pageWith(MERRY_QUOTE) },
+        completions: [scheduled(schedule, MERRY_QUOTE)],
+      });
+      expect(dataset.events[0]).toMatchObject({ recurrence: "recurring", schedule });
+    },
+  );
 
   it("a dated row among a market's hours by season stays recurring (#221)", async () => {
     const quote = "Farmers Market Hours by Season: April–November: Sat & Sun, 8:00 a.m. – 3:00 p.m. Nov. 1 – Nov. 22: Sat & Sun, 9:00 a.m. – 3:00 p.m.";

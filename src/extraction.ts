@@ -511,7 +511,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const dateProblem = startAt.problem ?? endAt.problem ?? (endsFirst ? `an end (${endAt.iso!.slice(0, 10)}) before its start` : undefined);
   const dateEvidence = unmarked(candidate.dateEvidence);
   const read = { start, end, schedule: nonEmpty(candidate.schedule) };
-  const span = deriveRecurrence(read) === "recurring" ? spanOverSchedule(dateEvidence, context) : undefined;
+  const span = deriveRecurrence(read) === "recurring" && !namesWeekOfMonth(read.schedule!) ? spanOverSchedule(dateEvidence, context) : undefined;
   const recurrence = deriveRecurrence(span ?? read);
   const when = recurrence === "recurring" ? { schedule: read.schedule } : (span ?? { start, end });
   const venueEvidence = unmarked(candidate.venueEvidence);
@@ -574,7 +574,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
  * The span a reading the model gave a schedule and no end, so recurring, is held to (#218): the one month-day span
  * its date quote gives ("SATURDAYS & SUNDAYS / Nov 28th – Dec 20th"), as local dates. A season named
  * by months alone ("Every Sunday, April thru October") gives none and stays recurring, and so does a
- * quote with two spans or none.
+ * quote with two spans or none. A schedule naming a week of the month is never held to one (namesWeekOfMonth).
  */
 function spanOverSchedule(dateQuote: string | undefined, context: ExtractionContext): { start: string; end: string } | undefined {
   if (dateQuote === undefined) return undefined;
@@ -582,6 +582,14 @@ function spanOverSchedule(dateQuote: string | undefined, context: ExtractionCont
   if (span === undefined) return undefined;
   const { timezone } = context.config;
   return { start: localIso(span.start, null, timezone).iso!, end: localIso(span.end, null, timezone).iso! };
+}
+
+/**
+ * Whether a schedule names a week of the month before a weekday ("First Friday of the month", "every
+ * second Saturday", "3rd Thursdays"), which days cannot say, so it stays recurring over a dated span (#266).
+ */
+function namesWeekOfMonth(schedule: string): boolean {
+  return /\b(?:first|second|third|fourth|last|1st|2nd|3rd|4th)\s+(?:mon|tue|wed|thu|fri|sat|sun)/i.test(schedule);
 }
 
 /**

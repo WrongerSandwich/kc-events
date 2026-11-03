@@ -132,13 +132,12 @@ describe("HARD_CASES", () => {
   const find = (label: string) => HARD_CASES.find((c) => c.label.startsWith(label))!;
   const crossroads = "https://kccrossroads.org/";
 
-  it("wants the Secret Show as its dated run with no days", () => {
+  it("wants the Secret Show as a recurring monthly series (#266)", () => {
     const secret = find("Secret Show");
-    const right = ev("The Secret Show", { primaryUrl: crossroads, recurrence: "limited-run", start: "2026-10-02", end: "2027-02-05" });
+    const right = ev("The Secret Show", { primaryUrl: crossroads, recurrence: "recurring", schedule: "First Friday of the month" });
     expect(secret.matches(right)).toBe(true);
     expect(secret.problem(right)).toBeUndefined();
-    expect(secret.problem({ ...right, recurrence: "recurring", start: undefined, end: undefined, schedule: "First Friday" })).toMatch(/read as recurring/);
-    expect(secret.problem({ ...right, days: ["Fri"] })).toBe("days Fri");
+    expect(secret.problem({ ...right, recurrence: "limited-run", start: "2026-10-02", end: "2027-02-05" })).toBe("read as limited-run 2026-10-02 to 2027-02-05");
     expect(secret.matches({ ...right, primaryUrl: "https://example.org/" })).toBe(false);
   });
 
@@ -181,7 +180,7 @@ describe("renderComparison", () => {
     expect(md).toContain("Not fetched: X (failed).");
     expect(md).toMatch(/\| `a\/one` \| 100\.0% \|/);
     expect(md).toContain('- A: venue stored "the hall", read "elsewhere"');
-    expect(md).toContain("Secret Show: dated monthly run, no days");
+    expect(md).toContain("Secret Show: monthly series, stays recurring");
   });
 });
 

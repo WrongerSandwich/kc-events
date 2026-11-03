@@ -104,9 +104,14 @@ function run(start: string, end: string, days?: Weekday[]): HardCase["problem"] 
     );
 }
 
-/** The 10-23 traps (#154, #218, #221): a dated run read as a schedule, a weekend run's days, a year-round market's season read as a run, a doors time taken as the start. */
+/** The 10-23 traps (#154, #218, #221, #266): a monthly series read as a run, a dated run read as a schedule, a weekend run's days, a year-round market's season read as a run, a doors time taken as the start. */
 export const HARD_CASES: HardCase[] = [
-  { label: "Secret Show: dated monthly run, no days", matches: titled("The Secret Show", "kccrossroads.org"), problem: run("2026-10-02", "2027-02-05") },
+  // A week of the month over a dated span stays recurring (#266): as a run it would show every night of the span.
+  {
+    label: "Secret Show: monthly series, stays recurring",
+    matches: titled("The Secret Show", "kccrossroads.org"),
+    problem: (e) => (e.recurrence === "recurring" ? undefined : `read as ${e.recurrence} ${day(e.start)} to ${day(e.end)}`),
+  },
   { label: "Merry Market: weekend run, Sat+Sun", matches: titled("Merry Market", "artgardenkc.org"), problem: run("2026-11-28", "2026-12-20", ["Sat", "Sun"]) },
   // Year-round with hours by season ("Nov. 1 – Nov. 22: Sat & Sun", "Jan–Feb: Saturdays only"): one season's line is not a run that ends.
   {
