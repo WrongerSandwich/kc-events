@@ -20,6 +20,8 @@ const DAY_NAMES: Record<Weekday, string> = {
   Sun: "sun(?:day)?s?",
 };
 const DAY_NAME = new RegExp(`\\b(?:${WEEKDAYS.map((d) => `(${DAY_NAMES[d]})`).join("|")})\\b\\.?`, "gi");
+/** An ordinal week of the month before a weekday: "First Friday", "2nd & 4th Sundays", "last-Thursday". */
+const WEEK_OF_MONTH = new RegExp(`\\b(?:first|second|third|fourth|last|1st|2nd|3rd|4th)[\\s-]+(?:${WEEKDAYS.map((d) => DAY_NAMES[d]).join("|")})\\b`, "i");
 /** What joins two weekdays into a span: "Thursday–Sunday", "Thurs - Sun", "Wednesdays through Saturdays". */
 const SPAN_JOIN = /^\s*(?:[-–—]|to|through|thru)\s*$/i;
 /** "Weekends", "(Weekend)": Saturday and Sunday. */
@@ -93,4 +95,12 @@ export function statesDays(quote: string, days: readonly Weekday[]): boolean {
 /** The days a list's date line states as the days a run plays (statesDays), in week order. */
 export function statedDays(quote: string): Weekday[] {
   return WEEKDAYS.filter((d) => statesDays(quote, [d]));
+}
+
+/**
+ * Whether a schedule names a week of the month before a weekday ("First Friday of the month", "every
+ * second Saturday", "3rd Thursdays"), which days cannot say, so it stays recurring over a dated span (#266).
+ */
+export function namesWeekOfMonth(schedule: string): boolean {
+  return WEEK_OF_MONTH.test(schedule);
 }

@@ -16,7 +16,7 @@ import { deriveRecurrence } from "./recurrence.js";
 import { toKind, toNeighborhood } from "./taxonomy.js";
 import { fromLocal, toLocalIso } from "./time.js";
 import { quotedSpan } from "./date-span.js";
-import { orderedDays, statedDays, statesDays } from "./weekdays.js";
+import { namesWeekOfMonth, orderedDays, statedDays, statesDays } from "./weekdays.js";
 
 /** A page body longer than this is cut before it reaches the model; venue calendars rarely need more, link markers included. */
 export const MAX_PAGE_CHARS = 70_000;
@@ -511,7 +511,7 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
   const dateProblem = startAt.problem ?? endAt.problem ?? (endsFirst ? `an end (${endAt.iso!.slice(0, 10)}) before its start` : undefined);
   const dateEvidence = unmarked(candidate.dateEvidence);
   const read = { start, end, schedule: nonEmpty(candidate.schedule) };
-  const span = deriveRecurrence(read) === "recurring" && !namesWeekOfMonth(read.schedule!) ? spanOverSchedule(dateEvidence, context) : undefined;
+  const span = deriveRecurrence(read) === "recurring" && !namesWeekOfMonth(read.schedule ?? "") ? spanOverSchedule(dateEvidence, context) : undefined;
   const recurrence = deriveRecurrence(span ?? read);
   const when = recurrence === "recurring" ? { schedule: read.schedule } : (span ?? { start, end });
   const venueEvidence = unmarked(candidate.venueEvidence);
@@ -582,14 +582,6 @@ function spanOverSchedule(dateQuote: string | undefined, context: ExtractionCont
   if (span === undefined) return undefined;
   const { timezone } = context.config;
   return { start: localIso(span.start, null, timezone).iso!, end: localIso(span.end, null, timezone).iso! };
-}
-
-/**
- * Whether a schedule names a week of the month before a weekday ("First Friday of the month", "every
- * second Saturday", "3rd Thursdays"), which days cannot say, so it stays recurring over a dated span (#266).
- */
-function namesWeekOfMonth(schedule: string): boolean {
-  return /\b(?:first|second|third|fourth|last|1st|2nd|3rd|4th)\s+(?:mon|tue|wed|thu|fri|sat|sun)/i.test(schedule);
 }
 
 /**

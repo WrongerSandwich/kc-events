@@ -300,7 +300,7 @@ describe("a recurring reading whose date quote gives a month-day span is that sp
     expect(report.sources[0]!.detail ?? "").not.toContain("read as that span");
   });
 
-  it.each(["every second Saturday", "The last Sunday of each month", "3rd Thursdays, 7pm", "First & Third Fridays"])(
+  it.each(["every second Saturday", "First-Friday Nights", "The last Sunday of each month", "3rd Thursdays, 7pm", "First & Third Fridays"])(
     "a schedule naming a week of the month, %s, stays recurring over a dated span (#266)",
     async (schedule) => {
       const { dataset } = await runAt(WEEK_1, {
@@ -308,6 +308,7 @@ describe("a recurring reading whose date quote gives a month-day span is that sp
         completions: [scheduled(schedule, MERRY_QUOTE)],
       });
       expect(dataset.events[0]).toMatchObject({ recurrence: "recurring", schedule });
+      expect(dataset.events[0]).not.toHaveProperty("start");
     },
   );
 

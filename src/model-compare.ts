@@ -104,7 +104,7 @@ function run(start: string, end: string, days?: Weekday[]): HardCase["problem"] 
     );
 }
 
-/** The 10-23 traps (#154, #218, #221, #266): a monthly series read as a run, a dated run read as a schedule, a weekend run's days, a year-round market's season read as a run, a doors time taken as the start. */
+/** The 10-23 traps (#154, #218, #221) and the 11-02 one (#266): a monthly series read as a run, a dated run read as a schedule, a weekend run's days, a year-round market's season read as a run, a doors time taken as the start. */
 export const HARD_CASES: HardCase[] = [
   // A week of the month over a dated span stays recurring (#266): as a run it would show every night of the span.
   {
