@@ -169,7 +169,7 @@ sources:
     urls: [https://www.replaylounge.com/calendar-full/]
     kind: music
     neighborhood: Lawrence
-    checkHints: Bar at 946 Massachusetts St, Lawrence; many nights are recurring DJ or free shows. Its community nights (the Dungeons & Dragons Community Gathering) are the bar's standing nights, not events.
+    checkHints: Bar at 946 Massachusetts St, Lawrence; many nights are recurring DJ or free shows. Its community nights (the Dungeons & Dragons Community Gathering) are the bar's standing nights, not events. So are its DJ nights, even under a DJ's name and with a cover (DJ Nighttrain, DJ Carma Lea, DJ Not So Silent Bob), since the bar books a rotation of DJs most nights. A band's show is an event.
     status: active
     notes: ICS feed at https://www.replaylounge.com/calendar-full/?ical=1
 
@@ -292,12 +292,14 @@ sources:
   # --- Art, museums, exhibitions -----------------------------------------------------------------
 
   - name: Nelson-Atkins Museum of Art
-    urls: [https://www.nelson-atkins.org/events/]
+    urls:
+      - https://www.nelson-atkins.org/events/
+      - https://www.nelson-atkins.org/art/exhibitions/
     kind: art/exhibitions
     neighborhood: Plaza & Museum District
     checkHints: Museum at 4525 Oak St. Exhibitions are limited runs; talks, performances and festivals are listed too. The Tivoli cinema screens inside the museum and its films are on this page, kind film; first-run screenings repeat daily, special series and one-night screenings are one-offs.
     status: active
-    notes: The Tivoli's own page (/events/tivoli/) was a second source until 2026-10-10; it repeats this page's films, so each was stored twice and duplicate-expired weekly.
+    notes: The Tivoli's own page (/events/tivoli/) was a second source until 2026-10-10; it repeats this page's films, so each was stored twice and duplicate-expired weekly. /art/exhibitions/ added by hand 2026-11-03 for the exhibitions /events/ does not list (Out of Many, One, until Jan 17, 2027, expired two-strike on 11-02 when the homepage it was discovered on stopped naming it); about 4,300 characters, current exhibitions with their end dates.
 
   - name: Stray Cat Film Center
     urls: [https://www.straycatfilmcenter.com/screeningsandevents]
@@ -402,12 +404,14 @@ sources:
       - https://jocolibrary.bibliocommons.com/v2/events?types=5f6e0b39cafcc124001b143b,5ed14cce04cef73a006d9640,624319730bf5b93700524b17&page=2
       - https://jocolibrary.bibliocommons.com/v2/events?types=5f6e0b39cafcc124001b143b,5ed14cce04cef73a006d9640,624319730bf5b93700524b17&page=3
       - https://jocolibrary.bibliocommons.com/v2/events?types=5f6e0b39cafcc124001b143b,5ed14cce04cef73a006d9640,624319730bf5b93700524b17&page=4
+      - https://jocolibrary.bibliocommons.com/v2/events?types=5f6e0b39cafcc124001b143b,5ed14cce04cef73a006d9640,624319730bf5b93700524b17&page=5
+      - https://jocolibrary.bibliocommons.com/v2/events?types=5f6e0b39cafcc124001b143b,5ed14cce04cef73a006d9640,624319730bf5b93700524b17&page=6
     listedAt: https://jocolibrary.bibliocommons.com/v2/events
     kind: talks/readings
     neighborhood: Overland Park
     checkHints: Branches across Johnson County, so read the venue (the branch) from each listing. Each listing is one session at one branch, a one-off on its date, never a schedule, even when it says "View all dates". Skip storytimes and rhyme times; they are routine branch programming, not events. Skip online events. Author talks, lectures and workshops are the events. Appointments and equipment sessions are services, not events, such as One-on-One Basic Genealogy Help (arranged by email) and Memory Lab Sessions (digitizing your own photos and tapes).
     status: active
-    notes: jocolibrary.org/events redirects here. The unfiltered page shows 20 of about 490 listings, half of them storytimes, so its first page covered a day and a half (#247). The urls are that page filtered to three event types, Author Event, Arts and Culture and History (a comma ORs the type ids; if one stops working, the ids are the for= attributes beside each type's checkbox label on the events page), 20 a page in date order; one listing at the bare events URL, which the records cite. On 2026-10-31 pages 1-4 ran Oct 31-Nov 6, Nov 7-13, Nov 14-23 and Nov 24-Dec 5, about 20,000 characters of text each, with no storytime among them. Add page 5 when the report says page 4 lists through a day inside the horizon (#229).
+    notes: jocolibrary.org/events redirects here. The unfiltered page shows 20 of about 490 listings, half of them storytimes, so its first page covered a day and a half (#247). The urls are that page filtered to three event types, Author Event, Arts and Culture and History (a comma ORs the type ids; if one stops working, the ids are the for= attributes beside each type's checkbox label on the events page), 20 a page in date order; one listing at the bare events URL, which the records cite. On 2026-10-31 pages 1-4 ran Oct 31-Nov 6, Nov 7-13, Nov 14-23 and Nov 24-Dec 5, about 20,000 characters of text each, with no storytime among them. Add page 5 when the report says page 4 lists through a day inside the horizon (#229). Pages 5 and 6 added 2026-11-03 (the 11-02 report said page 4 listed through Dec 5); page 5 ran Dec 8-15 and page 6 Dec 16-19, and page 7 listed nothing, the library having published no further. So the report will say page 6 lists inside the horizon until the library publishes past Dec 19; add page 7 only once it lists events, since a page that lists nothing holds the whole listing (#264).
 
   - name: Truman Library
     urls: [https://www.trumanlibrary.gov/events]
@@ -519,7 +523,7 @@ sources:
     urls: [https://kansascityzoo.org/events]
     kind: outdoors/community
     neighborhood: Swope Park
-    checkHints: Zoo at 6800 Zoo Dr in Swope Park. Scout programs (Cub Scout Night at the Zoo) are for scout groups only, not the public. GloWild is listed again under each month's heading ("October 1 - 31", "November 1 - 30", "December 1 - 27"), but it is one run. Record it once, as a limited run from its first date to its last, with the month headings it is listed under quoted as its date evidence.
+    checkHints: Zoo at 6800 Zoo Dr in Swope Park. Scout programs (Cub Scout Night at the Zoo, Scouting America Day) are for scout groups only, not the public. GloWild is listed again under each month's heading ("October 1 - 31", "November 1 - 30", "December 1 - 27"), but it is one run. Record it once, as a limited run from its first date to its last, with the month headings it is listed under quoted as its date evidence.
     status: active
 
   - name: Powell Gardens

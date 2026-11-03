@@ -17088,7 +17088,7 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-02T06:17:07-06:00",
       "judgedWith": "9af15b2f0c9b",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -17106,7 +17106,8 @@
           "page": "https://kansascityzoo.org/event/cub-scouts-bsa-day",
           "quote": "Cost: Cub Scouts and Scouts BSA in uniform are free; one parent/guardian will receive a $3 discount on regular-priced general admission."
         }
-      }
+      },
+      "expiryReason": "not-public"
     },
     {
       "id": "evt_74dabafb0fca",
@@ -20031,7 +20032,7 @@
       "lastVerified": "2026-10-19T19:18:51-05:00",
       "lastChanged": "2026-10-23T12:32:11-05:00",
       "lastJudged": "2026-10-13T22:13:36-05:00",
-      "status": "unverified",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -20041,7 +20042,9 @@
       "evidence": {
         "date": "SATURDAYS & SUNDAYS, NOV. 29 – 30, DEC. 6-7, 13 – 14, 20 – 21\n10:00 A.M. – 4:00 P.M.",
         "venue": "City Market"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_44e13d0ef17a"
     },
     {
       "id": "evt_d91ac8a59da3",
@@ -38876,8 +38879,7 @@
       },
       "kind": "film",
       "recurrence": "one-off",
-      "dontMiss": true,
-      "whyLine": "An invited preview of a documentary about Kansas City drag performer Melinda Ryder, shown once before its wider release.",
+      "dontMiss": false,
       "firstSeen": "2026-10-13T22:13:36-05:00",
       "lastVerified": "2026-11-02T06:17:07-06:00",
       "lastChanged": "2026-11-02T06:17:07-06:00",
@@ -45685,7 +45687,7 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-02T06:17:07-06:00",
       "judgedWith": "9af15b2f0c9b",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -45695,7 +45697,8 @@
       "evidence": {
         "date": "America Recycles Day | starts 2026-11-13 08:00 | ends 2026-11-13 08:00 | at T-Mobile Center, 1407 Grand Boulevard, Kansas City | T-Mobile Center is inviting the Kansas City community to make a positive impact on the environment and support the touring entertainment community during its annual e-waste recycling event and book drive from 8a.m.-12p.m. on Friday, Nov. 13.",
         "venue": "T-Mobile Center"
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_ae39cc6f6cef",
@@ -46276,7 +46279,7 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-02T06:17:07-06:00",
       "judgedWith": "9af15b2f0c9b",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -46290,7 +46293,8 @@
           "page": "https://www.replaylounge.com/event/dj-nighttrain-2/",
           "quote": "6 PM / $5"
         }
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_61f713d6226f",
@@ -46531,7 +46535,7 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-02T06:17:07-06:00",
       "judgedWith": "9af15b2f0c9b",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -46541,7 +46545,8 @@
       "evidence": {
         "date": "November 18 @ 9:00 pm – 1:30 am",
         "venue": "Replay Lounge"
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_93df2683d70b",
@@ -47402,7 +47407,7 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-02T06:17:07-06:00",
       "judgedWith": "9af15b2f0c9b",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -47412,7 +47417,9 @@
       "evidence": {
         "date": "Friday, November 6, 2026 6:00 PM 9:00 PM",
         "venue": "Beggars Table Church & Gallery"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_a7175be2a197"
     },
     {
       "id": "evt_fe7d386d2372",
@@ -47683,7 +47690,7 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-02T06:17:07-06:00",
       "judgedWith": "9af15b2f0c9b",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -47693,7 +47700,9 @@
       "evidence": {
         "date": "Date: Sat, 11/7/2026 Time: 2:00pm - 4:30pm",
         "venue": "Johnson County Library - Central Resource"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_f0f28d539954"
     },
     {
       "id": "evt_466d56dc1c01",
@@ -47831,7 +47840,7 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-02T06:17:07-06:00",
       "judgedWith": "9af15b2f0c9b",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -47841,7 +47850,9 @@
       "evidence": {
         "date": "Date: Tue, 11/17/2026 Time: 6:00pm - 7:30pm",
         "venue": "Johnson County Library - Central Resource"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_73125bfb8194"
     },
     {
       "id": "evt_25a279140542",
@@ -48744,7 +48755,7 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-02T06:17:07-06:00",
       "judgedWith": "9af15b2f0c9b",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -48754,7 +48765,9 @@
       "evidence": {
         "date": "November 7 , 2026 | 10:00 AM",
         "venue": "Kingdom XP"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_51ccba80bf58"
     },
     {
       "id": "evt_2c4c003881ca",
@@ -49126,7 +49139,7 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-02T06:17:07-06:00",
       "judgedWith": "9af15b2f0c9b",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -49144,7 +49157,9 @@
           "page": "https://kcparks.org/event/visual-voice-moments-of-abstraction-exhibit-8/",
           "quote": "10 a.m. – 6 p.m., Tuesdays – Saturdays"
         }
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_6ff4cc9fb74f"
     },
     {
       "id": "evt_b2f8b2ab6f77",
@@ -49483,7 +49498,7 @@
     },
     {
       "id": "evt_ea38f4a74529",
-      "title": "San Francisco 49ers vs Kansas City Chiefs",
+      "title": "Kansas City Chiefs vs San Francisco 49ers",
       "start": "2026-12-27T15:25:00-06:00",
       "venue": "Arrowhead Stadium",
       "neighborhood": "Truman Sports Complex",
