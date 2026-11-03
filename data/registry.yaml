@@ -597,6 +597,13 @@ sources:
     reason: Even rendered in a browser, the list shows only one day's events with no dates on them (exhibitions, shows, the planetarium), and nothing beyond that day (checked 2026-10-08). City Stage productions come in through their presenters.
     notes: Its RSS feed carries no event dates.
 
+  - name: KC Wine Co
+    urls: [https://www.kcwineco.com/events/upcoming-events]
+    kind: food/drink
+    neighborhood: Olathe
+    status: excluded
+    reason: A winery's own programming, nearly all of it promotions in the rules' sense (weekly live music at the vineyard, Sip & Shop markets, make-and-take workshops, Breakfast with The Mean One, Boozy Book Exchange). Its events were shown before and had the same problem. Excluded 2026-11-03, Evan's call, so discovery stops suggesting it (16 runs, 25 held events on 11-02) and skips its leads.
+
   # --- Promoted from discovery
 
   - name: Kansas City Art Institute
@@ -627,3 +634,20 @@ sources:
       never list a ticket tier as its own event.
     status: active
     notes: "Promoted 2026-11-01 from discovery: 2 held events on 1 page (one festival, read as two by entry time). A single-event site, as the Renaissance Festival is: once the page carries no date for the next festival, exclude it with the month to activate it again."
+
+  - name: Downtown Overland Park
+    urls:
+      - https://www.downtownop.org/events
+    kind: festivals/markets
+    neighborhood: Overland Park
+    checkHints: >-
+      The downtown Overland Park district's own calendar (Downtown OP), around Santa Fe Drive and 80th
+      Street. Its events are district-wide community events (the Mayor's Holiday Festival, the Holiday
+      Stroll, Third Fridays, the Fall Festival). A listing that names no venue is held in the district:
+      give the venue "Downtown Overland Park" and quote the page's heading that says so ("Save the Dates
+      for upcoming Holiday Events in Downtown Overland Park!"). Skip the Overland Park Farmers Market: its
+      one listing gives only the season's first and last days ("Sat, Apr 18, 2026 … Sat, Dec 19, 2026"),
+      not which days the market is held. Wellness Wednesdays is a free fitness class with registration, a class
+      like any other. The page also lists past events below the upcoming ones; they are not events.
+    status: active
+    notes: "Promoted 2026-11-03 from discovery: 5 held events on 1 page. The page is about 5,500 characters, the season's events newest first, then past ones. The Farmers Market is skipped because read as one listing it would be a run with no days, shown as open every day from April to December; it needs its days from a page that states them."
