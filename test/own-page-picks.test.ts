@@ -344,6 +344,9 @@ describe("whether a quote states a price or age limit", () => {
     ["free and open to all", "All ages"],
     ["There is no fee.", "$0 suggested donation"],
     ["No refunds; tickets $20", "Free"],
+    ["No service fees! Tickets $25", "Free"],
+    ["Included at no additional charge with admission", "Free"],
+    ["No entry fee for members; $10 for others", "Free"],
   ])("%s does not state %s", (quote, value) => {
     expect(statesValue(quote, value)).toBe(false);
   });

@@ -227,11 +227,12 @@ function unmarkedIn(reading: PageReading): (text: string | null) => string {
  */
 export function statesValue(quote: string, value: string): boolean {
   const bare = (text: string) => comparable(text).replace(/\s/g, "");
-  if (value.trim().toLowerCase() === "free" && NO_FEE.test(quote)) return true;
+  if (value.trim().toLowerCase() === "free" && NO_FEE.test(quote) && !/\$\s?\d/.test(quote)) return true;
   return bare(quote).includes(bare(value));
 }
 
-const NO_FEE = /\bno\s+(?:\w+\s+)?(?:fee|charge)s?\b/i;
+/** A quote saying an event costs nothing to get into, never one about a service fee or an extra charge. */
+const NO_FEE = /\bno\s+(?:(?:entry|admission|entrance|cover|registration)\s+)?(?:fee|charge)s?\b/i;
 
 /**
  * Whether a quote gives a clock time (HH:MM, 24-hour) as a page would write it: the hour on a
@@ -252,20 +253,23 @@ export function givesTime(quote: string, time: string): boolean {
 
 /**
  * A range with am or pm on its end hour alone ("6-7 pm", "3-7 p.m.", "6\n- 7 pm"), so a start only the end marks
- * (#263). A line break may fall either side of the dash.
+ * (#263). A line break may fall either side of the dash. A day number is no start: one after a month ("Nov. 6 – 7 pm")
+ * or a slash ("11/6 - 7 pm") is the date the time is on.
  */
-const RANGE = /(?<![\d:.])(\d{1,2})(?:[:.](\d{2}))?\s*[-–—]\s*(\d{1,2})(?:[:.]\d{2})?\s?([ap])\.?\s?m\b/gi;
+const HALF_MARKED_RANGE =
+  /(?<![\d:./])(?<!\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*)(\d{1,2})(?:[:.](\d{2}))?\s*[-–—]\s*(\d{1,2})(?:[:.]\d{2})?\s?([ap])\.?\s?m\b/gi;
 
 /**
  * The starts (HH:MM, 24-hour) of the ranges a quote writes with am or pm on the end hour alone. The start takes the
- * end's am or pm, or the other one when it comes after the end on a 12-hour clock: "11–1 pm" starts at 11:00, "12–2 pm"
- * at noon. Both hours must be on a 12-hour clock, so "2026-7 pm" is no range.
+ * end's am or pm, save that a start after the end on a 12-hour clock before a pm end is am: "11–1 pm" starts at 11:00,
+ * "12–2 pm" at noon. Both hours must be on a 12-hour clock, so "13-14 pm" is no range.
  */
 function rangeStarts(quote: string): string[] {
-  return [...quote.matchAll(RANGE)].flatMap(([, start, minutes = "00", end, meridiem]) => {
+  return [...quote.matchAll(HALF_MARKED_RANGE)].flatMap(([, start, minutes = "00", end, meridiem = ""]) => {
     const [from, to] = [Number(start), Number(end)];
     if (from < 1 || from > 12 || to < 1 || to > 12) return [];
-    const pm = (meridiem!.toLowerCase() === "p") !== from % 12 > to % 12;
+    const crossesNoon = from % 12 > to % 12;
+    const pm = meridiem.toLowerCase() === "p" && !crossesNoon;
     return [`${String((from % 12) + (pm ? 12 : 0)).padStart(2, "0")}:${minutes}`];
   });
 }

@@ -252,6 +252,10 @@ describe("whether a quote gives a time", () => {
     ["6:30-8 pm", "18:30"],
     ["10-11 am", "10:00"],
     ["11–1 pm", "11:00"],
+    ["11–12 pm", "11:00"],
+    ["12–2 pm", "12:00"],
+    ["10-12 am", "10:00"],
+    ["Friday, Nov. 6, 6–7 pm", "18:00"],
     ["6-7 pm", "19:00"],
   ])("%s gives %s", (quote, time) => {
     expect(givesTime(quote, time)).toBe(true);
@@ -270,6 +274,12 @@ describe("whether a quote gives a time", () => {
     ["Nov 6", "06:00"],
     ["Nov 6", "18:00"],
     ["October 12-14, 7 pm", "12:00"],
+    // A date and then its time is no range.
+    ["Friday, Nov. 6 – 7 pm", "18:00"],
+    ["Nov 5-7 pm", "17:00"],
+    ["Dec 12 - 7pm", "12:00"],
+    ["11/6 - 7 pm", "18:00"],
+    ["10-12 am", "22:00"],
   ])("%s does not give %s", (quote, time) => {
     expect(givesTime(quote, time)).toBe(false);
   });
