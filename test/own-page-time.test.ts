@@ -241,6 +241,18 @@ describe("whether a quote gives a time", () => {
     ["10 am tour", "10:00"],
     ["12 noon, or 12 pm", "12:00"],
     ["7.00", "19:00"],
+    // A range writes am or pm on its end hour alone, and its start takes it (#263).
+    ["Tue, Nov 3, 2026, 6\n- 7 pm", "18:00"],
+    ["WHEN: November 5, 2026, 3-7 p.m.", "15:00"],
+    ["5 – 8 pm on Friday, November 6th", "17:00"],
+    ["Artists in Dialogue from 7-8:30 PM", "19:00"],
+    ["Nov\n6\n9–11:45pm", "21:00"],
+    ["Performance: 7–9 PM", "19:00"],
+    ["Thursday, Nov. 5 | 6-7:15 pm", "18:00"],
+    ["6:30-8 pm", "18:30"],
+    ["10-11 am", "10:00"],
+    ["11–1 pm", "11:00"],
+    ["6-7 pm", "19:00"],
   ])("%s gives %s", (quote, time) => {
     expect(givesTime(quote, time)).toBe(true);
   });
@@ -252,6 +264,12 @@ describe("whether a quote gives a time", () => {
     ["7:30 pm", "19:00"],
     ["17:00", "19:00"],
     ["Monday • October 12, 2026", "19:00"],
+    ["6-7 pm", "06:00"],
+    ["6-7 pm", "07:00"],
+    ["11–1 pm", "23:00"],
+    ["Nov 6", "06:00"],
+    ["Nov 6", "18:00"],
+    ["October 12-14, 7 pm", "12:00"],
   ])("%s does not give %s", (quote, time) => {
     expect(givesTime(quote, time)).toBe(false);
   });

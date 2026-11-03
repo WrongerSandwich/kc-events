@@ -222,12 +222,16 @@ function unmarkedIn(reading: PageReading): (text: string | null) => string {
 
 /**
  * Whether a quote states a value as the page wrote it: the value is in the quote, compared as a quote
- * is with its page and with no whitespace counted, so "$25 – $45" is in "Tickets $25-$45".
+ * is with its page and with no whitespace counted, so "$25 – $45" is in "Tickets $25-$45". A quote saying there is no
+ * fee or charge ("has no entry fee", "There is no fee.", "no cover charge") states "Free" (#263).
  */
 export function statesValue(quote: string, value: string): boolean {
   const bare = (text: string) => comparable(text).replace(/\s/g, "");
+  if (value.trim().toLowerCase() === "free" && NO_FEE.test(quote)) return true;
   return bare(quote).includes(bare(value));
 }
+
+const NO_FEE = /\bno\s+(?:\w+\s+)?(?:fee|charge)s?\b/i;
 
 /**
  * Whether a quote gives a clock time (HH:MM, 24-hour) as a page would write it: the hour on a
@@ -243,5 +247,25 @@ export function givesTime(quote: string, time: string): boolean {
   const meridiem = `\\s?[ap]\\.?\\s?m\\b`;
   const marked = `${h12}(?:${minute})${minutes === "00" ? "?" : ""}\\s?${hour < 12 ? "a" : "p"}\\.?\\s?m\\b`;
   const clock = `(?:${[...new Set([h12, String(hour), String(hour).padStart(2, "0")])].join("|")})${minute}(?!${meridiem})`;
-  return new RegExp(`(?<![\\d:.])(?:${marked}|${clock})`, "i").test(quote);
+  return new RegExp(`(?<![\\d:.])(?:${marked}|${clock})`, "i").test(quote) || rangeStarts(quote).includes(time);
+}
+
+/**
+ * A range with am or pm on its end hour alone ("6-7 pm", "3-7 p.m.", "6\n- 7 pm"), so a start only the end marks
+ * (#263). A line break may fall either side of the dash.
+ */
+const RANGE = /(?<![\d:.])(\d{1,2})(?:[:.](\d{2}))?\s*[-–—]\s*(\d{1,2})(?:[:.]\d{2})?\s?([ap])\.?\s?m\b/gi;
+
+/**
+ * The starts (HH:MM, 24-hour) of the ranges a quote writes with am or pm on the end hour alone. The start takes the
+ * end's am or pm, or the other one when it comes after the end on a 12-hour clock: "11–1 pm" starts at 11:00, "12–2 pm"
+ * at noon. Both hours must be on a 12-hour clock, so "2026-7 pm" is no range.
+ */
+function rangeStarts(quote: string): string[] {
+  return [...quote.matchAll(RANGE)].flatMap(([, start, minutes = "00", end, meridiem]) => {
+    const [from, to] = [Number(start), Number(end)];
+    if (from < 1 || from > 12 || to < 1 || to > 12) return [];
+    const pm = (meridiem!.toLowerCase() === "p") !== from % 12 > to % 12;
+    return [`${String((from % 12) + (pm ? 12 : 0)).padStart(2, "0")}:${minutes}`];
+  });
 }

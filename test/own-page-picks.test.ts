@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyDataset, parseDataset } from "../src/dataset.js";
+import { statesValue } from "../src/own-page.js";
 import { renderReportMarkdown } from "../src/report.js";
 import { candidateAt, judging, source, WEEK_1, WEEK_2 } from "./fakes/fixtures.js";
 import { testConfig } from "./fakes/config.js";
@@ -323,5 +324,27 @@ describe("the dataset schema and an own page's price and ages (#133)", () => {
     expect(() => parseDataset(withEvent({ ...event, evidence: { ...event.evidence, ages: undefined } }))).toThrow(/ages/);
     expect(() => parseDataset(withEvent({ ...event, price: "x".repeat(81) }))).toThrow();
     expect(parseDataset(withEvent(event)).events[0]).toEqual(event);
+  });
+});
+
+describe("whether a quote states a price or age limit", () => {
+  it.each([
+    ["Tickets $25-$45", "$25 – $45"],
+    ["Free admission", "Free"],
+    // A quote saying there is no fee or charge gives Free (#263).
+    ["The festival has no entry fee.", "Free"],
+    ["There is no fee.", "Free"],
+    ["No charge to attend", "Free"],
+  ])("%s states %s", (quote, value) => {
+    expect(statesValue(quote, value)).toBe(true);
+  });
+
+  it.each([
+    ["Tickets $25", "$30"],
+    ["free and open to all", "All ages"],
+    ["There is no fee.", "$0 suggested donation"],
+    ["No refunds; tickets $20", "Free"],
+  ])("%s does not state %s", (quote, value) => {
+    expect(statesValue(quote, value)).toBe(false);
   });
 });
