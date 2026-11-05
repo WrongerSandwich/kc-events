@@ -138,6 +138,18 @@ sources:
     checkHints: Performing arts center at Johnson County Community College, Overland Park; Yardley Hall and Polsky Theatre.
     status: active
 
+  - name: Social Symphony of Kansas City
+    urls: [https://socialsymphonykc.org/events/]
+    kind: music
+    neighborhood: Midtown
+    checkHints: >-
+      A community orchestra (it calls itself the "Drunk Orchestra") giving two or three free concerts a
+      season, most at the Kansas City Scottish Rite (1330 Linwood Blvd) or The Truman; read the venue from
+      each listing. The page lists upcoming events only. Its fundraisers (HamBINGO at Hamburger Mary's,
+      trivia nights, Drink to Donate at a bar) are promotions, not concerts: skip them.
+    status: active
+    notes: "Added 2026-11-04 at Evan's request. Plain fetch; a WordPress Events Calendar list (about 1,000 characters of listings). Its .ics export is at /events/?ical=1."
+
   - name: Knuckleheads
     urls: [https://tickets.knuckleheadskc.com/]
     kind: music
