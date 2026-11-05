@@ -6,7 +6,8 @@
 
 import { comparable } from "./extraction.js";
 import { samePage } from "./hosts.js";
-import { calendarDate, sameVenue, type EventIdentity, type VenueAliases } from "./identity.js";
+import { calendarDate, sameMoment, sameVenue, type EventIdentity, type VenueAliases } from "./identity.js";
+import { hasTime } from "./time.js";
 
 /**
  * Two records are likely one event when they share a primary page or a venue (aliases applied) and
@@ -17,6 +18,11 @@ import { calendarDate, sameVenue, type EventIdentity, type VenueAliases } from "
  * night inside a run of the same name). Titles are compared as quotes are (`comparable`); an empty
  * one never counts. Two shows of one night under different names are not a pair, nor two nights of
  * one play stored one by one.
+ *
+ * They are a pair too when both start at one moment, day and clock time, under titles sharing a
+ * phrase of two or more whole words not all filler (#260): "Jennifer Lynn Barnes, Dangerous Impulses"
+ * and "Meet the Author: Jennifer Lynn Barnes and Sarah Henning". Reported only, never folded: a
+ * double feature's two films ("Double Feature: Alien", "Double Feature: Aliens") are two events.
  */
 export function likelyDuplicate(a: EventIdentity, b: EventIdentity, aliases: VenueAliases): boolean {
   const [x, y] = [comparable(a.title), comparable(b.title)];
@@ -24,7 +30,30 @@ export function likelyDuplicate(a: EventIdentity, b: EventIdentity, aliases: Ven
   const shared = samePage(a.primaryUrl, b.primaryUrl) || (a.venue !== undefined && b.venue !== undefined && sameVenue(a.venue, b.venue, aliases));
   if (!shared) return false;
   if (x === y) return covers(a, b) || covers(b, a);
-  return sameDay(a, b) && (containsWords(x, y) || containsWords(y, x));
+  return (sameDay(a, b) && (containsWords(x, y) || containsWords(y, x))) || (sameTimedStart(a, b) && sharePhrase(x, y));
+}
+
+/**
+ * Words that make no phrase on their own: "A Night at the Opera" and "A Night at the Museum" share
+ * nothing. "night" is one because so many titles are one ("Comedy Night", "A Night of Jazz").
+ */
+const FILLER = new Set(["a", "an", "the", "of", "and", "&", "at", "in", "on", "with", "for", "to", "from", "by", "or", "night"]);
+
+/** Whether two titles have two consecutive words in common, one of them not filler. */
+function sharePhrase(x: string, y: string): boolean {
+  const pairs = new Set(wordPairs(x));
+  return wordPairs(y).some((pair) => pairs.has(pair) && pair.split(" ").some((word) => !FILLER.has(word)));
+}
+
+/** A title's consecutive words two by two, split at anything not a letter, digit, ampersand or apostrophe. */
+function wordPairs(title: string): string[] {
+  const words = title.split(/[^\p{L}\p{N}&']+/u).filter((word) => word !== "");
+  return words.slice(1).map((word, i) => `${words[i]} ${word}`);
+}
+
+/** Both dated with a time, on the same day at the same minute; a recurring record never is. */
+function sameTimedStart(a: EventIdentity, b: EventIdentity): boolean {
+  return a.recurrence !== "recurring" && b.recurrence !== "recurring" && hasTime(a.start) && hasTime(b.start) && sameMoment(a.start, b.start);
 }
 
 /** Whether a title holds another as whole words: "endrid, poets mortis" holds "endrid", "smart party" does not hold "art". */

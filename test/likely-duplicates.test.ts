@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyDataset, type Dataset, type Event } from "../src/dataset.js";
+import { sameEvent } from "../src/identity.js";
 import { likelyDuplicate, likelyDuplicatePairs } from "../src/likely-duplicates.js";
 import { renderReportMarkdown } from "../src/report.js";
 import { testConfig } from "./fakes/config.js";
@@ -120,6 +121,85 @@ describe("likelyDuplicate", () => {
     const b = event("Rooms We Carry", "Charlotte Street", CHARLOTTE, "2026-11-21");
     expect(likelyDuplicate(a, b, ALIASES)).toBe(false);
     expect(likelyDuplicate(a, { ...a, id: "evt_other" }, ALIASES)).toBe(false);
+  });
+});
+
+const LIBRARY = "https://www.jocolibrary.org/events";
+const RAINY_DAY = "https://www.rainydaybooks.com/events";
+const BEGGARS = "https://www.beggarstable.org/events";
+const SCREENLAND = "https://www.screenland.com/coming-soon";
+const LIBRARY_ALIASES = { "Central Resource Library": ["Johnson County Library - Central Resource"] };
+
+/** The pairs #260 found: one venue, one minute, titles sharing only a phrase. */
+const sharedPhrase = () => [
+  [
+    event("Jennifer Lynn Barnes, Dangerous Impulses", "Central Resource Library", RAINY_DAY, "2026-11-07T14:00:00-06:00"),
+    event("Meet the Author: Jennifer Lynn Barnes and Sarah Henning", "Johnson County Library - Central Resource", LIBRARY, "2026-11-07T14:00:00-06:00"),
+  ],
+  [
+    event("Curtis Chin, Everything I Learned, I Learned in a Chinese Restaurant", "Johnson County Library - Central Resource", RAINY_DAY, "2026-11-17T18:00:00-06:00"),
+    event("Curtis Chin on Family, Food and Belonging", "Central Resource Library", LIBRARY, "2026-11-17T18:00:00-06:00"),
+  ],
+  [
+    event("Beggars Bazaar: First Friday Popup with AGKC", "Beggars Table Church & Gallery", BEGGARS, "2026-11-06T18:00:00-06:00"),
+    event("Beggars Bazaar 2026", "Beggars Table Church & Gallery", "https://www.beggarstable.org/bazaar", "2026-11-06T18:00:00-06:00"),
+  ],
+];
+
+/** An ISO date-time with the two digits at `at` one higher: 8 the day, 11 the hour. */
+const oneHigher = (iso: string, at: number) => `${iso.slice(0, at)}${String(Number(iso.slice(at, at + 2)) + 1).padStart(2, "0")}${iso.slice(at + 2)}`;
+
+describe("likelyDuplicate on a shared phrase (#260)", () => {
+  it("lists one venue's records at one moment whose titles share a phrase of two words", () => {
+    for (const [a, b] of sharedPhrase()) {
+      expect(likelyDuplicate(a!, b!, LIBRARY_ALIASES)).toBe(true);
+      expect(likelyDuplicate(b!, a!, LIBRARY_ALIASES)).toBe(true);
+    }
+  });
+
+  it("does not list them an hour apart, on another day, or at another venue on another page", () => {
+    for (const [a, b] of sharedPhrase()) {
+      expect(likelyDuplicate(a!, { ...b!, start: oneHigher(b!.start!, 11) }, LIBRARY_ALIASES)).toBe(false);
+      expect(likelyDuplicate(a!, { ...b!, start: oneHigher(b!.start!, 8) }, LIBRARY_ALIASES)).toBe(false);
+      expect(likelyDuplicate(a!, { ...b!, venue: "Kansas City Zoo", primaryUrl: ZOO_EVENTS }, LIBRARY_ALIASES)).toBe(false);
+    }
+  });
+
+  it("does not count a phrase of filler words, and \"night\" is filler", () => {
+    const a = event("A Night at the Opera", "The Folly Theater", CHARLOTTE, "2026-11-21T19:30:00-06:00");
+    const b = event("A Night at the Museum", "The Folly Theater", CHARLOTTE, "2026-11-21T19:30:00-06:00");
+    expect(likelyDuplicate(a, b, ALIASES)).toBe(false);
+    const c = event("An Evening of Jazz and Blues", "The Folly Theater", CHARLOTTE, "2026-11-21T19:30:00-06:00");
+    const d = event("Jazz and Blues Brunch", "The Folly Theater", CHARLOTTE, "2026-11-21T19:30:00-06:00");
+    expect(likelyDuplicate(c, d, ALIASES)).toBe(true);
+  });
+
+  it("does not count one shared word", () => {
+    const a = event("Halloween Bash", "Knuckleheads", CHARLOTTE, "2026-10-31T20:00:00-05:00");
+    const b = event("Halloween Costume Contest", "Knuckleheads", CHARLOTTE, "2026-10-31T20:00:00-05:00");
+    expect(likelyDuplicate(a, b, ALIASES)).toBe(false);
+  });
+
+  it("does not count records with no time, or recurring ones", () => {
+    const a = event("Beggars Bazaar: First Friday Popup", "Beggars Table Church & Gallery", BEGGARS, "2026-11-06");
+    const b = event("Beggars Bazaar 2026", "Beggars Table Church & Gallery", BEGGARS, "2026-11-06");
+    expect(likelyDuplicate(a, b, ALIASES)).toBe(false);
+    expect(likelyDuplicate(a, { ...b, start: "2026-11-06T18:00:00-06:00" }, ALIASES)).toBe(false);
+    const weekly = (title: string) => event(title, "Charlotte Street", CHARLOTTE, undefined, { recurrence: "recurring", schedule: "Every Friday" });
+    expect(likelyDuplicate(weekly("Beggars Bazaar Popup"), weekly("Beggars Bazaar Market"), ALIASES)).toBe(false);
+  });
+
+  it("reports a double feature but does not fold it", () => {
+    const a = event("Double Feature: Alien", "Screenland Armour", SCREENLAND, "2026-11-13T19:00:00-06:00");
+    const b = event("Double Feature: Aliens", "Screenland Armour", SCREENLAND, "2026-11-13T19:00:00-06:00");
+    expect(likelyDuplicate(a, b, ALIASES)).toBe(true);
+    expect(sameEvent(a, b, [a, b], ALIASES)).toBe(false);
+  });
+
+  it("still lists First Friday beside Free First Friday Comedy", () => {
+    const a = event("First Friday", "Charlotte Street", CHARLOTTE, "2026-11-06T18:00:00-06:00");
+    const b = event("Free First Friday Comedy", "Charlotte Street", CHARLOTTE, "2026-11-06T20:00:00-06:00");
+    expect(likelyDuplicate(a, b, ALIASES)).toBe(true);
   });
 });
 
