@@ -52,6 +52,8 @@
   --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-6: 1.5rem; --space-8: 2rem; --space-12: 3rem; --space-16: 4rem;
   --measure: 42rem;
   --gutter: 1rem;
+  /* The measure's text width: prose kept to it inside the wide frame (the front page on desktop, #259). */
+  --reading: calc(var(--measure) - 2 * var(--gutter));
   --radius: 6px;
   /* 44 px: the primary actions' height (Save, Share, Add to calendar, the header's links, Keep going). The filter chips
      (the explorer's rail, the front page's kinds) are 32 px on phones, over WCAG 2.5.8's 24 px (#194). */

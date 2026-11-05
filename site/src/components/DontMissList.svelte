@@ -177,9 +177,14 @@
       {:else if h !== "through-sunday"}
         <!-- After this week, one line a pick (#184): the cards are for what is close enough to plan tonight, which at
              the weekend reaches into the days after it (soon). -->
-        {#each buckets[h].filter((e) => soon.has(e.id)) as event (event.id)}
-          <div class="pick"><DontMissCard {event} {today} {now} /></div>
-        {/each}
+        {@const cards = buckets[h].filter((e) => soon.has(e.id))}
+        {#if cards.length > 0}
+        <div class="picks">
+          {#each cards as event (event.id)}
+            <div class="pick"><DontMissCard {event} {today} {now} /></div>
+          {/each}
+        </div>
+        {/if}
         {@const rows = buckets[h].filter((e) => !soon.has(e.id))}
         {#if rows.length > 0}
         <ul class="later">
@@ -233,11 +238,15 @@
           <WeekStrip picks={[...upcoming, ...started]} {today} sunday={horizonBounds(today).sunday} />
         {/if}
         <!-- Named while a filter moves them (toggle), so its view transition slides the kept cards into place. -->
-        {#each upcoming as event (event.id)}
-          <div class="pick" style={moving ? `view-transition-name: pick-${event.id}` : undefined}>
-            <DontMissCard {event} {today} {now} />
-          </div>
-        {/each}
+        {#if upcoming.length > 0}
+        <div class="picks">
+          {#each upcoming as event (event.id)}
+            <div class="pick" style={moving ? `view-transition-name: pick-${event.id}` : undefined}>
+              <DontMissCard {event} {today} {now} />
+            </div>
+          {/each}
+        </div>
+        {/if}
         {#if started.length > 0}
           <details class="started" class:alone={upcoming.length === 0}>
             <summary><UiIcon name="chevron-right" />{started.length} earlier today</summary>
@@ -265,7 +274,7 @@
   .pick + .pick { border-top: 1px solid var(--rule); margin-top: var(--space-6); padding-top: var(--space-6); }
   .empty { color: var(--fg-muted); margin-top: var(--space-3); }
   /* The rows after a run of cards (the next days' picks at the weekend) stand off them as one card does the next. */
-  .pick + .later { margin-top: var(--space-6); border-top: 1px solid var(--rule); }
+  .picks + .later { margin-top: var(--space-6); border-top: 1px solid var(--rule); }
   /* The one-line rows, after this week and in the started fold (the class is the Later list's, which had them first):
      date in a fixed column so titles align; the venue drops under on a phone. */
   .later { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
@@ -291,7 +300,7 @@
   }
   .more { margin-top: var(--space-3); }
   /* Under a run of cards, the link stands off them as far as one card stands off the next. */
-  .pick + .more, .started + .more { margin-top: var(--space-6); }
+  .picks + .more, .started + .more { margin-top: var(--space-6); }
   /* Started picks: one line under the cards, open on request. No tile and no actions: there is nothing left to plan.
      The rows are the later list's; the titles step down to the muted ink, the kind icons keep their colour. */
   .started { margin-top: var(--space-6); border-top: 1px solid var(--rule); padding-top: var(--space-2); }
@@ -306,6 +315,18 @@
   .started[open] summary :global(.ui-icon) { transform: rotate(90deg); }
   .started .later { margin-top: 0; }
   .started .later a { color: var(--fg-muted); }
+  /* Desktop (#259): the page is in the wide frame (Base's listing), and the cards tile across it, two to a row and
+     three from 75rem, each its own hairline over it rather than one between it and the next. Everything else in a
+     section keeps the measure's width, ranged left. A card narrower than the measure lays out as on a phone (its
+     container query), so the words keep the width beside the tile. */
+  @media (min-width: 64rem) {
+    .picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8) var(--space-8); margin-top: var(--space-4); }
+    .pick { container: pick / inline-size; border-top: 1px solid var(--rule); padding-top: var(--space-4); }
+    .pick + .pick { margin-top: 0; padding-top: var(--space-4); }
+    .pick :global(.card) { margin-top: 0; }
+    .kinds, .later, .more, .started, .empty { max-width: var(--reading); }
+  }
+  @media (min-width: 75rem) { .picks { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   /* What kind of week it is, at a glance; each chip narrows the section to those picks (links to the explorer
      without JavaScript). */
   .kinds { list-style: none; padding: 0; margin: var(--space-3) 0 var(--space-2); display: flex; flex-wrap: wrap; gap: var(--space-2); }

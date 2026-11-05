@@ -23,7 +23,7 @@ const count = events.length;
 const buckets = bucketDontMiss(dontMiss, meta.buildToday);
 const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta.lastSuccessfulRun);
 ---
-<Base title="Kansas City events this week" description={siteConfig.tagline} jsonLd={jsonLd}>
+<Base title="Kansas City events this week" description={siteConfig.tagline} jsonLd={jsonLd} listing>
   <h1>What's on in Kansas City</h1>
   <p class="lede">
     The picks worth going out of your way for, chosen and explained by a model under written rules. Every date is read
@@ -32,7 +32,7 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
 
   <DontMissList client:load />
 
-  {alwaysThere.length > 0 && <section aria-labelledby="always">
+  {alwaysThere.length > 0 && <section class="always-there" aria-labelledby="always">
     <h2 id="always" class="section-heading">Always there</h2>
     <p class="note">On a regular schedule, for whenever you want to go.</p>
     <ul class="always">
@@ -76,6 +76,9 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
     .lede { font-size: var(--text-sm); }
   }
   .lede { color: var(--fg-muted); margin-top: var(--space-2); max-width: 36rem; }
+  /* In the frame (listing, from 64rem), only the picks take its width; what follows them keeps the measure's, ranged
+     left under the wordmark (#259). */
+  .always-there, .subscribe, .explore, .lists { max-width: var(--reading); }
   .note { color: var(--fg-muted); margin-top: var(--space-1); }
   .always { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
   /* Two lines a row: the name, then when and where. Schedules run long ("Saturdays & Sundays, April–November; …"),
