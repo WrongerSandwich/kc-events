@@ -315,17 +315,17 @@
   .started[open] summary :global(.ui-icon) { transform: rotate(90deg); }
   .started .later { margin-top: 0; }
   .started .later a { color: var(--fg-muted); }
-  /* Desktop (#259): the page is in the wide frame (Base's wideOnDesktop), and the cards tile across it, two to a row and
-     three from 75rem, each its own hairline over it rather than one between it and the next (the second rule undoes
-     the run's). The week strip takes the frame's width too, over the columns; everything else in a section keeps the
-     measure's, ranged left. In a column, a card puts its controls under its words (its container query). */
+  /* Desktop (#259): the page is in the wide frame (Base's wideOnDesktop), and the cards tile across it two to a row,
+     each with its own hairline over it (the card's margin under the line) rather than one between it and the next (the
+     second rule undoes the run's). The week strip takes the frame's width too, over the columns; everything else in a
+     section keeps the measure's, ranged left. A narrow column puts a card's controls under its words (its container
+     query). */
   @media (min-width: 64rem) {
     .picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); margin-top: var(--space-4); }
-    .pick { container: pick / inline-size; border-top: 1px solid var(--rule); padding-top: var(--space-4); }
-    .pick + .pick { margin-top: 0; padding-top: var(--space-4); }
+    .pick { container: pick / inline-size; border-top: 1px solid var(--rule); }
+    .pick + .pick { margin-top: 0; padding-top: 0; }
     .kinds, .later, .more, .started, .empty { max-width: var(--reading); }
   }
-  @media (min-width: 75rem) { .picks { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   /* What kind of week it is, at a glance; each chip narrows the section to those picks (links to the explorer
      without JavaScript). */
   .kinds { list-style: none; padding: 0; margin: var(--space-3) 0 var(--space-2); display: flex; flex-wrap: wrap; gap: var(--space-2); }

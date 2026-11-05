@@ -82,12 +82,11 @@
     .card { grid-template-columns: 3.5rem minmax(0, 1fr); column-gap: var(--space-3); }
     .actions { grid-column: 2; flex-direction: row; flex-wrap: wrap; justify-content: flex-start; gap: 0; min-height: var(--tap); margin: var(--space-1) 0 0 calc(-1 * var(--space-3)); }
   }
-  /* A card in the front page's desktop grid (#259), a column a third or half of the frame (never as wide as 40rem, so
-     this always holds there): the controls go under the words, as on a phone (the rule above, which changes with this
-     one), but the tile keeps its desktop size, and the grid's gap stands for the margin. Only the grid names this
-     container. */
+  /* A card in the front page's desktop grid (#259), a column half the frame: under 40rem wide (in a window under
+     1440 px), the controls go under the words, as on a phone (the rule above, which changes with this one), but the
+     tile keeps its desktop size; wider, the card is as it is in the measure. Only the grid names this container. */
   @container pick (max-width: 40rem) {
-    .card { grid-template-columns: 4rem minmax(0, 1fr); margin-top: 0; }
+    .card { grid-template-columns: 4rem minmax(0, 1fr); }
     .actions { grid-column: 2; flex-direction: row; flex-wrap: wrap; justify-content: flex-start; gap: 0; min-height: var(--tap); margin: var(--space-1) 0 0 calc(-1 * var(--space-3)); }
   }
 </style>
