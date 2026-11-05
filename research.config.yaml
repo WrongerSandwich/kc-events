@@ -225,6 +225,8 @@ venueAliases:
   Zhou B Art Center KC: [Zhou B Art Center Kansas City, 1801 East 18th Street]
   # Weekly audit 2026-10-26: some of its listings give the street address alone.
   Liberty Hall: [644 Massachusetts St]
+  # Weekly audit 2026-11-02 (#260): kcparks.org's homepage gives the center's street address alone.
+  Bruce R. Watkins Cultural Heritage Center: [3700 Dr. Martin Luther King, Jr. Blvd.]
   # #197: Music Theater Heritage's Ruby Room, Suite 301 at Crown Center, as Crown Center's calendar gives it.
   Music Theater Heritage: [Ruby Room, "2450 Grand Blvd., Suite 301"]
   # #197: spellings as pages give them. A name with no other names files only the same words in other
@@ -241,7 +243,8 @@ venueAliases:
   # Each is its own building; these name it, they put no two branches together.
   Central Library (Kansas City Public Library): [Central Library]
   Plaza Branch (Kansas City Public Library): [Plaza Branch]
-  Central Resource Library (Johnson County Library): [Central Resource Library]
+  # #260: Rainy Day Books names it "Johnson County Library - Central Resource" for its author talks there.
+  Central Resource Library (Johnson County Library): [Central Resource Library, Johnson County Library - Central Resource]
   Blue Valley Library (Johnson County Library): [Blue Valley Library]
   Oak Park Library (Johnson County Library): [Oak Park Library]
   Monticello Library (Johnson County Library): [Monticello Library]
