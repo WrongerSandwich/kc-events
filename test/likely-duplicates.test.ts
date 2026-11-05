@@ -146,8 +146,10 @@ const sharedPhrase = () => [
   ],
 ];
 
-/** An ISO date-time with the two digits at `at` one higher: 8 the day, 11 the hour. */
+/** An ISO date-time with the two digits at `at` one higher (no carry; the fixtures stay clear of hour 23 and a month's end). */
 const oneHigher = (iso: string, at: number) => `${iso.slice(0, at)}${String(Number(iso.slice(at, at + 2)) + 1).padStart(2, "0")}${iso.slice(at + 2)}`;
+const nextDay = (iso: string) => oneHigher(iso, 8);
+const anHourLater = (iso: string) => oneHigher(iso, 11);
 
 describe("likelyDuplicate on a shared phrase (#260)", () => {
   it("lists one venue's records at one moment whose titles share a phrase of two words", () => {
@@ -159,8 +161,8 @@ describe("likelyDuplicate on a shared phrase (#260)", () => {
 
   it("does not list them an hour apart, on another day, or at another venue on another page", () => {
     for (const [a, b] of sharedPhrase()) {
-      expect(likelyDuplicate(a!, { ...b!, start: oneHigher(b!.start!, 11) }, LIBRARY_ALIASES)).toBe(false);
-      expect(likelyDuplicate(a!, { ...b!, start: oneHigher(b!.start!, 8) }, LIBRARY_ALIASES)).toBe(false);
+      expect(likelyDuplicate(a!, { ...b!, start: anHourLater(b!.start!) }, LIBRARY_ALIASES)).toBe(false);
+      expect(likelyDuplicate(a!, { ...b!, start: nextDay(b!.start!) }, LIBRARY_ALIASES)).toBe(false);
       expect(likelyDuplicate(a!, { ...b!, venue: "Kansas City Zoo", primaryUrl: ZOO_EVENTS }, LIBRARY_ALIASES)).toBe(false);
     }
   });
@@ -174,13 +176,19 @@ describe("likelyDuplicate on a shared phrase (#260)", () => {
     expect(likelyDuplicate(c, d, ALIASES)).toBe(true);
   });
 
+  it("reads a possessive's apostrophe as no part of the word", () => {
+    const a = event("Beggars' Bazaar: Holiday Market", "Beggars Table Church & Gallery", BEGGARS, "2026-12-04T18:00:00-06:00");
+    const b = event("Beggars Bazaar 2026", "Beggars Table Church & Gallery", BEGGARS, "2026-12-04T18:00:00-06:00");
+    expect(likelyDuplicate(a, b, ALIASES)).toBe(true);
+  });
+
   it("does not count one shared word", () => {
     const a = event("Halloween Bash", "Knuckleheads", CHARLOTTE, "2026-10-31T20:00:00-05:00");
     const b = event("Halloween Costume Contest", "Knuckleheads", CHARLOTTE, "2026-10-31T20:00:00-05:00");
     expect(likelyDuplicate(a, b, ALIASES)).toBe(false);
   });
 
-  it("does not count records with no time, or recurring ones", () => {
+  it("does not count records with no time on either side, or recurring ones", () => {
     const a = event("Beggars Bazaar: First Friday Popup", "Beggars Table Church & Gallery", BEGGARS, "2026-11-06");
     const b = event("Beggars Bazaar 2026", "Beggars Table Church & Gallery", BEGGARS, "2026-11-06");
     expect(likelyDuplicate(a, b, ALIASES)).toBe(false);

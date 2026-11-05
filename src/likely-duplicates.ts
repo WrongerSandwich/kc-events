@@ -30,12 +30,13 @@ export function likelyDuplicate(a: EventIdentity, b: EventIdentity, aliases: Ven
   const shared = samePage(a.primaryUrl, b.primaryUrl) || (a.venue !== undefined && b.venue !== undefined && sameVenue(a.venue, b.venue, aliases));
   if (!shared) return false;
   if (x === y) return covers(a, b) || covers(b, a);
-  return (sameDay(a, b) && (containsWords(x, y) || containsWords(y, x))) || (sameTimedStart(a, b) && sharePhrase(x, y));
+  if (sameDay(a, b) && (containsWords(x, y) || containsWords(y, x))) return true;
+  return sameTimedStart(a, b) && sharePhrase(x, y);
 }
 
 /**
  * Words that make no phrase on their own: "A Night at the Opera" and "A Night at the Museum" share
- * nothing. "night" is one because so many titles are one ("Comedy Night", "A Night of Jazz").
+ * nothing. "night" counts as filler because so many titles name one ("Comedy Night", "A Night of Jazz").
  */
 const FILLER = new Set(["a", "an", "the", "of", "and", "&", "at", "in", "on", "with", "for", "to", "from", "by", "or", "night"]);
 
@@ -45,9 +46,15 @@ function sharePhrase(x: string, y: string): boolean {
   return wordPairs(y).some((pair) => pairs.has(pair) && pair.split(" ").some((word) => !FILLER.has(word)));
 }
 
-/** A title's consecutive words two by two, split at anything not a letter, digit, ampersand or apostrophe. */
+/**
+ * A title's consecutive words two by two, split at anything not a letter, digit, ampersand or
+ * apostrophe, a word's apostrophe at either end dropped ("Beggars' Bazaar" is "beggars bazaar").
+ */
 function wordPairs(title: string): string[] {
-  const words = title.split(/[^\p{L}\p{N}&']+/u).filter((word) => word !== "");
+  const words = title
+    .split(/[^\p{L}\p{N}&']+/u)
+    .map((word) => word.replace(/^'+|'+$/g, ""))
+    .filter((word) => word !== "");
   return words.slice(1).map((word, i) => `${words[i]} ${word}`);
 }
 
