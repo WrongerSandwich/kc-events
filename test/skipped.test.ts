@@ -34,6 +34,13 @@ describe("skipped candidates", () => {
     "Annual E-Waste Recycling Event and Book Drive",
     "Canned Food Drives",
     "A Book Drive for Literacy",
+    "Coat & Toy Drive",
+    "Food and Clothing Drive",
+    "Diaper and Wipes Drive",
+    "Electronics Recycling Drop-Off",
+    "E-Waste Drop Off",
+    // Billed first, the drive is the thing listed, whatever comes with it.
+    "Holiday Toy Drive with Santa",
   ])("%s is a collection drive, skipped as a promotion (#262)", async (title) => {
     const { dataset, report } = await runAt(candidate({ title }), candidate());
 
@@ -82,6 +89,8 @@ describe("skipped candidates", () => {
     "Holiday Concert and Toy Drive",
     "Jingle Bell Jam & Toy Drive",
     "Winter Market with a Coat Drive",
+    "Book Drive-In Movie Night",
+    "The E-Waste Problem: A Talk",
   ])("%s is a show or a public event, not skipped", async (title) => {
     const { dataset, report } = await runAt(candidate({ title }));
 

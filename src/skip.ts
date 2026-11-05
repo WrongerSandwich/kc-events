@@ -1,8 +1,8 @@
 /**
  * The backstop behind the extraction rules (#81): what the model was told to skip and listed anyway.
- * A promotion (a business's standing night, a watch party, a collection drive) and a non-public event (a graduation, a
- * board meeting, anything online) are skipped by their normalised title or their venue, after
- * extraction and before storage, and counted; and an away game on a team's schedule is counted
+ * A promotion (a business's standing night, a watch party, a collection drive) and a non-public
+ * event (a graduation, a board meeting, anything online) are skipped by their normalised title or
+ * their venue, after extraction and before storage, and counted; and an away game on a team's schedule is counted
  * outside the geography. Each pattern is narrow enough that a ticketed show with a named act does not
  * match: the symphony's "Happy Hour: Beethoven …" series, a band's "One Night Reunion", an "Opening
  * Night Gala with" a soloist, and a drag bingo are shows.
@@ -14,7 +14,7 @@ export type SkipReason = (typeof SKIP_REASONS)[number];
 
 /** What a collection drive gathers, as a title names it: "Blood Drive", "Warm-Up Drive". */
 const DRIVE_THINGS =
-  "(?:blood|(?:canned )?food|coats?|toys?|books?|clothing|clothes|diapers?|barrel|donations?|school suppl(?:y|ies)|warm up|winter wear|shoes?|socks?|hygiene|pantry|supply|supplies)";
+  "(?:blood|(?:canned )?food|coats?|toys?|books?|clothing|clothes|diapers?|wipes|barrel|donations?|warm up|winter wear|shoes?|socks?|hygiene|pantry|suppl(?:y|ies))";
 
 /**
  * Patterns on the normalised title (lower case, punctuation as spaces), each a whole-word match. A
@@ -34,11 +34,12 @@ const SKIP_RULES: readonly { reason: SkipReason; pattern: RegExp }[] = [
     "speed dating",
     "pop up bar",
     "dueling pianos",
-    // A collection is no event (#262): a drive of a named thing, never the bare word, and not one an
-    // event billed in its own right hosts ("Holiday Concert and Toy Drive").
-    `(?<!(?:^| )(?:and|with|plus)(?: an?)? )${DRIVE_THINGS} drives?`,
-    "e waste",
-    "recycl(?:ing|es) days?",
+    // A collection is no event (#262): a drive of named things ("Coat & Toy Drive"), never the bare
+    // word or a drive-in, and not one an event billed in its own right hosts ("Holiday Concert and
+    // Toy Drive"); an e-waste or recycling day or drop-off.
+    `(?:${DRIVE_THINGS} (?:and|or) |(?<!(?:^| )(?:and|with|plus)(?: an?)? ))${DRIVE_THINGS} drives?(?! in(?: |$))`,
+    "e waste (?:recycling|drop off|collection|days?)",
+    "recycl(?:ing|es) (?:days?|drop off)",
   ].map((term) => ({ reason: "promotion" as const, pattern: wholeWords(term) })),
   ...[
     "graduations?",
