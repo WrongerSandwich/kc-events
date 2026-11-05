@@ -14,7 +14,7 @@ import type { CompletionRequest, FetchResult, ModelStage } from "./ports.js";
 import type { Source } from "./registry.js";
 import { deriveRecurrence } from "./recurrence.js";
 import { toKind, toNeighborhood } from "./taxonomy.js";
-import { fromLocal, toLocalIso } from "./time.js";
+import { fromLocal, shiftDate, toLocalIso } from "./time.js";
 import { quotedSpan } from "./date-span.js";
 import { namesWeekOfMonth, orderedDays, statedDays, statesDays } from "./weekdays.js";
 
@@ -94,10 +94,15 @@ const strictReplySchema = z.object({ events: z.array(candidateSchema), afterHori
 /** The reply as it is read: one without `afterHorizon` (an older fake, a model leaving it out) lists nothing after the horizon. */
 export const extractionReplySchema = strictReplySchema.extend({ afterHorizon: afterHorizonSchema.default({ listed: false, latestStart: null }) });
 
-/** What a reply says the page lists after the horizon, when it lists anything there; a latest start that is no date is dropped. */
-export function afterHorizonOf(reported: z.infer<typeof afterHorizonSchema>): { latestStart?: string } | undefined {
+/**
+ * The latest start among what a reply says the page lists after the horizon (#264), when it lists anything
+ * there. A page that does reaches past the horizon whatever date it gives, so one that is no date, or not
+ * after `lastDay`, reads as the horizon's next day.
+ */
+export function afterHorizonOf(reported: z.infer<typeof afterHorizonSchema>, lastDay: string): string | undefined {
   if (!reported.listed) return undefined;
-  return reported.latestStart !== null && LOCAL_DATE.test(reported.latestStart) ? { latestStart: reported.latestStart } : {};
+  const { latestStart } = reported;
+  return latestStart !== null && LOCAL_DATE.test(latestStart) && latestStart > lastDay ? latestStart : shiftDate(lastDay, 1);
 }
 
 /** The longest description the model may write for an event, from a list or an event's own page. */

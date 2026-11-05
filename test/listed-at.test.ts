@@ -124,10 +124,18 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
       expect(report.sources[0]!.detail ?? "").not.toContain("add the next page");
     });
 
-    it("nor when it gives no latest start", async () => {
-      const { report } = await runAt(WEEK_2, emptyDataset(), [reply(choir), pastHorizon(null, quartet)]);
+    it.each([
+      ["gives no latest start", null],
+      ["gives one inside the horizon", "2026-11-20"],
+    ])("nor when it %s, and the listing reaches past the horizon all the same", async (_, latestStart) => {
+      const recital = at({ title: "Holiday Recital", startDate: "2026-11-28", dateEvidence: "Sat, Nov 28 @ 6:00 pm" });
+      const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(choir), reply(quartet, recital)])).dataset;
+
+      // Holiday Recital (Nov 28) is past String Quartet (Nov 14) but inside the horizon, which the page reaches past: struck.
+      const { dataset, report } = await runAt(WEEK_2, week1, [reply(choir), pastHorizon(latestStart, quartet)]);
 
       expect(report.sources[0]!.detail ?? "").not.toContain("add the next page");
+      expect(titled(dataset, "Holiday Recital")[0]).toMatchObject({ verificationFailures: 1 });
     });
   });
 

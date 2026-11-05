@@ -96,6 +96,16 @@ describe("an excluded source's events", () => {
 });
 
 describe("a page read as empty", () => {
+  it("is not one whose every event starts after the horizon (#264): what it no longer lists is struck", async () => {
+    const first = await listing(bigShow, secondShow, thirdShow);
+    const season = { ...reply(), value: { events: [], afterHorizon: { listed: true, latestStart: "2027-03-27" } } };
+
+    const second = await runAt(week(2), first.dataset, { [CALENDAR_URL]: PAGE }, [season, reply()]);
+
+    expect(second.dataset.events.map(strikeState)).toEqual([STRUCK, STRUCK, STRUCK]);
+    expect(second.report.reverification.problems).toEqual([]);
+  });
+
   it("where three or more active events cite it is an outage for them, not a strike each, and the report says so", async () => {
     const first = await listing(bigShow, secondShow, thirdShow);
 
