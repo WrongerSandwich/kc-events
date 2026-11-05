@@ -23,7 +23,7 @@ const count = events.length;
 const buckets = bucketDontMiss(dontMiss, meta.buildToday);
 const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta.lastSuccessfulRun);
 ---
-<Base title="Kansas City events this week" description={siteConfig.tagline} jsonLd={jsonLd} listing>
+<Base title="Kansas City events this week" description={siteConfig.tagline} jsonLd={jsonLd} wideOnDesktop>
   <h1>What's on in Kansas City</h1>
   <p class="lede">
     The picks worth going out of your way for, chosen and explained by a model under written rules. Every date is read
@@ -76,7 +76,7 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
     .lede { font-size: var(--text-sm); }
   }
   .lede { color: var(--fg-muted); margin-top: var(--space-2); max-width: 36rem; }
-  /* In the frame (listing, from 64rem), only the picks take its width; what follows them keeps the measure's, ranged
+  /* In the frame (Base's wideOnDesktop, from 64rem), only the picks take its width; what follows them keeps the measure's, ranged
      left under the wordmark (#259). */
   .always-there, .subscribe, .explore, .lists { max-width: var(--reading); }
   .note { color: var(--fg-muted); margin-top: var(--space-1); }

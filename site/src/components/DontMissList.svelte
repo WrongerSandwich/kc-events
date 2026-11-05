@@ -315,15 +315,14 @@
   .started[open] summary :global(.ui-icon) { transform: rotate(90deg); }
   .started .later { margin-top: 0; }
   .started .later a { color: var(--fg-muted); }
-  /* Desktop (#259): the page is in the wide frame (Base's listing), and the cards tile across it, two to a row and
-     three from 75rem, each its own hairline over it rather than one between it and the next. Everything else in a
-     section keeps the measure's width, ranged left. A card narrower than the measure lays out as on a phone (its
-     container query), so the words keep the width beside the tile. */
+  /* Desktop (#259): the page is in the wide frame (Base's wideOnDesktop), and the cards tile across it, two to a row and
+     three from 75rem, each its own hairline over it rather than one between it and the next (the second rule undoes
+     the run's). The week strip takes the frame's width too, over the columns; everything else in a section keeps the
+     measure's, ranged left. In a column, a card puts its controls under its words (its container query). */
   @media (min-width: 64rem) {
-    .picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8) var(--space-8); margin-top: var(--space-4); }
+    .picks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-8); margin-top: var(--space-4); }
     .pick { container: pick / inline-size; border-top: 1px solid var(--rule); padding-top: var(--space-4); }
     .pick + .pick { margin-top: 0; padding-top: var(--space-4); }
-    .pick :global(.card) { margin-top: 0; }
     .kinds, .later, .more, .started, .empty { max-width: var(--reading); }
   }
   @media (min-width: 75rem) { .picks { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

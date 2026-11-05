@@ -83,7 +83,7 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // Clear and saved view buttons and Filters control, Export after the results, quiet Saves on phone rows, the Every
   // date pill, the fades at the rail's and the kind row's ends, and the sheet's Show button unfilled in the dark
   // (measured 1,670 against a 55,006 build), and 100 for the front page's listing width in the shared stylesheet (#259;
-  // measured 39)
+  // measured 41)
   { page: "explore.html", budget: 56_800, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
