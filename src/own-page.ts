@@ -152,7 +152,8 @@ export function readOwnPageReply(value: unknown, event: Event, reading: PageRead
   const price = stated(reply.price, reply.priceEvidence, MAX_PRICE, "price");
   const ages = stated(reply.ages, reply.agesEvidence, MAX_AGES, "age limit");
   const venue = venueReply && stated(venueReply.venue, venueReply.venueEvidence, MAX_VENUE, "venue");
-  if (venueReply && venue === undefined && !problems.at(-1)?.endsWith("no venue taken")) problems.push("named no venue for it; no venue taken");
+  // A venue given and not held has its line from stated; one not given at all gets this one.
+  if (venueReply && (!unmarked(venueReply.venue) || !unmarked(venueReply.venueEvidence))) problems.push("named no venue for it; no venue taken");
   const days = event.recurrence === "limited-run" ? statedDays(reply, quotable, unmarked, problems) : undefined;
   const ticketPage = event.recurrence === "limited-run" && days === undefined ? linkedPage(reply.daysLink, reading, problems) : undefined;
   const description = unmarked(reply.description);

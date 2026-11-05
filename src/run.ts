@@ -1137,9 +1137,10 @@ function listQuote(quote: Event["evidence"]["venue"]): string | undefined {
 function keepsStoredCitation(known: Event, { event, quoteProblem }: Sighting, aliases: VenueAliases): boolean {
   if (quoteProblem === undefined) return false;
   const { pageText } = quoteProblem;
-  const { date, venue } = known.evidence;
+  const { date } = known.evidence;
   // A venue quoted from the event's own page (#267) is not on the list, so it cannot say the list has not changed.
-  if (date === undefined || typeof venue !== "string" || !quotedOn(date, pageText) || !quotedOn(venue, pageText)) return false;
+  const venue = listQuote(known.evidence.venue);
+  if (date === undefined || venue === undefined || !quotedOn(date, pageText) || !quotedOn(venue, pageText)) return false;
   return sameDay(event, known) && event.venue !== undefined && known.venue !== undefined && sameVenue(event.venue, known.venue, aliases);
 }
 
@@ -1422,7 +1423,7 @@ function withStoredQuotes(known: Event, record: Event, page: SightedPage | undef
     evidence: {
       ...record.evidence,
       ...(sameWhen && onPage(date) ? { date } : {}),
-      ...(record.venue === known.venue && typeof venue === "string" && onPage(venue) ? { venue } : {}),
+      ...(record.venue === known.venue && onPage(listQuote(venue)) ? { venue } : {}),
     },
   };
 }
