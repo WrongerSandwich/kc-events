@@ -10,7 +10,7 @@
  * And, per set-up of one or two reads of every page (#223), what the run's own merge makes of the
  * stored dataset from them: `measureSetups`.
  */
-import type { Event, Weekday } from "./dataset.js";
+import { venueWords, type Event, type Weekday } from "./dataset.js";
 import { comparable, type ExtractionContext, type SightedPage, type Sighting } from "./extraction.js";
 import { pageKey } from "./hosts.js";
 import { sameName, type VenueAliases } from "./identity.js";
@@ -74,7 +74,7 @@ export function trialEvent({ event, quoteProblem }: Sighting): TrialEvent {
     primaryUrl: event.primaryUrl,
     ...(quoteProblem !== undefined ? { quoteProblem: quoteProblem.phrase } : {}),
     ...(event.evidence.date !== undefined ? { dateEvidence: event.evidence.date } : {}),
-    ...(event.evidence.venue !== undefined ? { venueEvidence: event.evidence.venue } : {}),
+    ...(event.evidence.venue !== undefined ? { venueEvidence: venueWords(event.evidence.venue)! } : {}),
   };
 }
 

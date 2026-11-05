@@ -6,7 +6,7 @@
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import { MAX_AGES, MAX_PRICE, WEEKDAYS, type Event, type Weekday } from "./dataset.js";
-import { comparable, EXTRACTION_TIMEOUT_MS, localIso, MAX_DESCRIPTION, MAX_QUOTE, quotableText, quotedOn, withoutLinkMarkers, type PageReading } from "./extraction.js";
+import { comparable, EXTRACTION_TIMEOUT_MS, localIso, MAX_DESCRIPTION, MAX_QUOTE, MAX_VENUE, quotableText, quotedOn, withoutLinkMarkers, type PageReading } from "./extraction.js";
 import { calendarDate } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest, FetchResult } from "./ports.js";
@@ -46,12 +46,23 @@ export const ownPageReplySchema = z.object({
     .describe("One or two plain sentences on what the event is, from the page's own text only. Null when the page says nothing about it beyond its title."),
 });
 
+/**
+ * The reply for an event its list gave no venue (#267): the fields above and the venue, with its quote. Asked only of
+ * such an event, so every other call stays the size it was.
+ */
+export const ownPageVenueReplySchema = ownPageReplySchema.extend({
+  venue: z.string().nullable().describe("The place this event is held, as the page names it in this event's own details. Null when the page names none for it."),
+  venueEvidence: z.string().nullable().describe("The exact text from the page body the venue was read from. Null when there is no venue."),
+});
+
 const ownPageResponseFormat = strictResponseFormat("event_page_details", ownPageReplySchema);
+const ownPageVenueResponseFormat = strictResponseFormat("event_page_details", ownPageVenueReplySchema);
 
 /**
  * One call over one event's own page: the event page rules, this run's dates, and the event the
  * page is for, by title, venue and the date its list gave. A "ticket" call is over the ticket page
- * a run's own page links (#143), read for its days alone.
+ * a run's own page links (#143), read for its days alone. A "venue" call is the own page's for an event its list gave a
+ * cited date and no venue (#267), which asks for the venue too.
  */
 export function buildOwnPageRequest(
   event: Event,
@@ -60,7 +71,7 @@ export function buildOwnPageRequest(
   rules: string,
   config: RunConfig,
   today: string,
-  kind: "own" | "ticket" = "own",
+  kind: "own" | "ticket" | "venue" = "own",
 ): CompletionRequest {
   const system = [
     rules,
@@ -70,6 +81,7 @@ export function buildOwnPageRequest(
     ...(event.venue !== undefined ? [`- Venue: ${event.venue}`] : []),
     `- The calendar's date: ${calendarDate(event.start)}`,
     ...(event.end !== undefined ? [`- The calendar's last day: ${calendarDate(event.end)}`] : []),
+    ...(kind === "venue" ? [`- The calendar names no venue for this event: give its venue (venue, venueEvidence) as this page names it.`] : []),
     ...(kind === "ticket" ? [`- This page: the run's ticket page, linked from its own page, read for the weekdays it plays (days); leave the other fields null.`] : []),
   ].join("\n");
   return {
@@ -79,7 +91,7 @@ export function buildOwnPageRequest(
       { role: "system", content: system },
       { role: "user", content: `Page URL: ${page.finalUrl}\n\n${reading.text}` },
     ],
-    responseFormat: ownPageResponseFormat,
+    responseFormat: kind === "venue" ? ownPageVenueResponseFormat : ownPageResponseFormat,
     // As long as a list page gets: a call past it costs only what the one page would give.
     timeoutMs: EXTRACTION_TIMEOUT_MS,
   };
@@ -98,16 +110,18 @@ export interface Quoted<T = string> {
  * that is worth one. A time comes only on the list's date, with a quote on the page that gives that
  * time; a price or an age limit only with a quote on the page that states it (ADR 0002). One that
  * fails that, a time that does not exist, or a value past its cap, is left out. A description, written
- * as the list's is, carries no quote.
+ * as the list's is, carries no quote. A venue is read only when asked for (wantsVenue, #267), and taken only with a
+ * quote on the page that names it; one asked for and not taken is a line.
  */
 export type OwnPageReading =
   | { kind: "disagrees"; date: string }
   | { kind: "unreadable" }
-  | { kind: "read"; start?: Quoted; price?: Quoted; ages?: Quoted; days?: Quoted<Weekday[]>; ticketPage?: string; description?: string; problems: string[] };
+  | { kind: "read"; start?: Quoted; price?: Quoted; ages?: Quoted; venue?: Quoted; days?: Quoted<Weekday[]>; ticketPage?: string; description?: string; problems: string[] };
 
-export function readOwnPageReply(value: unknown, event: Event, reading: PageReading, timezone: string): OwnPageReading {
-  const parsed = ownPageReplySchema.safeParse(value);
+export function readOwnPageReply(value: unknown, event: Event, reading: PageReading, timezone: string, wantsVenue = false): OwnPageReading {
+  const parsed = (wantsVenue ? ownPageVenueReplySchema : ownPageReplySchema).safeParse(value);
   if (!parsed.success) return { kind: "unreadable" };
+  const venueReply = wantsVenue ? (parsed.data as z.infer<typeof ownPageVenueReplySchema>) : undefined;
   const reply = parsed.data;
   const day = reply.date?.trim();
   if (day && day !== calendarDate(event.start)) return { kind: "disagrees", date: day };
@@ -117,9 +131,9 @@ export function readOwnPageReply(value: unknown, event: Event, reading: PageRead
 
   const time = day ? ownPageTime(reply.time, unmarked(reply.timeEvidence), day, quotable, timezone) : {};
   if (time.problem !== undefined) problems.push(`${time.problem}; no time taken`);
-  const stated = (field: "price" | "ages", cap: number, noun: string): Quoted | undefined => {
-    const value = unmarked(reply[field]);
-    const quote = unmarked(reply[`${field}Evidence`]);
+  const stated = (given: string | null, evidence: string | null, cap: number, noun: string): Quoted | undefined => {
+    const value = unmarked(given);
+    const quote = unmarked(evidence);
     if (!value || !quote) return undefined;
     const problem =
       value.length > cap
@@ -135,8 +149,10 @@ export function readOwnPageReply(value: unknown, event: Event, reading: PageRead
     problems.push(`${problem}; no ${noun} taken`);
     return undefined;
   };
-  const price = stated("price", MAX_PRICE, "price");
-  const ages = stated("ages", MAX_AGES, "age limit");
+  const price = stated(reply.price, reply.priceEvidence, MAX_PRICE, "price");
+  const ages = stated(reply.ages, reply.agesEvidence, MAX_AGES, "age limit");
+  const venue = venueReply && stated(venueReply.venue, venueReply.venueEvidence, MAX_VENUE, "venue");
+  if (venueReply && venue === undefined && !problems.at(-1)?.endsWith("no venue taken")) problems.push("named no venue for it; no venue taken");
   const days = event.recurrence === "limited-run" ? statedDays(reply, quotable, unmarked, problems) : undefined;
   const ticketPage = event.recurrence === "limited-run" && days === undefined ? linkedPage(reply.daysLink, reading, problems) : undefined;
   const description = unmarked(reply.description);
@@ -147,6 +163,7 @@ export function readOwnPageReply(value: unknown, event: Event, reading: PageRead
     ...(time.start !== undefined ? { start: time.start } : {}),
     ...(price !== undefined ? { price } : {}),
     ...(ages !== undefined ? { ages } : {}),
+    ...(venue !== undefined ? { venue } : {}),
     ...(days !== undefined ? { days } : {}),
     ...(ticketPage !== undefined ? { ticketPage } : {}),
     ...(describes ? { description } : {}),

@@ -4,7 +4,7 @@
  * Evan's. Everything this module writes sits between marker comments, so re-rendering after a
  * repeated run replaces only those blocks and keeps the hand-written text around them.
  */
-import { citedDate, type Dataset, type Event } from "./dataset.js";
+import { citedDate, venueWords, type Dataset, type Event } from "./dataset.js";
 import { hiddenSinceVerified } from "./expiry.js";
 import { normalizeName } from "./identity.js";
 import { markdownTable, plural, tableCell } from "./markdown.js";
@@ -116,7 +116,7 @@ ${doubts.length === 0 ? "_None._" : doubts.join("\n")}
 
 ${markdownTable(
   ["Event", "Date read", "Venue read", "Date evidence", "Venue evidence", "Primary page"],
-  active.map((e) => [tableCell(e.title), tableCell(dateRead(e)), tableCell(e.venue), tableCell(e.evidence.date), tableCell(e.evidence.venue), e.primaryUrl]),
+  active.map((e) => [tableCell(e.title), tableCell(dateRead(e)), tableCell(e.venue), tableCell(e.evidence.date), tableCell(venueWords(e.evidence.venue)), e.primaryUrl]),
   "_No active events._",
 )}`;
 }
@@ -161,7 +161,7 @@ function auditDoubts(e: Event, report: Pick<RunReport, "runDate" | "horizonWeeks
     const last = (e.end ?? e.start)?.slice(0, 10);
     if (e.recurrence === "one-off" && last !== undefined && last < report.runDate) doubts.push(`ended ${last}, before the run date`);
   }
-  if (e.venue !== undefined && !normalizeName(e.evidence.venue ?? "").includes(normalizeName(e.venue))) {
+  if (e.venue !== undefined && !normalizeName(venueWords(e.evidence.venue) ?? "").includes(normalizeName(e.venue))) {
     doubts.push(`the venue evidence does not mention "${e.venue}"`);
   }
   return doubts;

@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { RunConfig } from "./config.js";
 import { citedDate, ownPageAllowed, WEEKDAYS, type Event, type Weekday } from "./dataset.js";
 import { linkTarget } from "./discovery.js";
-import { samePage } from "./hosts.js";
+import { onHost, samePage, sameSite } from "./hosts.js";
 import { calendarDate, givesTitle, namesTitle } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
 import type { CompletionRequest, FetchResult, ModelStage } from "./ports.js";
@@ -111,6 +111,9 @@ export const MAX_DESCRIPTION = 300;
 /** The longest quote the model may give for a date, a venue, or an own page's time. */
 export const MAX_QUOTE = 500;
 
+/** The longest venue name the model may give, from a list or an event's own page (#267). */
+export const MAX_VENUE = 150;
+
 /**
  * The longest each free-text field the model writes may be, so one runaway page cannot grow the
  * dataset past what the site will build. Checked candidate by candidate rather than in the response
@@ -119,7 +122,7 @@ export const MAX_QUOTE = 500;
  */
 export const cappedCandidateSchema = candidateSchema.extend({
   title: z.string().max(200),
-  venue: z.string().max(150).nullable(),
+  venue: z.string().max(MAX_VENUE).nullable(),
   description: z.string().max(MAX_DESCRIPTION).nullable(),
   dateEvidence: z.string().max(MAX_QUOTE).nullable(),
   venueEvidence: z.string().max(MAX_QUOTE).nullable(),
@@ -484,6 +487,12 @@ export interface Sighting {
    * run read (#124).
    */
   quoteProblem?: { phrase: string; pageText: string };
+  /**
+   * That the reading is held only for want of a venue (#267): a dated event, not recurring, whose start and date quote
+   * on the page are good, and the page named no venue but links the event's own page on its own site (venuePage), which
+   * may supply one (readOwnPages in run).
+   */
+  wantsVenue?: true;
   /** Why the weekdays the model named for a run were not taken (#196); the event stands without them. */
   daysProblem?: string;
   /** That a reading given a schedule was read as the span its date quote gives instead (#218), for the source's line. */
@@ -551,6 +560,15 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     venueEvidence !== undefined;
   const quoteProblem = cited ? quoteNotOnPage({ date: dateEvidence, venue: venueEvidence }, origin.quotableText) : undefined;
   const verified = cited && quoteProblem === undefined;
+  const wantsVenue =
+    dateProblem === undefined &&
+    recurrence !== "recurring" &&
+    when.start !== undefined &&
+    venue === undefined &&
+    dateEvidence !== undefined &&
+    quotedOn(dateEvidence, origin.quotableText) &&
+    eventUrl !== undefined &&
+    venuePage(eventUrl, primaryUrl, context.config.discovery.platformHosts);
   // A reading held to its quoted span (#218) was given as recurring, so the model named no days for it: it takes those its quote states.
   const namedDays = span === undefined ? candidate.days : (candidate.days ?? statedDays(dateEvidence!));
   const days = verified && recurrence === "limited-run" ? listDays(namedDays, dateEvidence!) : {};
@@ -586,12 +604,21 @@ export function candidateToSighting(candidate: Candidate, origin: CandidateOrigi
     event,
     cancelled: candidate.notice === "cancelled",
     ...(dateProblem !== undefined ? { dateProblem } : {}),
+    ...(wantsVenue ? { wantsVenue: true as const } : {}),
     ...(quoteProblem !== undefined ? { quoteProblem: { phrase: quoteProblem, pageText: origin.quotableText } } : {}),
     ...(days.problem !== undefined ? { daysProblem: days.problem } : {}),
     ...(ownPage.note !== undefined ? { ownPageNote: ownPage.note } : {}),
     ...(span !== undefined ? { spanNote: `was given a schedule, but its date quote gives the span ${span.start.slice(0, 10)} to ${span.end.slice(0, 10)}; read as that span` } : {}),
     page: { quotable: origin.quotableText, links: origin.links, linkTexts: origin.linkTexts },
   };
+}
+
+/**
+ * Whether an event's own page may supply the venue its list left out (#267): it is on the list's own site, its
+ * registrable domain, and on no ticketing platform, whose page names the box office rather than the room.
+ */
+export function venuePage(eventUrl: string, primaryUrl: string, platformHosts: readonly string[]): boolean {
+  return sameSite(eventUrl, primaryUrl) && !onHost(eventUrl, platformHosts);
 }
 
 /**

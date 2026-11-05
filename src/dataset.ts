@@ -123,7 +123,11 @@ const eventFields = z.strictObject({
   lead: leadSchema,
   evidence: z.strictObject({
     date: z.string().min(1).optional(),
-    venue: z.string().min(1).optional(),
+    /**
+     * The words the venue was read from: on the primary page; or, when the primary page gave a cited date and no venue
+     * (#267), on the event's own page, which it names. A list's reading that names a venue replaces an own page's.
+     */
+    venue: z.union([z.string().min(1), ownPageQuote]).optional(),
     /**
      * Where the start's time was read when the primary page gave the date only (#123): the event's own page and the
      * words on it that give the time. Present only on a start that carries a time, from the event's own page.
@@ -148,6 +152,11 @@ const eventFields = z.strictObject({
  */
 export function citedDate(e: { recurrence: RecurrenceClass; start?: string; end?: string; schedule?: string }): string | undefined {
   return e.recurrence === "recurring" ? e.schedule : (e.start ?? e.end);
+}
+
+/** The words a venue quote gives, wherever they were read (#267). */
+export function venueWords(quote: Event["evidence"]["venue"]): string | undefined {
+  return typeof quote === "object" ? quote.quote : quote;
 }
 
 /** Whether a quote read from an own page, when there is one, is from the event's own page. */
@@ -209,6 +218,9 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     })
     .refine((e) => e.evidence.time === undefined || (hasTime(e.start) && e.eventUrl !== undefined && samePage(e.evidence.time.page, e.eventUrl)), {
       message: "a time quoted from an own page is on a start that carries a time, and from the event's own page",
+    })
+    .refine((e) => typeof e.evidence.venue !== "object" || fromOwnPage(e.evidence.venue, e.eventUrl), {
+      message: "a venue quoted from a page other than the primary page is from the event's own page",
     })
     .refine((e) => (e.price === undefined) === (e.evidence.price === undefined) && fromOwnPage(e.evidence.price, e.eventUrl), {
       message: "a price carries its quote, from the event's own page, and a price quote its price",

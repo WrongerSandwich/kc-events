@@ -24,6 +24,7 @@ import {
   type PageOrigin,
   type Sighting,
   type SightedPage,
+  venuePage,
 } from "./extraction.js";
 import {
   applyJudgment,
@@ -188,8 +189,8 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
     : reverified.events.map((e) => ageUnsighted(e, { sighted: sighted.has(e.id), laneRan: couldHaveSighted(e, laneOutcome.attempts, registry, config, suggested) }));
   // Every upcoming event's own page is read once, before curation so it judges the fuller description (#254); not midweek.
   const ownPages = reverifyOnly
-    ? { events: aged, report: [], notRead: 0, covered: new Set<string>() }
-    : await readOwnPages(aged, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
+    ? { events: aged, report: [], notRead: 0, covered: new Set<string>(), venued: new Set<string>() }
+    : await readOwnPages(aged, new Set([...merged.awaitingVenue, ...reverified.awaitingVenue]), registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   // A mapped venue places every event at it, read this run or not (#150); a reading places the rest from its page,
   // and one no page placed this run is placed from what is stored. The map goes first: its neighborhoods are on the
   // list (the config checks), so the off-list placement leaves them be and reports only what the map did not place.
@@ -238,7 +239,8 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
       new: merged.counts.new,
       updated: merged.counts.updated,
       reverified: reverified.reverified,
-      heldUnverified: merged.counts.heldUnverified,
+      // Less what an own page's venue made active since (#267).
+      heldUnverified: merged.counts.heldUnverified - [...ownPages.venued].filter((id) => merged.touched.has(id) && !merged.uncitable.has(id)).length,
       heldThroughOutage: reverified.heldThroughOutage,
       heldSourceExcluded: reverified.heldSourceExcluded,
       beyondHorizonUnstruck: reverified.beyondHorizonUnstruck,
@@ -889,13 +891,15 @@ export function mergeSightings(existing: Event[], sightings: Sighting[], { today
   const readVerified = new Set<string>();
   const uncitable = new Set<string>();
   const kept = new Map<string, string>();
+  const awaitingVenue = new Set<string>();
   const cancellationsFromElsewhere: RunReport["cancellationsFromElsewhere"] = [];
   const skippedAsExpired = new Map<string, RunReport["skippedAsExpired"][number]>();
   const tally = noTally();
   let venuelessAmbiguous = 0;
 
-  const create = (event: Event) => {
+  const create = (event: Event, wantsVenue = false) => {
     events.push(event);
+    if (wantsVenue) awaitingVenue.add(event.id);
     touched.add(event.id);
     created.add(event.id);
     if (event.status === "active") readVerified.add(event.id);
@@ -910,7 +914,7 @@ export function mergeSightings(existing: Event[], sightings: Sighting[], { today
         venuelessAmbiguous++;
         continue;
       }
-      create(event);
+      create(event, sighting.wantsVenue);
       continue;
     }
     const { event: known, rule } = match;
@@ -941,9 +945,11 @@ export function mergeSightings(existing: Event[], sightings: Sighting[], { today
     // Of this run's verified sightings of the event from pages with standing, the one nearest its stored start is its reading.
     if (event.status === "active" && !cancelled && hasNearerSighting(known, sighting, sightings, events.filter(matchable), config)) continue;
     touched.add(known.id);
-    if (event.status === "active" && rule !== "month") readVerified.add(known.id);
     const applied = applySighting(known, sighting, standing, rule, nowIso, aliases);
+    // A reading kept on its own page's venue (#267) is verified too.
+    if ((event.status === "active" || applied.refreshed) && rule !== "month") readVerified.add(known.id);
     events[events.indexOf(known)] = applied.event;
+    if (applied.awaitsVenue) awaitingVenue.add(known.id);
     if (applied.refreshed && !created.has(known.id)) refreshed.add(known.id);
     if (applied.uncitable) uncitable.add(known.id);
     if (applied.keptOn !== undefined) kept.set(known.id, applied.keptOn);
@@ -957,6 +963,7 @@ export function mergeSightings(existing: Event[], sightings: Sighting[], { today
     touched,
     uncitable,
     kept,
+    awaitingVenue,
     cancellationsFromElsewhere,
     tally,
     skippedAsExpired: [...skippedAsExpired.values()],
@@ -1061,6 +1068,10 @@ function matchable(event: Event): boolean {
  * keeps an active event on its stored reading, verified now (keptOn, the failed quote), when the
  * event's stored quotes are on the page this run read and the reading puts it on the same day at the
  * same venue (keepsStoredCitation, #220): the page has not changed, only the model's quote has.
+ * A reading of its own primary page held only for want of a venue (wantsVenue, #267) stands with the
+ * venue the event's own page gave it while it gives the same date and own page (keepsOwnPageVenue),
+ * and is a verified reading; otherwise an event not expired takes the reading, unverified and with no
+ * venue, for the own-page pass to read its venue (awaitsVenue).
  */
 function applySighting(
   known: Event,
@@ -1069,13 +1080,19 @@ function applySighting(
   rule: MatchRule,
   nowIso: string,
   aliases: VenueAliases,
-): { event: Event; refreshed: boolean; uncitable: boolean; keptOn?: string } {
-  const { event, cancelled } = sighting;
+): { event: Event; refreshed: boolean; uncitable: boolean; keptOn?: string; awaitsVenue?: true } {
+  const { cancelled } = sighting;
   const fromOwnPage = standing === "own-page";
   const confirmsOnly = rule === "month";
+  const event = fromOwnPage && !confirmsOnly && keepsOwnPageVenue(known, sighting) ? withStoredVenue(known, sighting.event, nowIso) : sighting.event;
   const mayCancel = !confirmsOnly && (fromOwnPage || event.status === "active");
   if (cancelled && mayCancel) return { event: known.status === "expired" ? known : expire(known, "cancelled"), refreshed: false, uncitable: false };
   if (event.status === "active" && !confirmsOnly) return { event: refresh(known, event, rule, { page: sighting.page, aliases }), refreshed: true, uncitable: false };
+  if (sighting.wantsVenue && fromOwnPage && !confirmsOnly && known.status !== "expired") {
+    const reading = refresh(known, event, rule, { page: sighting.page, aliases });
+    const awaiting = { ...reading, ...(known.lastVerified !== undefined ? { lastVerified: known.lastVerified } : {}) };
+    return { event: awaiting, refreshed: false, uncitable: known.status === "active", awaitsVenue: true };
+  }
   const listed = { ...known, verificationFailures: 0, consecutiveOutages: 0 };
   if (known.status === "active" && fromOwnPage && !confirmsOnly) {
     if (keepsStoredCitation(known, sighting, aliases)) return { event: { ...listed, lastVerified: nowIso }, refreshed: false, uncitable: false, keptOn: sighting.quoteProblem!.phrase };
@@ -1083,6 +1100,26 @@ function applySighting(
   }
   const cleared = known.verificationFailures === 0 && known.consecutiveOutages === 0;
   return { event: cleared ? known : listed, refreshed: false, uncitable: false };
+}
+
+/**
+ * Whether a reading held only for want of a venue (wantsVenue) keeps the venue the event's own page gave it (#267), as
+ * keepsOwnPageTime keeps a time: the reading gives the same date and the same own page the venue was quoted from.
+ */
+function keepsOwnPageVenue(known: Event, { event, wantsVenue }: Sighting): boolean {
+  const quote = known.evidence.venue;
+  if (!wantsVenue || typeof quote !== "object" || known.venue === undefined || event.eventUrl === undefined) return false;
+  return calendarDate(event.start) === calendarDate(known.start) && samePage(event.eventUrl, quote.page);
+}
+
+/** The reading verified with the stored venue its own page gave (keepsOwnPageVenue), and that venue's quote. */
+function withStoredVenue(known: Event, reading: Event, nowIso: string): Event {
+  return { ...reading, venue: known.venue!, status: "active", lastVerified: nowIso, evidence: { ...reading.evidence, venue: known.evidence.venue! } };
+}
+
+/** A quote read from the primary page, not an own page's (#267). */
+function listQuote(quote: Event["evidence"]["venue"]): string | undefined {
+  return typeof quote === "string" ? quote : undefined;
 }
 
 /**
@@ -1101,7 +1138,8 @@ function keepsStoredCitation(known: Event, { event, quoteProblem }: Sighting, al
   if (quoteProblem === undefined) return false;
   const { pageText } = quoteProblem;
   const { date, venue } = known.evidence;
-  if (date === undefined || venue === undefined || !quotedOn(date, pageText) || !quotedOn(venue, pageText)) return false;
+  // A venue quoted from the event's own page (#267) is not on the list, so it cannot say the list has not changed.
+  if (date === undefined || typeof venue !== "string" || !quotedOn(date, pageText) || !quotedOn(venue, pageText)) return false;
   return sameDay(event, known) && event.venue !== undefined && known.venue !== undefined && sameVenue(event.venue, known.venue, aliases);
 }
 
@@ -1384,7 +1422,7 @@ function withStoredQuotes(known: Event, record: Event, page: SightedPage | undef
     evidence: {
       ...record.evidence,
       ...(sameWhen && onPage(date) ? { date } : {}),
-      ...(record.venue === known.venue && onPage(venue) ? { venue } : {}),
+      ...(record.venue === known.venue && typeof venue === "string" && onPage(venue) ? { venue } : {}),
     },
   };
 }
@@ -1410,7 +1448,7 @@ function refreshFields(known: Event, sighting: Event): Event {
     evidence: {
       ...sighting.evidence,
       ...keepIfSame("date", known.evidence.date, sighting.evidence.date, sameQuote),
-      ...keepIfSame("venue", known.evidence.venue, sighting.evidence.venue, sameQuote),
+      ...keepIfSame("venue", listQuote(known.evidence.venue), listQuote(sighting.evidence.venue), sameQuote),
       ...(holdsSchedule(known, sighting) ? { date: known.evidence.date } : {}),
       ...(keepsOwnPageTime(known, sighting) ? { time: known.evidence.time } : {}),
       ...(ownPageKept && known.evidence.price !== undefined ? { price: known.evidence.price } : {}),
@@ -1584,6 +1622,7 @@ async function reverify(
   const outageLimited: Event[] = [];
   const uncitable = new Set<string>();
   const kept = new Map<string, string>();
+  const awaitingVenue = new Set<string>();
   const checked = events.map((event) => {
     if (!pending.includes(event)) return event;
     const url = event.primaryUrl;
@@ -1618,6 +1657,7 @@ async function reverify(
     if (applied.refreshed) refreshed.add(event.id);
     if (applied.uncitable) uncitable.add(event.id);
     if (applied.keptOn !== undefined) kept.set(event.id, applied.keptOn);
+    if (applied.awaitsVenue) awaitingVenue.add(event.id);
     return applied.event;
   });
   return {
@@ -1636,6 +1676,7 @@ async function reverify(
     outageLimited,
     uncitable,
     kept,
+    awaitingVenue,
     sightings: [...sightingsAt.values()].flat(),
     problems,
   };
@@ -1675,25 +1716,38 @@ function sightingFor(event: Event, sightings: Sighting[], aliases: VenueAliases)
  * for a later run, nearest first again, and counted, never as a shortfall of the spend cap. A host whose robots.txt
  * refused one of them is not fetched again this run (robotsGate). `covered` holds every event the pass kept a read
  * for or planned, read or not (the spend cap's shortfall counts one it did not reach), so the picks' pass neither
- * counts nor tries it again.
+ * counts nor tries it again. An event this run's list reading left awaiting a venue (awaitingVenue, #267) is read
+ * too, asking for the venue, when it is still unverified and not held for promotion and its own page is on its
+ * primary page's site and no ticketing platform (a ticket page names the box office, not the room); every run reads
+ * it until a venue holds. `venued` holds the events a venue made active.
  */
 async function readOwnPages(
   events: Event[],
+  awaitingVenue: Set<string>,
   registry: Registry,
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
   rules: string,
-): Promise<{ events: Event[]; report: OwnPagesReport[]; notRead: number; covered: Set<string> }> {
+): Promise<{ events: Event[]; report: OwnPagesReport[]; notRead: number; covered: Set<string>; venued: Set<string> }> {
   const { config, today } = context;
+  const venued = new Set<string>();
   // At a ceiling of 0 the pass is off, and only the picks' pass reads.
-  if (config.ownPageReadsPerRun === 0) return { events, report: [], notRead: 0, covered: new Set() };
+  if (config.ownPageReadsPerRun === 0) return { events, report: [], notRead: 0, covered: new Set(), venued };
   const lastDay = horizonEnd(today, config.horizonWeeks);
   const line = ownPagesLine(UPCOMING_OWN_PAGES);
   const due: number[] = [];
   const covered = new Set<string>();
+  const wantsVenue = (event: Event) =>
+    awaitingVenue.has(event.id) &&
+    event.status === "unverified" &&
+    event.heldForPromotion === undefined &&
+    event.eventUrl !== undefined &&
+    venuePage(event.eventUrl, event.primaryUrl, config.discovery.platformHosts);
   events.forEach((event, i) => {
-    if (event.status !== "active" || event.eventUrl === undefined || !coversDays(event, today, lastDay)) return;
-    if (event.ownPageRead !== undefined && samePage(event.ownPageRead.page, event.eventUrl)) {
+    if (event.eventUrl === undefined || !coversDays(event, today, lastDay)) return;
+    if (wantsVenue(event)) due.push(i);
+    else if (event.status !== "active") return;
+    else if (event.ownPageRead !== undefined && samePage(event.ownPageRead.page, event.eventUrl)) {
       line.kept++;
       covered.add(event.id);
     } else due.push(i);
@@ -1705,7 +1759,7 @@ async function readOwnPages(
 
   const gate = robotsGate();
   const chosen = planned.map((i) => events[i]!);
-  const plans = chosen.map((event) => ({ route: ownPageRouteFor(event, registry, ports), line, gate }));
+  const plans = chosen.map((event) => ({ route: ownPageRouteFor(event, registry, ports), line, gate, ...(wantsVenue(event) ? { venue: true as const } : {}) }));
   const outcomes = await readOwnPagesTogether(chosen, plans, ports, context, rules);
   line.problems.push(...gate.lines());
 
@@ -1716,8 +1770,9 @@ async function readOwnPages(
     covered.add(events[index]!.id);
     if (outcome === "not-read") notRead++;
     else out[index] = outcome;
+    if (outcome !== "not-read" && events[index]!.status !== "active" && outcome?.status === "active") venued.add(outcome.id);
   });
-  return { events: out, report: line.kept + nearest.length > 0 ? [line] : [], notRead, covered };
+  return { events: out, report: line.kept + nearest.length > 0 ? [line] : [], notRead, covered, venued };
 }
 
 /**
@@ -1855,6 +1910,8 @@ interface OwnPagePlan {
   route: FetchRoute;
   line: OwnPagesReport;
   gate?: RobotsGate;
+  /** That the read asks for the venue too, for an event its list gave none (#267). */
+  venue?: true;
 }
 
 /** One own-pages line's counts and problems added to another's; the counts are every number a line starts with. */
@@ -1883,11 +1940,12 @@ function ownPagesLine(source: string): OwnPagesReport {
  * (see inOrder), so with pages read together the own pages' calls go out in event order; a ticket
  * page's call (readTicketPage) follows its own page's reply and keeps no turn. Through a robots gate
  * (the pass's, #254), a page its host's robots.txt already refused this run is neither fetched nor
- * counted, and a refusal is counted as a failure whose line the gate gives.
+ * counted, and a refusal is counted as a failure whose line the gate gives. A read asking for the venue (#267) that
+ * gives one, quoted on this page, makes the event active with that venue and its quote, which names this page.
  */
 async function readOwnPage(
   event: Event,
-  { route, gate }: OwnPagePlan,
+  { route, gate, venue: asksVenue }: OwnPagePlan,
   ports: Ports & { model: CappedModel },
   context: ExtractionContext,
   rules: string,
@@ -1912,12 +1970,12 @@ async function readOwnPage(
   const reading = readPage(fetched.page, config);
   let reply: Awaited<ReturnType<ModelPort["complete"]>>;
   try {
-    reply = await turn(() => ports.model.complete(buildOwnPageRequest(event, fetched.page, reading, rules, config, today)));
+    reply = await turn(() => ports.model.complete(buildOwnPageRequest(event, fetched.page, reading, rules, config, today, asksVenue ? "venue" : "own")));
   } catch (error) {
     if (error instanceof SpendCapReached) return "not-read";
     return failed(`${url} not read: ${modelFailed(error)}`);
   }
-  const outcome = readOwnPageReply(reply.value, event, reading, config.timezone);
+  const outcome = readOwnPageReply(reply.value, event, reading, config.timezone, asksVenue === true);
   if (outcome.kind === "unreadable") return failed(`the reply for ${url} was not in the expected shape`);
   line.read++;
   if (outcome.kind === "disagrees") {
@@ -1926,7 +1984,7 @@ async function readOwnPage(
     return event;
   }
   for (const problem of outcome.problems) line.problems.push(`"${event.title}": ${url} ${problem}`);
-  const { start, price, ages, description } = outcome;
+  const { start, price, ages, venue, description } = outcome;
   // Days the list's own date line gave (#196) stand unless this page gives its own; its ticket page is not followed for them.
   const listed = fromList(event) ? { value: event.days!, ...event.evidence.days! } : undefined;
   const followed =
@@ -1943,8 +2001,10 @@ async function readOwnPage(
   if (described) line.described++;
   const { price: _price, ages: _ages, days: _days, ...unread } = event;
   const { price: _priceQuote, ages: _agesQuote, days: _daysQuote, ...evidence } = event.evidence;
+  // The venue the list left out, quoted from this page (#267), verifies the event: the list cited its date.
+  const { runsUnsighted: _runsUnsighted, ...verified } = unread;
   return {
-    ...unread,
+    ...(venue ? { ...verified, venue: venue.value, status: "active" as const, lastVerified: context.nowIso } : unread),
     ...(timed ? { start: start.value } : {}),
     ...(price ? { price: price.value } : {}),
     ...(ages ? { ages: ages.value } : {}),
@@ -1957,6 +2017,7 @@ async function readOwnPage(
       ...(timed ? { time: { page: url, quote: start.quote } } : {}),
       ...(price ? { price: { page: url, quote: price.quote } } : {}),
       ...(ages ? { ages: { page: url, quote: ages.quote } } : {}),
+      ...(venue ? { venue: { page: url, quote: venue.quote } } : {}),
       ...(days ? { days: { page: days.page, quote: days.quote } } : {}),
     },
   };
