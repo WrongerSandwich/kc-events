@@ -23,6 +23,25 @@ describe("skipped candidates", () => {
   );
 
   it.each([
+    "Sporting KC Blood Drive",
+    "America Recycles Day",
+    "Recycling Day",
+    "Ballard Center Barrel Drive",
+    "Coats & Kindness Warm-Up Drive at Merry Market",
+    "Chiefs Kingdom Food Drive",
+    "Holiday Toy Drive",
+    "Book Drive",
+    "Annual E-Waste Recycling Event and Book Drive",
+    "Canned Food Drives",
+    "A Book Drive for Literacy",
+  ])("%s is a collection drive, skipped as a promotion (#262)", async (title) => {
+    const { dataset, report } = await runAt(candidate({ title }), candidate());
+
+    expect(dataset.events.map((e) => e.title)).toEqual(["Big Show"]);
+    expect(report.counts.skippedPromotion).toBe(1);
+  });
+
+  it.each([
     ["Kansas City Fire Department Cadet Graduation 2026", "Kansas City Convention Center"],
     ["UMKC School of Medicine 55th Anniversary Gala", "Kansas City Convention Center"],
     ["KC Area Development Council Annual Meeting 2026", "Kansas City Convention Center"],
@@ -54,6 +73,15 @@ describe("skipped candidates", () => {
     "Galactic",
     "Memorial Day Parade",
     "Lecture at the National WWI Museum and Memorial",
+    "Ride the Drive: Cliff Drive by Pedicab",
+    "'We Are Latinos V' Drive-In Screening",
+    "Detoured: The Making of Bruce R. Watkins Drive",
+    "Drive-By Truckers",
+    "Test Drive",
+    // An event billed in its own right that hosts a drive alongside is kept, as the extraction rules say.
+    "Holiday Concert and Toy Drive",
+    "Jingle Bell Jam & Toy Drive",
+    "Winter Market with a Coat Drive",
   ])("%s is a show or a public event, not skipped", async (title) => {
     const { dataset, report } = await runAt(candidate({ title }));
 
@@ -111,6 +139,8 @@ describe("stored promotions and non-public events", () => {
       stored("Speed Dating"),
       stored("KC Parks Board Meeting", { status: "unverified", lastVerified: undefined }),
       stored("Add More Arts to Your Classroom", { venue: "Online" }),
+      stored("Chiefs Kingdom Food Drive", { status: "unverified", lastVerified: undefined }),
+      stored("America Recycles Day"),
       stored("Harry Potter Trivia", { status: "expired", expiryReason: "two-strike" }),
     ];
 
@@ -121,11 +151,13 @@ describe("stored promotions and non-public events", () => {
       ["Speed Dating", "expired", "promotion"],
       ["KC Parks Board Meeting", "expired", "not-public"],
       ["Add More Arts to Your Classroom", "expired", "not-public"],
+      ["Chiefs Kingdom Food Drive", "expired", "promotion"],
+      ["America Recycles Day", "expired", "promotion"],
       ["Harry Potter Trivia", "expired", "two-strike"],
     ]);
-    expect(report.counts.expired).toMatchObject({ promotion: 1, "not-public": 2, "two-strike": 0 });
+    expect(report.counts.expired).toMatchObject({ promotion: 3, "not-public": 2, "two-strike": 0 });
     const markdown = renderReportMarkdown(report);
-    expect(markdown).toContain("| Expired: promotion | 1 |");
+    expect(markdown).toContain("| Expired: promotion | 3 |");
     expect(markdown).toContain("| Expired: not-public | 2 |");
   });
 

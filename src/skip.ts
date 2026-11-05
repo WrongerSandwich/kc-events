@@ -1,6 +1,6 @@
 /**
  * The backstop behind the extraction rules (#81): what the model was told to skip and listed anyway.
- * A promotion (a business's standing night, a watch party) and a non-public event (a graduation, a
+ * A promotion (a business's standing night, a watch party, a collection drive) and a non-public event (a graduation, a
  * board meeting, anything online) are skipped by their normalised title or their venue, after
  * extraction and before storage, and counted; and an away game on a team's schedule is counted
  * outside the geography. Each pattern is narrow enough that a ticketed show with a named act does not
@@ -11,6 +11,10 @@ import { normalizeName } from "./identity.js";
 
 export const SKIP_REASONS = ["promotion", "not-public"] as const;
 export type SkipReason = (typeof SKIP_REASONS)[number];
+
+/** What a collection drive gathers, as a title names it: "Blood Drive", "Warm-Up Drive". */
+const DRIVE_THINGS =
+  "(?:blood|(?:canned )?food|coats?|toys?|books?|clothing|clothes|diapers?|barrel|donations?|school suppl(?:y|ies)|warm up|winter wear|shoes?|socks?|hygiene|pantry|supply|supplies)";
 
 /**
  * Patterns on the normalised title (lower case, punctuation as spaces), each a whole-word match. A
@@ -30,6 +34,11 @@ const SKIP_RULES: readonly { reason: SkipReason; pattern: RegExp }[] = [
     "speed dating",
     "pop up bar",
     "dueling pianos",
+    // A collection is no event (#262): a drive of a named thing, never the bare word, and not one an
+    // event billed in its own right hosts ("Holiday Concert and Toy Drive").
+    `(?<!(?:^| )(?:and|with|plus)(?: an?)? )${DRIVE_THINGS} drives?`,
+    "e waste",
+    "recycl(?:ing|es) days?",
   ].map((term) => ({ reason: "promotion" as const, pattern: wholeWords(term) })),
   ...[
     "graduations?",
@@ -62,7 +71,7 @@ function wholeWords(term: string): RegExp {
 export function skipReason(candidate: { title: string; venue?: string | null }): SkipReason | undefined {
   if (candidate.venue != null && NO_PLACE.test(normalizeName(candidate.venue))) return "not-public";
   if (HOUR_SERIES.test(candidate.title)) return undefined;
-  const name = normalizeName(candidate.title);
+  const name = normalizeName(candidate.title.replace(/[&+]/g, " and "));
   return SKIP_RULES.find(({ pattern }) => pattern.test(name))?.reason;
 }
 
