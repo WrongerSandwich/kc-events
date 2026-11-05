@@ -95,6 +95,42 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
     expect(report.sources[0]!.detail).toContain(`${feedPage(1)} read as listing nothing, so the events listed at ${CALENDAR} are held, not struck`);
   });
 
+  describe("a page whose every event starts after the horizon (#264)", () => {
+    /** A reply listing these candidates inside the horizon, and reporting what the page lists after it. */
+    const pastHorizon = (latestStart: string | null, ...candidates: unknown[]) => ({ ...reply(...candidates), value: { events: candidates, afterHorizon: { listed: true, latestStart } } });
+
+    it("is not read as listing nothing, so an event no page lists is struck as usual", async () => {
+      const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(pottery, quartet), reply()])).dataset;
+
+      // Page 1 no longer lists Pottery Night; page 2 lists only a season past the horizon.
+      const { dataset, report } = await runAt(WEEK_2, week1, [reply(quartet), pastHorizon("2027-03-27")]);
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ verificationFailures: 1 });
+      expect(report.sources[0]!.detail ?? "").not.toContain("read as listing nothing");
+    });
+
+    it("but a reply that says nothing of after the horizon still holds the listing", async () => {
+      const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(pottery, quartet), reply()])).dataset;
+
+      const { dataset, report } = await runAt(WEEK_2, week1, [reply(quartet), { ...reply(), value: { events: [] } }]);
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+      expect(report.sources[0]!.detail).toContain(`${feedPage(2)} read as listing nothing, so the events listed at ${CALENDAR} are held, not struck`);
+    });
+
+    it("nor does a last page listing inside the horizon and after it ask for the next page (#229)", async () => {
+      const { report } = await runAt(WEEK_2, emptyDataset(), [reply(choir), pastHorizon("2027-03-27", quartet)]);
+
+      expect(report.sources[0]!.detail ?? "").not.toContain("add the next page");
+    });
+
+    it("nor when it gives no latest start", async () => {
+      const { report } = await runAt(WEEK_2, emptyDataset(), [reply(choir), pastHorizon(null, quartet)]);
+
+      expect(report.sources[0]!.detail ?? "").not.toContain("add the next page");
+    });
+  });
+
   it("holds every event it has not read when one page was cut at the cap, so what fell past the cut is not struck", async () => {
     const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(pottery), reply(quartet)])).dataset;
     const long: CannedPage = { status: 200, body: `<html><body>${"<div>A long description of the calendar, nothing on this night</div>\n".repeat(1_500)}</body></html>` };

@@ -7,6 +7,7 @@ import { ageUnsighted, expire, expireIndexCited, expirePast, expireSkipped, hidd
 import {
   buildExtractionRequest,
   candidateToSighting,
+  afterHorizonOf,
   comparable,
   extractionReplySchema,
   linksOwnPage,
@@ -638,7 +639,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     }
     addTally(tally, counted.tally);
     for (const read of reads) if (read.sightings) sightings.push(...read.sightings);
-    const yields = reads.flatMap((read) => (read.sightings ? [yieldOf(read.sightings, read.tally)] : []));
+    const yields = reads.flatMap((read) => (read.sightings ? [yieldOf(read.sightings, read.tally, read.afterHorizon)] : []));
     const pageYield = yields.length > 0 ? widestYield(yields) : undefined;
     if (pageYield) {
       for (const key of keys) {
@@ -657,7 +658,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     }
     // A listing's last page still listing inside the horizon may have more past it, on a page the registry does not list (#229).
     const reach = pageYield?.latestStart;
-    if (source.listedAt && page.url === source.urls.at(-1) && reach !== undefined && reach <= lastDay) {
+    if (source.listedAt && page.url === source.urls.at(-1) && !pageYield?.pastHorizon && reach !== undefined && reach <= lastDay) {
       outcome.problems.push(`${page.url} lists through ${reach}, inside the horizon (${lastDay}); events past it may be on a page not read, so add the next page`);
     }
     outcome.extracted += counted.extracted;
@@ -683,11 +684,10 @@ function addedBy(later: Sighting[], earlier: Sighting[]): number {
   return new Set(later.map(pageIdentity).filter((id) => !seen.has(id))).size;
 }
 
-/** Two reads' yields of one page as one: the larger listing and the later latest start. */
+/** Two reads' yields of one page as one: the larger listing and the later latest start, past the horizon when either is. */
 function widestYield(yields: PageYield[]): PageYield {
   const listed = Math.max(...yields.map((y) => y.listed));
-  const latestStart = yields.flatMap((y) => (y.latestStart !== undefined ? [y.latestStart] : [])).sort().at(-1);
-  return { listed, ...(latestStart !== undefined ? { latestStart } : {}) };
+  return pageYield(listed, yields.map((y) => y.latestStart), yields.some((y) => y.pastHorizon));
 }
 
 const noTally = (): CandidateTally => ({
@@ -722,24 +722,30 @@ function readInFull(read: { sightings?: Sighting[]; tally: CandidateTally }): bo
  * listed, its sightings and the candidates skipped as promotions or not public (#81), which the page
  * did list (a candidate with no title, or outside the geography, is neither, so a reply of only those
  * lists nothing), and the latest start among the sightings, cancelled or not, cited or not, which is
- * as far as the page listed this run. A recurring sighting is listed under no date.
+ * as far as the page listed this run. A recurring sighting is listed under no date. What the reply says
+ * the page lists after the horizon (#264), left out of the sightings, counts as one more thing listed,
+ * and its latest start, when it gives one, as a start; `pastHorizon` says the page reaches past it.
  */
 interface PageYield {
   listed: number;
   latestStart?: string;
+  pastHorizon?: true;
+}
+
+function pageYield(listed: number, starts: (string | undefined)[], pastHorizon: boolean): PageYield {
+  const latestStart = starts.filter((d): d is string => d !== undefined).sort().at(-1);
+  return { listed, ...(latestStart !== undefined ? { latestStart } : {}), ...(pastHorizon ? { pastHorizon: true as const } : {}) };
 }
 
 /** Two pages of one listing as one (#226): everything both list, and the later latest start. */
 function joinedYield(a: PageYield, b: PageYield): PageYield {
-  const latestStart = [a.latestStart, b.latestStart].filter((d): d is string => d !== undefined).sort().at(-1);
-  return { listed: a.listed + b.listed, ...(latestStart !== undefined ? { latestStart } : {}) };
+  return pageYield(a.listed + b.listed, [a.latestStart, b.latestStart], Boolean(a.pastHorizon || b.pastHorizon));
 }
 
-function yieldOf(sightings: Sighting[], tally: CandidateTally): PageYield {
-  const starts = sightings.flatMap((s) => (s.event.recurrence === "recurring" ? [] : [calendarDate(s.event.start)])).filter((d): d is string => d !== undefined);
-  const latestStart = starts.sort().at(-1);
-  const listed = Object.values(SKIPPED_AS).reduce((n, cause) => n + tally[cause], sightings.length);
-  return { listed, ...(latestStart !== undefined ? { latestStart } : {}) };
+function yieldOf(sightings: Sighting[], tally: CandidateTally, afterHorizon: { latestStart?: string } | undefined): PageYield {
+  const starts = sightings.flatMap((s) => (s.event.recurrence === "recurring" ? [] : [calendarDate(s.event.start)]));
+  const listed = Object.values(SKIPPED_AS).reduce((n, cause) => n + tally[cause], sightings.length) + (afterHorizon ? 1 : 0);
+  return pageYield(listed, [...starts, afterHorizon?.latestStart], afterHorizon !== undefined);
 }
 
 function sumTallies(...tallies: CandidateTally[]): CandidateTally {
@@ -761,7 +767,15 @@ export async function extractPage(
   model: ModelPort,
   context: ExtractionContext,
   stage: ExtractionStage,
-): Promise<{ sightings?: Sighting[]; extracted: number; tally: CandidateTally; problems: string[]; truncated?: true }> {
+): Promise<{
+  sightings?: Sighting[];
+  extracted: number;
+  tally: CandidateTally;
+  problems: string[];
+  truncated?: true;
+  /** Present when the reply says the page lists something after the horizon (#264). */
+  afterHorizon?: { latestStart?: string };
+}> {
   const reading = readPage(page, context.config);
   const cut = reading.truncated ? [`${page.finalUrl} was cut at the ${MAX_PAGE_CHARS}-character cap`] : [];
   const reply = await model.complete(buildExtractionRequest(page, reading, origin, context, stage));
@@ -822,7 +836,15 @@ export async function extractPage(
     }
     sightings.push(sighting);
   }
-  return { sightings, extracted: parsed.data.events.length, tally, problems, ...(reading.truncated ? { truncated: true as const } : {}) };
+  const afterHorizon = afterHorizonOf(parsed.data.afterHorizon);
+  return {
+    sightings,
+    extracted: parsed.data.events.length,
+    tally,
+    problems,
+    ...(reading.truncated ? { truncated: true as const } : {}),
+    ...(afterHorizon ? { afterHorizon } : {}),
+  };
 }
 
 function withExtraction(report: SourceReport, extraction: SourceExtraction | undefined): SourceReport {
@@ -1532,7 +1554,7 @@ async function reverify(
     problems.push(...read.problems);
     if (read.sightings) {
       sightingsAt.set(url, read.sightings);
-      yieldAt.set(url, yieldOf(read.sightings, read.tally));
+      yieldAt.set(url, yieldOf(read.sightings, read.tally, read.afterHorizon));
       if (!readInFull(read)) partlyReadAt.add(url);
     }
   }
@@ -2262,7 +2284,7 @@ async function discover(
     report.problems.push(...read.problems);
     if (!readInFull(read)) for (const u of pageUrls) attempts.unread.add(u);
     if (!read.sightings) return;
-    for (const u of pageUrls) attempts.yields.set(u, yieldOf(read.sightings, read.tally));
+    for (const u of pageUrls) attempts.yields.set(u, yieldOf(read.sightings, read.tally, read.afterHorizon));
     outcome.sightings.push(...read.sightings);
     const host = hostOf(page.finalUrl);
     if (host && !outcome.hosts.has(host) && read.sightings.some((s) => s.event.status === "active")) outcome.hosts.set(host, normalizeUrl(page.finalUrl, url));

@@ -60,6 +60,12 @@ describe("extraction over the registry lane", () => {
     expect(request.messages[1]!.content).toContain("Big Show");
     expect(request.messages[1]!.content).not.toContain("<h2>");
     expect(request.responseFormat.schema).toMatchObject({ type: "object", additionalProperties: false });
+    // What the page lists after the horizon is asked for too, required and with no default, as strict mode wants (#264).
+    expect(request.responseFormat.schema).toMatchObject({
+      required: ["events", "afterHorizon"],
+      properties: { afterHorizon: { required: ["listed", "latestStart"], additionalProperties: false } },
+    });
+    expect(JSON.stringify(request.responseFormat.schema)).not.toContain('"default"');
   });
 
   it("a page lacking a date yields an unverified event that is counted as held, never as publishable", async () => {

@@ -79,7 +79,26 @@ export const candidateSchema = z.object({
     ),
 });
 
-export const extractionReplySchema = z.object({ events: z.array(candidateSchema) });
+/**
+ * What the page lists that starts after the horizon, which the rules leave out of the events (#264): a
+ * page whose every event is past the horizon still lists something, and how far it lists.
+ */
+export const afterHorizonSchema = z.object({
+  listed: z.boolean().describe("True when the page lists at least one event starting after the Horizon under This run, which are left out of events."),
+  latestStart: z.string().nullable().describe("The latest start date, YYYY-MM-DD, among the events the page lists after the horizon. Null when it lists none."),
+});
+
+/** The reply as the model is asked for it, every field required for strict mode. */
+const strictReplySchema = z.object({ events: z.array(candidateSchema), afterHorizon: afterHorizonSchema });
+
+/** The reply as it is read: one without `afterHorizon` (an older fake, a model leaving it out) lists nothing after the horizon. */
+export const extractionReplySchema = strictReplySchema.extend({ afterHorizon: afterHorizonSchema.default({ listed: false, latestStart: null }) });
+
+/** What a reply says the page lists after the horizon, when it lists anything there; a latest start that is no date is dropped. */
+export function afterHorizonOf(reported: z.infer<typeof afterHorizonSchema>): { latestStart?: string } | undefined {
+  if (!reported.listed) return undefined;
+  return reported.latestStart !== null && LOCAL_DATE.test(reported.latestStart) ? { latestStart: reported.latestStart } : {};
+}
 
 /** The longest description the model may write for an event, from a list or an event's own page. */
 export const MAX_DESCRIPTION = 300;
@@ -115,7 +134,7 @@ export type Candidate = z.infer<typeof candidateSchema>;
 export const EXTRACTION_TIMEOUT_MS = 120_000;
 
 /** The strict JSON schema sent as the response format on every extraction call. */
-export const extractionResponseFormat = strictResponseFormat("extracted_events", extractionReplySchema);
+export const extractionResponseFormat = strictResponseFormat("extracted_events", strictReplySchema);
 
 /** What every extraction call and every candidate in one run shares. */
 export interface ExtractionContext {
