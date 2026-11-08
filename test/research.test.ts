@@ -7,7 +7,8 @@ import { research, runOptionsFromArgs } from "../src/research.js";
 import { emptyDataset, parseDataset, type Dataset, type Event } from "../src/dataset.js";
 import { fakePorts, type FakePortOptions } from "./fakes/ports.js";
 import { testConfig, TEST_MODELS } from "./fakes/config.js";
-import { candidateAt, knuckleheads, PAGE, reply, source, WEEK_1 } from "./fakes/fixtures.js";
+import { newEventId } from "../src/extraction.js";
+import { candidateAt, knuckleheads, PAGE, reply, source, WEEK_1, WEEK_1_ISO } from "./fakes/fixtures.js";
 
 // The run guards every invariant the schema holds, so the test of a refused dataset bends one record of
 // the real run's output: `corrupt.event`, when a test sets it, is applied to each event the run returns.
@@ -129,6 +130,27 @@ describe("a research run's files", () => {
     });
     return { done, closed: () => closed, calls: fakes.calls };
   };
+
+  it("refuses a data/picks.yaml that does not parse before anything is written, naming the file (ADR 0014)", async () => {
+    await writeFile(join(root, "data", "picks.yaml"), stringify([{ id: "evt_000000000001", title: "Big Show", pick: true, reason: "famous", why: "Why." }]));
+    const { done, closed } = researchWith({ pages: { [CALENDAR_URL]: PAGE }, completions: [reply(candidateAt(knuckleheads))] });
+
+    await expect(done).rejects.toThrow(/data\/picks\.yaml does not parse; nothing was written/);
+    expect(await dataFiles()).toEqual(["picks.yaml", "registry.yaml"]);
+    // The file is read before the adapters are opened, as the registry is, so there is nothing to let go of.
+    expect(closed()).toBe(false);
+  });
+
+  it("applies the entries of data/picks.yaml after curation, and the dataset carries the hand pick (ADR 0014)", async () => {
+    const id = newEventId(CALENDAR_URL, "Big Show", WEEK_1_ISO, "2026-10-31");
+    await writeFile(join(root, "data", "picks.yaml"), stringify([{ id, title: "Big Show", pick: true, reason: "tradition", why: "A Halloween night the room has kept up for years." }]));
+    const { done } = researchWith({ pages: { [CALENDAR_URL]: PAGE }, completions: [reply(candidateAt(knuckleheads))] });
+    const { report } = await done;
+
+    const dataset = parseDataset(JSON.parse(await readFile(join(root, "data", "events.json"), "utf8")));
+    expect(dataset.events.find((e) => e.id === id)).toMatchObject({ dontMiss: true, pickReason: "tradition", pickedBy: "hand" });
+    expect(report.curation.handPicks).toEqual({ applied: 1, stale: [], changed: [] });
+  });
 
   it("writes exactly the dataset and the report's two files, and lets go of the adapters", async () => {
     const { done, closed } = researchWith({ pages: { [CALENDAR_URL]: PAGE }, completions: [reply(candidateAt(knuckleheads))] });

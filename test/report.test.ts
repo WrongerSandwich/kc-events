@@ -65,6 +65,7 @@ const full: RunReport = {
     rejudgedForPrompt: 3,
     problems: ["evt_1: flagged with no why-line"],
     datedWhyLines: [{ id: "evt_2", title: "Big Blue Pink", primaryUrl: "https://museum.test/big-blue-pink", whyLine: "A retrospective that closes December 13." }],
+    handPicks: { applied: 0, stale: [], changed: [] },
   },
   sources: [
     { name: "Knuckleheads", result: "fetched", extracted: 12 },

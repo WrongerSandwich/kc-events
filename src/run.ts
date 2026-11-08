@@ -57,6 +57,7 @@ import {
   suggestedHosts,
   trackDiscoveryHosts,
 } from "./discovery.js";
+import { applyHandPicks, type HandPick } from "./hand-picks.js";
 import { hostOf, onHost, pageKey, samePage, sameSite } from "./hosts.js";
 import {
   calendarDate,
@@ -117,6 +118,8 @@ export interface RunInput {
    * through today + `days` have their primary pages re-read, and nothing is created.
    */
   reverifyOnly?: { days: number };
+  /** The entries of data/picks.yaml (ADR 0014), applied after curation; none when absent. */
+  handPicks?: HandPick[];
 }
 
 export interface RunOutput {
@@ -130,7 +133,7 @@ export interface RunOutput {
  * One run of the research job: a function over values and ports that returns the new
  * dataset and the run report. It performs no I/O of its own.
  */
-export async function run({ config: givenConfig, prompts, dataset, registry, ports, reverifyOnly }: RunInput): Promise<RunOutput> {
+export async function run({ config: givenConfig, prompts, dataset, registry, ports, handPicks = [], reverifyOnly }: RunInput): Promise<RunOutput> {
   const startedAt = ports.clock.now();
   const today = toLocalDate(startedAt, givenConfig.timezone);
   // A midweek pass searches nothing, whatever the config says, and a monthly lane only in a month's first run (#255).
@@ -206,10 +209,12 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   const kept = placed.events.filter((e) => keptOn.has(e.id) && e.status === "active");
   const changed = markChanged(dataset.events, placed.events, startedIso);
   const curation = await curate(changed, model, { config, curationPrompt: prompts.curationPrompt, today }, startedIso);
+  // The hand's entries stand over the model's judgments (ADR 0014), before the picks' own pages are read so a hand pick gets its read too.
+  const overridden = applyHandPicks(curation.events, handPicks, startedIso);
   // A pick the pass did not read this run (its ceiling left it) has its own page read now, once per date and own page (#133).
   const picks = reverifyOnly
-    ? { events: curation.events, report: [], notRead: 0 }
-    : await readPicks(curation.events, ownPages.covered, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
+    ? { events: overridden.events, report: [], notRead: 0 }
+    : await readPicks(overridden.events, ownPages.covered, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   assertModelReached(model);
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = picks.events.map(cleanStoredWhyLine);
@@ -267,7 +272,7 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
     },
     discovery: discovery.report,
     reverification: { pagesRead: reverified.pagesRead, problems: reverified.problems },
-    curation: { ...curation.report, datedWhyLines: datedWhyLines(events) },
+    curation: { ...curation.report, datedWhyLines: datedWhyLines(events), handPicks: overridden.report },
     sources: sourceReports,
     ownPages: [...ownPages.report, ...picks.report],
     failingSources: registryLane.failingSources,
@@ -1433,7 +1438,11 @@ function withStoredQuotes(known: Event, record: Event, page: SightedPage | undef
 /** The reading under the known event's identity and curation, by the field rules every refresh applies. */
 function refreshFields(known: Event, sighting: Event): Event {
   const ownPageKept = keepsOwnPageRead(known, sighting);
-  const curated = sighting.recurrence === "recurring" ? {} : pickFields(known);
+  // A hand entry's marks (ADR 0014) ride along too; a reading that makes the event recurring drops them, and the entry is reported stale.
+  const curated =
+    sighting.recurrence === "recurring"
+      ? {}
+      : { ...pickFields(known), ...(known.pickedBy !== undefined ? { pickedBy: known.pickedBy, modelJudgment: known.modelJudgment } : {}) };
   /** The stored value under its field when the new one is the same by the given test, else nothing, so the new one stands. */
   const keepIfSame = (field: string, was: string | undefined, now: string | undefined, same: (a: string, b: string) => boolean) =>
     was !== undefined && now !== undefined && same(was, now) ? { [field]: was } : {};
@@ -2478,7 +2487,7 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
   const due = events.filter((e) => needsCuration(e, judgedWith)).sort(byKindThenDate);
   const judged = new Map<string, Event>();
   const unjudgedFlags = new Map<string, Event>();
-  const report: Omit<RunReport["curation"], "datedWhyLines"> = { calls: 0, judged: 0, flagged: 0, close: 0, rejudgedForPrompt: 0, problems: [] };
+  const report: Omit<RunReport["curation"], "datedWhyLines" | "handPicks"> = { calls: 0, judged: 0, flagged: 0, close: 0, rejudgedForPrompt: 0, problems: [] };
   let notCurated = 0;
 
   for (let i = 0; i < due.length; i += CURATION_BATCH_SIZE) {

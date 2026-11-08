@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { EXPIRY_REASONS, type ExpiryReason } from "./dataset.js";
 import { ARCHIVE_AFTER_WEEKS } from "./archive.js";
+import type { HandPicksReport } from "./hand-picks.js";
 import { markdownList, plural, tableCell } from "./markdown.js";
 import { SKIP_REASONS, type SkipReason } from "./skip.js";
 import { MODEL_STAGES, type ModelStage, type ServedBy } from "./ports.js";
@@ -183,6 +184,8 @@ export interface RunReport {
     problems: string[];
     /** Active picks, judged this run or before, whose why-line states their own end date; still flagged (#234). */
     datedWhyLines: (ChangeRef & { whyLine: string })[];
+    /** The entries of data/picks.yaml this run (ADR 0014): applied, stale, and hand-governed events whose facts changed. */
+    handPicks: HandPicksReport;
   };
   sources: SourceReport[];
   /** Own pages read for a time the list does not give, by flagged source (#123). */
@@ -364,6 +367,13 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     rejudgedForPrompt: countSince,
     problems: z.array(z.string()),
     datedWhyLines: listSince(changeRef.extend({ whyLine: z.string() })),
+    handPicks: z
+      .strictObject({
+        applied: count,
+        stale: z.array(z.strictObject({ id: z.string(), title: z.string(), note: z.string() })),
+        changed: z.array(z.strictObject({ id: z.string(), title: z.string() })),
+      })
+      .default({ applied: 0, stale: [], changed: [] }),
   }),
   sources: z.array(z.strictObject({ name: z.string(), result: z.enum(["fetched", "failed", "blocked", "excluded"]), extracted: count, detail: z.string().optional() })),
   ownPages: listSince(

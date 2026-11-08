@@ -1,0 +1,17 @@
+# Hand picks and un-picks (ADR 0014). The weekly run applies these after curation and never edits this file.
+#
+# An entry names an event by its id (from data/events.json or the run report's Picks and Close calls sections) and
+# its title, for the reader; the report says when the event's title no longer contains it. `pick: true` makes the
+# event a pick under one of the six reasons (rare, big-name, occasion, tradition, unusual, major-run) with a why-line
+# held to the same rules as the model's; `pick: false` drops the model's pick. An entry stands until it is removed,
+# whatever the model says later; the model's own judgment is kept beside the event and comes back when the entry goes.
+#
+# - id: evt_000000000000
+#   title: Electric Poe
+#   pick: true
+#   reason: unusual
+#   why: A Poe performance staged outdoors at sunset before a cemetery's holding vault, a setting no theater can give it.
+# - id: evt_000000000000
+#   title: Stewart Copeland
+#   pick: false
+[]

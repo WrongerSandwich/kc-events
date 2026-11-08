@@ -16,6 +16,7 @@ import { addToArchive, byArchiveYear } from "./archive.js";
 import { parseConfig, type RunConfig } from "./config.js";
 import { DATASET_SCHEMA_VERSION, emptyDataset, parseArchive, parseDataset, type Archive, type Dataset, type Event } from "./dataset.js";
 import type { Ports } from "./ports.js";
+import { parseHandPicks, type HandPick } from "./hand-picks.js";
 import { parseRegistry } from "./registry.js";
 import { renderReportMarkdown, type RunReport } from "./report.js";
 import { run } from "./run.js";
@@ -167,10 +168,20 @@ export async function research({ root, args, env, adapters = realAdapters }: Res
     eventPageRules: await readFile(join(root, "prompts", "event-page-rules.md"), "utf8"),
   };
   const registry = parseRegistry(parseYaml(await readFile(join(dataDir, "registry.yaml"), "utf8")));
+  // The hand's picks and un-picks (ADR 0014); a file that does not parse stops the run before any write, as the registry does.
+  const picksPath = join(dataDir, "picks.yaml");
+  let handPicks: HandPick[] = [];
+  if (existsSync(picksPath)) {
+    try {
+      handPicks = parseHandPicks(parseYaml(await readFile(picksPath, "utf8")));
+    } catch (error) {
+      throw new Error("data/picks.yaml does not parse; nothing was written", { cause: error });
+    }
+  }
   const dataset = existsSync(datasetPath) ? parseDataset(JSON.parse(await readFile(datasetPath, "utf8")), config) : emptyDataset();
 
   const { ports, close } = adapters(config, env);
-  const result = await run({ config, prompts, dataset, registry, ports, ...(reverifyOnly && { reverifyOnly }) }).finally(close);
+  const result = await run({ config, prompts, dataset, registry, ports, handPicks, ...(reverifyOnly && { reverifyOnly }) }).finally(close);
 
   const reportBase = join(runsDir, result.report.runDate);
 

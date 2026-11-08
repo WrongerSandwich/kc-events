@@ -142,7 +142,8 @@ describe("a model call that throws", () => {
     });
 
     expect(report.curation).toMatchObject({ calls: 2, judged: 1 });
-    expect(dataset.events.filter((e) => e.lastJudged !== undefined).map((e) => e.title)).toEqual([`Show ${CURATION_BATCH_SIZE + 1}`]);
+    // Batches are formed by kind, then date, then id, so which show falls to the second batch is the ids' order; one of them is judged.
+    expect(dataset.events.filter((e) => e.lastJudged !== undefined)).toHaveLength(1);
   });
 });
 

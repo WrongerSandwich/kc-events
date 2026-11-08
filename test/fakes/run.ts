@@ -2,6 +2,7 @@ import { expect } from "vitest";
 import { run } from "../../src/run.js";
 import type { RunConfig } from "../../src/config.js";
 import { parseDataset, type Dataset } from "../../src/dataset.js";
+import type { HandPick } from "../../src/hand-picks.js";
 import type { CompletionRequest, CompletionResult, SearchResult } from "../../src/ports.js";
 import type { Source } from "../../src/registry.js";
 import { fakePorts, type CannedPage, type ScriptedReply } from "./ports.js";
@@ -26,6 +27,8 @@ export async function runWith(
     searches,
     pagesCarryQuotes = true,
     curate,
+    curations,
+    handPicks,
     reverifyOnly,
   }: {
     sources: Source[];
@@ -35,11 +38,15 @@ export async function runWith(
     searches?: Record<string, SearchResult[] | Error>;
     pagesCarryQuotes?: boolean;
     curate?: (request: CompletionRequest) => CompletionResult;
+    /** Scripted curation replies, taken in order before `curate` answers. */
+    curations?: ScriptedReply[];
+    /** Entries of data/picks.yaml, applied after curation (ADR 0014). */
+    handPicks?: HandPick[];
     reverifyOnly?: { days: number };
   },
 ) {
-  const fakes = fakePorts(now, { pages, completions, pagesCarryQuotes, ...(searches ? { searches } : {}), ...(curate ? { curate } : {}) });
-  const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports, ...(reverifyOnly && { reverifyOnly }) });
+  const fakes = fakePorts(now, { pages, completions, pagesCarryQuotes, ...(searches ? { searches } : {}), ...(curate ? { curate } : {}), ...(curations ? { curations } : {}) });
+  const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports, ...(handPicks ? { handPicks } : {}), ...(reverifyOnly && { reverifyOnly }) });
   expect(parseDataset(result.dataset, config)).toEqual(result.dataset);
   return { ...result, calls: fakes.calls, requests: fakes.requests };
 }
