@@ -65,6 +65,18 @@ describe("scoring repeated judgments", () => {
     expect(score).toMatchObject({ picks: 2, pickRate: 0.5, agreementWithStored: { same: 2, storedPickNowNot: 1, nowPickStoredNot: 1 } });
   });
 
+  it("counts the majority picks by kind, most first, so a skew is a number", () => {
+    const film = stored("F", { kind: "film" });
+    const trials = [...current, ...[0, 1, 2].map((r) => trial("current", r, film.id, "pick", "unusual", "A live score."))];
+    const [score] = scoreRepeats(trials, [...dataset, film]);
+    expect(score!.picksByKind).toEqual([
+      { name: "music", count: 2 },
+      { name: "film", count: 1 },
+    ]);
+    const markdown = renderCurationComparison(scoreRepeats(trials, [...dataset, film]), [], { date: "2026-11-09", model: "m", currentHash: "abcdefabcdef", sample: 5, minutes: 1 });
+    expect(markdown).toContain("Picks by kind (current): music 2, film 1.");
+  });
+
   it("scores each prompt's trials apart, current first", () => {
     const candidate = [0, 1, 2].map((r) => trial("candidate", r, a.id, "close", "none", "Nearly rare."));
     const scores = scoreRepeats([...candidate, ...current], dataset);

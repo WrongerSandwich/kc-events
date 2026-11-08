@@ -90,6 +90,8 @@ export interface RepeatScore {
   pickRate: number;
   /** The majority verdict against the stored flag: a stored flag is a pick, anything else is not. */
   agreementWithStored: { same: number; storedPickNowNot: number; nowPickStoredNot: number };
+  /** The majority picks counted by the event's kind, most first, then by name: the skew the reasons exist to correct. */
+  picksByKind: { name: string; count: number }[];
   costUsd: number;
 }
 
@@ -103,6 +105,7 @@ export function scoreRepeats(trials: CurationTrial[], dataset: Event[]): RepeatS
       const grouped = byEvent(trials, prompt);
       const majorities = [...grouped.entries()].map(([id, ts]) => ({ id, majority: majorityOf(ts) }));
       const byAnswer = new Map<string, { events: number; flipped: number }>();
+      const byKind = new Map<string, number>();
       const agreement = { same: 0, storedPickNowNot: 0, nowPickStoredNot: 0 };
       for (const { id, majority } of majorities) {
         const label = answerLabel(majority);
@@ -112,6 +115,10 @@ export function scoreRepeats(trials: CurationTrial[], dataset: Event[]): RepeatS
         byAnswer.set(label, row);
         const storedPick = stored.get(id)?.dontMiss === true;
         const nowPick = majority.verdict === "pick";
+        if (nowPick) {
+          const kind = stored.get(id)?.kind ?? "unknown";
+          byKind.set(kind, (byKind.get(kind) ?? 0) + 1);
+        }
         if (storedPick === nowPick) agreement.same++;
         else if (storedPick) agreement.storedPickNowNot++;
         else agreement.nowPickStoredNot++;
@@ -130,6 +137,7 @@ export function scoreRepeats(trials: CurationTrial[], dataset: Event[]): RepeatS
         picks,
         pickRate: events === 0 ? 0 : picks / events,
         agreementWithStored: agreement,
+        picksByKind: [...byKind].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)),
         costUsd: own.reduce((sum, t) => sum + t.costUsd, 0),
       };
     });
@@ -199,6 +207,9 @@ export function renderCurationComparison(scores: RepeatScore[], diff: PromptMove
     );
   }
   lines.push("");
+  for (const s of scores) {
+    lines.push(`Picks by kind (${s.prompt}): ${s.picksByKind.length === 0 ? "none" : s.picksByKind.map((k) => `${k.name} ${k.count}`).join(", ")}.`, "");
+  }
   lines.push("## Flips by majority answer", "");
   lines.push("| Prompt | Answer | Events | Flipped |");
   lines.push("| --- | --- | ---: | ---: |");
