@@ -9,7 +9,7 @@ The front page is the picks (one-offs and limited runs worth going out of the wa
 Once a week a research job reads Kansas City venue and organizer pages directly. Two rules shape what it publishes:
 
 - **Cite or drop.** A date and a venue are published only when they were read from the venue's or organizer's own page, never from a listings site or a search result. An event the job cannot cite is held back, not guessed at. Every event shows when it was last verified.
-- **A pick is scarcity of occurrence.** A model picks the one-offs and limited runs you would regret missing, under written rules, with a reason for each, and tags them Don't miss. Recurring events are never picks.
+- **A pick has a named reason.** A model picks the one-offs and limited runs worth going out of your way for, under written rules, for one of six reasons (rare, big name, occasion, tradition, unusual, major run), and tags each with its reason and a one-line explanation. Recurring events are never picks.
 
 The listings and the reasons are written by a model, and the site says so. The rules it works by are plain Markdown in [`prompts/`](prompts/): [`extraction-rules.md`](prompts/extraction-rules.md) for reading a page, [`curation-prompt.md`](prompts/curation-prompt.md) for the picks. The sources it checks are [`data/registry.yaml`](data/registry.yaml). Each run writes a report to [`data/runs/`](data/runs/).
 

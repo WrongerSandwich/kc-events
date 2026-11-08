@@ -108,6 +108,22 @@ describe("ResultRow's width (#182)", () => {
   });
 });
 
+// The pick tag says the reason (#273), in both of the row's places for it (#184); the why-line is the sentence alone.
+describe("ResultRow's pick tag (#273)", () => {
+  it("says the reason in the tag, said as a pick to a screen reader, and keeps the why-line plain", () => {
+    const { container } = render(ResultRow, { event: event({ dontMiss: true, pickReason: "major-run", whyLine: "A touring production's one stop." }), today: "2026-10-05" });
+    const tags = container.querySelectorAll(".dont-miss");
+    expect(tags).toHaveLength(2);
+    for (const tag of tags) expect(tag).toHaveTextContent(/^Pick: Major run$/);
+    expect(container.querySelector(".why")).toHaveTextContent(/^A touring production's one stop\.$/);
+  });
+
+  it("says Pick alone on a pick with no reason, which the schema no longer allows", () => {
+    const { container } = render(ResultRow, { event: event({ dontMiss: true, whyLine: "Rare." }), today: "2026-10-05" });
+    expect(container.querySelector(".dont-miss")).toHaveTextContent(/^Pick$/);
+  });
+});
+
 describe("LandingEvents (#182)", () => {
   const groups = [{ key: "2026-10-09", heading: "Fri Oct 9", events: [event()], collapsed: false }];
 

@@ -1,5 +1,5 @@
 import { addDays, formatDay, formatShort, formatTime, isDateOnly, localDate } from "./dates";
-import { firstDay, isDated, lastDay, detailsUrl } from "./events";
+import { firstDay, isDated, lastDay, detailsUrl, reasonLine } from "./events";
 import { nextPlayingDay } from "./filter";
 import { kindName } from "./landing";
 import type { Geo, PublishedEvent, PublishedVenue } from "./types";
@@ -125,10 +125,11 @@ function calendarLocation(e: IcsEvent): string {
   return place === undefined ? e.venue : `${e.venue}, ${place}`;
 }
 
-/** The notes after the times: the why-line, then where it was verified and where the details are. */
+/** The notes after the times: the why-line led by the pick's reason (#273), then where it was verified and where the details are. */
 function calendarNotes(e: IcsEvent, siteName: string, timeNotes: string[]): string {
   const notes = [...timeNotes];
-  if (e.whyLine) notes.push(e.whyLine);
+  const why = reasonLine(e);
+  if (why) notes.push(why);
   notes.push(`Verified ${formatShort(localDate(e.lastVerified))} by ${siteName}; details at ${detailsUrl(e)}.`);
   return notes.join("\n\n");
 }

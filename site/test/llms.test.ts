@@ -18,7 +18,7 @@ const input = {
   venueCount: 97,
   schemaVersion: 2,
   events: [
-    event({ id: "evt_pick00000001", title: "A rare show", dontMiss: true, whyLine: "Rare; see it." }),
+    event({ id: "evt_pick00000001", title: "A rare show", dontMiss: true, pickReason: "rare", whyLine: "Rare; see it." }),
     event({ id: "evt_plain0000001", title: "A play", kind: "theater/dance", region: "Johnson County", neighborhood: "Overland Park" }),
     event({ id: "evt_alway0000001", title: "Trivia", recurrence: "recurring", start: undefined, schedule: "Tuesdays" }),
   ],
@@ -78,7 +78,8 @@ describe("llmsTxt (#188)", () => {
   it("lists the current picks with their event pages, and no event that is not one", () => {
     const s = section("The picks");
     expect(s).toContain("[A rare show](https://www.kcthisweek.com/e/evt_pick00000001)");
-    expect(s).toContain("Rare; see it.");
+    // The reason leads the why-line, as on the site (#273).
+    expect(s).toContain(". Rare · Rare; see it.");
     expect(s).not.toContain("A play");
   });
 

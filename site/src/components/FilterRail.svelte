@@ -92,12 +92,12 @@
   </fieldset>
 
   <!-- Each switch says what it does under its words, out of its name, so a screen reader hears the name and then the
-       line. The rail is on the page once, so the ids are fixed. Don't miss leads the front page; here it is a switch
-       like the others, named as the tag is (the 2026-10-25 critique). -->
+       line. The rail is on the page once, so the ids are fixed. The picks lead the front page; here they are a switch
+       like the others (the 2026-10-25 critique), named for the set, since each pick's tag says its own reason (#273). -->
   <fieldset class="show">
     <legend>Show</legend>
-    <label><input type="checkbox" aria-describedby="show-picks" checked={filters.dontMiss} onchange={() => onchange({ ...filters, dontMiss: !filters.dontMiss })} /> Don't miss only</label>
-    <p class="hint" id="show-picks">The front page's picks, each with a reason</p>
+    <label><input type="checkbox" aria-describedby="show-picks" checked={filters.dontMiss} onchange={() => onchange({ ...filters, dontMiss: !filters.dontMiss })} /> Picks only</label>
+    <p class="hint" id="show-picks">The front page's picks, each tagged with its reason</p>
     <label><input type="checkbox" aria-describedby="show-always" checked={filters.recurring} onchange={() => onchange({ ...filters, recurring: !filters.recurring })} /> Always there</label>
     <p class="hint" id="show-always">Adds recurring events, after the days</p>
     <label><input type="checkbox" aria-describedby="show-saved" checked={filters.saved} onchange={() => onchange({ ...filters, saved: !filters.saved })} /> Saved only</label>

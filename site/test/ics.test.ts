@@ -176,6 +176,10 @@ describe("toIcs, what each event says about itself (#190)", () => {
   it("puts the time notes before the why-line", () => {
     expect(vevent(event({ whyLine: "Rare; see it." }))).toContain("DESCRIPTION:End time not listed\\; shown as two hours.\\n\\nRare\\; see it.\\n\\nVerified");
   });
+
+  it("leads the why-line with the pick's reason (#273)", () => {
+    expect(vevent(event({ dontMiss: true, pickReason: "big-name", whyLine: "A name most people know." }))).toContain("\\n\\nBig name · A name most people know.\\n\\nVerified");
+  });
 });
 
 describe("googleCalendarUrl (#188)", () => {

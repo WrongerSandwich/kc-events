@@ -1,6 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { admissionLine, detailsLabel, modelNote, daysSaid, firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, neighborhoodShown, venueLine } from "../src/lib/events";
+import { admissionLine, detailsLabel, modelNote, daysSaid, firstDay, hasStartDay, hostOf, isDated, isMultiDay, isPast, isUnderway, lastDay, detailsUrl, neighborhoodShown, reasonLine, reasonWord, venueLine } from "../src/lib/events";
 import { event } from "./fixtures/event";
+
+// The reason a pick is one (ADR 0014) is shown as a word or two leading its why-line wherever the why-line appears
+// (#273). A pick with no reason, which the schema no longer allows, keeps its why-line alone.
+describe("a pick's reason (#273)", () => {
+  it("says each of the six reasons in a word or two", () => {
+    expect(reasonWord("rare")).toBe("Rare");
+    expect(reasonWord("big-name")).toBe("Big name");
+    expect(reasonWord("occasion")).toBe("Occasion");
+    expect(reasonWord("tradition")).toBe("Tradition");
+    expect(reasonWord("unusual")).toBe("Unusual");
+    expect(reasonWord("major-run")).toBe("Major run");
+  });
+
+  it("leads the why-line with the reason, and leaves a why-line with no reason as it was", () => {
+    expect(reasonLine(event({ dontMiss: true, pickReason: "tradition", whyLine: "Once a year." }))).toBe("Tradition · Once a year.");
+    expect(reasonLine(event({ dontMiss: true, whyLine: "Once a year." }))).toBe("Once a year.");
+    expect(reasonLine(event())).toBeUndefined();
+  });
+});
 
 describe("venueLine", () => {
   it("is the venue, then the room when the page named one", () => {

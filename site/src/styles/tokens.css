@@ -23,8 +23,8 @@
   --accent-fg: oklch(1 0 0);
   --focus: oklch(0.56 0.15 238);
   /* The city flag's two colours (its 2023 design: carmine over NCS blue, a white fountain between). Red marks
-     don't-miss, the one state that is not a kind, as a solid pill where a kind's chip is a tint, so it is never read as
-     a kind; blue is the focus ring. Their lightness is set for the words on them, not the flag's. */
+     a pick, the one state that is not a kind, as a solid pill where a kind's chip is a tint, so it is never read as a
+     kind; blue is the focus ring. Their lightness is set for the words on them, not the flag's. */
   --flag-red: oklch(0.55 0.2 27); --flag-red-fg: oklch(1 0 0);
   /* A pressed filter that is not a kind: a grey tint under ink, the same shape as a pressed kind's tint and shade. */
   --pressed-tint: oklch(0.94 0 0);

@@ -148,7 +148,7 @@ export function filterPills(f: Filters): FilterPill[] {
   }
   for (const k of f.kinds) out.push({ label: kindLabel(k), kind: k, without: { ...f, kinds: f.kinds.filter((x) => x !== k) } });
   for (const r of f.regions) out.push({ label: r, without: { ...f, regions: f.regions.filter((x) => x !== r) } });
-  if (f.dontMiss) out.push({ label: "Don't miss", without: { ...f, dontMiss: false } });
+  if (f.dontMiss) out.push({ label: "Picks", without: { ...f, dontMiss: false } });
   if (f.recurring) out.push({ label: "Always there", without: { ...f, recurring: false } });
   if (f.saved) out.push({ label: "Saved only", without: { ...f, saved: false } });
   if (f.q.trim() !== "") out.push({ label: `“${f.q.trim()}”`, without: { ...f, q: "" } });

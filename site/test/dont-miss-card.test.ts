@@ -49,3 +49,19 @@ describe("DontMissCard's actions (#181)", () => {
     expect(screen.getByRole("link", { name: "Music" })).toHaveAttribute("href", "/k/music");
   });
 });
+
+// The pick tag, the reason in the carmine pill, leads the card's why-line; a screen reader hears what the word is (#273).
+describe("DontMissCard's pick tag (#273)", () => {
+  it("leads the why-line with the reason in the tag, said as a pick to a screen reader", () => {
+    const { container } = render(DontMissCard, { event: event({ dontMiss: true, pickReason: "tradition", whyLine: "Once a year." }), today: "2026-10-05" });
+    const tag = container.querySelector(".why .dont-miss")!;
+    expect(tag).toHaveTextContent(/^Pick: Tradition$/);
+    expect(tag.querySelector(".visually-hidden")).toHaveTextContent("Pick:");
+    expect(container.querySelector(".why")).toHaveTextContent(/Tradition Once a year\.$/);
+  });
+
+  it("says Pick alone on a pick with no reason, which the schema no longer allows", () => {
+    const { container } = render(DontMissCard, { event: event({ dontMiss: true, whyLine: "Once a year." }), today: "2026-10-05" });
+    expect(container.querySelector(".why .dont-miss")).toHaveTextContent(/^Pick$/);
+  });
+});

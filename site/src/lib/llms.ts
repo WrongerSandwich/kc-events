@@ -1,6 +1,6 @@
 import { longDateLine } from "./date-line";
 import { addDays } from "./dates";
-import { venueLine } from "./events";
+import { reasonLine, venueLine } from "./events";
 import { ALL_EVENTS_FEED, kindFeedPath, PICKS_FEED } from "./feeds";
 import { bucketDontMiss, HORIZONS } from "./horizon";
 import { kindLanding, landingRange, regionLanding } from "./landing";
@@ -92,7 +92,7 @@ export function llmsTxt(i: LlmsInput): string {
 
 > ${i.tagline}
 
-A weekly research job reads Kansas City venue and organizer pages directly, a language model writes each listing from the page, and an event is published only when its date and venue were read from the venue's or organizer's own page (cite-or-drop). Anything it cannot cite is held back. Every event shows when it was last verified. A pick, tagged Don't miss, is an editorial call, made by a model under written rules, that a one-off or limited run is worth going out of the way for; recurring events are never picks.
+A weekly research job reads Kansas City venue and organizer pages directly, a language model writes each listing from the page, and an event is published only when its date and venue were read from the venue's or organizer's own page (cite-or-drop). Anything it cannot cite is held back. Every event shows when it was last verified. A pick is an editorial call, made by a model under written rules, that a one-off or limited run is worth going out of the way for; each is tagged with one of six reasons (rare, big-name, occasion, tradition, unusual, major-run); recurring events are never picks.
 
 Last run: ${i.lastSuccessfulRun}. ${i.events.length} active events.
 
@@ -154,6 +154,6 @@ ${Object.entries(EVENTS_JSON_FIELDS).map(([k, v]) => `- ${k}: ${v}`).join("\n")}
 
 Every pick from today on, by when it can first be seen.
 
-${picks.length === 0 ? "None." : picks.map((e) => `- [${e.title}](${at(`/e/${e.id}`)}): ${longDateLine(e, i.today)} · ${venueLine(e)}${e.whyLine ? `. ${e.whyLine}` : ""}`).join("\n")}
+${picks.length === 0 ? "None." : picks.map((e) => `- [${e.title}](${at(`/e/${e.id}`)}): ${longDateLine(e, i.today)} · ${venueLine(e)}${e.whyLine ? `. ${reasonLine(e)}` : ""}`).join("\n")}
 `;
 }
