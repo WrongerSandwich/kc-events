@@ -134,7 +134,7 @@ Two runs after the prompt lands: the pick rate against the calibration figure; p
 ## Left to the builder
 
 - Exact prompt wording, the per-reason examples (drawn from the dataset's own events where possible, so they are real Kansas City examples), and the two-paragraph ADR 0014 that records this change and amends 0005.
-- Where in `run.ts` the override pass sits (after curation, before the picks' second own-page read, so a hand pick gets its time and price read like any pick) and how `withLaterJudgment` treats a folded pair when one side is hand-governed (my call: the hand side wins).
+- Where in `run.ts` the override pass sits (after curation, before the picks' second own-page read, so a hand pick gets its time and price read like any pick). Overrides are by id, so when a hand-governed record is folded into another the entry no longer matches an active event: the report lists it as stale with the kept record's id, and Evan re-points it (settled in the plan; it replaces an earlier call that the hand side of a fold would win, which would have left an entry governing an id it does not name).
 - The report's exact line formats, within the existing Markdown conventions.
 - The sample and seed scheme for `compare-curation`, and its spend cap figure.
 - Whether `closeNote` is shown anywhere but the report (my call: nowhere, for now).
