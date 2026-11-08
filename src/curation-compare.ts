@@ -21,6 +21,16 @@ export interface CurationTrial {
   reason: PickReason | "none";
   why: string;
   costUsd: number;
+  /** The hash (promptHash) of the prompt text the trial was made under; absent on a trial saved before it was kept. */
+  promptHash?: string;
+}
+
+/**
+ * The saved trials made under the prompts as they now stand: a trial of a side whose hash is not the side's current
+ * one, or that carries none, is left out, so an edited prompt is never measured on the old prompt's trials.
+ */
+export function trialsUnder(trials: CurationTrial[], hashes: { current: string; candidate?: string }): CurationTrial[] {
+  return trials.filter((t) => t.promptHash !== undefined && t.promptHash === hashes[t.prompt]);
 }
 
 /** The spec's calibration figure: picks across an eight-week horizon of about 450 eligible events. */

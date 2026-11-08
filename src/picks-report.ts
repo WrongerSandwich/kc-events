@@ -107,9 +107,9 @@ export function standing(e: Event | undefined): Standing {
 /** Why an event's standing changed this run, by the first test that holds. */
 function causeOf(was: Event | undefined, now: Event, nowIso: string): MoveCause {
   if (was === undefined) return "new event";
+  if (now.status === "expired") return "expired";
   if (now.pickedBy !== undefined && was.pickedBy === undefined) return now.dontMiss ? "hand pick" : "hand un-pick";
   if (was.pickedBy !== undefined && now.pickedBy === undefined) return "hand entry removed";
-  if (now.status === "expired") return "expired";
   if (now.recurrence === "recurring" && was.recurrence !== "recurring") return "made recurring";
   if (now.lastJudged === nowIso && now.lastChanged === nowIso) return "re-judged after a change";
   if (now.lastJudged === nowIso) return "re-judged under a new prompt";

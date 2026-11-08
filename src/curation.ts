@@ -52,11 +52,13 @@ export type Judgment = z.infer<typeof judgmentSchema>;
  * Why a judgment cannot be applied, or undefined when it can: a pick with no reason or no why-line, a close call with
  * no note. The event is left unjudged, so it comes up again next run.
  */
-export function judgmentProblem(judgment: Judgment): "picked with no reason" | "picked with no why-line" | "a close call with no note" | undefined {
+export function judgmentProblem(judgment: Judgment): "picked with no reason" | "picked with no why-line" | "a close call with no note" | "a no with a reason" | undefined {
   const empty = cleanWhyLine(judgment.why) === "";
   if (judgment.verdict === "pick" && judgment.reason === "none") return "picked with no reason";
   if (judgment.verdict === "pick" && empty) return "picked with no why-line";
   if (judgment.verdict === "close" && empty) return "a close call with no note";
+  // A no that names a reason contradicts itself; a close that names one is read as a close, the reason set aside.
+  if (judgment.verdict === "no" && judgment.reason !== "none") return "a no with a reason";
   return undefined;
 }
 
@@ -221,7 +223,14 @@ export function applyJudgment(event: Event, judgment: Judgment, nowIso: string, 
 export function withLaterJudgment(kept: Event, duplicate: Event): Event {
   if (kept.recurrence === "recurring" || duplicate.lastJudged === undefined) return kept;
   if (kept.lastJudged !== undefined && Date.parse(kept.lastJudged) >= Date.parse(duplicate.lastJudged)) return kept;
-  return withJudgment(kept, pickFields(duplicate), duplicate.lastJudged, duplicate.judgedWith);
+  // A hand-governed duplicate's visible fields are the hand's; the model's judgment is the one beside them (ADR 0014).
+  const judgment = duplicate.modelJudgment ?? pickFields(duplicate);
+  // A hand-governed kept record keeps the hand's visible fields; the later model judgment goes where the hand keeps it.
+  if (kept.pickedBy !== undefined) {
+    const { judgedWith: _, ...rest } = kept;
+    return { ...rest, modelJudgment: judgment, lastJudged: duplicate.lastJudged, ...(duplicate.judgedWith !== undefined ? { judgedWith: duplicate.judgedWith } : {}) };
+  }
+  return withJudgment(kept, judgment, duplicate.lastJudged, duplicate.judgedWith);
 }
 
 /** The event carrying these pick fields, and the prompt the judgment was made under, in place of its own. */

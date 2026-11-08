@@ -21,7 +21,7 @@ import { createOpenRouterModel } from "./adapters/openrouter.js";
 import { systemClock } from "./adapters/system.js";
 import { parseConfig } from "./config.js";
 import { buildCurationRequest, CURATION_BATCH_SIZE, curationReplySchema, promptHash, type CurationContext } from "./curation.js";
-import { promptDiff, renderCurationComparison, sampleEligible, scoreRepeats, type CurationTrial, type PromptSide } from "./curation-compare.js";
+import { promptDiff, renderCurationComparison, sampleEligible, scoreRepeats, trialsUnder, type CurationTrial, type PromptSide } from "./curation-compare.js";
 import { parseDataset, type Event } from "./dataset.js";
 import { byKindThenDate } from "./run.js";
 import { capSpend, SpendCapReached } from "./spend.js";
@@ -63,13 +63,17 @@ async function main() {
   const trialsPath = join(runDir, "trials.jsonl");
   await mkdir(runDir, { recursive: true });
   if (values.fresh) await rm(trialsPath, { force: true });
-  const trials: CurationTrial[] = existsSync(trialsPath)
+  const hashes = { current: promptHash(prompts[0]!.text), ...(prompts[1] ? { candidate: promptHash(prompts[1].text) } : {}) };
+  const saved: CurationTrial[] = existsSync(trialsPath)
     ? (await readFile(trialsPath, "utf8"))
         .split("\n")
         .filter(Boolean)
         .map((line) => JSON.parse(line) as CurationTrial)
     : [];
+  // Trials of a prompt since edited are not this comparison's: they stay in the file, and are neither reused nor scored.
+  const trials = trialsUnder(saved, hashes);
   const done = new Set(trials.map((t) => `${t.prompt} ${t.repeat} ${t.id}`));
+  if (saved.length > trials.length) console.log(`${saved.length - trials.length} saved trial(s) were made under another prompt text and are left out`);
   if (trials.length > 0) console.log(`${trials.length} trial(s) already saved under ${name}; making only the rest`);
   console.log(`${events.length} event(s) × ${repeats} repeat(s) × ${prompts.length} prompt(s), cap ${capUsd} USD, model ${config.models.curation}`);
 
@@ -99,7 +103,7 @@ async function main() {
           const perEvent = costUsd / Math.max(1, parsed.data.judgments.length);
           judgments = parsed.data.judgments
             .filter((j) => ids.has(j.id))
-            .map((j) => ({ prompt: side, repeat, id: j.id, verdict: j.verdict, reason: j.reason, why: j.why, costUsd: perEvent }));
+            .map((j) => ({ prompt: side, repeat, id: j.id, verdict: j.verdict, reason: j.reason, why: j.why, costUsd: perEvent, promptHash: hashes[side]! }));
         } catch (error) {
           if (error instanceof SpendCapReached) {
             capHit = true;
@@ -124,8 +128,8 @@ async function main() {
   const markdown = renderCurationComparison(scoreRepeats(scored, dataset.events), promptDiff(scored, events), {
     date: today,
     model: config.models.curation,
-    currentHash: promptHash(prompts[0]!.text),
-    ...(prompts[1] ? { candidateHash: promptHash(prompts[1].text) } : {}),
+    currentHash: hashes.current,
+    ...(hashes.candidate ? { candidateHash: hashes.candidate } : {}),
     sample: events.length,
     minutes: (Date.now() - started) / 60_000,
     capHit,

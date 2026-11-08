@@ -83,7 +83,7 @@ _None._
 
 By kind: music 1. By reason: rare 1.
 
-- 2026-10-31 Big Show at Knuckleheads [rare]: A rare club date from a band that plays arenas. (new)
+- 2026-10-31 Big Show at Knuckleheads [rare]: A rare club date from a band that plays arenas. (new) `evt_0416dfbe3fa1`
 
 ### Close calls
 
@@ -91,7 +91,7 @@ _None._
 
 ### Moved this run
 
-- Big Show: no → pick (new event)
+- Big Show: no → pick (new event) `evt_0416dfbe3fa1`
 
 ### Hand picks
 

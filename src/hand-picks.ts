@@ -84,6 +84,9 @@ export function applyHandPicks(events: Event[], picks: HandPick[], nowIso: strin
   const byId = new Map(events.map((e) => [e.id, e]));
   const report: HandPicksReport = { applied: 0, stale: [], changed: [] };
   const applicable = new Map<string, HandPick>();
+  // Every id the file names: a stale entry is not applied, but while it is in the file its event is not released either,
+  // so an outage strike or a retitling does not flap the event between the hand's answer and the model's.
+  const named = new Set(picks.map((p) => p.id));
   for (const entry of picks) {
     const event = byId.get(entry.id);
     const note = staleNote(entry, event);
@@ -95,7 +98,7 @@ export function applyHandPicks(events: Event[], picks: HandPick[], nowIso: strin
   }
   const out = events.map((event) => {
     const entry = applicable.get(event.id);
-    if (entry === undefined) return event.pickedBy === undefined ? event : released(event);
+    if (entry === undefined) return event.pickedBy === undefined || named.has(event.id) ? event : released(event);
     report.applied++;
     // A change this run to an event known before; a new event is "changed" by markChanged too, and is not news to the entry's author.
     if (event.lastChanged === nowIso && event.firstSeen !== nowIso) report.changed.push({ id: event.id, title: event.title });

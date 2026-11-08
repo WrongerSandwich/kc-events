@@ -121,6 +121,18 @@ describe("picks with reasons, close calls and nos (ADR 0014)", () => {
     });
   });
 
+  it("a no with a reason is contradictory and left unjudged; a close with a reason applies as a close", async () => {
+    const { dataset, report } = await runAt(WEEK_1, emptyDataset(), [
+      extracted(candidate(), second),
+      judging(0.02, { id: SHOW_ID, verdict: "no", reason: "rare", why: "" }, { id: SECOND_ID, verdict: "close", reason: "tradition", why: "Nearly a tradition." }),
+    ]);
+
+    expect(byId(dataset.events, SHOW_ID)).not.toHaveProperty("lastJudged");
+    expect(byId(dataset.events, SECOND_ID)).toMatchObject({ dontMiss: false, closeCall: true, closeNote: "Nearly a tradition.", lastJudged: WEEK_1_ISO });
+    expect(byId(dataset.events, SECOND_ID)).not.toHaveProperty("pickReason");
+    expect(report.curation).toMatchObject({ judged: 1, close: 1, problems: [expect.stringContaining('"Big Show" was a no with a reason')] });
+  });
+
   it("a re-judgment that says no clears a stored close call and its note", async () => {
     const first = await runAt(WEEK_1, emptyDataset(), [extracted(candidate()), judging(0.02, { id: SHOW_ID, verdict: "close", reason: "none", why: "Nearly rare." })]);
     expect(first.dataset.events[0]).toMatchObject({ closeCall: true, closeNote: "Nearly rare." });
@@ -159,6 +171,29 @@ describe("picks with reasons, close calls and nos (ADR 0014)", () => {
     const back = withLaterJudgment(laterClose as never, { ...earlierPick, lastJudged: "2026-10-20T06:00:00-05:00" } as never);
     expect(back).toMatchObject({ dontMiss: true, pickReason: "rare", whyLine: "Rare." });
     expect(back).not.toHaveProperty("closeCall");
+  });
+
+  it("a fold takes a hand-governed duplicate's model judgment, never the hand's fields, and keeps a hand-governed record's visible fields", () => {
+    const base = { recurrence: "one-off" as const, judgedWith: "abcdefabcdef" };
+    const handDuplicate = {
+      ...base,
+      dontMiss: true,
+      pickReason: "unusual" as const,
+      whyLine: "Hand reason.",
+      pickedBy: "hand" as const,
+      modelJudgment: { dontMiss: false, closeCall: true as const, closeNote: "Nearly." },
+      lastJudged: WEEK_2_ISO,
+    };
+    const kept = withLaterJudgment({ ...base, dontMiss: false, lastJudged: WEEK_1_ISO } as never, handDuplicate as never);
+    expect(kept).toMatchObject({ dontMiss: false, closeCall: true, closeNote: "Nearly.", lastJudged: WEEK_2_ISO });
+    expect(kept).not.toHaveProperty("pickedBy");
+    expect(kept).not.toHaveProperty("pickReason");
+
+    const handKept = { ...base, dontMiss: false, pickedBy: "hand" as const, modelJudgment: { dontMiss: false }, lastJudged: WEEK_1_ISO };
+    const later = { ...base, dontMiss: true, pickReason: "rare" as const, whyLine: "Rare.", lastJudged: WEEK_2_ISO };
+    const stillHand = withLaterJudgment(handKept as never, later as never);
+    expect(stillHand).toMatchObject({ dontMiss: false, pickedBy: "hand", modelJudgment: { dontMiss: true, pickReason: "rare", whyLine: "Rare." }, lastJudged: WEEK_2_ISO });
+    expect(stillHand).not.toHaveProperty("pickReason");
   });
 
   it("a stored pick whose why-line cleans to empty loses its flag and its reason, and a stored close note is cleaned too", async () => {

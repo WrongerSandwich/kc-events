@@ -707,9 +707,10 @@ const counted = (counts: { name: string; count: number }[]) => counts.map((c) =>
 
 /** The picks, close calls, moves and hand entries of the run (ADR 0014), the part of the report a person reads to overrule the model. */
 function picksSection({ picks, closeCalls, moved, byKind, byReason, handPicks }: RunReport["curation"]): string {
-  const pickLines = picks.map((p) => `${pickDates(p)} ${p.title} at ${p.venue} [${p.reason}]: ${p.whyLine}${p.marks.length > 0 ? ` (${p.marks.join(", ")})` : ""}`);
-  const closeLines = closeCalls.map((c) => `${pickDates(c)} ${c.title} at ${c.venue}: ${c.closeNote}`);
-  const moveLines = moved.map((m) => `${m.title}: ${m.from} → ${m.to} (${m.cause})`);
+  // Each line ends with the event's id, what an entry in data/picks.yaml names.
+  const pickLines = picks.map((p) => `${pickDates(p)} ${p.title} at ${p.venue} [${p.reason}]: ${p.whyLine}${p.marks.length > 0 ? ` (${p.marks.join(", ")})` : ""} \`${p.id}\``);
+  const closeLines = closeCalls.map((c) => `${pickDates(c)} ${c.title} at ${c.venue}: ${c.closeNote} \`${c.id}\``);
+  const moveLines = moved.map((m) => `${m.title}: ${m.from} → ${m.to} (${m.cause}) \`${m.id}\``);
   return [
     "### Picks",
     ...(picks.length > 0 ? [`By kind: ${counted(byKind)}. By reason: ${counted(byReason)}.`] : []),

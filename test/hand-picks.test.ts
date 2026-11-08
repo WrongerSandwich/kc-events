@@ -138,6 +138,22 @@ describe("applying hand picks after curation", () => {
     ]);
   });
 
+  it("a stale entry still in the file keeps its hand-governed event as it stands, so an outage strike does not flap it", () => {
+    const pick = stored("Stewart Copeland", { dontMiss: true, pickReason: "rare", whyLine: "The Police's drummer." });
+    const governed = applyHandPicks([pick], [unpickEntry(pick)], WEEK_1_ISO).events[0]!;
+    const struck = { ...governed, status: "unverified" as const };
+
+    const { events, report } = applyHandPicks([struck], [unpickEntry(pick)], WEEK_2_ISO);
+
+    expect(events[0]).toEqual(struck);
+    expect(report).toEqual({ applied: 0, stale: [{ id: pick.id, title: "Stewart Copeland", note: "unverified" }], changed: [] });
+
+    const retitled = { ...governed, title: "An Evening with Stewart Copeland" };
+    const kept = applyHandPicks([retitled], [{ ...unpickEntry(pick), title: "Copeland Night" }], WEEK_2_ISO);
+    expect(kept.events[0]).toEqual(retitled);
+    expect(kept.report.stale).toEqual([{ id: pick.id, title: "Copeland Night", note: 'title now "An Evening with Stewart Copeland"' }]);
+  });
+
   it("an entry's title matches the event's when the event's contains it, ignoring case and punctuation", () => {
     const e = stored("Electric Poe: An Evening at Union Cemetery");
     const { report } = applyHandPicks([e], [pickEntry(e, { title: "electric poe" })], WEEK_2_ISO);

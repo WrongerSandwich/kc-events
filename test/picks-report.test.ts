@@ -127,6 +127,12 @@ describe("what moved this run", () => {
     expect(moves[0]).toMatchObject({ id: cases[0]!.now.id, title: "New", primaryUrl: base.primaryUrl });
   });
 
+  it("a hand pick whose date passed is reported as expired, not as a removed entry", () => {
+    const hand = pick("Hand", { pickedBy: "hand", modelJudgment: { dontMiss: false } });
+    const moves = pickMoves([hand], [{ ...hand, status: "expired", expiryReason: "past" }], NOW);
+    expect(moves.map((m) => [m.from, m.to, m.cause])).toEqual([["pick", "no", "expired"]]);
+  });
+
   it("an unchanged standing is no move, a pick kept through an unverified strike included", () => {
     const kept = pick("Kept");
     const struck = pick("Struck");

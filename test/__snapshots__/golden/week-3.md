@@ -80,7 +80,7 @@ _None._
 
 By kind: music 1. By reason: rare 1.
 
-- 2026-10-31 Big Show at Knuckleheads [rare]: A rare club date from a band that plays arenas.
+- 2026-10-31 Big Show at Knuckleheads [rare]: A rare club date from a band that plays arenas. `evt_0416dfbe3fa1`
 
 ### Close calls
 

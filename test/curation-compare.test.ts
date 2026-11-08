@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { promptDiff, renderCurationComparison, sampleEligible, scoreRepeats, type CurationTrial } from "../src/curation-compare.js";
+import { promptDiff, renderCurationComparison, sampleEligible, scoreRepeats, trialsUnder, type CurationTrial } from "../src/curation-compare.js";
 import { storedEvent as stored } from "./fakes/fixtures.js";
 
 const trial = (prompt: CurationTrial["prompt"], repeat: number, id: string, verdict: CurationTrial["verdict"], reason: CurationTrial["reason"], why = ""): CurationTrial => ({
@@ -30,6 +30,18 @@ describe("the events a comparison judges", () => {
     expect(sampleEligible(all, 2, "one").map((e) => e.id)).toEqual(first);
     const seeds = ["two", "three", "four", "five", "six"].map((s) => sampleEligible(all, 2, s).map((e) => e.id).join());
     expect(new Set([first.join(), ...seeds]).size).toBeGreaterThan(1);
+  });
+});
+
+describe("saved trials and the prompt they were made under", () => {
+  it("keeps only the trials whose prompt hash is the side's current one, so an edited prompt is never measured on the old prompt's trials", () => {
+    const a = stored("A");
+    const old = { ...trial("current", 0, a.id, "pick", "rare"), promptHash: "oldoldoldold" };
+    const fresh = { ...trial("current", 1, a.id, "no", "none"), promptHash: "newnewnewnew" };
+    const candidate = { ...trial("candidate", 0, a.id, "close", "none"), promptHash: "candcandcand" };
+    const unstamped = trial("current", 2, a.id, "no", "none");
+    expect(trialsUnder([old, fresh, candidate, unstamped], { current: "newnewnewnew", candidate: "candcandcand" })).toEqual([fresh, candidate]);
+    expect(trialsUnder([old, fresh, candidate], { current: "newnewnewnew" })).toEqual([fresh]);
   });
 });
 

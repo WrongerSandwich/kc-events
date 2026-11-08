@@ -266,17 +266,17 @@ describe("the run report", () => {
 
       By kind: music 1, theater/dance 1. By reason: rare 1, unusual 1.
 
-      - 2026-11-07 Stewart Copeland at The Granada [rare]: The Police's drummer on a one-night stop. (new, hand)
-      - 2026-10-14–2026-11-01 Electric Poe at Union Cemetery [unusual]: Poe staged outdoors before a cemetery's holding vault.
+      - 2026-11-07 Stewart Copeland at The Granada [rare]: The Police's drummer on a one-night stop. (new, hand) \`evt_3\`
+      - 2026-10-14–2026-11-01 Electric Poe at Union Cemetery [unusual]: Poe staged outdoors before a cemetery's holding vault. \`evt_5\`
 
       ### Close calls
 
-      - 2026-11-15 Twin Peaks: Conversation with the Stars at Kauffman Center: Nearly rare, but the page says nothing of who appears.
+      - 2026-11-15 Twin Peaks: Conversation with the Stars at Kauffman Center: Nearly rare, but the page says nothing of who appears. \`evt_4\`
 
       ### Moved this run
 
-      - Twin Peaks: Conversation with the Stars: pick → close (re-judged under a new prompt)
-      - Stewart Copeland: no → pick (hand pick)
+      - Twin Peaks: Conversation with the Stars: pick → close (re-judged under a new prompt) \`evt_4\`
+      - Stewart Copeland: no → pick (hand pick) \`evt_3\`
 
       ### Hand picks
 
