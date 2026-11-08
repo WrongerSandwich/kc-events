@@ -16,7 +16,8 @@
     "promote": "tsx src/promote-cli.ts",
     "test:all": "pnpm -r test",
     "typecheck:all": "pnpm -r typecheck",
-    "compare-models": "tsx src/model-compare-cli.ts"
+    "compare-models": "tsx src/model-compare-cli.ts",
+    "compare-curation": "tsx src/curation-compare-cli.ts"
   },
   "dependencies": {
     "openai": "^7.43.0",
