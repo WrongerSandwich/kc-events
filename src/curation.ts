@@ -6,7 +6,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import type { RunConfig } from "./config.js";
-import type { Event } from "./dataset.js";
+import { PICK_REASONS, type Event } from "./dataset.js";
 import { statesMonthDay } from "./date-span.js";
 import { sameMoment, sameName } from "./identity.js";
 import { strictResponseFormat, thisRunLines } from "./model-request.js";
@@ -17,11 +17,20 @@ import type { RunReport } from "./report.js";
 /** Events judged per curation call; enough for the model to weigh them against each other, few enough to answer every one. */
 export const CURATION_BATCH_SIZE = 25;
 
-/** The curation model's answer about one event. A flag with no why-line is not a flag. */
+/** The three answers curation gives about an event (ADR 0014): on the front page under a reason, nearly there, or neither. */
+export const VERDICTS = ["pick", "close", "no"] as const;
+export type Verdict = (typeof VERDICTS)[number];
+
+/**
+ * The curation model's answer about one event (ADR 0014). A pick with no reason or no why-line is not a pick, and a
+ * close call with no note is not one; "none" stands in for a reason on anything but a pick, since the strict response
+ * format wants every field on every judgment.
+ */
 export const judgmentSchema = z.object({
   id: z.string().describe("The event's id, exactly as given."),
-  dontMiss: z.boolean().describe("True when a friend who lives here would be sorry to have missed it."),
-  why: z.string().describe("When dontMiss is true: the one sentence a reader could disagree with. Otherwise empty."),
+  verdict: z.enum(VERDICTS).describe("pick: someone in a mixed group of friends would bring it up, under one of the reasons. close: nearly, but no reason's test is clearly met. no: neither."),
+  reason: z.enum([...PICK_REASONS, "none"]).describe("On a pick, the one reason it is picked under. On a close or a no, none."),
+  why: z.string().describe("On a pick, the why-line: one sentence a reader could disagree with. On a close, one sentence naming the reason it nearly met and what was missing. On a no, empty."),
 });
 
 export const curationReplySchema = z.object({ judgments: z.array(judgmentSchema) });
@@ -32,12 +41,53 @@ export const curationReplySchema = z.object({ judgments: z.array(judgmentSchema)
  */
 export const WHY_LINE_CAP = 200;
 
-/** Whether the judgment flags its event with a why-line that, cleaned, runs past the cap. */
+/** Whether the judgment picks, or nearly picks, its event with a why-line or note that, cleaned, runs past the cap. */
 export function whyLineOverCap(judgment: Judgment): boolean {
-  return judgment.dontMiss && cleanWhyLine(judgment.why).length > WHY_LINE_CAP;
+  return judgment.verdict !== "no" && cleanWhyLine(judgment.why).length > WHY_LINE_CAP;
 }
 
 export type Judgment = z.infer<typeof judgmentSchema>;
+
+/**
+ * Why a judgment cannot be applied, or undefined when it can: a pick with no reason or no why-line, a close call with
+ * no note. The event is left unjudged, so it comes up again next run.
+ */
+export function judgmentProblem(judgment: Judgment): "picked with no reason" | "picked with no why-line" | "a close call with no note" | undefined {
+  const empty = cleanWhyLine(judgment.why) === "";
+  if (judgment.verdict === "pick" && judgment.reason === "none") return "picked with no reason";
+  if (judgment.verdict === "pick" && empty) return "picked with no why-line";
+  if (judgment.verdict === "close" && empty) return "a close call with no note";
+  return undefined;
+}
+
+/** The pick fields of an event or a stored model judgment: what a verdict sets and what a fold or a hand entry carries. */
+export type PickFields = Pick<Event, "dontMiss" | "pickReason" | "whyLine" | "closeCall" | "closeNote">;
+
+/** The pick fields a judgment amounts to, its why-line or note cleaned. */
+export function pickFieldsOf(judgment: Judgment): PickFields {
+  const why = cleanWhyLine(judgment.why);
+  if (judgment.verdict === "pick" && judgment.reason !== "none") return { dontMiss: true, pickReason: judgment.reason, whyLine: why };
+  if (judgment.verdict === "close") return { dontMiss: false, closeCall: true, closeNote: why };
+  return { dontMiss: false };
+}
+
+/** The pick fields an event carries now. */
+export function pickFields(event: PickFields): PickFields {
+  const { dontMiss, pickReason, whyLine, closeCall, closeNote } = event;
+  return {
+    dontMiss,
+    ...(pickReason !== undefined ? { pickReason } : {}),
+    ...(whyLine !== undefined ? { whyLine } : {}),
+    ...(closeCall !== undefined ? { closeCall } : {}),
+    ...(closeNote !== undefined ? { closeNote } : {}),
+  };
+}
+
+/** The event with these pick fields in place of its own. */
+export function withPickFields(event: Event, fields: PickFields): Event {
+  const { pickReason: _r, whyLine: _w, closeCall: _c, closeNote: _n, ...rest } = event;
+  return { ...rest, ...pickFields(fields) };
+}
 
 /** A batch of events is a longer reply than a page's; three minutes, and a call past it costs only its batch. */
 const CURATION_TIMEOUT_MS = 180_000;
@@ -78,7 +128,7 @@ export function changedSinceJudged(event: Event): boolean {
 }
 
 /** Whether curation may judge the event at all: publishable, not recurring, and marked by markChanged. */
-function curationEligible(event: Event): event is Event & { lastChanged: string } {
+export function curationEligible(event: Event): event is Event & { lastChanged: string } {
   return event.status === "active" && event.recurrence !== "recurring" && event.lastChanged !== undefined;
 }
 
@@ -158,29 +208,26 @@ export function buildCurationRequest(events: Event[], context: CurationContext):
   };
 }
 
-/** The event with a judgment applied and stamped as judged now under this prompt; the why-line is kept only with the flag. */
+/** The event with a judgment applied and stamped as judged now under this prompt; the why-line is kept only with the flag, the note only with a close call. */
 export function applyJudgment(event: Event, judgment: Judgment, nowIso: string, judgedWith: string): Event {
-  return withJudgment(event, { dontMiss: judgment.dontMiss, whyLine: cleanWhyLine(judgment.why), lastJudged: nowIso, judgedWith });
+  return withJudgment(event, pickFieldsOf(judgment), nowIso, judgedWith);
 }
 
 /**
  * The record kept by a fold, with the judgment of whichever record of the pair was judged later
- * (#79): the pair is one event, and its latest verdict is the one to show. A recurring record takes
- * no judgment, since recurring events are never flagged.
+ * (#79): the pair is one event, and its latest verdict is the one to show, reason and close call
+ * included. A recurring record takes no judgment, since recurring events are never flagged.
  */
 export function withLaterJudgment(kept: Event, duplicate: Event): Event {
   if (kept.recurrence === "recurring" || duplicate.lastJudged === undefined) return kept;
   if (kept.lastJudged !== undefined && Date.parse(kept.lastJudged) >= Date.parse(duplicate.lastJudged)) return kept;
-  return withJudgment(kept, { dontMiss: duplicate.dontMiss, whyLine: duplicate.whyLine, lastJudged: duplicate.lastJudged, judgedWith: duplicate.judgedWith });
+  return withJudgment(kept, pickFields(duplicate), duplicate.lastJudged, duplicate.judgedWith);
 }
 
-/** The event carrying this judgment, and the prompt it was made under, in place of its own; the why-line is kept only with the flag. */
-function withJudgment(
-  event: Event,
-  { dontMiss, whyLine, lastJudged, judgedWith }: { dontMiss: boolean; whyLine: string | undefined; lastJudged: string; judgedWith: string | undefined },
-): Event {
-  const { whyLine: _, judgedWith: __, ...rest } = event;
-  return { ...rest, dontMiss, ...(dontMiss && whyLine !== undefined ? { whyLine } : {}), lastJudged, ...(judgedWith !== undefined ? { judgedWith } : {}) };
+/** The event carrying these pick fields, and the prompt the judgment was made under, in place of its own. */
+function withJudgment(event: Event, fields: PickFields, lastJudged: string, judgedWith: string | undefined): Event {
+  const { judgedWith: _, ...rest } = withPickFields(event, fields);
+  return { ...rest, lastJudged, ...(judgedWith !== undefined ? { judgedWith } : {}) };
 }
 
 /** A sentence end followed, after a space, by another: the second is the stray. A spaced ellipsis (". . .") is no sentence end. */
@@ -252,16 +299,25 @@ export function datedWhyLines(events: Event[]): RunReport["curation"]["datedWhyL
     .map((e) => ({ id: e.id, title: e.title, primaryUrl: e.primaryUrl, whyLine: e.whyLine! }));
 }
 
-/** The event with no flag and no why-line. */
+/** The event with no flag, no reason, no why-line, and no close call. */
 export function unflagged(event: Event): Event {
-  const { whyLine: _, ...rest } = event;
-  return { ...rest, dontMiss: false };
+  return withPickFields(event, { dontMiss: false });
 }
 
-/** A stored event with its why-line cleaned; a flag whose why-line cleans to empty is no flag. Not a change, and not a judgment. */
+/**
+ * A stored event with its why-line or close note cleaned; a flag whose why-line cleans to empty is no flag (its
+ * reason goes with it), and a close call whose note cleans to empty is no close call. Not a change, and not a judgment.
+ */
 export function cleanStoredWhyLine(event: Event): Event {
-  if (event.whyLine === undefined) return event;
-  const why = cleanWhyLine(event.whyLine);
-  if (why === event.whyLine) return event;
-  return why === "" ? unflagged(event) : { ...event, whyLine: why };
+  if (event.whyLine !== undefined) {
+    const why = cleanWhyLine(event.whyLine);
+    if (why === event.whyLine) return event;
+    return why === "" ? unflagged(event) : { ...event, whyLine: why };
+  }
+  if (event.closeNote !== undefined) {
+    const note = cleanWhyLine(event.closeNote);
+    if (note === event.closeNote) return event;
+    return note === "" ? unflagged(event) : { ...event, closeNote: note };
+  }
+  return event;
 }

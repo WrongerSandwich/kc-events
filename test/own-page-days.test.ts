@@ -71,7 +71,7 @@ const ownPage = (overrides: Record<string, unknown> = {}): ScriptedReply => ({
 /** Curation flagging every event it is sent. */
 const flagAll = (request: { messages: { content: string }[] }) => {
   const ids = [...request.messages[1]!.content.matchAll(/evt_[0-9a-f]{12}/g)].map((m) => m[0]);
-  return judging(0.02, ...[...new Set(ids)].map((id) => ({ id, dontMiss: true, why: "Poe at sunset in a cemetery." })));
+  return judging(0.02, ...[...new Set(ids)].map((id) => ({ id, verdict: "pick" as const, reason: "rare" as const, why: "Poe at sunset in a cemetery." })));
 };
 
 /** The test config with the ticket page's host a ticketing platform whose pages render by script. */

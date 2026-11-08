@@ -77,7 +77,7 @@ _None._
 
 ## Curation
 
-5 events judged in 1 call, 1 flagged don't-miss.
+5 events judged in 1 call, 1 picked, 0 close calls.
 
 ## Failing sources
 

@@ -107,13 +107,13 @@ describe("a midweek re-verification pass", () => {
     const id = titled(before, "Near Show").id;
     const picked: Dataset = {
       ...before,
-      events: before.events.map((e) => (e.id === id ? { ...e, dontMiss: true, whyLine: "A rare one.", lastJudged: e.lastChanged, eventUrl: "https://knuckleheads.test/near" } : e)),
+      events: before.events.map((e) => (e.id === id ? { ...e, dontMiss: true, pickReason: "rare" as const, whyLine: "A rare one.", lastJudged: e.lastChanged, eventUrl: "https://knuckleheads.test/near" } : e)),
     };
     const judged: string[] = [];
     const curate = (request: CompletionRequest) => {
       const sent = JSON.parse(request.messages[1]!.content.slice(EVENTS_TO_JUDGE.length)) as { id: string }[];
       judged.push(...sent.map((e) => e.id));
-      return judging(0.01, { id, dontMiss: true, why: "Still a rare one." });
+      return judging(0.01, { id, verdict: "pick", reason: "rare", why: "Still a rare one." });
     };
 
     const { dataset, report, calls } = await midweek(picked, [reply({ ...near, startDate: "2026-10-09", dateEvidence: "Fri, Oct 9" }, late)], { curate });

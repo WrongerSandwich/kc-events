@@ -234,7 +234,7 @@ describe("re-verification and expiry", () => {
 
   it("an active event its page still lists without a citable venue is unverified, with its reading and curation kept and its strike cleared", async () => {
     const first = await runAt(WEEK_1, emptyDataset(), { completions: [reply(candidate())] });
-    const flagged = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, dontMiss: true, whyLine: "The one show this fall." })) };
+    const flagged = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, dontMiss: true, pickReason: "rare" as const, whyLine: "The one show this fall." })) };
     const struck = await runAt(WEEK_2, flagged, { completions: [reply()] });
     expect(struck.dataset.events[0]!.verificationFailures).toBe(1);
 

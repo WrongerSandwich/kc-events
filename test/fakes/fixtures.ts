@@ -1,3 +1,4 @@
+import type { Judgment } from "../../src/curation.js";
 import type { CompletionResult } from "../../src/ports.js";
 import type { Source } from "../../src/registry.js";
 import { toLocalIso } from "../../src/time.js";
@@ -64,6 +65,6 @@ export function reply(...candidates: unknown[]): CompletionResult {
 }
 
 /** A scripted curation reply carrying these judgments, at a per-call cost. */
-export function judging(costUsd: number, ...judgments: { id: string; dontMiss: boolean; why: string }[]): CompletionResult {
+export function judging(costUsd: number, ...judgments: Judgment[]): CompletionResult {
   return { value: { judgments }, costUsd };
 }

@@ -44,10 +44,10 @@ describe("runChanges", () => {
 
   it("a new pick is an active flagged event that was not flagged before, new or stored", () => {
     const turned = stored("Turned");
-    const kept = stored("Kept", { dontMiss: true, whyLine: "Why." });
-    const fresh = stored("Fresh", { dontMiss: true, whyLine: "Why." });
-    const hidden = stored("Hidden", { dontMiss: true, whyLine: "Why.", status: "unverified" });
-    const changes = runChanges([turned, kept], [{ ...turned, dontMiss: true, whyLine: "Why." }, kept, fresh, hidden], WEEK_1_ISO, TODAY);
+    const kept = stored("Kept", { dontMiss: true, pickReason: "rare", whyLine: "Why." });
+    const fresh = stored("Fresh", { dontMiss: true, pickReason: "rare", whyLine: "Why." });
+    const hidden = stored("Hidden", { dontMiss: true, pickReason: "rare", whyLine: "Why.", status: "unverified" });
+    const changes = runChanges([turned, kept], [{ ...turned, dontMiss: true, pickReason: "rare", whyLine: "Why." }, kept, fresh, hidden], WEEK_1_ISO, TODAY);
     expect(changes.newPicks).toEqual([ref(turned), ref(fresh)]);
   });
 

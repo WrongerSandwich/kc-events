@@ -79,7 +79,7 @@ describe("outages", () => {
 
   it("the third consecutive outage makes an active event unverified, never expired, keeping its reading and curation", async () => {
     const first = await runAt(WEEK_1, emptyDataset(), { [CALENDAR_URL]: PAGE }, [reply(candidate()), reply()]);
-    const flagged = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, dontMiss: true, whyLine: "The one show this fall." })) };
+    const flagged = { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, dontMiss: true, pickReason: "rare" as const, whyLine: "The one show this fall." })) };
 
     const second = await down(week(2), flagged);
     const third = await down(week(3), second.dataset);

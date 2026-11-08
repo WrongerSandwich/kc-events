@@ -195,4 +195,33 @@ describe("dataset", () => {
     expect(() => parseDataset({ ...emptyDataset(), events: [{ ...held, lead: event.lead }] })).toThrow(/held for promotion/);
     expect(() => parseDataset({ ...emptyDataset(), events: [{ ...held, heldForPromotion: false }] })).toThrow();
   });
+
+  describe("picks with reasons", () => {
+    const withEvent = (overrides: Record<string, unknown>) => ({ ...emptyDataset(), events: [{ ...event, ...overrides }] });
+
+    it("a pick needs a reason from the vocabulary as well as a why-line", () => {
+      expect(() => parseDataset(withEvent({ dontMiss: true, whyLine: "A reason." }))).toThrow(/pickReason/);
+      expect(() => parseDataset(withEvent({ dontMiss: true, whyLine: "A reason.", pickReason: "famous" }))).toThrow();
+      expect(() => parseDataset(withEvent({ dontMiss: false, pickReason: "rare" }))).toThrow(/pickReason/);
+      expect(parseDataset(withEvent({ dontMiss: true, whyLine: "A reason.", pickReason: "big-name" })).events[0]!.pickReason).toBe("big-name");
+    });
+
+    it("a close call carries a note, never a reason, and never sits on a pick or a recurring event", () => {
+      expect(() => parseDataset(withEvent({ closeCall: true }))).toThrow(/closeNote/);
+      expect(() => parseDataset(withEvent({ closeNote: "orphan" }))).toThrow(/closeNote/);
+      expect(() => parseDataset(withEvent({ closeCall: true, closeNote: "Nearly a tradition.", dontMiss: true, whyLine: "x", pickReason: "rare" }))).toThrow(/close call/);
+      expect(() => parseDataset(withEvent({ closeCall: false, closeNote: "n" }))).toThrow();
+      const recurring = { recurrence: "recurring", schedule: "Every Tuesday", start: undefined, evidence: { date: "Every Tuesday", venue: "Knuckleheads Saloon" } };
+      expect(() => parseDataset(withEvent({ ...recurring, closeCall: true, closeNote: "n" }))).toThrow(/close call/);
+      expect(parseDataset(withEvent({ closeCall: true, closeNote: "Nearly a tradition." })).events[0]).toMatchObject({ dontMiss: false, closeCall: true, closeNote: "Nearly a tradition." });
+    });
+
+    it("a hand-governed event keeps the model's judgment beside it", () => {
+      expect(() => parseDataset(withEvent({ pickedBy: "hand", dontMiss: true, whyLine: "x", pickReason: "rare" }))).toThrow(/modelJudgment/);
+      expect(() => parseDataset(withEvent({ modelJudgment: { dontMiss: false } }))).toThrow(/pickedBy/);
+      expect(() => parseDataset(withEvent({ pickedBy: "model", dontMiss: false, modelJudgment: { dontMiss: false } }))).toThrow();
+      const e = parseDataset(withEvent({ pickedBy: "hand", dontMiss: true, whyLine: "x", pickReason: "rare", modelJudgment: { dontMiss: false, closeCall: true, closeNote: "n" } })).events[0]!;
+      expect(e.modelJudgment).toEqual({ dontMiss: false, closeCall: true, closeNote: "n" });
+    });
+  });
 });

@@ -173,8 +173,10 @@ export interface RunReport {
     calls: number;
     /** Events that received a judgment. */
     judged: number;
-    /** Of those, events flagged don't-miss. */
+    /** Of those, events picked (flagged don't-miss, under a reason; ADR 0014). */
     flagged: number;
+    /** Of those judged, events answered as a close call (ADR 0014): nearly a pick, listed in the report and never published. */
+    close: number;
     /** Of those judged, events judged again only because the curation prompt changed since, or their judgment predates its hash (#256). */
     rejudgedForPrompt: number;
     /** Replies that could not be read, events the model did not answer, and flags with no why-line. */
@@ -358,6 +360,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     calls: count,
     judged: count,
     flagged: count,
+    close: countSince,
     rejudgedForPrompt: countSince,
     problems: z.array(z.string()),
     datedWhyLines: listSince(changeRef.extend({ whyLine: z.string() })),
@@ -499,7 +502,7 @@ ${markdownList(report.reverification.problems)}
 
 ## Curation
 
-${plural(report.curation.judged, "event")} judged in ${plural(report.curation.calls, "call")}, ${report.curation.flagged} flagged don't-miss.${
+${plural(report.curation.judged, "event")} judged in ${plural(report.curation.calls, "call")}, ${report.curation.flagged} picked, ${plural(report.curation.close, "close call")}.${
   report.curation.rejudgedForPrompt > 0 ? ` ${report.curation.rejudgedForPrompt} re-judged under a changed prompt.` : ""
 }${
   report.curation.problems.length > 0 ? `\n\n${markdownList(report.curation.problems)}` : ""

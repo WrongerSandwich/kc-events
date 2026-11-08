@@ -84,12 +84,12 @@ describe("length caps on what the model writes", () => {
 
   it("a flag whose why-line runs past 200 characters is not applied: left unjudged and reported", async () => {
     const id = newEventId(CALENDAR_URL, "Big Show", WEEK_1_ISO, "2026-10-31");
-    const { dataset, report } = await runOver([candidate()], [judging(0.01, { id, dontMiss: true, why: "w".repeat(201) })]);
+    const { dataset, report } = await runOver([candidate()], [judging(0.01, { id, verdict: "pick", reason: "rare", why: "w".repeat(201) })]);
 
     expect(dataset.events[0]).toMatchObject({ dontMiss: false });
     expect(dataset.events[0]).not.toHaveProperty("lastJudged");
     expect(report.curation.judged).toBe(0);
-    expect(report.curation.problems).toContain('"Big Show" was flagged with a why-line past the 200-character cap and was left unjudged');
+    expect(report.curation.problems).toContain('"Big Show" was picked with a why-line past the 200-character cap and was left unjudged');
   });
 });
 

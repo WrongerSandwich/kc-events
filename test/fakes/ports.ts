@@ -11,7 +11,7 @@ import { TEST_MODELS } from "./config.js";
 function nothingFlagged(request: CompletionRequest): CompletionResult {
   const listed = request.messages.at(-1)?.content.split(`${EVENTS_TO_JUDGE}\n\n`)[1] ?? "[]";
   const events = JSON.parse(listed) as { id: string }[];
-  return { value: { judgments: events.map(({ id }) => ({ id, dontMiss: false, why: "" })) }, costUsd: 0 };
+  return { value: { judgments: events.map(({ id }) => ({ id, verdict: "no", reason: "none", why: "" })) }, costUsd: 0 };
 }
 
 /**

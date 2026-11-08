@@ -61,6 +61,7 @@ const full: RunReport = {
     calls: 2,
     judged: 14,
     flagged: 1,
+    close: 2,
     rejudgedForPrompt: 3,
     problems: ["evt_1: flagged with no why-line"],
     datedWhyLines: [{ id: "evt_2", title: "Big Blue Pink", primaryUrl: "https://museum.test/big-blue-pink", whyLine: "A retrospective that closes December 13." }],
@@ -204,7 +205,7 @@ describe("the run report", () => {
 
       ## Curation
 
-      14 events judged in 2 calls, 1 flagged don't-miss. 3 re-judged under a changed prompt.
+      14 events judged in 2 calls, 1 picked, 2 close calls. 3 re-judged under a changed prompt.
 
       - evt_1: flagged with no why-line
 

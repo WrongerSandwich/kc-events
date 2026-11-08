@@ -155,7 +155,7 @@ describe("folding duplicates", () => {
   });
 
   it("keeps the judgment of whichever record of the pair was judged later (#79)", async () => {
-    const flag = { dontMiss: true, whyLine: "The festival's only Kansas City stop this year." };
+    const flag = { dontMiss: true, pickReason: "rare" as const, whyLine: "The festival's only Kansas City stop this year." };
     const [keptOld, flaggedLater] = hand().college;
     const [keptLater, flaggedOld] = hand().college;
     const [neverJudged] = hand().room;
@@ -172,7 +172,7 @@ describe("folding duplicates", () => {
   });
 
   it("carries the later judgment's prompt hash with it, so a kept record judged before the hash is not judged again (#256)", async () => {
-    const flag = { dontMiss: true, whyLine: "The festival's only Kansas City stop this year." };
+    const flag = { dontMiss: true, pickReason: "rare" as const, whyLine: "The festival's only Kansas City stop this year." };
     const [kept, duplicate] = hand().college;
     const { judgedWith: _, ...unstamped } = kept;
 
@@ -350,7 +350,7 @@ describe("folding a month-titled dated event into its recurring event (#63)", ()
   });
 
   it("never gives the recurring record a dated month's flag, however recently it was judged (#79)", async () => {
-    const dated = monthly("Hands-on History (Oct. 2026)", WWI, { dontMiss: true, whyLine: "Why.", lastJudged: RUN_TWO });
+    const dated = monthly("Hands-on History (Oct. 2026)", WWI, { dontMiss: true, pickReason: "rare" as const, whyLine: "Why.", lastJudged: RUN_TWO });
     const standing = recurring("Hands-on History");
 
     const { dataset } = await quietRun(withEvents([dated, standing]));

@@ -23,6 +23,14 @@ export const RECURRENCE_CLASSES = ["one-off", "limited-run", "recurring"] as con
 export const EVENT_STATUSES = ["active", "unverified", "expired"] as const;
 export const EXPIRY_REASONS = ["past", "two-strike", "cancelled", "index-page", "duplicate", "promotion", "not-public", "stale"] as const;
 
+/**
+ * The reasons a pick can carry, the vocabulary of why an event is on the front page (ADR 0014): a chance that
+ * seldom comes here, a name most people know, a communal occasion, a once-a-year tradition, a form or setting
+ * unlike anything else listed, a limited run worth planning around.
+ */
+export const PICK_REASONS = ["rare", "big-name", "occasion", "tradition", "unusual", "major-run"] as const;
+
+export type PickReason = (typeof PICK_REASONS)[number];
 export type RecurrenceClass = (typeof RECURRENCE_CLASSES)[number];
 export type EventStatus = (typeof EVENT_STATUSES)[number];
 export type ExpiryReason = (typeof EXPIRY_REASONS)[number];
@@ -93,6 +101,24 @@ const eventFields = z.strictObject({
   recurrence: z.enum(RECURRENCE_CLASSES),
   dontMiss: z.boolean(),
   whyLine: z.string().min(1).optional(),
+  /** The reason a pick is one (PICK_REASONS, ADR 0014); present exactly when dontMiss is true. */
+  pickReason: z.enum(PICK_REASONS).optional(),
+  /** A close call (ADR 0014): the model would understand a friend picking it, but no reason's test was clearly met. Never published; the report lists it. Present exactly with closeNote, never on a pick or a recurring event. */
+  closeCall: z.literal(true).optional(),
+  /** The close call's one sentence: which reason it nearly met and what was missing. */
+  closeNote: z.string().min(1).optional(),
+  /** Present while an entry in data/picks.yaml governs the event's pick (ADR 0014); the model's own judgment is kept in modelJudgment. */
+  pickedBy: z.literal("hand").optional(),
+  /** The model's last judgment while a hand entry governs the event, restored when the entry goes; present exactly with pickedBy. */
+  modelJudgment: z
+    .strictObject({
+      dontMiss: z.boolean(),
+      pickReason: z.enum(PICK_REASONS).optional(),
+      whyLine: z.string().min(1).optional(),
+      closeCall: z.literal(true).optional(),
+      closeNote: z.string().min(1).optional(),
+    })
+    .optional(),
   firstSeen: isoDateTime,
   lastVerified: isoDateTime.optional(),
   /** The run that first saw the event or last changed its title, date, venue, or status (markChanged in curation); curation re-judges on it. */
@@ -200,6 +226,18 @@ export const eventSchemaFor = (platformHosts: readonly string[]) =>
     })
     .refine((e) => !e.dontMiss || (e.recurrence !== "recurring" && e.whyLine !== undefined), {
       message: "a don't-miss flag needs a why-line and is never on a recurring event",
+    })
+    .refine((e) => e.dontMiss === (e.pickReason !== undefined), {
+      message: "a pick carries a pickReason from the vocabulary, and only a pick carries one",
+    })
+    .refine((e) => (e.closeCall !== undefined) === (e.closeNote !== undefined), {
+      message: "a close call carries its closeNote, and a closeNote only sits on a close call",
+    })
+    .refine((e) => e.closeCall === undefined || (!e.dontMiss && e.recurrence !== "recurring"), {
+      message: "a close call is never a pick and never a recurring event",
+    })
+    .refine((e) => (e.pickedBy !== undefined) === (e.modelJudgment !== undefined), {
+      message: "a hand-governed event (pickedBy) keeps the model's judgment in modelJudgment, and only such an event has one",
     })
     .refine((e) => (e.status === "expired") === (e.expiryReason !== undefined), {
       message: "an expired event has an expiryReason; no other event has one",

@@ -74,7 +74,7 @@ function flaggingBigShow(model: ModelPort): ModelPort {
       if (request.model !== TEST_MODELS.curation) return model.complete(request);
       const listed = JSON.parse(request.messages.at(-1)!.content.split(`${EVENTS_TO_JUDGE}\n\n`)[1]!) as { id: string; title: string }[];
       const judgments = listed.map(({ id, title }) =>
-        title === "Big Show" ? { id, dontMiss: true, why: "A rare club date from a band that plays arenas." } : { id, dontMiss: false, why: "" },
+        title === "Big Show" ? { id, verdict: "pick", reason: "rare", why: "A rare club date from a band that plays arenas." } : { id, verdict: "no", reason: "none", why: "" },
       );
       return { value: { judgments }, costUsd: 0.002 } satisfies CompletionResult;
     },

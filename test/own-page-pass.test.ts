@@ -57,7 +57,7 @@ const ownPage = (date: string, overrides: Record<string, unknown> = {}): Scripte
 /** Curation flagging every event it is sent. */
 const flagAll = (request: { messages: { content: string }[] }) => {
   const ids = [...request.messages[1]!.content.matchAll(/evt_[0-9a-f]{12}/g)].map((m) => m[0]);
-  return judging(0.02, ...[...new Set(ids)].map((id) => ({ id, dontMiss: true, why: "A band at a room this size." })));
+  return judging(0.02, ...[...new Set(ids)].map((id) => ({ id, verdict: "pick" as const, reason: "rare" as const, why: "A band at a room this size." })));
 };
 
 const runAt = (

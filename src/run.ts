@@ -32,6 +32,8 @@ import {
   cleanStoredWhyLine,
   cleanWhyLine,
   datedWhyLines,
+  judgmentProblem,
+  pickFields,
   markChanged,
   withLaterJudgment,
   unflagged,
@@ -1431,7 +1433,7 @@ function withStoredQuotes(known: Event, record: Event, page: SightedPage | undef
 /** The reading under the known event's identity and curation, by the field rules every refresh applies. */
 function refreshFields(known: Event, sighting: Event): Event {
   const ownPageKept = keepsOwnPageRead(known, sighting);
-  const curated = sighting.recurrence === "recurring" ? {} : { dontMiss: known.dontMiss, ...(known.whyLine !== undefined ? { whyLine: known.whyLine } : {}) };
+  const curated = sighting.recurrence === "recurring" ? {} : pickFields(known);
   /** The stored value under its field when the new one is the same by the given test, else nothing, so the new one stands. */
   const keepIfSame = (field: string, was: string | undefined, now: string | undefined, same: (a: string, b: string) => boolean) =>
     was !== undefined && now !== undefined && same(was, now) ? { [field]: was } : {};
@@ -2467,7 +2469,7 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
   const due = events.filter((e) => needsCuration(e, judgedWith));
   const judged = new Map<string, Event>();
   const unjudgedFlags = new Map<string, Event>();
-  const report: Omit<RunReport["curation"], "datedWhyLines"> = { calls: 0, judged: 0, flagged: 0, rejudgedForPrompt: 0, problems: [] };
+  const report: Omit<RunReport["curation"], "datedWhyLines"> = { calls: 0, judged: 0, flagged: 0, close: 0, rejudgedForPrompt: 0, problems: [] };
   let notCurated = 0;
 
   for (let i = 0; i < due.length; i += CURATION_BATCH_SIZE) {
@@ -2501,13 +2503,14 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
       }
       if (answered.has(event.id)) continue;
       answered.add(event.id);
-      if (judgment.dontMiss && cleanWhyLine(judgment.why) === "") {
-        report.problems.push(`"${event.title}" was flagged with no why-line and was left unjudged`);
-        unjudgedFlags.set(event.id, unflagged(event));
+      const problem = judgmentProblem(judgment);
+      if (problem !== undefined) {
+        report.problems.push(`"${event.title}" was ${problem} and was left unjudged`);
+        if (judgment.verdict === "pick") unjudgedFlags.set(event.id, unflagged(event));
         continue;
       }
       if (whyLineOverCap(judgment)) {
-        report.problems.push(`"${event.title}" was flagged with a why-line past the ${WHY_LINE_CAP}-character cap and was left unjudged`);
+        report.problems.push(`"${event.title}" was ${judgment.verdict === "pick" ? "picked with a why-line" : "a close call with a note"} past the ${WHY_LINE_CAP}-character cap and was left unjudged`);
         continue;
       }
       judged.set(event.id, applyJudgment(event, judgment, nowIso, judgedWith));
@@ -2521,6 +2524,7 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
 
   report.judged = judged.size;
   report.flagged = [...judged.values()].filter((e) => e.dontMiss).length;
+  report.close = [...judged.values()].filter((e) => e.closeCall).length;
   return { events: events.map((e) => judged.get(e.id) ?? unjudgedFlags.get(e.id) ?? e), report, notCurated };
 }
 
