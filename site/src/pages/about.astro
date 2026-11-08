@@ -11,6 +11,7 @@ import ReportForm from "../components/ReportForm.astro";
 import { siteConfig } from "../site.config";
 
 const curationRules = `${siteConfig.repoUrl}/blob/main/prompts/curation-prompt.md`;
+const handPicks = `${siteConfig.repoUrl}/blob/main/data/picks.yaml`;
 const extractionRules = `${siteConfig.repoUrl}/blob/main/prompts/extraction-rules.md`;
 // Numbers in prose are words (house style); the staleness banner shows once the run is more than this many days old.
 const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
@@ -33,7 +34,7 @@ const allEvents = feeds.allEvents.events.length;
     <p>To correct a listing, use <a href="#wrong-listing">Corrections</a> below, or "Wrong? Report it" on the event's page; both are public. For anything else, such as asking for your calendar page to be read, <a href={`${siteConfig.repoUrl}/issues/new`}>open an issue on GitHub</a>.</p>
 
     <h2>What a pick is</h2>
-    <p>A pick, tagged Don't miss, is a one-off or a limited run worth going out of your way for. It is an editorial call, made by a model under <a href={curationRules}>written rules</a> kept in the repository, and each one comes with a one-line reason. Recurring events are never picks; they are listed under Always there instead.</p>
+    <p>A pick, tagged Don't miss, is a one-off or a limited run worth going out of your way for, for one of six reasons: rare, a chance that seldom comes to Kansas City; big name, one most people would recognize; occasion, a large event much of the city turns out for; tradition, once a year, with a season to it; unusual, unlike anything else on the list; or major run, a limited run worth planning around. Each pick shows its reason and a one-line explanation. The call is made by a model under <a href={curationRules}>written rules</a> kept in the repository; a few picks are made by hand, under the same rules, in <a href={handPicks}>a file beside them</a>. Recurring events are never picks; they are listed under Always there instead.</p>
 
     <h2 id="subscribe">In your calendar</h2>
     <Subscribe origin={origin} intro="The picks as a calendar of your own, updated each week. Remove the calendar to stop." />

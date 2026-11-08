@@ -609,6 +609,26 @@ test("an event page says don't miss in the explorer's words and case", async ({ 
   await expect(tag).toHaveClass(/\bdont-miss\b/);
 });
 
+// The reason a pick is one leads its why-line in a muted word on the front page's card, the explorer's row and the
+// event page, with the pill unchanged; the About page explains the six (#273).
+test("a pick's reason leads its why-line on the card, the row and the event page, and the About page names the six", async ({ page }) => {
+  await on(page, BUILD_DAY, "/");
+  const card = page.locator("#pick-evt_e2e000000001");
+  await expect(card.locator(".why")).toHaveText("Rare · A rare touring occasion for a Kansas City stage.");
+  await expect(card.locator(".why .reason")).toHaveText("Rare ·");
+  // The word is the only place the reason shows: the pill still says Don't miss (Solid-Means-State).
+  await expect(card.getByText("Don't miss", { exact: true })).toHaveCount(0);
+  await on(page, BUILD_DAY, "/explore?when=all");
+  await expect(page.locator("article.row.flagged").filter({ hasText: "Closes Sunday." }).locator(".why")).toHaveText("Major run · Closes Sunday.");
+  await on(page, BUILD_DAY, "/e/evt_e2e000000005");
+  await expect(page.locator(".why")).toHaveText("Tradition · Once a year.");
+  await expect(page.getByText("Don't miss", { exact: true })).toBeVisible();
+  await page.goto("/about");
+  const what = page.locator("h2", { hasText: "What a pick is" }).locator("xpath=following-sibling::p[1]");
+  for (const word of ["rare", "big name", "occasion", "tradition", "unusual", "major run"]) await expect(what).toContainText(word);
+  await expect(what.getByRole("link", { name: "a file beside them" })).toHaveAttribute("href", /data\/picks\.yaml$/);
+});
+
 test("the site's page for an event sends the reader to the event's own page and names the list it was verified from", async ({ page }) => {
   await on(page, BUILD_DAY, "/e/evt_e2e000000001");
   await expect(page.getByRole("link", { name: "Tickets at tickets.example.com" })).toHaveAttribute("href", "https://tickets.example.com/frizzi");

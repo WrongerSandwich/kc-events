@@ -49,3 +49,17 @@ describe("DontMissCard's actions (#181)", () => {
     expect(screen.getByRole("link", { name: "Music" })).toHaveAttribute("href", "/k/music");
   });
 });
+
+describe("DontMissCard's why-line (#273)", () => {
+  it("leads it with the pick's reason, the word in its own span", () => {
+    const { container } = render(DontMissCard, { event: event({ dontMiss: true, pickReason: "tradition", whyLine: "Once a year." }), today: "2026-10-05" });
+    expect(container.querySelector(".why")).toHaveTextContent(/^Tradition · Once a year\.$/);
+    expect(container.querySelector(".why .reason")).toHaveTextContent("Tradition");
+  });
+
+  it("keeps the why-line alone on a pick with no reason", () => {
+    const { container } = render(DontMissCard, { event: event({ dontMiss: true, whyLine: "Once a year." }), today: "2026-10-05" });
+    expect(container.querySelector(".why")).toHaveTextContent(/^Once a year\.$/);
+    expect(container.querySelector(".why .reason")).toBeNull();
+  });
+});

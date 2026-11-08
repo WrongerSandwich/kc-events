@@ -248,15 +248,16 @@ Quiet instruments: precise edges, ink words, colour only where a kind lives.
 - **Filter chip (explorer rail, front page kinds):** an outlined pill in muted ink. Pressed, it takes its kind's tint, shade and edge at weight 500; a filter that is not a kind takes the grey pressed tint under ink. A chip that would list nothing goes faint with a dashed edge and stays pressable. Each carries its count in faint ink. In forced colours a pressed chip takes the system's Highlight.
 - **Kind row (explorer bar, phones):** every kind's filter chip in one line that swipes sideways, fading at its end until swiped there, Filters at its end; kind is the explorer's lens, since the list is in date order already and the picks lead the front page (Don't miss is a Show switch like the others). The sheet keeps the dates, regions and switches; wide windows keep the rail's Kind group.
 - **Don't-miss tag:** a solid Flag Carmine pill with "Don't miss" in white. A passed save's tag sits in the same place, outlined in a hairline, muted.
+- **Pick reason:** the reason a pick is one (rare, big name, occasion, tradition, unusual, major run; ADR 0014) is not a second tag and takes no colour. It is a word or two at weight 500 in muted ink leading the why line, with a middle dot ("Tradition · Once a year."), on the card, the row and the event page alike, so the pill stays the one solid state and no tight line gets wider. The six reasons are explained once, on the About page.
 
 ### Date Tile (signature)
 The kind's tint with its shade, weekday and month in label type around a 1.75rem/600 day number in tabular figures, 6px radius, 4rem wide on a card (3.5rem on phones, 5rem large on an event page). Today is ringed in its own shade. On navigation it glides into the event page's tile.
 
 ### Don't-Miss Card
-Not a box. A three-column grid: the date tile, the words (title, a meta line of icon-led facts, the why line in ink, chips and a muted source link), then the action column with Save over Add to calendar. On phones the actions fold into a row under the words. Cards are separated by 1rem of space, never a border or shadow.
+Not a box. A three-column grid: the date tile, the words (title, a meta line of icon-led facts, the why line in ink led by the pick's reason in a muted word, chips and a muted source link), then the action column with Save over Add to calendar. On phones the actions fold into a row under the words. Cards are separated by 1rem of space, never a border or shadow.
 
 ### Result Row (explorer)
-One shape on every row: the date line, the title, the kind chip leading the venue and neighbourhood, Save spanning them at the row's end, and the why line full width beneath. Below 1024px Save is the bookmark alone, quiet in muted ink with its 44px target, so a screen of rows is not a column of boxes and the venue keeps the room; the neighbourhood gives way before the venue. From 1024px it collapses to one line. Rows are divided by a hairline and nothing else.
+One shape on every row: the date line, the title, the kind chip leading the venue and neighbourhood, Save spanning them at the row's end, and the why line full width beneath, led by the pick's reason in a muted word. Below 1024px Save is the bookmark alone, quiet in muted ink with its 44px target, so a screen of rows is not a column of boxes and the venue keeps the room; the neighbourhood gives way before the venue. From 1024px it collapses to one line. Rows are divided by a hairline and nothing else.
 
 ### Inputs / Fields
 - **Style:** raised surface, 1px faint-ink edge, 4px radius, meta-size text. Search, sort and the date range share it.

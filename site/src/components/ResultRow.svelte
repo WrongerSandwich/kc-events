@@ -1,7 +1,7 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { daysSaid, isPast, lastDay, neighborhoodShown, venueLine, verifiedLabel } from "../lib/events";
+  import { daysSaid, isPast, lastDay, neighborhoodShown, reasonWord, venueLine, verifiedLabel } from "../lib/events";
   import { rowDate } from "../lib/group";
   import { kindPath } from "../lib/landing";
   import { venuePath } from "../lib/venues";
@@ -43,7 +43,8 @@
   {#if hide !== "kind"}<KindChip kind={event.kind} href={kindPath(event.kind)} tabindex={-1} />{/if}
   {#if checked < runDay}<span class="verified" title={verifiedLine}><span aria-hidden="true">✓ {formatShort(checked)}</span><span class="visually-hidden">{verifiedLine}</span></span>{/if}
   <SaveButton id={event.id} title={event.title} last={lastDay(event)} when={daysSaid(event)} />
-  {#if event.whyLine}<p class="why">{event.whyLine}</p>{/if}
+  <!-- The pick's reason leads the why-line in a muted word, as on its card (#273). -->
+  {#if event.whyLine}<p class="why">{#if event.pickReason}<span class="reason">{reasonWord(event.pickReason)} ·</span>{" "}{/if}{event.whyLine}</p>{/if}
 </article>
 
 <style>
@@ -94,6 +95,7 @@
   }
   /* A sentence that wraps, so it has the page's leading, not the row's, and a reading line's length on a wide row. */
   .why { grid-area: why; max-width: 70ch; margin: 0; font-size: var(--text-sm); line-height: var(--leading); color: var(--fg); }
+  .reason { font-weight: 500; color: var(--fg-muted); }
   /* Venue and neighborhood give way, the neighborhood first below 1024 px; from 1024 px only the venue does. */
   .where { grid-area: where; display: flex; align-items: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
   /* A 12 px line at the row's 1.25 leading is 15 px, so 4.5 px above and below make 24. */

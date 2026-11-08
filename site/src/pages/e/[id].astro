@@ -16,7 +16,7 @@ import { formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd, eventPageTitle } from "../../lib/event-meta";
 import { breadcrumbJsonLd, kindName, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
-import { admissionLine, detailsLabel, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, modelNote, neighborhoodLine, neighborhoodShown, venueLine, verifiedLabel } from "../../lib/events";
+import { admissionLine, detailsLabel, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, modelNote, neighborhoodLine, neighborhoodShown, reasonWord, venueLine, verifiedLabel } from "../../lib/events";
 import ReportForm from "../../components/ReportForm.astro";
 import { googleCalendarUrl, locatedForCalendar } from "../../lib/ics";
 import { siteConfig } from "../../site.config";
@@ -64,7 +64,8 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
         {admission && <p class="admission">{admission}</p>}
       </div>
     </header>
-    {event.whyLine && <p class="why">{event.whyLine}</p>}
+    {/* The pick's reason leads the why-line in a muted word, as on its card and row (#273). */}
+    {event.whyLine && <p class="why">{event.pickReason && <><span class="reason">{reasonWord(event.pickReason)} ·</span>{" "}</>}{event.whyLine}</p>}
     {description && <p class="about">{description}</p>}
     {/* The one filled control: going, or buying, is what a visitor from a shared link came for. The rest sit quiet under it. */}
     <p class="primary"><a class="control go" href={details}><UiIcon name={detailsLabel(event).startsWith("Tickets") ? "ticket" : "link"} />{detailsLabel(event)}</a></p>
@@ -120,6 +121,7 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   .where a { color: inherit; text-decoration: underline; }
   /* In ink, as on a pick's card and an explorer row: the reason is what the site adds (#184). */
   .why { margin: 0 0 var(--space-4); font-size: var(--text-lg); max-width: 38rem; }
+  .why .reason { font-weight: 500; color: var(--fg-muted); }
   .about { margin: 0 0 var(--space-4); max-width: 38rem; }
   .primary { margin: 0 0 var(--space-2); }
   /* The accent fill, as a pressed control has; a phone gives it the column's width. */

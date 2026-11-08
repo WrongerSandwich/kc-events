@@ -108,6 +108,20 @@ describe("ResultRow's width (#182)", () => {
   });
 });
 
+describe("ResultRow's why-line (#273)", () => {
+  it("leads it with the pick's reason, the word in its own span", () => {
+    const { container } = render(ResultRow, { event: event({ dontMiss: true, pickReason: "major-run", whyLine: "A touring production's one stop." }), today: "2026-10-05" });
+    expect(container.querySelector(".why")).toHaveTextContent(/^Major run · A touring production's one stop\.$/);
+    expect(container.querySelector(".why .reason")).toHaveTextContent("Major run");
+  });
+
+  it("keeps the why-line alone on a pick with no reason", () => {
+    const { container } = render(ResultRow, { event: event({ dontMiss: true, whyLine: "Rare." }), today: "2026-10-05" });
+    expect(container.querySelector(".why")).toHaveTextContent(/^Rare\.$/);
+    expect(container.querySelector(".why .reason")).toBeNull();
+  });
+});
+
 describe("LandingEvents (#182)", () => {
   const groups = [{ key: "2026-10-09", heading: "Fri Oct 9", events: [event()], collapsed: false }];
 

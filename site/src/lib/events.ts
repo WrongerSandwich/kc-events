@@ -1,5 +1,5 @@
 import { formatDay, isDateOnly, localDate, weekday } from "./dates";
-import type { PublishedEvent } from "./types";
+import type { PickReason, PublishedEvent } from "./types";
 
 export function isDated(e: PublishedEvent): boolean {
   return e.recurrence !== "recurring";
@@ -112,6 +112,30 @@ export function modelNote(whyLine: string | undefined, description: string | und
   if (whyLine) return "The reason is written by a model.";
   if (description) return "The description is written by a model.";
   return undefined;
+}
+
+/** The six reasons a pick can be one (ADR 0014), each said in a word or two, as the site shows them (#273). */
+const REASON_WORDS: Record<PickReason, string> = {
+  rare: "Rare",
+  "big-name": "Big name",
+  occasion: "Occasion",
+  tradition: "Tradition",
+  unusual: "Unusual",
+  "major-run": "Major run",
+};
+
+export function reasonWord(reason: PickReason): string {
+  return REASON_WORDS[reason];
+}
+
+/**
+ * The why-line led by the pick's reason ("Tradition · Once a year."), for the places that write it as one line (a
+ * calendar's notes, the llms page); the card, row and event page set the same word in its own span. A pick with no
+ * reason, which the schema no longer allows, keeps its why-line alone; undefined when there is no why-line.
+ */
+export function reasonLine(e: PublishedEvent): string | undefined {
+  if (e.whyLine === undefined) return undefined;
+  return e.pickReason === undefined ? e.whyLine : `${reasonWord(e.pickReason)} · ${e.whyLine}`;
 }
 
 /** What it costs and who may go, as the event's own page stated them ("Free · All ages"); undefined when it stated neither. */
