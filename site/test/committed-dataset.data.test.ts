@@ -51,12 +51,9 @@ describe("the committed dataset through the site's loader", () => {
   });
 
   it("publishes a reason from the vocabulary on every pick and on nothing else (#272, ADR 0014)", () => {
-    const dir = tempDir("kc-committed-");
-    writeGenerated({ datasetPath, configPath, outDir: join(dir, "generated"), publicDir: join(dir, "public"), today });
-    const published = JSON.parse(readFileSync(join(dir, "public", "events.json"), "utf8")) as { events: { id: string; dontMiss: boolean; pickReason?: string }[] };
-    const picks = published.events.filter((e) => e.dontMiss);
+    const picks = p.events.filter((e) => e.dontMiss);
     expect(picks.length).toBeGreaterThan(0);
     for (const e of picks) expect(PICK_REASONS, `pick ${e.id} publishes reason "${e.pickReason}"`).toContain(e.pickReason);
-    for (const e of published.events.filter((e) => !e.dontMiss)) expect(e, `event ${e.id}`).not.toHaveProperty("pickReason");
+    for (const e of p.events.filter((e) => !e.dontMiss)) expect(e, `event ${e.id}`).not.toHaveProperty("pickReason");
   });
 });

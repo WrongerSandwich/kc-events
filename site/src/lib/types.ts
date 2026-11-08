@@ -1,8 +1,8 @@
 export type Recurrence = "one-off" | "limited-run" | "recurring";
 
 /**
- * Why an event is a pick (ADR 0014): the job's PICK_REASONS vocabulary, spelled out here so the islands need not import
- * the job; load-dataset.ts checks the two agree at compile time.
+ * Why an event is a pick (ADR 0014): the job's PICK_REASONS vocabulary, spelled out here as Recurrence is, since nothing
+ * under lib/ imports the job; load-dataset.ts, which does, checks the two agree at compile time.
  */
 export type PickReason = "rare" | "big-name" | "occasion" | "tradition" | "unusual" | "major-run";
 

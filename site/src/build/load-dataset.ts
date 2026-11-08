@@ -18,10 +18,10 @@ import { href } from "./href.ts";
 import { isProductionBuild, knownOrigin } from "./origin.ts";
 import { buildVenues, readVenueTable } from "./venues.ts";
 
-/** The site's PickReason (lib/types.ts) spells the job's vocabulary out; a reason added on either side alone fails here. */
-type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
-const PICK_REASONS_AGREE: Same<PickReason, JobPickReason> = true;
-void PICK_REASONS_AGREE;
+/** True when A and B are the same union (each assignable to the other), never otherwise. */
+type SameUnion<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+/** lib/types.ts spells the job's pick reasons out rather than importing them; a reason added on either side alone fails here. */
+true satisfies SameUnion<PickReason, JobPickReason>;
 
 /** Bumped by hand when the site is updated for a new dataset shape; a job-side bump fails the build until then. */
 export const SITE_EXPECTS_SCHEMA_VERSION = 1;
