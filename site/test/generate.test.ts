@@ -21,7 +21,7 @@ describe("writeGenerated", () => {
       datasetPath,
       JSON.stringify(
         dataset([
-          activeEvent({ id: "evt_000000000001", dontMiss: true, whyLine: "A rare occasion." }),
+          activeEvent({ id: "evt_000000000001", dontMiss: true, pickReason: "rare", whyLine: "A rare occasion." }),
           activeEvent({ id: "evt_000000000002", description: "A three-piece playing their first record." }),
           activeEvent({ id: "evt_000000000003", status: "expired", expiryReason: "past" }),
           activeEvent({ id: "evt_000000000004", status: "unverified", venue: undefined, lastVerified: undefined }),
@@ -69,7 +69,7 @@ describe("writeGenerated", () => {
       JSON.stringify(
         dataset([
           activeEvent({ id: "evt_000000000001" }),
-          activeEvent({ id: "evt_000000000002", ...held, dontMiss: true, whyLine: "A rare occasion.", description: "Three bands in the barrel room." }),
+          activeEvent({ id: "evt_000000000002", ...held, dontMiss: true, pickReason: "rare", whyLine: "A rare occasion.", description: "Three bands in the barrel room." }),
           activeEvent({ id: "evt_000000000003", ...held, lastVerified: undefined, evidence: {} }),
         ]),
       ),
@@ -93,7 +93,7 @@ describe("writeGenerated", () => {
 
   it("warns when the front page would carry more picks than its budget was sized for, and not at the ceiling", () => {
     const picks = (n: number) =>
-      dataset(Array.from({ length: n }, (_, i) => activeEvent({ id: `evt_${String(i + 1).padStart(12, "0")}`, dontMiss: true, whyLine: "A rare occasion." })));
+      dataset(Array.from({ length: n }, (_, i) => activeEvent({ id: `evt_${String(i + 1).padStart(12, "0")}`, dontMiss: true, pickReason: "rare", whyLine: "A rare occasion." })));
     const run = (n: number) => {
       const dir = tempDir("kc-generate-");
       writeFileSync(join(dir, "events.json"), JSON.stringify(picks(n)));
