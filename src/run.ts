@@ -2464,9 +2464,18 @@ function placeOffList(events: Event[], list: string[], config: RunConfig, regist
  * and comes up again next run (the second losing any flag it had, since a flag with no why-line is no flag), and a judgment naming no event in the batch is reported. A reply that cannot be read, or a call that throws, leaves its whole batch unjudged. Once
  * the spend cap is reached, events still to judge are not sent and are counted as not curated.
  */
+/**
+ * The order events go to curation in: by kind, then date, an undated event last in its kind, then id (ADR 0014). A
+ * batch's neighbours are then comparable, so a batch of mixed kinds does not move the model's threshold; the
+ * comparison command forms its batches the same way, so what it measures is what the run does.
+ */
+export function byKindThenDate(a: Event, b: Event): number {
+  return a.kind.localeCompare(b.kind) || (a.start ?? "￿").localeCompare(b.start ?? "￿") || a.id.localeCompare(b.id);
+}
+
 async function curate(events: Event[], model: CappedModel, context: CurationContext, nowIso: string) {
   const judgedWith = promptHash(context.curationPrompt);
-  const due = events.filter((e) => needsCuration(e, judgedWith));
+  const due = events.filter((e) => needsCuration(e, judgedWith)).sort(byKindThenDate);
   const judged = new Map<string, Event>();
   const unjudgedFlags = new Map<string, Event>();
   const report: Omit<RunReport["curation"], "datedWhyLines"> = { calls: 0, judged: 0, flagged: 0, close: 0, rejudgedForPrompt: 0, problems: [] };

@@ -45,6 +45,31 @@ describe("don't-miss curation", () => {
   });
 });
 
+describe("how a batch is formed", () => {
+  it("batches are formed by kind, then date, with an undated event last in its kind, and the second batch continues the order", async () => {
+    // 27 one-offs of the test config's two kinds in a scrambled order, so the two batches cut across a kind.
+    const kinds = ["music", "other"];
+    const candidates = Array.from({ length: 27 }, (_, i) => {
+      const day = String(1 + ((i * 7) % 27)).padStart(2, "0");
+      return candidate({ title: `Show ${i}`, kind: kinds[i % 2], startDate: `2026-11-${day}`, dateEvidence: `Nov ${day} · Show 8:00 PM` });
+    });
+    const undatedIndex = 5; // an "other" with no start
+    candidates[undatedIndex] = candidate({ title: "Show 5", kind: "other", startDate: null, startTime: null, endDate: "2026-11-30", dateEvidence: "Through Nov 30" });
+
+    const { curationRequests, dataset } = await runAt(WEEK_1, emptyDataset(), [extracted(...candidates)]);
+
+    expect(curationRequests).toHaveLength(2);
+    const sentIds = curationRequests.flatMap((r) => (JSON.parse(r.messages[1]!.content.split(`${EVENTS_TO_JUDGE}\n\n`)[1]!) as { id: string }[]).map((e) => e.id));
+    const byId = new Map(dataset.events.map((e) => [e.id, e]));
+    const sent = sentIds.map((id) => byId.get(id)!);
+    const expected = [...sent].sort((a, b) => a.kind.localeCompare(b.kind) || (a.start ?? "￿").localeCompare(b.start ?? "￿") || a.id.localeCompare(b.id));
+    expect(sent.map((e) => `${e.kind} ${e.start ?? "undated"}`)).toEqual(expected.map((e) => `${e.kind} ${e.start ?? "undated"}`));
+    expect(sentIds.slice(0, 25)).toHaveLength(25);
+    expect(sent.filter((e) => e.kind === "other").at(-1)!.start).toBeUndefined();
+    expect(sent.filter((e) => e.kind === "music")).toHaveLength(14);
+  });
+});
+
 describe("picks with reasons, close calls and nos (ADR 0014)", () => {
   const second = candidate({ title: "Second Show", startDate: "2026-11-01", dateEvidence: "Sun, Nov 1 · Show 8:00 PM" });
   const third = candidate({ title: "Third Show", startDate: "2026-11-02", dateEvidence: "Mon, Nov 2 · Show 8:00 PM" });
