@@ -1,13 +1,14 @@
 <script lang="ts">
   import { meta } from "../generated/meta";
   import { formatShort, localDate } from "../lib/dates";
-  import { admissionLine, daysSaid, hostOf, detailsUrl, lastDay, neighborhoodShown, reasonWord, venueLine } from "../lib/events";
+  import { admissionLine, daysSaid, hostOf, detailsUrl, lastDay, neighborhoodShown, venueLine } from "../lib/events";
   import { kindPath } from "../lib/landing";
   import { slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
   import type { PublishedEvent } from "../lib/types";
   import DateTile from "./DateTile.svelte";
   import KindChip from "./KindChip.svelte";
+  import PickTag from "./PickTag.svelte";
   import SaveButton from "./SaveButton.svelte";
   import UiIcon from "./UiIcon.svelte";
 
@@ -32,9 +33,9 @@
       <span class="fact"><UiIcon name="map-pin" />{[venueLine(event), neighborhoodShown(event)].filter(Boolean).join(", ")}</span>
       {#if admission}<span class="fact"><UiIcon name="ticket" /><span class="admission">{admission}</span></span>{/if}
     </p>
-    <!-- The reason the pick is one leads its why-line in a muted word, not a second tag: the pill stays the one solid
-         state (#273). -->
-    {#if event.whyLine}<p class="why">{#if event.pickReason}<span class="reason">{reasonWord(event.pickReason)} ·</span>{" "}{/if}{event.whyLine}</p>{/if}
+    <!-- The pick tag leads the why-line: every card is a pick, so the tag's word (the reason) is what differs between
+         cards, and it sits with the sentence it names (#273). -->
+    {#if event.dontMiss || event.whyLine}<p class="why">{#if event.dontMiss}<PickTag reason={event.pickReason} />{" "}{/if}{event.whyLine}</p>{/if}
     <p class="tags">
       <!-- The link it looks like, to the kind's page (#181). -->
       <KindChip kind={event.kind} href={kindPath(event.kind)} />
@@ -64,7 +65,8 @@
   .fact :global(.ui-icon) { color: var(--fg-faint); align-self: center; }
   /* The why line is the pick's reason, so it is in ink, as on an explorer row and the event page (#184). */
   .why { margin-top: var(--space-2); max-width: 38rem; }
-  .reason { font-weight: 500; color: var(--fg-muted); }
+  /* The tag is base.css's; a hair of room before the sentence, over the space already there. */
+  .why :global(.dont-miss) { margin-right: var(--space-1); vertical-align: baseline; }
   .tags { margin-top: var(--space-2); display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-4); font-size: var(--text-sm); }
   /* Like the always-there host links: plain until hovered (base.css underlines links in a <p>). */
   .primary { color: var(--fg-muted); text-decoration: none; }

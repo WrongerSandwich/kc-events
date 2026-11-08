@@ -12,7 +12,7 @@ vi.mock("../src/generated/events", async () => {
       event({ id: "a", title: "Friday jazz", start: "2026-10-09T19:00:00-05:00", kind: "music", region: "Central KC" }),
       event({ id: "b", title: "Saturday film", start: "2026-10-10", kind: "film", region: "Lawrence", neighborhood: "Lawrence", venue: "Liberty Hall" }),
       event({ id: "c", title: "Later talk", start: "2026-10-20T18:00:00-05:00", kind: "talks/readings", region: "Central KC" }),
-      event({ id: "d", title: "Exhibition", recurrence: "limited-run", start: "2026-09-01", end: "2026-10-25", kind: "art/exhibitions", region: "Central KC", dontMiss: true, whyLine: "Closing soon." }),
+      event({ id: "d", title: "Exhibition", recurrence: "limited-run", start: "2026-09-01", end: "2026-10-25", kind: "art/exhibitions", region: "Central KC", dontMiss: true, pickReason: "major-run", whyLine: "A touring exhibition's one stop." }),
       event({ id: "r", title: "Trivia", recurrence: "recurring", start: undefined, schedule: "Tuesdays", kind: "food/drink", region: "Central KC" }),
     ],
   };
@@ -102,18 +102,18 @@ describe("Explorer", () => {
     }
   });
 
-  it("keeps Don't miss a switch in the rail's Show group, under a pill once set, for the front page's links", async () => {
+  it("keeps the picks a switch in the rail's Show group, under a pill once set, for the front page's links", async () => {
     render(Explorer);
-    const picks = screen.getByRole("checkbox", { name: "Don't miss only" });
+    const picks = screen.getByRole("checkbox", { name: "Picks only" });
     await fireEvent.click(picks);
     expect(location.search).toBe("?picks=1");
     expect(rows()).toEqual(["Exhibition"]);
-    expect(screen.getByRole("list", { name: "Active filters" })).toHaveTextContent("Don't miss");
+    expect(screen.getByRole("list", { name: "Active filters" })).toHaveTextContent("Picks");
     expect(screen.getByRole("button", { name: "Filters (1)" })).toBeInTheDocument();
     // Nothing matching, the empty state names it and offers to drop it.
     await fireEvent.click(railKind(/^Film,/));
-    expect(screen.getByText(/No events match/, { selector: ".empty" })).toHaveTextContent("No events match This week · Film · Don't miss.");
-    expect(screen.getByRole("button", { name: "Without Don't miss, 1 event" })).toBeInTheDocument();
+    expect(screen.getByText(/No events match/, { selector: ".empty" })).toHaveTextContent("No events match This week · Film · Picks.");
+    expect(screen.getByRole("button", { name: "Without Picks, 1 event" })).toBeInTheDocument();
   });
 
   it("offers every kind in the bar for phones, counted, the same filter as the rail's", async () => {
@@ -251,13 +251,15 @@ describe("Explorer", () => {
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["Liberty Hall", "recordBar"]);
   });
 
-  it("labels a don't-miss row in words, not by colour alone", () => {
+  it("labels a pick's row in words, its reason, not by colour alone", () => {
     history.replaceState(null, "", "/explore?when=30d"); // On now open, so its rows show
     render(Explorer);
     const row = (title: string) => found(screen.getAllByRole("article").find((a) => within(a).getByRole("heading").textContent === title), `the ${title} row`);
-    // Twice in the markup, one shown by width (#184); jsdom has no media queries, so both are there.
-    expect(within(row("Exhibition")).getAllByText("Don't miss")).toHaveLength(2);
-    expect(within(row("Friday jazz")).queryByText("Don't miss")).toBeNull();
+    // Twice in the markup, one shown by width (#184); jsdom has no media queries, so both are there. The whole text,
+    // since the "Pick:" a screen reader hears is its own hidden span (#273).
+    const tags = [...row("Exhibition").querySelectorAll(".dont-miss")].map((t) => t.textContent);
+    expect(tags).toEqual(["Pick: Major run", "Pick: Major run"]);
+    expect(row("Friday jazz").querySelector(".dont-miss")).toBeNull();
   });
 
   it("keeps the From and To fields behind Custom dates…, open when the link carries a range", () => {

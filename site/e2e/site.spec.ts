@@ -172,13 +172,13 @@ test("the explorer honors the URL and writes it back", async ({ page }) => {
   await expect(page).toHaveURL("/explore");
 });
 
-test("the explorer's picks=1 shows only the picks, under a Don't miss pill, and writes it back (#185)", async ({ page }) => {
+test("the explorer's picks=1 shows only the picks, under a Picks pill, and writes it back (#185)", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore?when=all&picks=1");
   const rows = page.locator(".results article.row");
   await expect(rows.first()).toBeVisible();
   await expect(page.locator(".results article.row:not(.flagged)")).toHaveCount(0);
-  await expect(page.getByRole("list", { name: "Active filters" }).getByRole("button", { name: "Remove Don't miss" })).toBeVisible();
-  await expect(page.getByRole("checkbox", { name: "Don't miss only", exact: true })).toBeChecked();
+  await expect(page.getByRole("list", { name: "Active filters" }).getByRole("button", { name: "Remove Picks" })).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "Picks only", exact: true })).toBeChecked();
   await page.getByRole("button", { name: /^Comedy\b/ }).click();
   await expect(page).toHaveURL(/[?&]picks=1(&|$)/);
 });
@@ -582,9 +582,9 @@ for (const width of [1280, 1440]) {
   }
 }
 
-// In words, so it reads in grayscale and to a screen reader, and visible at every width.
+// In words (the pick's reason, #273), so it reads in grayscale and to a screen reader, and visible at every width.
 for (const width of [390, 1440]) {
-  test(`a don't-miss row says so in words at ${width} px`, async ({ page }) => {
+  test(`a pick's row says so in words at ${width} px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 800 });
     await on(page, BUILD_DAY, "/explore");
     await openOnNow(page);
@@ -593,37 +593,41 @@ for (const width of [390, 1440]) {
     // Once each: on the date line on a phone, so a wrapped title cannot throw it to the edge, beside the title wide (#184).
     const where = width < 1024 ? ".when-line" : ".title";
     for (const row of await flagged.all()) {
-      const shown = row.getByText("Don't miss", { exact: true }).filter({ visible: true });
+      const shown = row.locator(".dont-miss").filter({ visible: true });
       await expect(shown).toHaveCount(1);
-      await expect(row.locator(where).getByText("Don't miss", { exact: true })).toBeVisible();
+      await expect(shown).toHaveText(/^Pick: (Rare|Big name|Occasion|Tradition|Unusual|Major run)$/);
+      await expect(row.locator(where).locator(".dont-miss")).toBeVisible();
     }
-    await expect(page.locator("article.row:not(.flagged)").getByText("Don't miss")).toHaveCount(0);
+    await expect(page.locator("article.row:not(.flagged) .dont-miss")).toHaveCount(0);
   });
 }
 
-test("an event page says don't miss in the explorer's words and case", async ({ page }) => {
+test("an event page says the pick's reason in the explorer's words and case", async ({ page }) => {
   await on(page, BUILD_DAY, "/e/evt_e2e000000001");
-  const tag = page.getByText("Don't miss", { exact: true });
+  const tag = page.locator(".kind .dont-miss");
   await expect(tag).toBeVisible();
+  await expect(tag).toHaveText("Pick: Rare");
   await expect(tag).toHaveCSS("text-transform", "none");
-  await expect(tag).toHaveClass(/\bdont-miss\b/);
 });
 
-// The reason a pick is one leads its why-line in a muted word on the front page's card, the explorer's row and the
-// event page, with the pill unchanged; the About page explains the six (#273).
-test("a pick's reason leads its why-line on the card, the row and the event page, and the About page names the six", async ({ page }) => {
+// The pick tag carries the reason on the front page's card (leading the why-line), the explorer's row and the event
+// page, one carmine fill for all six words; the About page explains the six (#273).
+test("the pick tag says the reason on the card, the row and the event page, and the About page names the six", async ({ page }) => {
   await on(page, BUILD_DAY, "/");
   const card = page.locator("#pick-evt_e2e000000001");
-  await expect(card.locator(".why")).toHaveText("Rare · A rare touring occasion for a Kansas City stage.");
-  await expect(card.locator(".why .reason")).toHaveText("Rare ·");
-  // The reason is a word, not a second tag: no fill, no edge (Solid-Means-State: only Don't miss is solid).
-  await expect(card.locator(".why .reason")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await expect(card.locator(".why .reason")).toHaveCSS("border-style", "none");
+  const tag = card.locator(".why .dont-miss");
+  await expect(tag).toHaveText("Pick: Rare");
+  await expect(card.locator(".why")).toContainText("A rare touring occasion for a Kansas City stage.");
+  // One fill for every reason (Solid-Means-State): the card's Rare and the row's Major run are the same carmine.
+  const fill = await tag.evaluate((el) => getComputedStyle(el).backgroundColor);
   await on(page, BUILD_DAY, "/explore?when=all");
-  await expect(page.locator("article.row.flagged").filter({ hasText: "A touring exhibition's one Kansas City stop." }).locator(".why")).toHaveText("Major run · A touring exhibition's one Kansas City stop.");
+  const row = page.locator("article.row.flagged").filter({ hasText: "A touring exhibition's one Kansas City stop." });
+  await expect(row.locator(".dont-miss").filter({ visible: true })).toHaveText("Pick: Major run");
+  expect(await row.locator(".dont-miss").filter({ visible: true }).evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(fill);
+  await expect(row.locator(".why")).toHaveText("A touring exhibition's one Kansas City stop.");
   await on(page, BUILD_DAY, "/e/evt_e2e000000005");
-  await expect(page.locator(".why")).toHaveText("Tradition · Once a year.");
-  await expect(page.getByText("Don't miss", { exact: true })).toBeVisible();
+  await expect(page.locator(".kind .dont-miss")).toHaveText("Pick: Tradition");
+  await expect(page.locator(".why")).toHaveText("Once a year.");
   await page.goto("/about");
   const what = page.locator("h2", { hasText: "What a pick is" }).locator("xpath=following-sibling::p[1]");
   for (const word of ["rare", "big name", "occasion", "tradition", "unusual", "major run"]) await expect(what).toContainText(word);
@@ -1070,9 +1074,9 @@ test("the changes page lists the run's new picks, moves, new events by kind, and
 });
 
 // Two defects the 2026-10-21 pre-launch audit measured (its lane A): an event page with a long kind label beside its
-// Don't miss tag scrolled sideways at 320 px, and the explorer's sticky bar covered the row that Shift+Tab had just
-// focused, because nothing told the browser to scroll focus clear of the bar.
-test("an event page with a long kind label and a Don't miss tag does not scroll sideways at 320 px (WCAG 1.4.10)", async ({ page }) => {
+// pick tag (then "Don't miss") scrolled sideways at 320 px, and the explorer's sticky bar covered the row that Shift+Tab
+// had just focused, because nothing told the browser to scroll focus clear of the bar.
+test("an event page with a long kind label and a pick tag does not scroll sideways at 320 px (WCAG 1.4.10)", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await on(page, BUILD_DAY, "/e/evt_e2e000000005"); // a festivals/markets pick
   await expect(page.locator(".dont-miss")).toBeVisible();

@@ -1,6 +1,7 @@
 ---
 import Base from "../../layouts/Base.astro";
 import KindChip from "../../components/KindChip.svelte";
+import PickTag from "../../components/PickTag.svelte";
 import DateTile from "../../components/DateTile.svelte";
 import UiIcon from "../../components/UiIcon.svelte";
 import { dateTile } from "../../lib/tile";
@@ -16,7 +17,7 @@ import { formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd, eventPageTitle } from "../../lib/event-meta";
 import { breadcrumbJsonLd, kindName, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
-import { admissionLine, detailsLabel, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, modelNote, neighborhoodLine, neighborhoodShown, reasonWord, venueLine, verifiedLabel } from "../../lib/events";
+import { admissionLine, detailsLabel, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, modelNote, neighborhoodLine, neighborhoodShown, venueLine, verifiedLabel } from "../../lib/events";
 import ReportForm from "../../components/ReportForm.astro";
 import { googleCalendarUrl, locatedForCalendar } from "../../lib/ics";
 import { siteConfig } from "../../site.config";
@@ -55,7 +56,7 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
       {/* The same tile as the front page's card, by the same view-transition name, so one glides into the other. */}
       {isDated(event) && <DateTile tile={dateTile(event, meta.buildToday)} id={event.id} large />}
       <div>
-        <p class="kind"><KindChip kind={event.kind} href={kindPath(event.kind)} />{event.dontMiss && <span class="dont-miss">Don't miss</span>}</p>
+        <p class="kind"><KindChip kind={event.kind} href={kindPath(event.kind)} />{event.dontMiss && <PickTag reason={event.pickReason} />}</p>
         <h1 style={`view-transition-name: title-${event.id}`}>{event.title}</h1>
         <p class="date">{line}</p>
         <!-- A neighborhood of the venue's name, or the catch-all, gives way to the region, which neighborhoodLine then
@@ -64,8 +65,7 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
         {admission && <p class="admission">{admission}</p>}
       </div>
     </header>
-    {/* The pick's reason leads the why-line in a muted word, as on its card and row (#273). */}
-    {event.whyLine && <p class="why">{event.pickReason && <><span class="reason">{reasonWord(event.pickReason)} ·</span>{" "}</>}{event.whyLine}</p>}
+    {event.whyLine && <p class="why">{event.whyLine}</p>}
     {description && <p class="about">{description}</p>}
     {/* The one filled control: going, or buying, is what a visitor from a shared link came for. The rest sit quiet under it. */}
     <p class="primary"><a class="control go" href={details}><UiIcon name={detailsLabel(event).startsWith("Tickets") ? "ticket" : "link"} />{detailsLabel(event)}</a></p>
@@ -90,7 +90,7 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
                 <span class="row">
                   <span class="title">{e.title}<span class="visually-hidden">, {tile.label}</span></span>
                   {/* The tag leads the when-and-where line, as on an explorer row's date line, rather than a column of pills. */}
-                  <span class="meta">{e.dontMiss && <span class="dont-miss">Don't miss</span>}{[tile.detail, venueLine(e)].filter(Boolean).join(" · ")}</span>
+                  <span class="meta">{e.dontMiss && <PickTag reason={e.pickReason} />}{[tile.detail, venueLine(e)].filter(Boolean).join(" · ")}</span>
                 </span>
               </a>
             </li>
@@ -111,7 +111,7 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   @media (max-width: 26rem) {
     .head.dated { grid-template-columns: minmax(0, 1fr); row-gap: var(--space-3); }
   }
-  /* Wraps: beside the tile at 320 px, "outdoors/community" and the Don't miss tag together are wider than the column (audit 2026-10-21, A2). */
+  /* Wraps: beside the tile at 320 px, "outdoors/community" and the pick tag together are wider than the column (audit 2026-10-21, A2). */
   .kind { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0; }
   h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: var(--space-2) 0; }
   /* When is the first answer, so the date line is the heaviest line under the title. */
@@ -121,7 +121,6 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   .where a { color: inherit; text-decoration: underline; }
   /* In ink, as on a pick's card and an explorer row: the reason is what the site adds (#184). */
   .why { margin: 0 0 var(--space-4); font-size: var(--text-lg); max-width: 38rem; }
-  .why .reason { font-weight: 500; color: var(--fg-muted); }
   .about { margin: 0 0 var(--space-4); max-width: 38rem; }
   .primary { margin: 0 0 var(--space-2); }
   /* The accent fill, as a pressed control has; a phone gives it the column's width. */
@@ -160,7 +159,7 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   .row { display: grid; gap: 2px; }
   .title { font-weight: var(--weight-medium); line-height: var(--leading-tight); }
   .meta { font-size: var(--text-sm); color: var(--fg-muted); }
-  .meta .dont-miss { margin-right: var(--space-2); }
+  .meta :global(.dont-miss) { margin-right: var(--space-2); }
   .all { margin: var(--space-2) 0 0; }
   .all a { display: inline-flex; align-items: center; gap: 0.2em; min-height: var(--tap); color: var(--fg); font-weight: var(--weight-medium); text-decoration: none; }
   .all a:hover { text-decoration: underline; }

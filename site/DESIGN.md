@@ -152,7 +152,7 @@ components:
 
 A reference you scan, not a feed you scroll. The interface is set in true greys, ink on an off-white ground, and the only colour on most screens comes from the eleven kinds of event: talks, food, comedy, festivals, outdoors, art, sports, film, music, theater, other. Each kind is a filing tab in a strong shade and a tint, so a glance down a column of events sorts it before a word is read. The page is calm and dense at once: many events fit a screen, separated by space and the odd hairline, with nothing competing for attention.
 
-The system serves PRODUCT.md's "sleek, colorful, honest tool": the delight of a well-made instrument, closer to Fantastical's colour-coded calendar and Linear's exact chrome than to any magazine. Its one nod to the city is the header's fountain mark (five drops in kind colours, which play once on hover) and the flag's carmine, kept for the single state that is not a kind: don't miss. It rejects, by name, ad-laden local aggregators (thumbnails, sponsored slots, undifferentiated volume), ticketing marketplaces (big event images, countdowns, scarcity pressure, buy buttons), social feeds (infinite scroll, engagement bait), and the hand-written newsletter (serif voice type, a curator persona).
+The system serves PRODUCT.md's "sleek, colorful, honest tool": the delight of a well-made instrument, closer to Fantastical's colour-coded calendar and Linear's exact chrome than to any magazine. Its one nod to the city is the header's fountain mark (five drops in kind colours, which play once on hover) and the flag's carmine, kept for the single state that is not a kind: a pick. It rejects, by name, ad-laden local aggregators (thumbnails, sponsored slots, undifferentiated volume), ticketing marketplaces (big event images, countdowns, scarcity pressure, buy buttons), social feeds (infinite scroll, engagement bait), and the hand-written newsletter (serif voice type, a curator persona).
 
 Layout is two widths: a reading measure (42rem) for the front page, event pages and prose, and a wide frame (80rem, 86rem from 1440px) for the explorer's rail and one-line rows. Sections sit twice as far apart as the cards inside them (4rem between sections, 1rem between cards; 3rem between sections on phones). Motion is state feedback only: 150ms ease-out-quart transitions on controls, a 260ms cross-document view transition that glides a card's date tile and title into the event page's, and the fountain. All of it switches off under `prefers-reduced-motion`.
 
@@ -172,7 +172,7 @@ A grey interface lit by eleven kind hues and two colours from the city flag.
 - **Ink** (`ink`): text, link colour, and the filled state of a pressed toggle (a saved Save). Links and selection are ink, never a hue, because a hue would read as one more kind.
 
 ### Secondary
-- **Flag Carmine** (`flag-carmine`): the don't-miss tag and nothing else. The carmine of the city's 2023 flag, its lightness set for white words on it.
+- **Flag Carmine** (`flag-carmine`): the pick tag and nothing else. The carmine of the city's 2023 flag, its lightness set for white words on it.
 - **Fountain Blue** (`fountain-blue-focus`): the focus ring, 2px with a 2px offset. The flag's NCS blue, used only to show where the keyboard is.
 
 ### Tertiary: The Kinds
@@ -193,7 +193,7 @@ All neutrals are true greys (chroma 0), on purpose: a tinted neutral would bring
 ### Named Rules
 **The Only-Kinds-Bring-Colour Rule.** Chrome, links, selection, saved state and hover are ink or grey. A new hue anywhere in the interface is forbidden unless it names a kind; it would be read as one.
 
-**The Solid-Means-State Rule.** A kind is always a tint with its shade on it. A state that is not a kind (don't miss) is a solid fill, so it can never be mistaken for a kind, and it says its name in words so it reads in greyscale and to a screen reader.
+**The Solid-Means-State Rule.** A kind is always a tint with its shade on it. A state that is not a kind (a pick) is a solid fill, so it can never be mistaken for a kind, and it says its reason in words (Rare, Big name, Occasion, Tradition, Unusual, Major run), one fill for all six, so it reads in greyscale and to a screen reader, which hears "Pick:" before the word.
 
 **The Matched-Pair Rule.** A new kind gets the same lightness and chroma as the others and a hue in the widest gap on the wheel. Every shade must clear 4.5:1 on its own tint and on both grounds, in both schemes.
 
@@ -241,23 +241,22 @@ Quiet instruments: precise edges, ink words, colour only where a kind lives.
 - **Size:** 44px tall for every primary action (Save, Share, Add to calendar, Keep going, the header's links); the explorer bar's small control is 28px.
 - **Hover / Focus:** the edge darkens to faint ink over 150ms ease-out-quart; pressing nudges it down 1px; focus is the Fountain Blue ring.
 - **Pressed toggle:** a saved Save fills with ink, words in the ground colour.
-- **Quiet on a card:** on a don't-miss card the controls drop their box and sit in muted ink, gaining the card's kind tint on hover, so five cards are not ten buttons. The 44px target stays.
+- **Quiet on a card:** on a pick's card the controls drop their box and sit in muted ink, gaining the card's kind tint on hover, so five cards are not ten buttons. The 44px target stays.
 
 ### Chips
 - **Kind chip:** a pill (999px) in the kind's tint with its shade for the icon and words, label type. As a link to the kind's page it drops the pill, keeping icon and words, underlined on hover: only a filter is pill-shaped.
 - **Filter chip (explorer rail, front page kinds):** an outlined pill in muted ink. Pressed, it takes its kind's tint, shade and edge at weight 500; a filter that is not a kind takes the grey pressed tint under ink. A chip that would list nothing goes faint with a dashed edge and stays pressable. Each carries its count in faint ink. In forced colours a pressed chip takes the system's Highlight.
-- **Kind row (explorer bar, phones):** every kind's filter chip in one line that swipes sideways, fading at its end until swiped there, Filters at its end; kind is the explorer's lens, since the list is in date order already and the picks lead the front page (Don't miss is a Show switch like the others). The sheet keeps the dates, regions and switches; wide windows keep the rail's Kind group.
-- **Don't-miss tag:** a solid Flag Carmine pill with "Don't miss" in white. A passed save's tag sits in the same place, outlined in a hairline, muted.
-- **Pick reason:** the reason a pick is one (rare, big name, occasion, tradition, unusual, major run; ADR 0014) is not a second tag and takes no colour. It is a word or two at weight 500 in muted ink leading the why line, with a middle dot ("Tradition · Once a year."), on the card, the row and the event page alike, so the pill stays the one solid state and no tight line gets wider. The six reasons are explained once, on the About page.
+- **Kind row (explorer bar, phones):** every kind's filter chip in one line that swipes sideways, fading at its end until swiped there, Filters at its end; kind is the explorer's lens, since the list is in date order already and the picks lead the front page (Picks only is a Show switch like the others). The sheet keeps the dates, regions and switches; wide windows keep the rail's Kind group.
+- **Pick tag** (`PickTag.svelte`): a solid Flag Carmine pill with the pick's reason in white: Rare, Big name, Occasion, Tradition, Unusual or Major run (ADR 0014, #273). One fill for all six, so the colour says pick and the word says why; a visually hidden "Pick:" precedes the word for a screen reader. It replaced a pill that said "Don't miss" on every pick, an imperative with the scarcity tone the system rejects, and said less. On a row it rides the date line or sits beside the title; on an event page it sits beside the kind chip; on a card it leads the why line, since every card is a pick and the word is what differs between them. The six reasons are explained once, on the About page. A passed save's tag sits in the tag's place, outlined in a hairline, muted.
 
 ### Date Tile (signature)
 The kind's tint with its shade, weekday and month in label type around a 1.75rem/600 day number in tabular figures, 6px radius, 4rem wide on a card (3.5rem on phones, 5rem large on an event page). Today is ringed in its own shade. On navigation it glides into the event page's tile.
 
-### Don't-Miss Card
-Not a box. A three-column grid: the date tile, the words (title, a meta line of icon-led facts, the why line in ink led by the pick's reason in a muted word, chips and a muted source link), then the action column with Save over Add to calendar. On phones the actions fold into a row under the words. Cards are separated by 1rem of space, never a border or shadow.
+### Pick Card
+Not a box. A three-column grid: the date tile, the words (title, a meta line of icon-led facts, the why line in ink led by the pick tag, chips and a muted source link), then the action column with Save over Add to calendar. On phones the actions fold into a row under the words. Cards are separated by 1rem of space, never a border or shadow.
 
 ### Result Row (explorer)
-One shape on every row: the date line, the title, the kind chip leading the venue and neighbourhood, Save spanning them at the row's end, and the why line full width beneath, led by the pick's reason in a muted word. Below 1024px Save is the bookmark alone, quiet in muted ink with its 44px target, so a screen of rows is not a column of boxes and the venue keeps the room; the neighbourhood gives way before the venue. From 1024px it collapses to one line. Rows are divided by a hairline and nothing else.
+One shape on every row: the date line, the title, the kind chip leading the venue and neighbourhood, Save spanning them at the row's end, and the why line full width beneath. Below 1024px Save is the bookmark alone, quiet in muted ink with its 44px target, so a screen of rows is not a column of boxes and the venue keeps the room; the neighbourhood gives way before the venue. From 1024px it collapses to one line. Rows are divided by a hairline and nothing else.
 
 ### Inputs / Fields
 - **Style:** raised surface, 1px faint-ink edge, 4px radius, meta-size text. Search, sort and the date range share it.
@@ -275,7 +274,7 @@ A row of day tiles (raised surface, hairline edge, 6px radius): weekday, the day
 ### Do:
 - **Do** keep every neutral a true grey (chroma 0) and let only the kinds and the flag's two colours carry hue.
 - **Do** pair a kind's shade with its own tint, and check 4.5:1 for every new pairing in both the light and dark scheme.
-- **Do** say a state in words as well as colour: "Don't miss" is written on its red pill; kind is never conveyed by colour alone.
+- **Do** say a state in words as well as colour: a pick's reason is written on its red pill; kind is never conveyed by colour alone.
 - **Do** separate with space first, hairlines second: 4rem between sections, 1rem between cards.
 - **Do** give every action a 44px target and every filter chip at least 32px on phones.
 - **Do** use tabular figures for dates, times and counts.

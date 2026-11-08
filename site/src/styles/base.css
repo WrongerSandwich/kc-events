@@ -87,8 +87,9 @@ main:focus { outline: none; }
 a.chip.plain { background: none; padding: 0; }
 a.chip:hover { text-decoration: underline; }
 
-/* Don't miss, in words and in the city flag's red, on an explorer row and an event page: solid where a kind's chip is
-   tinted, so no hue is mistaken for a kind, and it still reads in grayscale and to a screen reader. */
+/* The pick tag (PickTag.svelte): the pick's reason in words, in the city flag's red, on a card, an explorer row and an
+   event page: solid where a kind's chip is tinted, so no hue is mistaken for a kind, and it still reads in grayscale
+   and to a screen reader. */
 .dont-miss {
   display: inline-flex; align-items: center;
   font-size: var(--text-xs);

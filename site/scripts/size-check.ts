@@ -82,9 +82,9 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // and 1,700 for the explorer critique of 2026-10-25: the phone bar's swiping row of kind chips, stuck lines, icon-only
   // Clear and saved view buttons and Filters control, Export after the results, quiet Saves on phone rows, the Every
   // date pill, the fades at the rail's and the kind row's ends, and the sheet's Show button unfilled in the dark
-  // (measured 1,670 against a 55,006 build), and 300 for a pick's reason leading its why-line on each row, with the six
-  // reasons' words (#273; measured 262)
-  { page: "explore.html", budget: 57_000, build: "fixture" },
+  // (measured 1,670 against a 55,006 build), and 400 for the pick tag carrying the reason on each row, with the six
+  // reasons' words and the "Pick:" a screen reader hears (#273; measured 363)
+  { page: "explore.html", budget: 57_100, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
   // A page with no island of its own loads no Svelte runtime: the header's Saved link and staleness banner are plain
