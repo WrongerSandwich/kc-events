@@ -1,4 +1,5 @@
 import type { Judgment } from "../../src/curation.js";
+import type { Event } from "../../src/dataset.js";
 import type { CompletionResult } from "../../src/ports.js";
 import type { Source } from "../../src/registry.js";
 import { toLocalIso } from "../../src/time.js";
@@ -62,6 +63,32 @@ export function costing(costUsd: number, ...candidates: unknown[]): CompletionRe
 /** A scripted extraction reply listing these candidates, at a cent a call. */
 export function reply(...candidates: unknown[]): CompletionResult {
   return costing(0.01, ...candidates);
+}
+
+let storedCount = 0;
+/** An active one-off at Knuckleheads as the dataset stores it, judged and unchanged since week one; ids count up. */
+export function storedEvent(title: string, overrides: Partial<Event> = {}): Event {
+  return {
+    id: `evt_${String(++storedCount).padStart(12, "0")}`,
+    title,
+    start: "2026-10-31T20:00:00-05:00",
+    venue: "Knuckleheads",
+    neighborhood: "East Bottoms",
+    primaryUrl: knuckleheads.urls[0]!,
+    kind: "music",
+    recurrence: "one-off",
+    dontMiss: false,
+    firstSeen: WEEK_1_ISO,
+    lastVerified: WEEK_1_ISO,
+    lastChanged: WEEK_1_ISO,
+    lastJudged: WEEK_1_ISO,
+    status: "active",
+    verificationFailures: 0,
+    consecutiveOutages: 0,
+    lead: { lane: "registry", source: knuckleheads.name },
+    evidence: { date: "Sat, Oct 31 · Show 8:00 PM", venue: "Knuckleheads, 1 Main St" },
+    ...overrides,
+  };
 }
 
 /** A scripted curation reply carrying these judgments, at a per-call cost. */

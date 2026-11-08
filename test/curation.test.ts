@@ -40,7 +40,7 @@ describe("don't-miss curation", () => {
       whyLine: "A touring act that rarely plays a room this small.",
       lastJudged: WEEK_1_ISO,
     });
-    expect(report.curation).toEqual({ calls: 1, judged: 1, flagged: 1, close: 0, rejudgedForPrompt: 0, problems: [], datedWhyLines: [], handPicks: { applied: 0, stale: [], changed: [] } });
+    expect(report.curation).toMatchObject({ calls: 1, judged: 1, flagged: 1, close: 0, rejudgedForPrompt: 0, problems: [], datedWhyLines: [], handPicks: { applied: 0, stale: [], changed: [] } });
     expect(report.spend.totalUsd).toBeCloseTo(0.03);
   });
 });
@@ -206,7 +206,7 @@ describe("what is sent for curation", () => {
     const second = await runAt(WEEK_2, first.dataset, [extracted(candidate(), tour)]);
 
     expect(second.curationCalls).toEqual([]);
-    expect(second.report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, close: 0, rejudgedForPrompt: 0, problems: [], datedWhyLines: [], handPicks: { applied: 0, stale: [], changed: [] } });
+    expect(second.report.curation).toMatchObject({ calls: 0, judged: 0, flagged: 0, close: 0, rejudgedForPrompt: 0, problems: [], datedWhyLines: [], handPicks: { applied: 0, stale: [], changed: [] } });
     expect(second.dataset.events[0]).toMatchObject({ dontMiss: true, whyLine: "Why.", lastJudged: WEEK_1_ISO, lastVerified: WEEK_2_ISO });
   });
 

@@ -65,7 +65,55 @@ const full: RunReport = {
     rejudgedForPrompt: 3,
     problems: ["evt_1: flagged with no why-line"],
     datedWhyLines: [{ id: "evt_2", title: "Big Blue Pink", primaryUrl: "https://museum.test/big-blue-pink", whyLine: "A retrospective that closes December 13." }],
-    handPicks: { applied: 0, stale: [], changed: [] },
+    picks: [
+      {
+        id: "evt_3",
+        title: "Stewart Copeland",
+        venue: "The Granada",
+        kind: "music",
+        start: "2026-11-07T19:30:00-06:00",
+        primaryUrl: "https://thegranada.test/events",
+        reason: "rare",
+        whyLine: "The Police's drummer on a one-night stop.",
+        marks: ["new", "hand"],
+      },
+      {
+        id: "evt_5",
+        title: "Electric Poe",
+        venue: "Union Cemetery",
+        kind: "theater/dance",
+        start: "2026-10-14",
+        end: "2026-11-01",
+        primaryUrl: "https://thecoterie.test/season",
+        reason: "unusual",
+        whyLine: "Poe staged outdoors before a cemetery's holding vault.",
+        marks: [],
+      },
+    ],
+    closeCalls: [
+      {
+        id: "evt_4",
+        title: "Twin Peaks: Conversation with the Stars",
+        venue: "Kauffman Center",
+        kind: "talks/readings",
+        start: "2026-11-15T19:00:00-06:00",
+        primaryUrl: "https://kauffman.test/events",
+        closeNote: "Nearly rare, but the page says nothing of who appears.",
+      },
+    ],
+    moved: [
+      { id: "evt_4", title: "Twin Peaks: Conversation with the Stars", primaryUrl: "https://kauffman.test/events", from: "pick", to: "close", cause: "re-judged under a new prompt" },
+      { id: "evt_3", title: "Stewart Copeland", primaryUrl: "https://thegranada.test/events", from: "no", to: "pick", cause: "hand pick" },
+    ],
+    byKind: [
+      { name: "music", count: 1 },
+      { name: "theater/dance", count: 1 },
+    ],
+    byReason: [
+      { name: "rare", count: 1 },
+      { name: "unusual", count: 1 },
+    ],
+    handPicks: { applied: 1, stale: [{ id: "evt_x", title: "Electric Poe", note: "no such event" }], changed: [{ id: "evt_3", title: "Stewart Copeland" }] },
   },
   sources: [
     { name: "Knuckleheads", result: "fetched", extracted: 12 },
@@ -214,6 +262,34 @@ describe("the run report", () => {
 
       - evt_2 "Big Blue Pink": "A retrospective that closes December 13."
 
+      ### Picks
+
+      By kind: music 1, theater/dance 1. By reason: rare 1, unusual 1.
+
+      - 2026-11-07 Stewart Copeland at The Granada [rare]: The Police's drummer on a one-night stop. (new, hand)
+      - 2026-10-14–2026-11-01 Electric Poe at Union Cemetery [unusual]: Poe staged outdoors before a cemetery's holding vault.
+
+      ### Close calls
+
+      - 2026-11-15 Twin Peaks: Conversation with the Stars at Kauffman Center: Nearly rare, but the page says nothing of who appears.
+
+      ### Moved this run
+
+      - Twin Peaks: Conversation with the Stars: pick → close (re-judged under a new prompt)
+      - Stewart Copeland: no → pick (hand pick)
+
+      ### Hand picks
+
+      1 entry applied.
+
+      Stale entries, not applied:
+
+      - evt_x "Electric Poe": no such event
+
+      Hand-governed events whose facts changed this run:
+
+      - evt_3 "Stewart Copeland"
+
       ## Failing sources
 
       - Pipe | Hall
@@ -290,6 +366,15 @@ describe("the run report", () => {
 
     expect(parsed.counts).toMatchObject({ archived: 0, heldThroughOutage: 0, quoteNotOnPage: 0, keptOnStoredCitation: 0, expired: { ...expiredBefore, stale: 0 } });
     expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], venueNeighborhoods: [], identityChurn: [], kindChanges: [], likelyDuplicates: [], keptOnStoredCitation: [], skippedAsExpired: [], spend: { modelCalls: [] } });
+  });
+
+  it("fills a report from before picks carried reasons (ADR 0014) with no close calls, no lists and no hand picks, and renders its empty sections", () => {
+    const { close, picks, closeCalls, moved, byKind, byReason, handPicks, ...olderCuration } = full.curation;
+    const parsed = parseRunReport({ ...full, curation: olderCuration });
+
+    expect(parsed.curation).toMatchObject({ close: 0, picks: [], closeCalls: [], moved: [], byKind: [], byReason: [], handPicks: { applied: 0, stale: [], changed: [] } });
+    const rendered = renderReportMarkdown(parsed);
+    expect(rendered).toContain("### Picks\n\n_None._\n\n### Close calls\n\n_None._\n\n### Moved this run\n\n_None._\n\n### Hand picks\n\n0 entries applied.\n\n## Failing sources");
   });
 
   it("reads a model call from before stages were recorded, and shows it on a row of its own", () => {

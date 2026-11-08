@@ -2,6 +2,8 @@ import { z } from "zod";
 import { EXPIRY_REASONS, type ExpiryReason } from "./dataset.js";
 import { ARCHIVE_AFTER_WEEKS } from "./archive.js";
 import type { HandPicksReport } from "./hand-picks.js";
+import { MOVE_CAUSES, type CloseLine, type PickLine, type PickMove } from "./picks-report.js";
+import { PICK_REASONS } from "./dataset.js";
 import { markdownList, plural, tableCell } from "./markdown.js";
 import { SKIP_REASONS, type SkipReason } from "./skip.js";
 import { MODEL_STAGES, type ModelStage, type ServedBy } from "./ports.js";
@@ -184,6 +186,16 @@ export interface RunReport {
     problems: string[];
     /** Active picks, judged this run or before, whose why-line states their own end date; still flagged (#234). */
     datedWhyLines: (ChangeRef & { whyLine: string })[];
+    /** Every active pick in the horizon, soonest first (ADR 0014): what a person reads to decide which to overrule. */
+    picks: PickLine[];
+    /** Every active close call in the horizon, soonest first: the ones a person might pull in. */
+    closeCalls: CloseLine[];
+    /** Every event whose standing (pick, close, no) changed this run, with the cause. */
+    moved: PickMove[];
+    /** The picks in the horizon counted by kind, most first. */
+    byKind: { name: string; count: number }[];
+    /** The picks in the horizon counted by reason, most first. */
+    byReason: { name: string; count: number }[];
     /** The entries of data/picks.yaml this run (ADR 0014): applied, stale, and hand-governed events whose facts changed. */
     handPicks: HandPicksReport;
   };
@@ -286,6 +298,10 @@ const flagSince = z.boolean().default(false);
 const listSince = <T extends z.ZodType>(item: T) => z.array(item).default([]);
 const eventRef = z.strictObject({ title: z.string(), primaryUrl: z.string() });
 const changeRef = eventRef.extend({ id: z.string() });
+const pickLineFields = { ...changeRef.shape, venue: z.string(), kind: z.string(), start: z.string().optional(), end: z.string().optional() };
+const pickLine = z.strictObject({ ...pickLineFields, reason: z.enum(PICK_REASONS), whyLine: z.string(), marks: z.array(z.enum(["new", "hand"])) });
+const closeLine = z.strictObject({ ...pickLineFields, closeNote: z.string() });
+const named = z.strictObject({ name: z.string(), count });
 const likelyDuplicateRecord = changeRef.extend({ firstDay: z.iso.date().nullable(), end: z.iso.date().nullable() });
 const hostEvents = z.strictObject({ host: z.string(), events: count });
 const servedBy = z.strictObject({ model: z.string(), provider: z.string().optional(), generationId: z.string() });
@@ -367,6 +383,20 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
     rejudgedForPrompt: countSince,
     problems: z.array(z.string()),
     datedWhyLines: listSince(changeRef.extend({ whyLine: z.string() })),
+    picks: listSince(pickLine),
+    closeCalls: listSince(closeLine),
+    moved: listSince(
+      z.strictObject({
+        id: z.string(),
+        title: z.string(),
+        primaryUrl: z.string(),
+        from: z.enum(["pick", "close", "no"]),
+        to: z.enum(["pick", "close", "no"]),
+        cause: z.enum(MOVE_CAUSES),
+      }),
+    ),
+    byKind: listSince(named),
+    byReason: listSince(named),
     handPicks: z
       .strictObject({
         applied: count,
@@ -524,6 +554,8 @@ ${plural(report.curation.judged, "event")} judged in ${plural(report.curation.ca
     : ""
 }
 
+${picksSection(report.curation)}
+
 ## Failing sources
 
 ${markdownList(report.failingSources)}
@@ -661,4 +693,34 @@ function likelyDuplicateLine(r: LikelyDuplicateRecord): string {
 
 function eventList(events: EventRef[]): string {
   return markdownList(events.map((e) => `${e.title}: ${e.primaryUrl}`));
+}
+
+/** A pick's dates as the report shows them: the start, a run's start–end, or "through" an end alone. */
+function pickDates({ start, end }: { start?: string; end?: string }): string {
+  const [from, to] = [start?.slice(0, 10), end?.slice(0, 10)];
+  if (from !== undefined && to !== undefined && to !== from) return `${from}–${to}`;
+  if (from !== undefined) return from;
+  return `through ${to}`;
+}
+
+const counted = (counts: { name: string; count: number }[]) => counts.map((c) => `${c.name} ${c.count}`).join(", ");
+
+/** The picks, close calls, moves and hand entries of the run (ADR 0014), the part of the report a person reads to overrule the model. */
+function picksSection({ picks, closeCalls, moved, byKind, byReason, handPicks }: RunReport["curation"]): string {
+  const pickLines = picks.map((p) => `${pickDates(p)} ${p.title} at ${p.venue} [${p.reason}]: ${p.whyLine}${p.marks.length > 0 ? ` (${p.marks.join(", ")})` : ""}`);
+  const closeLines = closeCalls.map((c) => `${pickDates(c)} ${c.title} at ${c.venue}: ${c.closeNote}`);
+  const moveLines = moved.map((m) => `${m.title}: ${m.from} → ${m.to} (${m.cause})`);
+  return [
+    "### Picks",
+    ...(picks.length > 0 ? [`By kind: ${counted(byKind)}. By reason: ${counted(byReason)}.`] : []),
+    markdownList(pickLines),
+    "### Close calls",
+    markdownList(closeLines),
+    "### Moved this run",
+    markdownList(moveLines),
+    "### Hand picks",
+    `${plural(handPicks.applied, "entry", "entries")} applied.`,
+    ...(handPicks.stale.length > 0 ? ["Stale entries, not applied:", markdownList(handPicks.stale.map((s) => `${s.id} "${s.title}": ${s.note}`))] : []),
+    ...(handPicks.changed.length > 0 ? ["Hand-governed events whose facts changed this run:", markdownList(handPicks.changed.map((c) => `${c.id} "${c.title}"`))] : []),
+  ].join("\n\n");
 }

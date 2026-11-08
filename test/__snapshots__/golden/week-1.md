@@ -79,6 +79,24 @@ _None._
 
 5 events judged in 1 call, 1 picked, 0 close calls.
 
+### Picks
+
+By kind: music 1. By reason: rare 1.
+
+- 2026-10-31 Big Show at Knuckleheads [rare]: A rare club date from a band that plays arenas. (new)
+
+### Close calls
+
+_None._
+
+### Moved this run
+
+- Big Show: no → pick (new event)
+
+### Hand picks
+
+0 entries applied.
+
 ## Failing sources
 
 _None._

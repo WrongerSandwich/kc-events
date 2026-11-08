@@ -58,6 +58,7 @@ import {
   trackDiscoveryHosts,
 } from "./discovery.js";
 import { applyHandPicks, type HandPick } from "./hand-picks.js";
+import { closeCallsInHorizon, countBy, pickMoves, picksInHorizon } from "./picks-report.js";
 import { hostOf, onHost, pageKey, samePage, sameSite } from "./hosts.js";
 import {
   calendarDate,
@@ -233,6 +234,8 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   };
 
   const finishedIso = toLocalIso(ports.clock.now(), config.timezone);
+  // The picks as a person reads them (ADR 0014), against the dataset the run started from.
+  const pickLines = picksInHorizon(events, today, config.horizonWeeks, dataset.events);
 
   const report: RunReport = {
     runDate: today,
@@ -272,7 +275,16 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
     },
     discovery: discovery.report,
     reverification: { pagesRead: reverified.pagesRead, problems: reverified.problems },
-    curation: { ...curation.report, datedWhyLines: datedWhyLines(events), handPicks: overridden.report },
+    curation: {
+      ...curation.report,
+      datedWhyLines: datedWhyLines(events),
+      picks: pickLines,
+      closeCalls: closeCallsInHorizon(events, today, config.horizonWeeks),
+      moved: pickMoves(dataset.events, events, startedIso),
+      byKind: countBy(pickLines, "kind"),
+      byReason: countBy(pickLines, "reason"),
+      handPicks: overridden.report,
+    },
     sources: sourceReports,
     ownPages: [...ownPages.report, ...picks.report],
     failingSources: registryLane.failingSources,
@@ -2487,7 +2499,7 @@ async function curate(events: Event[], model: CappedModel, context: CurationCont
   const due = events.filter((e) => needsCuration(e, judgedWith)).sort(byKindThenDate);
   const judged = new Map<string, Event>();
   const unjudgedFlags = new Map<string, Event>();
-  const report: Omit<RunReport["curation"], "datedWhyLines" | "handPicks"> = { calls: 0, judged: 0, flagged: 0, close: 0, rejudgedForPrompt: 0, problems: [] };
+  const report: Pick<RunReport["curation"], "calls" | "judged" | "flagged" | "close" | "rejudgedForPrompt" | "problems"> = { calls: 0, judged: 0, flagged: 0, close: 0, rejudgedForPrompt: 0, problems: [] };
   let notCurated = 0;
 
   for (let i = 0; i < due.length; i += CURATION_BATCH_SIZE) {

@@ -78,7 +78,7 @@ describe("run", () => {
       leadsOnSuggestedHosts: 0,
       notRun: { reason: "off" },
     });
-    expect(report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, close: 0, rejudgedForPrompt: 0, problems: [], datedWhyLines: [], handPicks: { applied: 0, stale: [], changed: [] } });
+    expect(report.curation).toEqual({ calls: 0, judged: 0, flagged: 0, close: 0, rejudgedForPrompt: 0, problems: [], datedWhyLines: [], picks: [], closeCalls: [], moved: [], byKind: [], byReason: [], handPicks: { applied: 0, stale: [], changed: [] } });
     expect(report.promotionSuggestions).toEqual([]);
     expect(report.heldForPromotion).toEqual([]);
     expect(report.releasedForPromotion).toEqual([]);
