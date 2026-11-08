@@ -616,17 +616,18 @@ test("a pick's reason leads its why-line on the card, the row and the event page
   const card = page.locator("#pick-evt_e2e000000001");
   await expect(card.locator(".why")).toHaveText("Rare · A rare touring occasion for a Kansas City stage.");
   await expect(card.locator(".why .reason")).toHaveText("Rare ·");
-  // The word is the only place the reason shows: the pill still says Don't miss (Solid-Means-State).
-  await expect(card.getByText("Don't miss", { exact: true })).toHaveCount(0);
+  // The reason is a word, not a second tag: no fill, no edge (Solid-Means-State: only Don't miss is solid).
+  await expect(card.locator(".why .reason")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(card.locator(".why .reason")).toHaveCSS("border-style", "none");
   await on(page, BUILD_DAY, "/explore?when=all");
-  await expect(page.locator("article.row.flagged").filter({ hasText: "Closes Sunday." }).locator(".why")).toHaveText("Major run · Closes Sunday.");
+  await expect(page.locator("article.row.flagged").filter({ hasText: "A touring exhibition's one Kansas City stop." }).locator(".why")).toHaveText("Major run · A touring exhibition's one Kansas City stop.");
   await on(page, BUILD_DAY, "/e/evt_e2e000000005");
   await expect(page.locator(".why")).toHaveText("Tradition · Once a year.");
   await expect(page.getByText("Don't miss", { exact: true })).toBeVisible();
   await page.goto("/about");
   const what = page.locator("h2", { hasText: "What a pick is" }).locator("xpath=following-sibling::p[1]");
   for (const word of ["rare", "big name", "occasion", "tradition", "unusual", "major run"]) await expect(what).toContainText(word);
-  await expect(what.getByRole("link", { name: "a file beside them" })).toHaveAttribute("href", /data\/picks\.yaml$/);
+  await expect(what.getByRole("link", { name: "a file in the same repository" })).toHaveAttribute("href", /data\/picks\.yaml$/);
 });
 
 test("the site's page for an event sends the reader to the event's own page and names the list it was verified from", async ({ page }) => {
