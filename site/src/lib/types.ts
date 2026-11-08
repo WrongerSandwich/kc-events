@@ -1,5 +1,11 @@
 export type Recurrence = "one-off" | "limited-run" | "recurring";
 
+/**
+ * Why an event is a pick (ADR 0014): the job's PICK_REASONS vocabulary, spelled out here as Recurrence is, since nothing
+ * under lib/ imports the job; load-dataset.ts, which does, checks the two agree at compile time.
+ */
+export type PickReason = "rare" | "big-name" | "occasion" | "tradition" | "unusual" | "major-run";
+
 /** An active event as the site sees it: the job's record minus its internals, plus region. */
 export type PublishedEvent = {
   id: string;
@@ -33,6 +39,8 @@ export type PublishedEvent = {
   kind: string;
   recurrence: Recurrence;
   dontMiss: boolean;
+  /** The reason the event is a pick (ADR 0014, #272); present exactly when dontMiss is true, as whyLine is. */
+  pickReason?: PickReason;
   whyLine?: string;
   lastVerified: string;
 };

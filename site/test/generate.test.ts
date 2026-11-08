@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { PRODUCT, USER_AGENT } from "../../src/adapters/identity";
+import { PICK_REASONS } from "../../src/dataset";
 import { MAX_PICKS, writeGenerated } from "../src/build/write-generated";
 import { activeEvent, configYaml, dataset } from "./fixtures/dataset";
 import { tempDir } from "./fixtures/temp-dir";
@@ -40,6 +41,9 @@ describe("writeGenerated", () => {
     expect(meta).not.toHaveProperty("events");
     expect(exported(join(outDir, "events.ts")).map((e: { id: string }) => e.id)).toEqual(["evt_000000000001", "evt_000000000002"]);
     expect(exported(join(outDir, "dont-miss.ts")).map((e: { id: string }) => e.id)).toEqual(["evt_000000000001"]);
+    // A pick's reason goes everywhere its why-line does (#272); a non-pick carries none.
+    expect(exported(join(outDir, "dont-miss.ts"))[0]).toMatchObject({ pickReason: "rare", whyLine: "A rare occasion." });
+    expect(exported(join(outDir, "events.ts"))[1]).not.toHaveProperty("pickReason");
     expect(exported(join(outDir, "descriptions.ts"))).toEqual({ evt_000000000002: "A three-piece playing their first record." });
     // The about page's user agent, the footer's geography, and the landing pages' horizon and neighborhoods come from
     // the job, so they cannot drift from it (#93, #138).
@@ -56,6 +60,11 @@ describe("writeGenerated", () => {
     expect(published).toMatchObject({ schemaVersion: 2, generatedAt: "2026-10-05T14:00:00.000Z", lastSuccessfulRun: "2026-10-05T06:30:00-05:00" });
     expect(published.events.map((e: { id: string }) => e.id)).toEqual(["evt_000000000001", "evt_000000000002"]);
     expect(published.events[0]).toEqual(exported(join(outDir, "events.ts"))[0]);
+    for (const e of published.events) {
+      if (e.dontMiss) expect(PICK_REASONS, `pick ${e.id}`).toContain(e.pickReason);
+      else expect(e, `event ${e.id}`).not.toHaveProperty("pickReason");
+    }
+    expect(published.events.filter((e: { dontMiss: boolean }) => e.dontMiss)).toHaveLength(1);
     expect(published.events[1]).toEqual({ ...exported(join(outDir, "events.ts"))[1], description: "A three-piece playing their first record." });
   });
 

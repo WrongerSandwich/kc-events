@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { PICK_REASONS } from "../../src/dataset";
 import { loadPublished } from "../src/build/load-dataset";
 import { writeGenerated } from "../src/build/write-generated";
 import { tempDir } from "./fixtures/temp-dir";
@@ -42,10 +43,17 @@ describe("the committed dataset through the site's loader", () => {
     expect(published.lastSuccessfulRun).toBe(p.lastSuccessfulRun);
     expect(published.events.map((e: { id: string }) => e.id)).toEqual(p.events.map((e) => e.id));
 
-    const allowed = new Set(["id", "title", "start", "end", "schedule", "venue", "room", "neighborhood", "region", "primaryUrl", "eventUrl", "kind", "recurrence", "dontMiss", "whyLine", "lastVerified", "description", "price", "ages", "days", "daysLine"]);
+    const allowed = new Set(["id", "title", "start", "end", "schedule", "venue", "room", "neighborhood", "region", "primaryUrl", "eventUrl", "kind", "recurrence", "dontMiss", "pickReason", "whyLine", "lastVerified", "description", "price", "ages", "days", "daysLine"]);
     for (const e of published.events) {
       for (const key of Object.keys(e)) expect(allowed.has(key), `event ${e.id} publishes "${key}"`).toBe(true);
       expect(e.description).toBe(p.descriptions[e.id]);
     }
+  });
+
+  it("publishes a reason from the vocabulary on every pick and on nothing else (#272, ADR 0014)", () => {
+    const picks = p.events.filter((e) => e.dontMiss);
+    expect(picks.length).toBeGreaterThan(0);
+    for (const e of picks) expect(PICK_REASONS, `pick ${e.id} publishes reason "${e.pickReason}"`).toContain(e.pickReason);
+    for (const e of p.events.filter((e) => !e.dontMiss)) expect(e, `event ${e.id}`).not.toHaveProperty("pickReason");
   });
 });

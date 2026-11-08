@@ -6,17 +6,22 @@ import { readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
 import { PRODUCT, USER_AGENT } from "../../../src/adapters/identity.ts";
 import { ELSEWHERE_IN_THE_METRO, parseConfig, type RunConfig } from "../../../src/config.ts";
-import { DATASET_SCHEMA_VERSION, parseDataset, WEEKDAYS, type Event, type Weekday } from "../../../src/dataset.ts";
+import { DATASET_SCHEMA_VERSION, parseDataset, WEEKDAYS, type Event, type PickReason as JobPickReason, type Weekday } from "../../../src/dataset.ts";
 import { genericVenueName, venueAndRoom } from "../../../src/identity.ts";
 import { regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
 import { addDays, isDateOnly, isValidDate, localDate } from "../lib/dates";
 import { isPast } from "../lib/events";
-import type { Published, PublishedDescriptions, PublishedEvent } from "../lib/types";
+import type { PickReason, Published, PublishedDescriptions, PublishedEvent } from "../lib/types";
 import { publishedChanges, readRunChanges } from "./changes.ts";
 import { href } from "./href.ts";
 import { isProductionBuild, knownOrigin } from "./origin.ts";
 import { buildVenues, readVenueTable } from "./venues.ts";
+
+/** True when A and B are the same union (each assignable to the other), never otherwise. */
+type SameUnion<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+/** lib/types.ts spells the job's pick reasons out rather than importing them; a reason added on either side alone fails here. */
+true satisfies SameUnion<PickReason, JobPickReason>;
 
 /** Bumped by hand when the site is updated for a new dataset shape; a job-side bump fails the build until then. */
 export const SITE_EXPECTS_SCHEMA_VERSION = 1;
@@ -122,6 +127,7 @@ export function project(e: Event, config: RunConfig): PublishedEvent {
   if (e.start !== undefined) out.start = e.start;
   if (e.end !== undefined) out.end = e.end;
   if (e.schedule !== undefined) out.schedule = e.schedule;
+  if (e.pickReason !== undefined) out.pickReason = e.pickReason;
   if (e.whyLine !== undefined) out.whyLine = e.whyLine;
   if (e.price !== undefined) out.price = e.price;
   if (e.ages !== undefined) out.ages = e.ages;
