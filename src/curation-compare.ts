@@ -187,7 +187,7 @@ export function renderCurationComparison(scores: RepeatScore[], diff: PromptMove
   const lines: string[] = [];
   lines.push(`# Curation prompt comparison ${meta.date}`, "");
   lines.push(
-    `${meta.sample} eligible event(s) judged under the current prompt (\`${meta.currentHash}\`)${meta.candidateHash ? ` and a candidate (\`${meta.candidateHash}\`)` : ""} by \`${meta.model}\`, in batches formed as the run forms them, over ${meta.minutes.toFixed(1)} minute(s)${meta.capHit ? " (**cap hit**: later trials were not made)" : ""}. Made by \`pnpm compare-curation\` (ADR 0014).`,
+    `${meta.sample} eligible event(s) judged under the current prompt (\`${meta.currentHash}\`)${meta.candidateHash ? ` and a candidate (\`${meta.candidateHash}\`)` : ""} by \`${meta.model}\`, in batches formed as the run forms them, ${meta.minutes < 0.05 ? "rendered from saved trials" : `over ${meta.minutes.toFixed(1)} minute(s) of calls this invocation`}${meta.capHit ? " (**cap hit**: later trials were not made)" : ""}. Made by \`pnpm compare-curation\` (ADR 0014).`,
     "",
   );
   lines.push("## Repeatability and rate", "");

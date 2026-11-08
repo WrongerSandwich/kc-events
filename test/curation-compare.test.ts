@@ -77,6 +77,12 @@ describe("scoring repeated judgments", () => {
     expect(markdown).toContain("Picks by kind (current): music 2, film 1.");
   });
 
+  it("a report re-rendered from saved trials, with no calls made, says so instead of a time", () => {
+    const markdown = renderCurationComparison(scoreRepeats(current, dataset), [], { date: "2026-11-09", model: "m", currentHash: "abcdefabcdef", sample: 4, minutes: 0 });
+    expect(markdown).toContain("rendered from saved trials");
+    expect(markdown).not.toContain("0.0 minute");
+  });
+
   it("scores each prompt's trials apart, current first", () => {
     const candidate = [0, 1, 2].map((r) => trial("candidate", r, a.id, "close", "none", "Nearly rare."));
     const scores = scoreRepeats([...candidate, ...current], dataset);
