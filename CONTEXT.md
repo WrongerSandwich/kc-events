@@ -1,6 +1,6 @@
 # KC This Week
 
-A weekly-researched, ad-free picture of what is worth doing in Kansas City, built around one structural idea: which events are don't-miss because they won't come around again, versus which are always there.
+A weekly-researched, ad-free picture of what is worth doing in Kansas City, built around one structural idea: which events are picks, each for a named reason (it won't come around again, a name everyone knows, an occasion the city turns out for, a once-a-year tradition, a form unlike anything else, a run worth planning around), versus which are always there.
 
 ## Language
 
@@ -56,15 +56,27 @@ _Avoid_: special, deal
 How a recurring event repeats, in a few words from its page ("Every Tuesday, 7pm"). A recurring event carries it instead of a start and end date. A sports team's home game is a one-off, one per game; a season as a whole is not an event (#159).
 
 **Don't-miss flag**:
-The editorial call that a one-off or limited run is worth going out of your way for. Never applied to recurring events. The curation prompt names a density, on the order of 30 to 50 flags across an eight-week horizon of about 500 events: a calibration for the threshold, never a quota for a batch. The domain's and the code's term (`dontMiss`); a reader sees a flagged event called a **pick**, tagged "Don't miss" (#185).
+The editorial call that a one-off or limited run belongs on the front page, made under one named **reason** (ADR 0014). Never applied to recurring events. The curation prompt names a density, on the order of 50 to 80 picks across an eight-week horizon of about 450 eligible events, and a similar number of close calls: a calibration for the threshold, never a quota for a batch, to be corrected to the truth after two runs. The domain's and the code's term (`dontMiss`, with `pickReason`); a reader sees a flagged event called a **pick**, tagged "Don't miss" (#185).
 _Avoid_: featured, top pick, interest score, rating
 
 **Pick**:
 The reader's word for an event carrying the don't-miss flag, in every sentence the site writes (the About page's "What a pick is", the explorer's "Picks only", the "Picks" calendar feed, `?picks=1`). "Don't miss" is only the text of the tag that marks one. Code and the dataset keep `dontMiss`.
 _Avoid_: don't-miss as a noun or adjective in reader-facing copy
 
+**Reason**:
+Why a pick is one, from a closed vocabulary of six (ADR 0014), each with a test in the curation prompt: `rare` (a chance that seldom comes to Kansas City), `big-name` (a name most people would recognise), `occasion` (a large communal event much of the city turns out for), `tradition` (once a year, with a season to it), `unusual` (the form or setting is the draw), `major-run` (a notable limited run worth planning around). One per pick, the primary; stored as `pickReason`, published to the site. `rare` and `big-name` are split on purpose: the scene's pick and everyone's.
+_Avoid_: category, tag, score
+
+**Close call**:
+The model's middle answer (ADR 0014): it would understand a friend bringing the event up, but no reason's test is clearly met. Stored (`closeCall`, with a one-sentence `closeNote` naming the reason it nearly met and what was missing) so it is stable between runs, listed in the run report's "Close calls", never published. The list a person reads to pull a pick in by hand.
+_Avoid_: maybe, runner-up, honourable mention
+
+**Hand pick**:
+A pick or un-pick a person makes in `data/picks.yaml`, by event id (ADR 0014): applied after curation on every run, standing until the entry is removed, whatever the model says later. The event carries `pickedBy: "hand"` and keeps the model's own judgment in `modelJudgment`, restored when the entry goes. The file is also the record of where a person disagreed with the model. A stale entry (no such active event, a folded or recurring one, a title that no longer matches) is reported under "Hand picks" and not applied.
+_Avoid_: override (in reader-facing copy), manual flag
+
 **Why-line**:
-The one sentence stating why an event carries the don't-miss flag.
+The one sentence stating why an event is a pick, in its reason's own terms: a claim a reader could disagree with.
 _Avoid_: blurb, description, summary
 
 **Description**:
@@ -85,7 +97,7 @@ The date of the most recent run that read the event's date and venue from its pr
 The run that first saw an event or last changed its title, date, venue, or status. A name that changes only in case or punctuation, or a date read with a time where it had none (or none where it had one), is no change. Curation re-judges an event when it has changed since it was last judged, or was judged under another curation prompt (judged-with).
 
 **Last-judged**:
-The run that last judged an event for the don't-miss flag. Absent until curation has seen the event; a run the spend cap cuts short leaves it absent, so the event comes up again.
+The run that last judged an event (pick, close or no). Absent until curation has seen the event; a run the spend cap cuts short leaves it absent, so the event comes up again.
 
 **Judged-with**:
 The curation prompt a judgment was made under, as the first 12 hex digits of the sha256 of its text. An event judged under another prompt, or before judgments carried one, is judged again, so a prompt fix reaches every event once (#256); any edit to the prompt, whitespace included, re-judges every eligible event.
@@ -110,7 +122,7 @@ A run that only re-verifies (#253, `pnpm research --reverify-only`, Thursdays): 
 _Avoid_: midweek run (when meaning the weekly run on another day)
 
 **Run report**:
-The committed record of one run: counts, spend against the cap, per-source results, sources failing repeatedly, unmappable neighborhoods, and promotion suggestions. Since #135 its JSON twin also records the run's changes against the run its dataset came from: new picks, moves, and events gone, which the changes page shows.
+The committed record of one run: counts, spend against the cap, per-source results, sources failing repeatedly, unmappable neighborhoods, and promotion suggestions. Since #135 its JSON twin also records the run's changes against the run its dataset came from: new picks, moves, and events gone, which the changes page shows. Since ADR 0014 its Curation section lists every pick and close call in the horizon (reason or note, new and hand marks), what moved this run with its cause, picks by kind and by reason, and the hand picks applied and stale: the part a person reads each week before writing an entry in `data/picks.yaml`.
 
 **Promotion**:
 Moving a source that the discovery lane has found events on in two runs into the registry. The run tracks discovery sources by host (a ticketing platform is no one source and is never suggested). Always a suggestion in the run report, acted on by hand; never automatic. `pnpm promote <host>` drafts the registry stanza from the host's held events, and `--write` appends it for a person to finish and commit (#255). Promoting a host releases the events held for promotion from it on the next run (ADR 0012); each suggestion says how many it would release.
