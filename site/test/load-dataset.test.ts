@@ -118,6 +118,13 @@ venueAliases:
     expect(JSON.stringify(p.events[0])).not.toContain("Tickets");
   });
 
+  it("carries a pick's reason, and a non-pick carries none (#272, ADR 0014)", () => {
+    const p = loadPublished(write(dataset([activeEvent({ dontMiss: true, pickReason: "big-name", whyLine: "A big name." }), activeEvent({ id: "evt_000000000002" })])));
+    expect(p.events[0]).toMatchObject({ dontMiss: true, pickReason: "big-name", whyLine: "A big name." });
+    expect(p.events[1]).toMatchObject({ dontMiss: false });
+    expect(p.events[1]).not.toHaveProperty("pickReason");
+  });
+
   it("carries a run's days, and not their quote; a run without days carries none (#143)", () => {
     const run = { recurrence: "limited-run" as const, start: "2026-10-14", end: "2026-11-01", eventUrl: "https://www.therecordbar.com/shows/a-show" };
     const quote = { days: { page: "https://www.therecordbar.com/shows/a-show", quote: "Fridays through Sundays" } };

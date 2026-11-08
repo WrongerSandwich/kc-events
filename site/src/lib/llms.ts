@@ -33,6 +33,7 @@ export const EVENTS_JSON_FIELDS: Record<keyof DatasetEvent, string> = {
   kind: "one of the kinds under Lists",
   recurrence: "one-off, limited-run, or recurring",
   dontMiss: "true for a pick",
+  pickReason: "why the event is a pick, one of rare, big-name, occasion, tradition, unusual, major-run; present exactly when dontMiss is true",
   whyLine: "a pick's one-line reason, written by a model",
   lastVerified: "when the date and venue were last read from primaryUrl, an ISO instant",
   description: "a short description written by a model from the event's page, when there is one",
