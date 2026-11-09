@@ -11,12 +11,19 @@ import { sameVenue } from "../src/identity.js";
 import { parseRunReport } from "../src/report.js";
 import { parseRegistry } from "../src/registry.js";
 import { neighborhoodList, regionOf } from "../src/taxonomy.js";
+import { parseVenueTable } from "../src/venues.js";
 
 /** The hand-edited files the research job reads, as committed. A typo here fails the run, so it fails the suite first. */
 describe("committed config and registry", () => {
   const read = (path: string) => parse(readFileSync(new URL(`../${path}`, import.meta.url), "utf8"));
   const config = parseConfig(read("research.config.yaml"));
   const registry = parseRegistry(read("data/registry.yaml"));
+
+  it("loads the committed venue table against the config, every row's neighborhood on the list (ADR 0013, #258)", () => {
+    const rows = parseVenueTable(read("data/venues.yaml"), config);
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.filter((r) => r.neighborhood !== undefined).map((r) => r.name)).toContain("1900 Building");
+  });
 
   it("loads the committed dataset", () => {
     const raw = JSON.parse(readFileSync(new URL("../data/events.json", import.meta.url), "utf8"));

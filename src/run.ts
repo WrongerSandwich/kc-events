@@ -2463,16 +2463,18 @@ function placeMappedVenues(events: Event[], list: string[], config: RunConfig, v
  */
 function venuesWithoutRow(events: Event[], venues: readonly VenueRow[], config: RunConfig): RunReport["venuesWithoutRow"] {
   const rows = new Set(venues.map((r) => normalizeName(r.name)));
-  const counts = new Map<string, number>();
+  // Keyed as the table is, so two spellings of one unaliased venue are one line, under the spelling seen first.
+  const counts = new Map<string, { venue: string; events: number }>();
   for (const event of events) {
     if (event.status !== "active" || event.venue === undefined) continue;
     const { venue } = venueAndRoom(event.venue, config.venueAliases);
-    if (rows.has(normalizeName(venue))) continue;
-    counts.set(venue, (counts.get(venue) ?? 0) + 1);
+    const key = normalizeName(venue);
+    if (rows.has(key)) continue;
+    const line = counts.get(key);
+    if (line) line.events++;
+    else counts.set(key, { venue, events: 1 });
   }
-  return [...counts]
-    .map(([venue, count]) => ({ venue, events: count }))
-    .sort((a, b) => b.events - a.events || a.venue.localeCompare(b.venue));
+  return [...counts.values()].sort((a, b) => b.events - a.events || a.venue.localeCompare(b.venue));
 }
 
 /**

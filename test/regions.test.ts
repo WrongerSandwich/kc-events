@@ -296,12 +296,28 @@ describe("venue neighborhoods (#150)", () => {
       expect(result.report.venuesWithoutRow).toEqual([]);
     });
 
-    it("an event not active does not count", async () => {
-      const stored = await storedAs({ status: "expired", expiryReason: "two-strike" });
+    it("an event not active does not count, expired or unverified", async () => {
+      const expired = await runAt(WEEK_2, await storedAs({ status: "expired", expiryReason: "two-strike" }), FORBIDDEN, [reply()], mapped({}));
+      const unverified = await runAt(WEEK_2, await storedAs({ status: "unverified" }), FORBIDDEN, [reply()], mapped({}));
 
-      const second = await runAt(WEEK_2, stored, FORBIDDEN, [reply()], mapped({}));
+      expect(expired.report.venuesWithoutRow).toEqual([]);
+      expect(unverified.report.venuesWithoutRow).toEqual([]);
+    });
 
-      expect(second.report.venuesWithoutRow).toEqual([]);
+    it("lists most events first, then by name, and folds two spellings of one unaliased venue under the first seen", async () => {
+      const stored = await storedAs({});
+      const show = stored.events[0]!;
+      // Each with its own title, or they would fold as one another's duplicates.
+      const at = (id: string, venue: string): Event => ({ ...show, id, venue, title: `Show ${id}` });
+      const dataset = { ...stored, events: [at("evt_a", "Zed Hall"), show, at("evt_b", "Alpha Hall"), at("evt_c", "ZED HALL")] };
+
+      const second = await runAt(WEEK_2, dataset, FORBIDDEN, [reply()], mapped({}));
+
+      expect(second.report.venuesWithoutRow).toEqual([
+        { venue: "Zed Hall", events: 2 },
+        { venue: "Alpha Hall", events: 1 },
+        { venue: "Knuckleheads", events: 1 },
+      ]);
     });
   });
 });
