@@ -5,6 +5,7 @@ import { parseDataset, type Dataset } from "../../src/dataset.js";
 import type { HandPick } from "../../src/hand-picks.js";
 import type { CompletionRequest, CompletionResult, SearchResult } from "../../src/ports.js";
 import type { Source } from "../../src/registry.js";
+import type { VenueRow } from "../../src/venues.js";
 import { fakePorts, type CannedPage, type ScriptedReply } from "./ports.js";
 import { testConfig, testPrompts } from "./config.js";
 
@@ -29,6 +30,7 @@ export async function runWith(
     curate,
     curations,
     handPicks,
+    venues,
     reverifyOnly,
   }: {
     sources: Source[];
@@ -42,11 +44,22 @@ export async function runWith(
     curations?: ScriptedReply[];
     /** Entries of data/picks.yaml, applied after curation (ADR 0014). */
     handPicks?: HandPick[];
+    /** Rows of data/venues.yaml; a row's neighborhood places every event at its venue (#258). */
+    venues?: VenueRow[];
     reverifyOnly?: { days: number };
   },
 ) {
   const fakes = fakePorts(now, { pages, completions, pagesCarryQuotes, ...(searches ? { searches } : {}), ...(curate ? { curate } : {}), ...(curations ? { curations } : {}) });
-  const result = await run({ config, prompts: testPrompts(), dataset, registry: { sources }, ports: fakes.ports, ...(handPicks ? { handPicks } : {}), ...(reverifyOnly && { reverifyOnly }) });
+  const result = await run({
+    config,
+    prompts: testPrompts(),
+    dataset,
+    registry: { sources },
+    ports: fakes.ports,
+    ...(handPicks ? { handPicks } : {}),
+    ...(venues ? { venues } : {}),
+    ...(reverifyOnly && { reverifyOnly }),
+  });
   expect(parseDataset(result.dataset, config)).toEqual(result.dataset);
   return { ...result, calls: fakes.calls, requests: fakes.requests };
 }

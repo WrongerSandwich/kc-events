@@ -110,6 +110,14 @@ _None._
 
 _None._
 
+## Venues without a row
+
+Venues with active events and no row in data/venues.yaml, most events first; a row gives the venue's page an address and can place its events in a neighborhood (ADR 0013).
+
+- Knuckleheads: 2 events
+- Midland: 1 event
+- Recordbar: 1 event
+
 ## Unverified by outage limit
 
 _None._

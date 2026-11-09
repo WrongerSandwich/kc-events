@@ -91,6 +91,7 @@ import { deriveRecurrence } from "./recurrence.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
 import { neighborhoodList, placeStored } from "./taxonomy.js";
 import { hasTime, horizonEnd, shiftDate, toLocalDate, toLocalIso } from "./time.js";
+import { venueNeighborhoods, type VenueRow } from "./venues.js";
 
 /** Consecutive failed runs after which a source is flagged in the report. */
 const FAILING_SOURCE_THRESHOLD = 3;
@@ -121,6 +122,8 @@ export interface RunInput {
   reverifyOnly?: { days: number };
   /** The entries of data/picks.yaml (ADR 0014), applied after curation; none when absent. */
   handPicks?: HandPick[];
+  /** The rows of data/venues.yaml (ADR 0013, #258): a row's neighborhood places every event at its venue; none when absent. */
+  venues?: VenueRow[];
 }
 
 export interface RunOutput {
@@ -134,7 +137,7 @@ export interface RunOutput {
  * One run of the research job: a function over values and ports that returns the new
  * dataset and the run report. It performs no I/O of its own.
  */
-export async function run({ config: givenConfig, prompts, dataset, registry, ports, handPicks = [], reverifyOnly }: RunInput): Promise<RunOutput> {
+export async function run({ config: givenConfig, prompts, dataset, registry, ports, handPicks = [], venues = [], reverifyOnly }: RunInput): Promise<RunOutput> {
   const startedAt = ports.clock.now();
   const today = toLocalDate(startedAt, givenConfig.timezone);
   // A midweek pass searches nothing, whatever the config says, and a monthly lane only in a month's first run (#255).
@@ -197,10 +200,11 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   const ownPages = reverifyOnly
     ? { events: aged, report: [], notRead: 0, covered: new Set<string>(), venued: new Set<string>() }
     : await readOwnPages(aged, new Set([...merged.awaitingVenue, ...reverified.awaitingVenue]), registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
-  // A mapped venue places every event at it, read this run or not (#150); a reading places the rest from its page,
-  // and one no page placed this run is placed from what is stored. The map goes first: its neighborhoods are on the
-  // list (the config checks), so the off-list placement leaves them be and reports only what the map did not place.
-  const mappedVenues = placeMappedVenues(ownPages.events, neighborhoods, config);
+  // A venue the table places puts every event at it there, read this run or not (#150, #258); a reading places the
+  // rest from its page, and one no page placed this run is placed from what is stored. The table goes first: its
+  // neighborhoods are on the list (the table's parse checks), so the off-list placement leaves them be and reports
+  // only what the table did not place.
+  const mappedVenues = placeMappedVenues(ownPages.events, neighborhoods, config, venues);
   const placed = placeOffList(mappedVenues.events, neighborhoods, config, registry);
   // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
   const madeUncitable = new Set([...merged.uncitable, ...reverified.uncitable]);
@@ -290,6 +294,7 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
     failingSources: registryLane.failingSources,
     offListNeighborhoods: placed.report,
     venueNeighborhoods: mappedVenues.report,
+    venuesWithoutRow: venuesWithoutRow(events, venues, config),
     unmappableNeighborhoods: unmappableNeighborhoods(dataset.events, live),
     promotionSuggestions: promotion.promotionSuggestions,
     heldForPromotion: held.heldByHost,
@@ -2431,13 +2436,13 @@ function originFor(event: Event, url: string, registry: Registry): PageOrigin {
 }
 
 /**
- * Every event not expired at a venue the config's venueNeighborhoods maps (#150), by its display name (see
- * venueAndRoom), placed in the venue's neighborhood, whatever its page said or was stored; never the catch-all, so
- * it carries no unplaced mark. For the report, each venue that moved an event, and how many. An expired event is
- * left as it is: a reading that revives it is placed again then.
+ * Every event not expired at a venue the venue table places (#150, #258), by its display name (see venueAndRoom),
+ * placed in the row's neighborhood, whatever its page said or was stored; never the catch-all, so it carries no
+ * unplaced mark. For the report, each venue that moved an event, and how many. An expired event is left as it is: a
+ * reading that revives it is placed again then.
  */
-function placeMappedVenues(events: Event[], list: string[], config: RunConfig) {
-  const mapped = new Map(Object.entries(config.venueNeighborhoods).map(([venue, n]) => [normalizeName(venue), { venue, neighborhood: placeStored(n, list, config) }]));
+function placeMappedVenues(events: Event[], list: string[], config: RunConfig, venues: readonly VenueRow[]) {
+  const mapped = new Map(Object.entries(venueNeighborhoods(venues)).map(([venue, n]) => [normalizeName(venue), { venue, neighborhood: placeStored(n, list, config) }]));
   const report: RunReport["venueNeighborhoods"] = [];
   const placed = events.map((event) => {
     if (event.status === "expired" || event.venue === undefined) return event;
@@ -2450,6 +2455,24 @@ function placeMappedVenues(events: Event[], list: string[], config: RunConfig) {
     return { ...rest, neighborhood: entry.neighborhood };
   });
   return { events: placed, report };
+}
+
+/**
+ * The venues with active events and no venue table row (#258), most events first, by display name (see venueAndRoom):
+ * where the table should grow, since a row gives the venue's page an address and can place its events.
+ */
+function venuesWithoutRow(events: Event[], venues: readonly VenueRow[], config: RunConfig): RunReport["venuesWithoutRow"] {
+  const rows = new Set(venues.map((r) => normalizeName(r.name)));
+  const counts = new Map<string, number>();
+  for (const event of events) {
+    if (event.status !== "active" || event.venue === undefined) continue;
+    const { venue } = venueAndRoom(event.venue, config.venueAliases);
+    if (rows.has(normalizeName(venue))) continue;
+    counts.set(venue, (counts.get(venue) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([venue, count]) => ({ venue, events: count }))
+    .sort((a, b) => b.events - a.events || a.venue.localeCompare(b.venue));
 }
 
 /**

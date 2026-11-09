@@ -140,6 +140,10 @@ const full: RunReport = {
   failingSources: ["Pipe | Hall"],
   offListNeighborhoods: [{ stored: "Downtown East", placed: "Crossroads", events: 2 }],
   venueNeighborhoods: [{ venue: "Bruce R. Watkins Cultural Heritage Center", placed: "Swope Park", events: 2 }],
+  venuesWithoutRow: [
+    { venue: "Central Resource Library", events: 19 },
+    { venue: "1900 Building", events: 1 },
+  ],
   unmappableNeighborhoods: [
     { eventId: "evt_1", eventTitle: "Barn Dance", venue: "Red Barn", proposed: "Kearney", listedBefore: false },
     { eventId: "evt_2", eventTitle: "Pop-up", listedBefore: false },
@@ -307,7 +311,14 @@ describe("the run report", () => {
 
       ## Venue neighborhoods
 
-      - Bruce R. Watkins Cultural Heritage Center: 2 events placed in Swope Park by venueNeighborhoods
+      - Bruce R. Watkins Cultural Heritage Center: 2 events placed in Swope Park by the venue table
+
+      ## Venues without a row
+
+      Venues with active events and no row in data/venues.yaml, most events first; a row gives the venue's page an address and can place its events in a neighborhood (ADR 0013).
+
+      - Central Resource Library: 19 events
+      - 1900 Building: 1 event
 
       ## Unverified by outage limit
 
@@ -359,13 +370,13 @@ describe("the run report", () => {
   });
 
   it("fills the fields a report from before them does not carry", () => {
-    const { reverification, offListNeighborhoods, venueNeighborhoods, heldForPromotion, releasedForPromotion, outageLimited, uncitableReadings, keptOnStoredCitation, cancellationsFromElsewhere, skippedAsExpired, identityChurn, kindChanges, likelyDuplicates, ...older } = full;
+    const { reverification, offListNeighborhoods, venueNeighborhoods, venuesWithoutRow, heldForPromotion, releasedForPromotion, outageLimited, uncitableReadings, keptOnStoredCitation, cancellationsFromElsewhere, skippedAsExpired, identityChurn, kindChanges, likelyDuplicates, ...older } = full;
     const { archived, heldThroughOutage, quoteNotOnPage, keptOnStoredCitation: keptCount, expired, ...counts } = full.counts;
     const { stale, ...expiredBefore } = expired;
     const parsed = parseRunReport({ ...older, counts: { ...counts, expired: expiredBefore }, spend: { ...full.spend, modelCalls: undefined } });
 
     expect(parsed.counts).toMatchObject({ archived: 0, heldThroughOutage: 0, quoteNotOnPage: 0, keptOnStoredCitation: 0, expired: { ...expiredBefore, stale: 0 } });
-    expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], venueNeighborhoods: [], identityChurn: [], kindChanges: [], likelyDuplicates: [], keptOnStoredCitation: [], skippedAsExpired: [], spend: { modelCalls: [] } });
+    expect(parsed).toMatchObject({ reverification: { problems: [] }, offListNeighborhoods: [], venueNeighborhoods: [], venuesWithoutRow: [], identityChurn: [], kindChanges: [], likelyDuplicates: [], keptOnStoredCitation: [], skippedAsExpired: [], spend: { modelCalls: [] } });
   });
 
   it("fills a report from before picks carried reasons (ADR 0014) with no close calls, no lists and no hand picks, and renders its empty sections", () => {

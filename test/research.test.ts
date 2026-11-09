@@ -152,6 +152,26 @@ describe("a research run's files", () => {
     expect(report.curation.handPicks).toEqual({ applied: 1, stale: [], changed: [] });
   });
 
+  it("refuses a data/venues.yaml that does not parse before anything is written, naming the file (ADR 0013, #258)", async () => {
+    await writeFile(join(root, "data", "venues.yaml"), stringify([{ name: "Knuckleheads", address: "2715 Rochester Ave, Kansas City, MO 64120", neighborhood: "Topeka" }]));
+    const { done, closed } = researchWith({ pages: { [CALENDAR_URL]: PAGE }, completions: [reply(candidateAt(knuckleheads))] });
+
+    await expect(done).rejects.toThrow(/data\/venues\.yaml does not parse; nothing was written/);
+    expect(await dataFiles()).toEqual(["registry.yaml", "venues.yaml"]);
+    expect(closed()).toBe(false);
+  });
+
+  it("places every event at a venue the table gives a neighborhood there, and the report says so (#258)", async () => {
+    await writeFile(join(root, "data", "venues.yaml"), stringify([{ name: "Knuckleheads", address: "2715 Rochester Ave, Kansas City, MO 64120", neighborhood: "Westport" }]));
+    const { done } = researchWith({ pages: { [CALENDAR_URL]: PAGE }, completions: [reply(candidateAt(knuckleheads))] });
+    const { report } = await done;
+
+    const dataset = parseDataset(JSON.parse(await readFile(join(root, "data", "events.json"), "utf8")));
+    expect(dataset.events.map((e) => e.neighborhood)).toEqual(["Westport"]);
+    expect(report.venueNeighborhoods).toEqual([{ venue: "Knuckleheads", placed: "Westport", events: 1 }]);
+    expect(report.venuesWithoutRow).toEqual([]);
+  });
+
   it("writes exactly the dataset and the report's two files, and lets go of the adapters", async () => {
     const { done, closed } = researchWith({ pages: { [CALENDAR_URL]: PAGE }, completions: [reply(candidateAt(knuckleheads))] });
 

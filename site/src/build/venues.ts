@@ -1,33 +1,15 @@
 /**
- * Build-time only: the venue table, data/venues.yaml (#137, ADR 0013), and the venue pages made from it and the
- * published events. A table row adds an address, a position, and the venue's site to a page every venue with a
- * published event has anyway; a row whose venue has nothing coming up still makes one.
+ * Build-time: the venue table, data/venues.yaml (#137, ADR 0013), and the venue pages made from it and the published
+ * events. A table row adds an address, a position, and the venue's site to a page every venue with a published event
+ * has anyway; a row whose venue has nothing coming up still makes one. The row's neighborhood is the job's (#258): the
+ * run places the venue's events by it, and a page's neighborhood still comes from its events.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { parse as parseYaml } from "yaml";
-import { z } from "zod";
 import { venueAndRoom, type VenueAliases } from "../../../src/identity.ts";
+import { ADDRESS, parseVenueTable, type VenueTableConfig } from "../../../src/venues.ts";
 import type { Geo, PublishedEvent, PublishedVenue, VenueAddress } from "../lib/types";
 import { venueSlug } from "../lib/venues";
-
-/** The one shape an address may take: street, city, state, and ZIP, so the build can split it for JSON-LD. */
-const ADDRESS = /^([^,]+), ([^,]+), (MO|KS) (\d{5})$/;
-
-/** Around the metro and Lawrence, generously: a position outside it is a swapped pair or a sign dropped. */
-const METRO = { lat: [38.5, 39.7], lng: [-95.6, -93.9] } as const;
-
-const ROW = z
-  .object({
-    name: z.string().trim().min(1),
-    address: z.string().trim().regex(ADDRESS, "is not one line of street, city, MO or KS, and ZIP (\"1601 Broadway Blvd, Kansas City, MO 64108\")").optional(),
-    lat: z.number().min(METRO.lat[0]).max(METRO.lat[1]).optional(),
-    lng: z.number().min(METRO.lng[0]).max(METRO.lng[1]).optional(),
-    url: z.string().regex(/^https?:\/\/[^\s]+$/, "is not an http or https URL").optional(),
-  })
-  .strict()
-  .refine((r) => (r.lat === undefined) === (r.lng === undefined), "has lat without lng, or lng without lat")
-  // A district (the Crossroads) has no one street address; it has a position.
-  .refine((r) => r.address !== undefined || r.lat !== undefined, "has neither an address nor a position");
 
 export type VenueRow = { name: string; address?: VenueAddress; geo?: Geo; url?: string };
 
@@ -37,29 +19,20 @@ function splitAddress(line: string): VenueAddress {
 }
 
 /**
- * The rows of a venue table file; none when no path is given. Throws naming the row that does not parse, and when the
- * file is not there: a table moved or renamed would otherwise drop every address from the site without a word.
+ * The rows of a venue table file, parsed as the job parses it (src/venues.ts, against the config's aliases and
+ * neighborhoods) and with each address split; none when no path is given. Throws naming the row that does not parse,
+ * and when the file is not there: a table moved or renamed would otherwise drop every address from the site without a
+ * word.
  */
-export function readVenueTable(path: string | undefined): VenueRow[] {
+export function readVenueTable(path: string | undefined, config: VenueTableConfig): VenueRow[] {
   if (path === undefined) return [];
   if (!existsSync(path)) throw new Error(`no venue table at ${path}`);
-  const raw: unknown = parseYaml(readFileSync(path, "utf8")) ?? [];
-  if (!Array.isArray(raw)) throw new Error(`${path} is not a list of venue rows`);
-  return raw.map((item, i) => {
-    const parsed = ROW.safeParse(item);
-    if (!parsed.success) {
-      const name = typeof (item as { name?: unknown })?.name === "string" ? `"${(item as { name: string }).name}"` : `${i + 1}`;
-      const why = parsed.error.issues.map((issue) => `${issue.path.join(".") || "row"} ${issue.message}`).join("; ");
-      throw new Error(`venue table row ${name}: ${why}`);
-    }
-    const r = parsed.data;
-    return {
-      name: r.name,
-      ...(r.address !== undefined && { address: splitAddress(r.address) }),
-      ...(r.lat !== undefined && { geo: { lat: r.lat, lng: r.lng! } }),
-      ...(r.url !== undefined && { url: r.url }),
-    };
-  });
+  return parseVenueTable(parseYaml(readFileSync(path, "utf8")), config).map((r) => ({
+    name: r.name,
+    ...(r.address !== undefined && { address: splitAddress(r.address) }),
+    ...(r.lat !== undefined && { geo: { lat: r.lat, lng: r.lng! } }),
+    ...(r.url !== undefined && { url: r.url }),
+  }));
 }
 
 /** The value most of the list gives, the first seen of a tie; undefined for an empty list. */
@@ -73,10 +46,10 @@ function mostCommon(values: readonly string[]): string | undefined {
 
 /**
  * The venue pages: one per slug among the published events' venues and the table's rows, by name. Throws on a row
- * keyed on anything but a display name (an alias, or a known venue spelled another way), on two rows for one page, and
- * on a venue name with no letter or digit to make a slug from. A row whose venue no record in the dataset is at only
- * warns: the job archives expired records eight weeks on, so a quiet venue's row would otherwise refuse the weekly
- * data commit's build, and the site would stop refreshing (audit 2026-10-21, E2).
+ * keyed on a known venue spelled another way (one keyed on an alias is refused as the table is parsed), on two rows
+ * for one page, and on a venue name with no letter or digit to make a slug from. A row whose venue no record in the
+ * dataset is at only warns: the job archives expired records eight weeks on, so a quiet venue's row would otherwise
+ * refuse the weekly data commit's build, and the site would stop refreshing (audit 2026-10-21, E2).
  */
 export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; recordVenues: readonly string[]; aliases: VenueAliases }): PublishedVenue[] {
   // The display names exactly as the site shows them, so a row also keeps a venue's spelling: "the truman" is no name.
@@ -84,8 +57,6 @@ export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; 
   const knownBySlug = new Map([...known].map((name) => [venueSlug(name), name]));
   const rows = new Map<string, VenueRow>();
   for (const row of opts.rows) {
-    const { venue } = venueAndRoom(row.name, opts.aliases);
-    if (venue !== row.name) throw new Error(`venue table row "${row.name}" is a name venueAliases files under "${venue}"; key the row on "${venue}"`);
     const slug = venueSlug(row.name);
     if (!known.has(row.name)) {
       const spelled = knownBySlug.get(slug);

@@ -210,10 +210,15 @@ export interface RunReport {
    */
   offListNeighborhoods: { stored: string; placed: string; events: number }[];
   /**
-   * Events not expired moved this run into their venue's neighborhood by the config's venueNeighborhoods (#150), by
-   * venue: a venue here every week is one whose pages keep saying otherwise.
+   * Events not expired moved this run into their venue's neighborhood by the venue table (#150, #258), by venue: a
+   * venue here every week is one whose pages keep saying otherwise.
    */
   venueNeighborhoods: { venue: string; placed: string; events: number }[];
+  /**
+   * Venues with active events as the run ends and no venue table row (#258), most events first: where the table
+   * should grow, since a row gives the venue's page an address and can place its events.
+   */
+  venuesWithoutRow: { venue: string; events: number }[];
   /**
    * Unmappable neighborhoods: every record not expired that ends the run in the elsewhere-in-the-metro
    * catch-all (#104), with the neighborhood or city the extractor proposed instead, when it proposed
@@ -425,6 +430,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   failingSources: z.array(z.string()),
   offListNeighborhoods: listSince(z.strictObject({ stored: z.string(), placed: z.string(), events: count })),
   venueNeighborhoods: listSince(z.strictObject({ venue: z.string(), placed: z.string(), events: count })),
+  venuesWithoutRow: listSince(z.strictObject({ venue: z.string(), events: count })),
   unmappableNeighborhoods: z.array(
     z.strictObject({ eventId: z.string().optional(), eventTitle: z.string(), venue: z.string().optional(), proposed: z.string().optional(), listedBefore: flagSince }),
   ),
@@ -570,7 +576,13 @@ ${markdownList(report.offListNeighborhoods.map((r) => `"${r.stored}": ${plural(r
 
 ## Venue neighborhoods
 
-${markdownList(report.venueNeighborhoods.map((r) => `${r.venue}: ${plural(r.events, "event")} placed in ${r.placed} by venueNeighborhoods`))}
+${markdownList(report.venueNeighborhoods.map((r) => `${r.venue}: ${plural(r.events, "event")} placed in ${r.placed} by the venue table`))}
+
+## Venues without a row
+
+Venues with active events and no row in data/venues.yaml, most events first; a row gives the venue's page an address and can place its events in a neighborhood (ADR 0013).
+
+${markdownList(report.venuesWithoutRow.map((r) => `${r.venue}: ${plural(r.events, "event")}`))}
 
 ## Unverified by outage limit
 

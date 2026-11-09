@@ -201,7 +201,7 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; v
   });
 
   const venues = buildVenues({
-    rows: readVenueTable(opts.venuesPath),
+    rows: readVenueTable(opts.venuesPath, config),
     events,
     recordVenues: dataset.events.flatMap((e) => (e.venue === undefined ? [] : [e.venue])),
     aliases: config.venueAliases,

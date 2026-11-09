@@ -1,8 +1,11 @@
 # The venue table (#137, ADR 0013): one row per venue, keyed on its display name as the site shows it. Read by the
-# site's build only. A row: name, address as "<street>, <city>, <MO|KS> <ZIP>", then optionally lat and lng (both or
-# neither, looked up, never from memory) and url, the venue's own site; a district with no one street address gives
-# lat and lng alone. Check a row by opening the map link on its page, /v/<slug>. A venue with no row still has a
-# page, with its events alone.
+# site's build for the venue's page, and by the job for a row's neighborhood alone (#258). A row: name, address as
+# "<street>, <city>, <MO|KS> <ZIP>", then optionally lat and lng (both or neither, looked up, never from memory), url,
+# the venue's own site, and neighborhood, one the config's regions list (never the catch-all), which places every
+# event at the venue there each run whatever its page says; give one only when the pages keep placing the venue
+# wrongly or nowhere. A district with no one street address gives lat and lng alone. Check a row by opening the map
+# link on its page, /v/<slug>. A venue with no row still has a page, with its events alone, and the run report lists
+# it under "Venues without a row" while it has events.
 #
 # Drafted 2026-10-14 from each venue's own site (or, where it states none, a listing that agrees with OpenStreetMap),
 # with coordinates from OpenStreetMap Nominatim.
@@ -22,6 +25,7 @@
   lat: 39.094159
   lng: -94.587694
   url: https://www.kauffmancenter.org/
+  neighborhood: Crossroads
 - name: The Truman
   address: 601 E Truman Rd, Kansas City, MO 64106
   lat: 39.095213
@@ -142,6 +146,7 @@
   lat: 39.090814
   lng: -94.585333
   url: https://thebirdkc.com/
+  neighborhood: Crossroads
 - name: Central Library (Kansas City Public Library)
   address: 14 W 10th St, Kansas City, MO 64105
   lat: 39.102581
@@ -157,6 +162,7 @@
   lat: 39.049470
   lng: -94.585718
   url: https://kcai.edu/artspace/
+  neighborhood: Midtown
 - name: Arrowhead Stadium
   address: 1 Arrowhead Dr, Kansas City, MO 64129
   lat: 39.048936
@@ -182,6 +188,8 @@
   lat: 39.036777
   lng: -94.542573
   url: https://kcparks.org/places/brw-center/
+  # The closest listed neighborhood, in the South KC region with the Zoo.
+  neighborhood: Swope Park
 - name: Blue Valley Library (Johnson County Library)
   address: 9000 W 151st St, Overland Park, KS 66221
   lat: 38.855662
@@ -214,6 +222,8 @@
   lat: 38.8747875
   lng: -94.0364190
   url: https://www.powellgardens.org/
+  # Thirty miles east, in a city the catch-all would otherwise swallow (audit 2026-10-21).
+  neighborhood: Kingsville
 - name: Union Cemetery
   address: 227 E 28th Terrace, Kansas City, MO 64108
   lat: 39.0754423
@@ -222,3 +232,14 @@
   address: 4900 E Truman Rd, Kansas City, MO 64127
   lat: 39.0960460
   lng: -94.5259601
+  # Truman Road at Van Brunt; pages place it in the East Bottoms or nowhere.
+  neighborhood: Northeast
+# Added 2026-11-08 (#258), from the building's own site and OpenStreetMap. Mission Woods is a city of two hundred
+# wedged between Fairway and Westwood, which the list does not name; the extractor proposed it twice and the event
+# landed in the catch-all, so the row places it in Fairway, the nearest listed neighborhood.
+- name: 1900 Building
+  address: 1900 Shawnee Mission Pkwy, Mission Woods, KS 66205
+  lat: 39.034687
+  lng: -94.608070
+  url: https://1900bldg.com/
+  neighborhood: Fairway

@@ -2,7 +2,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { buildVenues, readVenueTable, type VenueRow } from "../src/build/venues";
+import { buildVenues, readVenueTable as readTable, type VenueRow } from "../src/build/venues";
 import { loadPublished } from "../src/build/load-dataset";
 import { addressLine, mapUrl, NOTHING_LISTED, venueDirectory, venueJsonLd, venuePath, venueSlug } from "../src/lib/venues";
 import { activeEvent, configYaml, dataset, write } from "./fixtures/dataset";
@@ -10,6 +10,9 @@ import { event } from "./fixtures/event";
 import { tempDir } from "./fixtures/temp-dir";
 
 const aliases = { "Kauffman Center for the Performing Arts": ["Kauffman Center", "Helzberg Hall"] };
+/** The config the table is checked against (src/venues.ts): the fixture config's neighborhoods and these aliases. */
+const tableConfig = { neighborhoods: { "Central KC": ["Crossroads", "Downtown"], "Johnson County": ["Olathe"], Lawrence: ["Lawrence"] }, venueAliases: aliases };
+const readVenueTable = (path: string | undefined) => readTable(path, tableConfig);
 
 function table(yaml: string): string {
   const path = join(tempDir("kc-venues-"), "venues.yaml");
@@ -100,6 +103,20 @@ describe("readVenueTable", () => {
   it("names a row without a name by its place in the list", () => {
     expect(() => readVenueTable(table("- address: 1544 Grand Blvd, Kansas City, MO 64108\n"))).toThrow(/venue table row 1:/);
   });
+
+  it("takes a row with the job's neighborhood (ADR 0013, #258), which the page does not carry, and refuses one no region lists", () => {
+    expect(readVenueTable(table("- name: recordBar\n  address: 1544 Grand Blvd, Kansas City, MO 64108\n  neighborhood: Crossroads\n"))).toEqual([
+      { name: "recordBar", address: { street: "1544 Grand Blvd", locality: "Kansas City", region: "MO", postalCode: "64108" } },
+    ]);
+    expect(() => readVenueTable(table("- name: recordBar\n  address: 1544 Grand Blvd, Kansas City, MO 64108\n  neighborhood: Topeka\n"))).toThrow(/"recordBar" names "Topeka", which no region lists/);
+  });
+
+  it("refuses a row keyed on an alias, naming the venue to key it on", () => {
+    expect(() => readVenueTable(table("- name: Kauffman Center\n  address: 1601 Broadway Blvd, Kansas City, MO 64108\n"))).toThrow(
+      'venue table row "Kauffman Center" is a name venueAliases files under "Kauffman Center for the Performing Arts"; key the row on "Kauffman Center for the Performing Arts"',
+    );
+    expect(() => readVenueTable(table("- name: Helzberg Hall\n  address: 1601 Broadway Blvd, Kansas City, MO 64108\n"))).toThrow(/key the row on "Kauffman Center for the Performing Arts"/);
+  });
 });
 
 describe("buildVenues", () => {
@@ -147,11 +164,6 @@ describe("buildVenues", () => {
 
   it("knows a venue by any record in the dataset, as the site names it", () => {
     expect(build({ rows: [{ ...kauffman }], recordVenues: ["Helzberg Hall"], aliases: { [kauffman.name]: ["Helzberg Hall"] } })).toHaveLength(1);
-  });
-
-  it("refuses a row keyed on an alias, naming the venue to key it on", () => {
-    expect(() => build({ rows: [{ ...kauffman, name: "Kauffman Center" }] })).toThrow('venue table row "Kauffman Center" is a name venueAliases files under "Kauffman Center for the Performing Arts"; key the row on "Kauffman Center for the Performing Arts"');
-    expect(() => build({ rows: [{ ...kauffman, name: "Helzberg Hall" }] })).toThrow(/key the row on "Kauffman Center for the Performing Arts"/);
   });
 
   it("keeps a row for a venue no record in the dataset names, with a warning, so an archived venue cannot refuse a deploy", () => {

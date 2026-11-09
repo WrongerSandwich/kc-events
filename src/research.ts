@@ -18,6 +18,7 @@ import { DATASET_SCHEMA_VERSION, emptyDataset, parseArchive, parseDataset, type 
 import type { Ports } from "./ports.js";
 import { parseHandPicks, type HandPick } from "./hand-picks.js";
 import { parseRegistry } from "./registry.js";
+import { parseVenueTable, type VenueRow } from "./venues.js";
 import { renderReportMarkdown, type RunReport } from "./report.js";
 import { run } from "./run.js";
 import { writeAllOrNothing, type FileToWrite } from "./write-files.js";
@@ -178,10 +179,20 @@ export async function research({ root, args, env, adapters = realAdapters }: Res
       throw new Error("data/picks.yaml does not parse; nothing was written", { cause: error });
     }
   }
+  // The venue table (ADR 0013, #258): a row's neighborhood places every event at its venue; a table that does not parse stops the run the same way.
+  const venuesPath = join(dataDir, "venues.yaml");
+  let venues: VenueRow[] = [];
+  if (existsSync(venuesPath)) {
+    try {
+      venues = parseVenueTable(parseYaml(await readFile(venuesPath, "utf8")), config);
+    } catch (error) {
+      throw new Error("data/venues.yaml does not parse; nothing was written", { cause: error });
+    }
+  }
   const dataset = existsSync(datasetPath) ? parseDataset(JSON.parse(await readFile(datasetPath, "utf8")), config) : emptyDataset();
 
   const { ports, close } = adapters(config, env);
-  const result = await run({ config, prompts, dataset, registry, ports, handPicks, ...(reverifyOnly && { reverifyOnly }) }).finally(close);
+  const result = await run({ config, prompts, dataset, registry, ports, handPicks, venues, ...(reverifyOnly && { reverifyOnly }) }).finally(close);
 
   const reportBase = join(runsDir, result.report.runDate);
 

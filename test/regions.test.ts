@@ -5,6 +5,7 @@ import type { CompletionResult } from "../src/ports.js";
 import { renderReportMarkdown } from "../src/report.js";
 import { run } from "../src/run.js";
 import { neighborhoodList, regionOf } from "../src/taxonomy.js";
+import type { VenueRow } from "../src/venues.js";
 import { testConfig, testPrompts } from "./fakes/config.js";
 import { candidateAt, knuckleheads, PAGE, reply, source, WEEK_1, WEEK_2 } from "./fakes/fixtures.js";
 import { fakePorts, type CannedPage } from "./fakes/ports.js";
@@ -186,13 +187,17 @@ describe("venue neighborhoods (#150)", () => {
   const calendar = knuckleheads.urls[0]!;
   const other = source("Other", { neighborhood: "Crossroads" });
   const show = () => candidateAt(knuckleheads, { startDate: "2026-12-12", dateEvidence: "Sat, Dec 12 · Show 8:00 PM" });
-  const mapped = (venueNeighborhoods: Record<string, string>, venueAliases: Record<string, string[]> = {}) =>
-    testConfig({ venueNeighborhoods, venueAliases });
-  const runAt = (now: Date, dataset: Dataset, knuckleheadsPage: CannedPage, completions: CompletionResult[], config: RunConfig) =>
-    runWith(now, dataset, { sources: [knuckleheads, other], pages: { [calendar]: knuckleheadsPage, [other.urls[0]!]: PAGE }, completions, config });
+  type Placement = { config: RunConfig; venues: VenueRow[] };
+  /** The venue table's rows placing these venues (#258), under a test config with these aliases. */
+  const mapped = (venueNeighborhoods: Record<string, string>, venueAliases: Record<string, string[]> = {}): Placement => ({
+    config: testConfig({ venueAliases }),
+    venues: Object.entries(venueNeighborhoods).map(([name, neighborhood]) => ({ name, address: "2715 Rochester Ave, Kansas City, MO 64120", neighborhood })),
+  });
+  const runAt = (now: Date, dataset: Dataset, knuckleheadsPage: CannedPage, completions: CompletionResult[], { config, venues }: Placement) =>
+    runWith(now, dataset, { sources: [knuckleheads, other], pages: { [calendar]: knuckleheadsPage, [other.urls[0]!]: PAGE }, completions, config, venues });
   /** A dataset holding the Big Show, read verified from Knuckleheads (East Bottoms) in week one, with these overrides. */
   const storedAs = async (overrides: Partial<Event>) => {
-    const first = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show()), reply()], testConfig());
+    const first = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show()), reply()], mapped({}));
     return { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, ...overrides })) };
   };
   const FORBIDDEN: CannedPage = { status: 403, body: "Forbidden" };
@@ -258,34 +263,45 @@ describe("venue neighborhoods (#150)", () => {
   it("the run report names each venue, how many events it moved, and where", async () => {
     const second = await runAt(WEEK_2, await storedAs({ neighborhood: "Crossroads" }), FORBIDDEN, [reply()], mapped({ Knuckleheads: "Westport" }));
 
-    expect(renderReportMarkdown(second.report)).toContain("- Knuckleheads: 1 event placed in Westport by venueNeighborhoods");
-  });
-});
-
-describe("the venueNeighborhoods config", () => {
-  const neighborhoods = { "Central KC": ["Westport", "Crossroads"], Lawrence: ["Lawrence"] };
-
-  it("defaults to no venues", () => {
-    expect(parseConfig({}).venueNeighborhoods).toEqual({});
+    expect(renderReportMarkdown(second.report)).toContain("- Knuckleheads: 1 event placed in Westport by the venue table");
   });
 
-  it("accepts a venue mapped to a listed neighborhood", () => {
-    expect(parseConfig({ neighborhoods, venueNeighborhoods: { recordBar: "Crossroads" } }).venueNeighborhoods).toEqual({ recordBar: "Crossroads" });
+  it("the config no longer takes venueNeighborhoods: a venue's neighborhood is a venue table row (#258)", () => {
+    expect(() => parseConfig({ venueNeighborhoods: { Knuckleheads: "Westport" } })).toThrow(/venueNeighborhoods/);
   });
 
-  it("refuses a neighborhood no region lists, naming the entry", () => {
-    expect(() => parseConfig({ neighborhoods, venueNeighborhoods: { recordBar: "Topeka" } })).toThrow(/recordBar.*Topeka.*no region lists/);
-  });
+  describe("venues without a row (#258)", () => {
+    const row = (name: string): VenueRow => ({ name, address: "2715 Rochester Ave, Kansas City, MO 64120" });
+    const withRows = (venues: VenueRow[], venueAliases: Record<string, string[]> = {}): Placement => ({ config: testConfig({ venueAliases }), venues });
 
-  it("refuses the catch-all as a neighborhood, naming the entry", () => {
-    expect(() => parseConfig({ neighborhoods, venueNeighborhoods: { recordBar: "Elsewhere in the metro" } })).toThrow(/recordBar.*catch-all/);
-  });
+    it("the report names each venue with active events and no row, most events first, and the Markdown lists them", async () => {
+      const result = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show()), reply()], mapped({}));
 
-  it("refuses a key that venueAliases files under another venue, naming the key to use", () => {
-    const venueAliases = { "Kauffman Center for the Performing Arts": ["Kauffman Center", "Helzberg Hall"] };
+      expect(result.report.venuesWithoutRow).toEqual([{ venue: "Knuckleheads", events: 1 }]);
+      expect(renderReportMarkdown(result.report)).toContain("## Venues without a row\n\nVenues with active events and no row in data/venues.yaml");
+      expect(renderReportMarkdown(result.report)).toContain("- Knuckleheads: 1 event");
+    });
 
-    expect(() => parseConfig({ neighborhoods, venueAliases, venueNeighborhoods: { "Helzberg Hall": "Crossroads" } })).toThrow(
-      /Helzberg Hall.*key the entry on .*Kauffman Center for the Performing Arts/,
-    );
+    it("a venue with a row is not named, with or without a neighborhood on the row", async () => {
+      const bare = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show()), reply()], withRows([row("Knuckleheads")]));
+      const placed = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show()), reply()], mapped({ Knuckleheads: "Westport" }));
+
+      expect(bare.report.venuesWithoutRow).toEqual([]);
+      expect(placed.report.venuesWithoutRow).toEqual([]);
+    });
+
+    it("a venue is named by its display name, so a row keyed on it covers the names venueAliases files under it", async () => {
+      const result = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show()), reply()], withRows([row("Knuckleheads Saloon")], { "Knuckleheads Saloon": ["Knuckleheads"] }));
+
+      expect(result.report.venuesWithoutRow).toEqual([]);
+    });
+
+    it("an event not active does not count", async () => {
+      const stored = await storedAs({ status: "expired", expiryReason: "two-strike" });
+
+      const second = await runAt(WEEK_2, stored, FORBIDDEN, [reply()], mapped({}));
+
+      expect(second.report.venuesWithoutRow).toEqual([]);
+    });
   });
 });
