@@ -1,6 +1,6 @@
 import { addDays, formatDay, formatTime, isDateOnly } from "./dates";
-import { firstDay, isDated, isMultiDay, isOnNow, isOpen, isPast, lastDay } from "./events";
-import { dateRange, matches, nextPlayingDay } from "./filter";
+import { firstDay, isDated, isMultiDay, isOnNow, isOpen, isPast, lastDay, nextRunDay } from "./events";
+import { dateRange, matches } from "./filter";
 import { throughLine } from "./horizon";
 import type { Filters } from "./query";
 import type { PublishedEvent } from "./types";
@@ -71,12 +71,13 @@ function timeOfDay(e: PublishedEvent): string {
 
 /**
  * The days a dated event is listed under: a one-off's every day from today within the when-filter, else its first day;
- * a run with days that is open but does not play today, its next day within the when-filter that it does (#143).
+ * a run with days that is open but does not play today, its next day within the when-filter that it does (#143), or its
+ * closing day when none is left (nextRunDay).
  */
 function listedDays(e: PublishedEvent, today: string, range: { from: string; to: string } | undefined): string[] {
   if (isOpen(e, today)) {
-    // From the when-filter's first day when that is later; matches has held that it plays before the filter's last.
-    const next = nextPlayingDay(e, range !== undefined && range.from > today ? range.from : today, lastDay(e)!);
+    // From the when-filter's first day when that is later; matches has held that the day comes before the filter's last.
+    const next = nextRunDay(e, range !== undefined && range.from > today ? range.from : today);
     return next === undefined ? [] : [next];
   }
   const first = firstDay(e)!; // a start-less run without days is always on now, so never reaches here

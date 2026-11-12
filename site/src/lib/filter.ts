@@ -1,5 +1,5 @@
 import { addDays, comingSunday, weekday } from "./dates";
-import { firstDay, isDated, isPast, lastDay, playsOn } from "./events";
+import { firstDay, isDated, isPast, lastDay, nextRunDay } from "./events";
 import { fold } from "./fold";
 import type { Filters, When, WhenPreset } from "./query";
 import type { PublishedEvent } from "./types";
@@ -103,20 +103,15 @@ export function facetCounts(events: readonly PublishedEvent[], f: Filters, today
   return { kinds, regions };
 }
 
-/**
- * The first day from `from` through `to` that a run plays on (playsOn); undefined when it plays on none of them. Here,
- * with the explorer's code, so the front page does not carry it.
- */
-export function nextPlayingDay(e: PublishedEvent, from: string, to: string): string | undefined {
-  for (let d = from, n = 0; d <= to && n < 7; d = addDays(d, 1), n++) if (playsOn(e, d)) return d;
-}
-
 function inRange(e: PublishedEvent, range: { from: string; to: string }): boolean {
   const last = lastDay(e)!;
   const first = firstDay(e) ?? range.from; // a start-less run has been on since before any range
   if (first > range.to || last < range.from) return false;
-  // A run with days must play on one of the range's days it is open (#143).
-  return e.days === undefined || nextPlayingDay(e, first > range.from ? first : range.from, last < range.to ? last : range.to) !== undefined;
+  if (e.days === undefined) return true;
+  // A run with days must have a day to go on within the range (#143): one of its weekdays, or its closing day once none
+  // of them is left before it (nextRunDay), so the front page never lists a pick the explorer's same days leave out.
+  const day = nextRunDay(e, first > range.from ? first : range.from);
+  return day !== undefined && day <= range.to;
 }
 
 /** Everything a search looks in, folded as the terms are, so "cafe" finds "Café" and "johnson county" a region. */

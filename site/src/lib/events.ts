@@ -1,4 +1,4 @@
-import { formatDay, isDateOnly, localDate, weekday } from "./dates";
+import { addDays, formatDay, isDateOnly, localDate, weekday } from "./dates";
 import type { PickReason, PublishedEvent } from "./types";
 
 export function isDated(e: PublishedEvent): boolean {
@@ -81,6 +81,24 @@ export function isOpen(e: PublishedEvent, today: string): boolean {
 /** Whether a date falls on one of a run's weekdays (#143); a run without days plays every day. */
 export function playsOn(e: PublishedEvent, date: string): boolean {
   return !e.days || e.days.includes(weekday(date));
+}
+
+/** The first day from `from` through `to` that a run plays on (playsOn); undefined when it plays on none of them. */
+export function nextPlayingDay(e: PublishedEvent, from: string, to: string): string | undefined {
+  // A week covers every weekday.
+  for (let d = from, n = 0; d <= to && n < 7; d = addDays(d, 1), n++) if (playsOn(e, d)) return d;
+}
+
+/**
+ * The day a run can next be gone to from `from`, which the front page sorts it by and the explorer lists it under:
+ * the first of its weekdays from then through its close, or, when none of them is left, the closing day itself. A span
+ * can outlast its last listed weekday ("Sept. 25 – Nov. 11 (Weekends)", closing on a Wednesday): by its own page the
+ * run is still open, so it is neither dropped nor called on today (isOnNow). It waits under the day it closes, the one
+ * date its card and its row state. Undefined once `from` is past the close.
+ */
+export function nextRunDay(e: PublishedEvent, from: string): string | undefined {
+  const last = lastDay(e)!;
+  return from > last ? undefined : (nextPlayingDay(e, from, last) ?? last);
 }
 
 /** "therecordbar.com" for a link label; the input when it is not a URL. */

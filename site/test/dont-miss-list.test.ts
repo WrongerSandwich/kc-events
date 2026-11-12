@@ -11,7 +11,7 @@ vi.mock("../src/generated/dont-miss", async () => {
     event({ id: "a", title: "Tuesday show", dontMiss: true, whyLine: "Why A.", start: "2026-10-06T20:00:00-05:00" }),
     event({ id: "b", title: "Closing run", kind: "art/exhibitions", dontMiss: true, whyLine: "Why B.", recurrence: "limited-run", start: "2026-09-01", end: "2026-10-11" }),
     event({ id: "e", title: "Wednesday show", dontMiss: true, start: "2026-10-07T20:00:00-05:00" }),
-    event({ id: "c", title: "Later show", dontMiss: true, whyLine: "Why C.", start: "2026-10-17" }),
+    event({ id: "c", title: "Later show", dontMiss: true, pickReason: "big-name", whyLine: "Why C.", start: "2026-10-17" }),
     event({ id: "f", title: "Art fair", kind: "art/exhibitions", dontMiss: true, start: "2026-10-19" }),
     event({ id: "d", title: "Plain show", dontMiss: false, start: "2026-10-06" }),
   ];
@@ -65,6 +65,10 @@ describe("DontMissList", () => {
     expect(within(sections[1]!).queryByRole("list", { name: "Picks by kind" })).toBeNull();
     expect(within(sections[1]!).getByRole("link", { name: "Later show, music" })).toHaveAttribute("href", "/e/c");
     expect(within(sections[1]!).getByText("Sat Oct 17")).toBeInTheDocument();
+    // A row has no why line, so it keeps the pick tag: the reason in a word, after the title and outside its link.
+    const row = within(sections[1]!).getAllByRole("listitem")[0]!;
+    expect(row).toHaveTextContent(/^Sat Oct 17\s*Later show, music\s*Pick: Big name\s*recordBar$/);
+    expect(row.querySelector(".dont-miss")).toHaveTextContent("Pick: Big name");
     expect(within(sections[2]!).getByText("Nothing picked further out yet.")).toBeInTheDocument();
     // One link to the explorer's picks on the page, under this week's (#184).
     expect(screen.getAllByRole("link", { name: /in the explorer/ }).map((a) => a.textContent)).toEqual(["This week's picks in the explorer"]);
@@ -107,6 +111,7 @@ describe("DontMissList", () => {
       expect(within(screen.getAllByRole("region")[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent(/^All 2\s*1 Art\/exhibitions\s*1 Music$/);
       expect(within(fold as HTMLElement).getByRole("link", { name: "Tuesday show, music" })).toHaveAttribute("href", "/e/a");
       expect(within(fold as HTMLElement).getByText("8:00 pm")).toBeInTheDocument();
+      expect(fold.querySelector(".dont-miss")).toBeNull(); // a started row is the title alone
       const week = screen.getAllByRole("region")[0]!;
       expect(within(week).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Closing run", "Wednesday show"]);
       expect(week.lastElementChild?.previousElementSibling).toBe(fold); // the explorer link follows it

@@ -1,6 +1,5 @@
 import { addDays, formatDay, formatShort, formatTime, isDateOnly, localDate } from "./dates";
-import { firstDay, isDated, lastDay, detailsUrl, reasonLine } from "./events";
-import { nextPlayingDay } from "./filter";
+import { firstDay, isDated, lastDay, nextPlayingDay, detailsUrl, reasonLine } from "./events";
 import { kindName } from "./landing";
 import type { Geo, PublishedEvent, PublishedVenue } from "./types";
 import { addressLine, venueNamed } from "./venues";
@@ -76,7 +75,8 @@ function calendarTimes(e: PublishedEvent, visitFrom?: string): { allDay: boolean
   const last = lastDay(e)!;
 
   const from = visitFrom === undefined || (first !== undefined && first > visitFrom) ? first : visitFrom;
-  // A day it plays, when it has days; none left (or a run already closed) leaves the span, as before.
+  // A day it plays, when it has days; none left (or a run already closed) leaves the span, as before. Not the closing
+  // day the site lists such a run under (nextRunDay): an entry in a calendar says the run is on that day.
   const day = from === undefined || from > last ? undefined : e.days === undefined ? from : nextPlayingDay(e, from, last);
   if (visitFrom !== undefined && e.recurrence === "limited-run" && (first === undefined || last > first) && day !== undefined) {
     // One event's own file, from a card or its page: a run goes in as one day to go, the first it is open from
