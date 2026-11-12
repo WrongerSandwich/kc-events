@@ -2,9 +2,9 @@
   import { flushSync, onMount, tick } from "svelte";
   // dont-miss, not events: the front page ships only the flagged events (the full list would be about 26 KB more).
   import { dontMiss } from "../generated/dont-miss";
-  import { addDays, formatDay, formatShort, formatTime } from "../lib/dates";
-  import { firstDay, isMultiDay, lastDay, playsOn, venueLine } from "../lib/events";
-  import { anchorDate, bucketDontMiss, horizonBounds, horizonHeading, HORIZONS } from "../lib/horizon";
+  import { addDays, formatTime } from "../lib/dates";
+  import { firstDay, isMultiDay, nextRunDay, venueLine } from "../lib/events";
+  import { anchorDate, bucketDontMiss, horizonBounds, horizonHeading, HORIZONS, rowWhen } from "../lib/horizon";
   import { kindName, kindWords } from "../lib/landing";
   import { hashId, kindLabel, slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
@@ -12,6 +12,7 @@
   import DontMissCard from "./DontMissCard.svelte";
   import KindChip from "./KindChip.svelte";
   import KindIcon from "./KindIcon.svelte";
+  import PickTag from "./PickTag.svelte";
   import UiIcon from "./UiIcon.svelte";
   import WeekStrip from "./WeekStrip.svelte";
   import { islandClock } from "./clock.svelte";
@@ -122,12 +123,14 @@
    */
   const hasStarted = (e: PublishedEvent) => now !== undefined && dateTile(e, today, now).started === true;
 
-  /** A pick this week that can be gone to after today: a later one-off, or a run open, and playing, on a later day by Sunday. */
+  /**
+   * A pick this week that can be gone to after today: a later one-off, or a run with a day to go on (nextRunDay) after
+   * today and by Sunday.
+   */
   function afterToday(e: PublishedEvent): boolean {
     if (e.recurrence !== "limited-run") return firstDay(e)! > today;
-    const until = lastDay(e)! < horizonBounds(today).sunday ? lastDay(e)! : horizonBounds(today).sunday;
-    for (let d = addDays(today, 1); d <= until; d = addDays(d, 1)) if (playsOn(e, d)) return true;
-    return false;
+    const next = nextRunDay(e, addDays(today, 1));
+    return next !== undefined && next <= horizonBounds(today).sunday;
   }
 
   /**
@@ -155,13 +158,6 @@
     const until = addDays(horizonBounds(today).sunday, 3);
     return new Set(buckets["next-two-weeks"].filter((e) => anchorDate(e, today)! <= until).map((e) => e.id));
   });
-
-  /** A one-line row's date: everything after this week starts after Sunday, so nothing there is on now. */
-  function shortWhen(e: PublishedEvent): string {
-    const first = firstDay(e)!;
-    if (!isMultiDay(e)) return formatDay(first);
-    return e.recurrence === "limited-run" ? `From ${formatDay(first)}` : `${formatDay(first)}–${formatShort(lastDay(e)!)}`;
-  }
 </script>
 
 {#if total === 0}
@@ -176,7 +172,8 @@
         <p class="empty">{emptyLines[h]}</p>
       {:else if h !== "through-sunday"}
         <!-- After this week, one line a pick (#184): the cards are for what is close enough to plan tonight, which at
-             the weekend reaches into the days after it (soon). -->
+             the weekend reaches into the days after it (soon). Each row keeps its pick tag, the one part of the why
+             that fits a line: without it a row says when and where and never why it is here. -->
         {#each buckets[h].filter((e) => soon.has(e.id)) as event (event.id)}
           <div class="pick"><DontMissCard {event} {today} {now} /></div>
         {/each}
@@ -185,8 +182,8 @@
         <ul class="later">
           {#each rows as event (event.id)}
             <li class={`kind-${slugify(event.kind)}`}>
-              <span class="when">{shortWhen(event)}</span>
-              <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {kindName(event.kind).toLowerCase()}</span></a>
+              <span class="when">{rowWhen(event, today)}</span>
+              <span class="what"><a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {kindName(event.kind).toLowerCase()}</span></a><PickTag reason={event.pickReason} /></span>
               <span class="where">{venueLine(event)}</span>
             </li>
           {/each}
@@ -280,14 +277,22 @@
   /* Icon, then title, with a hanging indent: a wrapped title lines up under itself, not under the icon. */
   .later a { display: flex; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
   .later .where { font-size: var(--text-sm); color: var(--fg-muted); max-width: 18rem; text-wrap: pretty; }
+  /* A row after this week: the title, then its pick tag (base.css's, in PickTag's markup, so global here), which never
+     gives way to a title that wraps. The started fold's rows have no tag: nothing there is left to choose between. */
+  .later .what { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
+  .later :global(.dont-miss) { flex: none; }
   @media (max-width: 34rem) {
     .later li { grid-template-columns: 5.5rem minmax(0, 1fr); }
     .later .where { grid-column: 2; max-width: none; }
+    /* The tag drops under the date, beside the venue: the room a two-line row leaves empty, so the title keeps its line. */
+    .later .what { display: contents; }
+    .later :global(.dont-miss) { grid-column: 1; grid-row: 2; justify-self: start; }
   }
-  /* The narrowest phones: date over title, so the title gets the whole line. */
+  /* The narrowest phones: date over title, so the title gets the whole line; the tag rides the date line. */
   @media (max-width: 24rem) {
-    .later li { grid-template-columns: minmax(0, 1fr); }
-    .later .where { grid-column: 1; }
+    .later li { grid-template-columns: max-content minmax(0, 1fr); }
+    .later a, .later .where { grid-column: 1 / -1; }
+    .later :global(.dont-miss) { grid-column: 2; grid-row: 1; }
   }
   .more { margin-top: var(--space-3); }
   /* Under a run of cards, the link stands off them as far as one card stands off the next. */

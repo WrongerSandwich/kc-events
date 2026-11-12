@@ -3,6 +3,8 @@ import { anchorDate, bucketDontMiss, closingLine, horizon, horizonBounds, horizo
 import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
 import { isDated, isPast } from "../src/lib/events";
+import { matches } from "../src/lib/filter";
+import { DEFAULT_FILTERS } from "../src/lib/query";
 import { addDays } from "../src/lib/dates";
 import { event } from "./fixtures/event";
 
@@ -119,6 +121,18 @@ describe("horizon", () => {
         }
         // A dataset with nothing dated in the week after its run would otherwise pass this test having checked nothing.
         expect(checked, `events checked for ${today}`).toBeGreaterThan(0);
+      }
+    });
+
+    it("holds the same picks this week as the explorer link under them, for a week of todays", () => {
+      // "This week's picks in the explorer" (when=weekend&picks=1) must not list fewer than the cards above it: on
+      // 2026-11-09 it left out the page's first card, a run with no listed weekday left before its close.
+      const link = { ...DEFAULT_FILTERS, when: { preset: "weekend" as const }, dontMiss: true };
+      for (let i = 0; i < 7; i++) {
+        const today = addDays(meta.buildToday, i);
+        const page = bucketDontMiss(events, today)["through-sunday"].map((e) => e.id).sort();
+        const explorer = events.filter((e) => matches(e, link, today, new Set())).map((e) => e.id).sort();
+        expect(explorer, `picks for the week from ${today}`).toEqual(page);
       }
     });
   });

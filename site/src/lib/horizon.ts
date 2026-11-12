@@ -1,5 +1,5 @@
 import { addDays, comingSunday, formatDay, formatRange, formatShort, formatTime, isDateOnly, weekday } from "./dates";
-import { firstDay, isDated, isOpen, isPast, isUnderway, lastDay, playsOn } from "./events";
+import { firstDay, isDated, isMultiDay, isOpen, isPast, isUnderway, lastDay, nextRunDay } from "./events";
 import type { PublishedEvent } from "./types";
 
 export type Horizon = "through-sunday" | "next-two-weeks" | "further-out";
@@ -13,16 +13,29 @@ export function horizonBounds(today: string): { sunday: string; twoWeeks: string
 /**
  * A one-off is placed by its start. A limited run is placed by when you can first go: its opening, or today once
  * it is open, so a run that is on now sits under "This week" whatever its close. The date line carries the close.
- * A run with days is placed on the first of them from then, so a weekend run is not "today" on a Monday.
+ * A run with days is placed on the first of them from then, so a weekend run is not "today" on a Monday; with none of
+ * them left before it closes, on its closing day (nextRunDay), the date its tile shows.
  */
 export function anchorDate(e: PublishedEvent, today: string): string | undefined {
   if (!isDated(e)) return undefined;
   if (e.recurrence !== "limited-run") return firstDay(e) ?? lastDay(e);
   const opens = firstDay(e);
   const from = opens === undefined || opens < today ? today : opens;
-  // A week covers every weekday; a run closing before its next day falls back to `from`, as isPast will drop it.
-  for (let d = from, n = 0; n < 7 && d <= lastDay(e)!; d = addDays(d, 1), n++) if (playsOn(e, d)) return d;
-  return from;
+  // Undefined only past the close, when bucketDontMiss has dropped the run already (isPast).
+  return nextRunDay(e, from) ?? from;
+}
+
+/**
+ * The date on a front page row after this week, the day the row is sorted by (anchorDate). A run with days can wait
+ * there while open, for its next weekday after Sunday or for its closing day, so it is never "From" an opening that
+ * has passed; one still to open is "From" the first day it plays.
+ */
+export function rowWhen(e: PublishedEvent, today: string): string {
+  if (!isMultiDay(e)) return formatDay(firstDay(e)!);
+  if (e.recurrence !== "limited-run") return `${formatDay(firstDay(e)!)}–${formatShort(lastDay(e)!)}`;
+  const day = anchorDate(e, today)!;
+  if (!isUnderway(e, today)) return `From ${formatDay(day)}`;
+  return day === lastDay(e) ? `Closes ${formatDay(day)}` : formatDay(day);
 }
 
 /** Total over every non-past dated event: each lands in exactly one bucket. */

@@ -1,6 +1,6 @@
 import { addDays, formatDay, formatTime, isDateOnly } from "./dates";
-import { firstDay, isDated, isMultiDay, isOnNow, isOpen, isPast, lastDay } from "./events";
-import { dateRange, matches, nextPlayingDay } from "./filter";
+import { firstDay, isDated, isMultiDay, isOnNow, isOpen, isPast, lastDay, nextRunDay } from "./events";
+import { dateRange, matches } from "./filter";
 import { throughLine } from "./horizon";
 import type { Filters } from "./query";
 import type { PublishedEvent } from "./types";
@@ -29,7 +29,8 @@ export type RowDate = { line: string; datetime?: string };
 
 /**
  * A row's date line under its group heading: a start time or "No time listed"; for a run on now, "Closes Tue Oct 20", under
- * "On now"; for a run not yet open, "Closes Sat Nov 14" under its opening day, or "Fri–Sun, through Sun Nov 1"; for a
+ * "On now"; for a run not yet open, "Closes Sat Nov 14" under its opening day, or "Fri–Sun, through Sun Nov 1" under the
+ * first of its weekdays; for a
  * multi-day one-off, under each of its days, "8:30 pm · through Sat Oct 10" or "Through Sun Oct 11" (throughLine); a recurring event's
  * schedule phrase. Kept short so the explorer's date column stays narrow; the front page's cards say more (closingLine).
  * With `withDay` (the venue sort, which has no day headings), the day comes first: "Fri Oct 9 · 7:00 pm",
@@ -71,17 +72,21 @@ function timeOfDay(e: PublishedEvent): string {
 
 /**
  * The days a dated event is listed under: a one-off's every day from today within the when-filter, else its first day;
- * a run with days that is open but does not play today, its next day within the when-filter that it does (#143).
+ * a run with days that is open but does not play today, its next day within the when-filter that it does (#143), or its
+ * closing day when none is left (nextRunDay); a run with days still to open, the first of them from its opening, the
+ * day the when-filter holds it for (inRange) and the front page sorts it by (anchorDate), not an opening day it does
+ * not play on.
  */
 function listedDays(e: PublishedEvent, today: string, range: { from: string; to: string } | undefined): string[] {
-  if (isOpen(e, today)) {
-    // From the when-filter's first day when that is later; matches has held that it plays before the filter's last.
-    const next = nextPlayingDay(e, range !== undefined && range.from > today ? range.from : today, lastDay(e)!);
+  const first = firstDay(e) ?? today; // a start-less run opened before today
+  // The latest of its first day, today and the when-filter's first day.
+  const from = [first, today, range?.from ?? first].reduce((a, b) => (a > b ? a : b));
+  if (isOpen(e, today) || e.days) {
+    // matches has held that the day is on or before the filter's last.
+    const next = nextRunDay(e, from);
     return next === undefined ? [] : [next];
   }
-  const first = firstDay(e)!; // a start-less run without days is always on now, so never reaches here
   if (e.recurrence === "limited-run" || !isMultiDay(e)) return [first];
-  const from = [first, today, range?.from ?? first].reduce((a, b) => (a > b ? a : b));
   const to = range !== undefined && range.to < lastDay(e)! ? range.to : lastDay(e)!;
   const days: string[] = [];
   for (let d = from; d <= to; d = addDays(d, 1)) days.push(d);

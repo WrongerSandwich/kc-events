@@ -83,8 +83,10 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // Clear and saved view buttons and Filters control, Export after the results, quiet Saves on phone rows, the Every
   // date pill, the fades at the rail's and the kind row's ends, and the sheet's Show button unfilled in the dark
   // (measured 1,670 against a 55,006 build), and 400 for the pick tag carrying the reason on each row, with the six
-  // reasons' words and the "Pick:" a screen reader hears (#273; measured 363)
-  { page: "explore.html", budget: 57_100, build: "fixture" },
+  // reasons' words and the "Pick:" a screen reader hears (#273; measured 363), and 100 for a run with days listed under
+  // the day it can next be gone to, its closing day when none of its weekdays is left, open or still to open (measured 51
+  // against a 57,049 build)
+  { page: "explore.html", budget: 57_200, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
   // A page with no island of its own loads no Svelte runtime: the header's Saved link and staleness banner are plain
