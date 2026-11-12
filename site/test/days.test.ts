@@ -5,7 +5,7 @@ import { daysPhrase } from "../src/build/load-dataset";
 import { isOnNow, nextRunDay, playsOn } from "../src/lib/events";
 import { matches } from "../src/lib/filter";
 import { groupResults, rowDate } from "../src/lib/group";
-import { anchorDate, bucketDontMiss, closingLine } from "../src/lib/horizon";
+import { anchorDate, bucketDontMiss, closingLine, rowWhen } from "../src/lib/horizon";
 import { toIcs } from "../src/lib/ics";
 import { DEFAULT_FILTERS, EVERY_DATE } from "../src/lib/query";
 import { dateTile } from "../src/lib/tile";
@@ -62,8 +62,18 @@ describe("a limited run that plays only some weekdays (#143)", () => {
     const groups = (today: string) => groupResults([poe], { ...DEFAULT_FILTERS, when: EVERY_DATE }, today, new Set()).map((g) => [g.key, g.events.map((e) => e.id)]);
     expect(groups(THU)).toEqual([[FRI, ["poe"]]]);
     expect(groups(FRI)).toEqual([["on-now", ["poe"]]]);
-    expect(groups("2026-10-05")).toEqual([["2026-10-14", ["poe"]]]);
     expect(rowDate(poe, THU).line).toBe("Fri–Sun, through Sun Nov 1");
+  });
+
+  it("is listed, while still to open, under the first of its weekdays from its opening: the day a when-filter holds it for", () => {
+    // Opens Wed Oct 14 and plays Fri–Sun: a Friday filter held it and listed it under a Wednesday heading.
+    const keys = (e: typeof poe, when: typeof DEFAULT_FILTERS.when) => groupResults([e], { ...DEFAULT_FILTERS, when }, "2026-10-05", new Set()).map((g) => g.key);
+    expect(keys(poe, EVERY_DATE)).toEqual([FRI]);
+    expect(keys(poe, { from: "2026-10-14", to: THU })).toEqual([]);
+    expect(keys(poe, { from: FRI, to: FRI })).toEqual([FRI]);
+    expect(keys(poe, { from: "2026-10-19", to: "2026-10-25" })).toEqual(["2026-10-23"]);
+    // Without days it plays the day it opens.
+    expect(keys(everyDay as typeof poe, EVERY_DATE)).toEqual(["2026-10-14"]);
   });
 
   it("matches a when-filter only when it plays within it", () => {
@@ -139,5 +149,18 @@ describe("a run whose span outlasts its last listed weekday", () => {
       const ics = toIcs([beacon], { siteName: "KC Events", stamp: "2026-11-09T11:30:00Z", visitFrom }).replace(/\r\n[ \t]/g, "");
       expect(ics).toContain("DTSTART;VALUE=DATE:20260926\r\nDTEND;VALUE=DATE:20260927\r\nRRULE:FREQ=WEEKLY;BYDAY=SA,SU;UNTIL=20261111\r\n");
     }
+  });
+
+  it("says the day it waits for on a front page row, never an opening that has passed", () => {
+    // Saturdays only, through Thu Nov 19. On a Sunday its next day is after the week, so it waits in the rows.
+    const sat = { ...beacon, id: "sat", end: "2026-11-19", days: [6], daysLine: "Sat" };
+    expect(bucketDontMiss([sat], "2026-11-08")["next-two-weeks"].map((e) => e.id)).toEqual(["sat"]);
+    expect(rowWhen(sat, "2026-11-08")).toBe("Sat Nov 14");
+    expect(bucketDontMiss([sat], "2026-11-15")["next-two-weeks"].map((e) => e.id)).toEqual(["sat"]);
+    expect(rowWhen(sat, "2026-11-15")).toBe("Closes Thu Nov 19");
+    // Still to open: from the first day it plays, which without days is the day it opens.
+    expect(rowWhen(poe, "2026-10-05")).toBe("From Fri Oct 16");
+    expect(rowWhen(everyDay, "2026-10-05")).toBe("From Wed Oct 14");
+    expect(rowWhen(event({ start: "2026-10-17" }), "2026-10-05")).toBe("Sat Oct 17");
   });
 });

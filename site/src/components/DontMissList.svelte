@@ -2,9 +2,9 @@
   import { flushSync, onMount, tick } from "svelte";
   // dont-miss, not events: the front page ships only the flagged events (the full list would be about 26 KB more).
   import { dontMiss } from "../generated/dont-miss";
-  import { addDays, formatDay, formatShort, formatTime } from "../lib/dates";
-  import { firstDay, isMultiDay, lastDay, nextRunDay, venueLine } from "../lib/events";
-  import { anchorDate, bucketDontMiss, horizonBounds, horizonHeading, HORIZONS } from "../lib/horizon";
+  import { addDays, formatTime } from "../lib/dates";
+  import { firstDay, isMultiDay, nextRunDay, venueLine } from "../lib/events";
+  import { anchorDate, bucketDontMiss, horizonBounds, horizonHeading, HORIZONS, rowWhen } from "../lib/horizon";
   import { kindName, kindWords } from "../lib/landing";
   import { hashId, kindLabel, slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
@@ -158,13 +158,6 @@
     const until = addDays(horizonBounds(today).sunday, 3);
     return new Set(buckets["next-two-weeks"].filter((e) => anchorDate(e, today)! <= until).map((e) => e.id));
   });
-
-  /** A one-line row's date: everything after this week starts after Sunday, so nothing there is on now. */
-  function shortWhen(e: PublishedEvent): string {
-    const first = firstDay(e)!;
-    if (!isMultiDay(e)) return formatDay(first);
-    return e.recurrence === "limited-run" ? `From ${formatDay(first)}` : `${formatDay(first)}–${formatShort(lastDay(e)!)}`;
-  }
 </script>
 
 {#if total === 0}
@@ -189,7 +182,7 @@
         <ul class="later">
           {#each rows as event (event.id)}
             <li class={`kind-${slugify(event.kind)}`}>
-              <span class="when">{shortWhen(event)}</span>
+              <span class="when">{rowWhen(event, today)}</span>
               <span class="what"><a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {kindName(event.kind).toLowerCase()}</span></a><PickTag reason={event.pickReason} /></span>
               <span class="where">{venueLine(event)}</span>
             </li>

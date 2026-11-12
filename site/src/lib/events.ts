@@ -94,7 +94,8 @@ export function nextPlayingDay(e: PublishedEvent, from: string, to: string): str
  * the first of its weekdays from then through its close, or, when none of them is left, the closing day itself. A span
  * can outlast its last listed weekday ("Sept. 25 – Nov. 11 (Weekends)", closing on a Wednesday): by its own page the
  * run is still open, so it is neither dropped nor called on today (isOnNow). It waits under the day it closes, the one
- * date its card and its row state. Undefined once `from` is past the close.
+ * date its card and its row state. Undefined once `from` is past the close. `from` is never before the opening: a
+ * caller passes the later of the opening and the day it asks from.
  */
 export function nextRunDay(e: PublishedEvent, from: string): string | undefined {
   const last = lastDay(e)!;
