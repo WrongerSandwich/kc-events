@@ -78,6 +78,7 @@ describe("loadPublished", () => {
 venueAliases:
   Kauffman Center for the Performing Arts: [Kauffman Center, Helzberg Hall]
   Lied Center of Kansas: [Main Auditorium]
+  Liberty Hall: [644 Massachusetts St]
 `;
     const venues = (...names: string[]) => names.map((venue, i) => activeEvent({ id: `evt_${String(i + 1).padStart(12, "0")}`, venue }));
 
@@ -91,6 +92,11 @@ venueAliases:
         ["recordBar", undefined],
       ]);
       expect(p.events[1]).not.toHaveProperty("room");
+    });
+
+    it("shows no room for an alias that is the venue's street address", () => {
+      const p = loadPublished(write(dataset(venues("644 Massachusetts St", "Liberty Hall")), withAliases));
+      expect(p.events.map((e) => [e.venue, e.room])).toEqual([["Liberty Hall", undefined], ["Liberty Hall", undefined]]);
     });
 
     it("warns about a published venue that is only generic words or a street address, so the alias list can catch up", () => {

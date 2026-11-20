@@ -25,6 +25,11 @@ describe("committed config and registry", () => {
     expect(rows.filter((r) => r.neighborhood !== undefined).map((r) => r.name)).toContain("1900 Building");
   });
 
+  it("keeps an address alias with a comma whole: unquoted, the comma makes two names of it", () => {
+    expect(config.venueAliases["Bruce R. Watkins Cultural Heritage Center"]).toEqual(["3700 Dr. Martin Luther King, Jr. Blvd."]);
+    expect(sameVenue("Swope Park, Martin Luther King Jr. Blvd.", "Bruce R. Watkins Cultural Heritage Center", config.venueAliases)).toBe(false);
+  });
+
   it("loads the committed dataset", () => {
     const raw = JSON.parse(readFileSync(new URL("../data/events.json", import.meta.url), "utf8"));
     // Loading fills fields newer than the file with their defaults and changes nothing else.

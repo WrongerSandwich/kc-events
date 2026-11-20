@@ -257,12 +257,15 @@ export function aliasedVenue(name: string, aliases: VenueAliases): string | unde
 export function venueAndRoom(name: string, aliases: VenueAliases): { venue: string; room?: string } {
   const venue = aliasedVenue(name, aliases);
   if (venue === undefined) return { venue: name };
-  return oneVenueName(normalizeName(name), normalizeName(venue)) || opensWithStreetNumber(name) ? { venue } : { venue, room: name };
+  return oneVenueName(normalizeName(name), normalizeName(venue)) || streetAddress(name) ? { venue } : { venue, room: name };
 }
 
-/** An alias that opens with a street number ("1801 East 18th Street", "2450 Grand Blvd., Suite 301"): an address, not a room. */
-function opensWithStreetNumber(name: string): boolean {
-  return /^\s*\d+\s+\p{L}/u.test(name);
+/**
+ * A house number, then a street-type word ("1801 East 18th Street", "2450 Grand Blvd., Suite 301"): a heuristic, which
+ * a "1600 Genessee" slips past and a "1900 Building" does not trip.
+ */
+export function streetAddress(name: string): boolean {
+  return /^\s*\d+\s+(?:\S+\s+)*?(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|ct|court|ln|lane|pkwy|parkway|pl|place|ter|terrace|hwy|highway|cir|circle|way|trail)\b/i.test(name);
 }
 
 /** Words that name a room or a kind of place, not any one venue. */

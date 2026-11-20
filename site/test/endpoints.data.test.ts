@@ -71,6 +71,7 @@ describe("the build of the committed dataset", () => {
     const where = /<p class="where"[^>]*>(.*?)<\/p>/.exec(read(`e/${lawrence!.id}.html`));
     expect(where, "the Lawrence event's page has a location line").not.toBeNull();
     // The venue's part is venueLine's, room and all ("Lied Center of Kansas · Main Auditorium"); Lawrence follows it once.
-    expect(where![1]!.replace(/<[^>]*>/g, "")).toBe(`${venueLine(lawrence!)} · Lawrence`);
+    const text = where![1]!.replace(/<[^>]*>/g, "").replaceAll("&#39;", "'").replaceAll("&quot;", "\"").replaceAll("&amp;", "&");
+    expect(text).toBe(`${venueLine(lawrence!)} · Lawrence`);
   });
 });

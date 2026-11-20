@@ -229,7 +229,8 @@ venueAliases:
   # Weekly audit 2026-10-26: some of its listings give the street address alone.
   Liberty Hall: [644 Massachusetts St]
   # Weekly audit 2026-11-02 (#260): kcparks.org's homepage gives the center's street address alone.
-  Bruce R. Watkins Cultural Heritage Center: [3700 Dr. Martin Luther King, Jr. Blvd.]
+  # Quoted for its comma: bare, it was two names, and "Jr. Blvd." filed any venue on that boulevard under the center.
+  Bruce R. Watkins Cultural Heritage Center: ["3700 Dr. Martin Luther King, Jr. Blvd."]
   # #197: Music Theater Heritage's Ruby Room, Suite 301 at Crown Center, as Crown Center's calendar gives it.
   Music Theater Heritage: [Ruby Room, "2450 Grand Blvd., Suite 301"]
   # #197: spellings as pages give them. A name with no other names files only the same words in other
