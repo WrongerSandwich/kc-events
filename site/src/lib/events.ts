@@ -163,7 +163,7 @@ export function admissionLine(e: PublishedEvent): string | undefined {
   return line === "" ? undefined : line;
 }
 
-/** "Crossroads · Central KC"; a neighborhood that is its own region (Lawrence, Elsewhere in the metro) is named once. */
+/** "Crossroads · Central KC"; a neighborhood that carries its region's name (Northland, Elsewhere in the metro) is named once. */
 export function neighborhoodLine(neighborhood: string, region: string): string {
   return region === neighborhood ? neighborhood : `${neighborhood} · ${region}`;
 }

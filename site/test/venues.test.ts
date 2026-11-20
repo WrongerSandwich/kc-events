@@ -11,7 +11,7 @@ import { tempDir } from "./fixtures/temp-dir";
 
 const aliases = { "Kauffman Center for the Performing Arts": ["Kauffman Center", "Helzberg Hall"] };
 /** The config the table is checked against (src/venues.ts): the fixture config's neighborhoods and these aliases. */
-const tableConfig = { neighborhoods: { "Central KC": ["Crossroads", "Downtown"], "Johnson County": ["Olathe"], Lawrence: ["Lawrence"] }, venueAliases: aliases };
+const tableConfig = { neighborhoods: { "Central KC": ["Crossroads", "Downtown"], "Johnson County": ["Olathe"], Northland: ["Northland"] }, venueAliases: aliases };
 const readVenueTable = (path: string | undefined) => readTable(path, tableConfig);
 
 function table(yaml: string): string {
@@ -198,13 +198,13 @@ describe("venueDirectory", () => {
 
   it("lists venues under their region in the config's order, by slug within it, with their event counts", () => {
     const groups = venueDirectory(
-      [venue("truman", "The Truman", "Central KC"), venue("granada", "The Granada", "Lawrence"), venue("recordbar", "recordBar", "Central KC")],
+      [venue("truman", "The Truman", "Central KC"), venue("granada", "The Granada", "Northland"), venue("recordbar", "recordBar", "Central KC")],
       [event({ id: "evt_a", venue: "recordBar" }), event({ id: "evt_b", venue: "The Truman" }), event({ id: "evt_c", venue: "recordBar" }), event({ id: "evt_d", venue: "The Granada" })],
-      ["Central KC", "Johnson County", "Lawrence"],
+      ["Central KC", "Johnson County", "Northland"],
     );
     expect(groups.map((g) => [g.heading, g.venues.map((v) => `${v.venue.name} ${v.events}`)])).toEqual([
       ["Central KC", ["recordBar 2", "The Truman 1"]],
-      ["Lawrence", ["The Granada 1"]],
+      ["Northland", ["The Granada 1"]],
     ]);
   });
 

@@ -87,7 +87,7 @@ export function kindLanding(kind: string, events: PublishedEvent[], today: strin
 
 /**
  * /r/<region>: "Things to do in Johnson County", with the region's neighborhoods from the config, less one that is only
- * the region's own name (Lawrence's is "Lawrence"), which the heading already says (#184).
+ * the region's own name (Northland lists "Northland"), which the heading already says (#184).
  */
 export function regionLanding(region: string, events: PublishedEvent[], today: string, range: { from: string; to: string }, neighborhoods: readonly string[]): Landing & { neighborhoods: readonly string[] } {
   const where = inRegion(region);

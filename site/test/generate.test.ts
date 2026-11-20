@@ -50,9 +50,9 @@ describe("writeGenerated", () => {
     expect(exported(join(outDir, "about.ts"))).toEqual({
       crawler: PRODUCT,
       userAgent: USER_AGENT,
-      geography: "Kansas City metro on both sides of the state line, plus Lawrence",
+      geography: "Kansas City metro on both sides of the state line",
       horizonWeeks: 8,
-      neighborhoods: { "Central KC": ["Crossroads", "Downtown"], "Johnson County": ["Olathe"], Lawrence: ["Lawrence"] },
+      neighborhoods: { "Central KC": ["Crossroads", "Downtown"], "Johnson County": ["Olathe"], Northland: ["Northland"] },
     });
     expect(meta).not.toHaveProperty("about");
     const published = JSON.parse(readFileSync(join(publicDir, "events.json"), "utf8"));

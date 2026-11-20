@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseConfig, type RunConfig } from "../src/config.js";
-import { emptyDataset, type Dataset, type Event } from "../src/dataset.js";
+import { emptyDataset, parseDataset, type Dataset, type Event } from "../src/dataset.js";
 import type { CompletionResult } from "../src/ports.js";
 import { renderReportMarkdown } from "../src/report.js";
 import { run } from "../src/run.js";
@@ -15,7 +15,7 @@ const config = parseConfig({
   neighborhoods: {
     "Central KC": ["Crossroads", "Westport"],
     "Johnson County": ["Olathe", "Overland Park"],
-    Lawrence: ["Lawrence"],
+    "Kansas City, Kansas": ["Kansas City, Kansas"],
   },
 });
 
@@ -23,7 +23,7 @@ describe("regions", () => {
   it("a neighborhood's region is the one listing it", () => {
     expect(regionOf("Olathe", config)).toBe("Johnson County");
     expect(regionOf("Crossroads", config)).toBe("Central KC");
-    expect(regionOf("Lawrence", config)).toBe("Lawrence");
+    expect(regionOf("Kansas City, Kansas", config)).toBe("Kansas City, Kansas");
   });
 
   it("the catch-all, and anything no region lists, is in no region", () => {
@@ -39,7 +39,7 @@ describe("regions", () => {
       "Westport",
       "Olathe",
       "Overland Park",
-      "Lawrence",
+      "Kansas City, Kansas",
       "Elsewhere in the metro",
     ]);
   });
@@ -70,26 +70,22 @@ describe("regions", () => {
 });
 
 describe("the neighborhoods config", () => {
-  it("defaults to the Lawrence region alone", () => {
-    expect(parseConfig({}).neighborhoods).toEqual({ Lawrence: ["Lawrence"] });
+  it("defaults to no regions, so every address lands in the catch-all", () => {
+    expect(parseConfig({}).neighborhoods).toEqual({});
   });
 
   it("rejects a neighborhood listed under two regions", () => {
-    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport"], "South KC": ["westport"], Lawrence: ["Lawrence"] } })).toThrow(
+    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport"], "South KC": ["westport"] } })).toThrow(
       /westport.*listed under both Central KC and South KC/,
     );
   });
 
   it("rejects the catch-all listed under a region", () => {
-    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport", "Elsewhere in the metro"], Lawrence: ["Lawrence"] } })).toThrow(/catch-all/);
-  });
-
-  it("rejects a list no region of which holds Lawrence", () => {
-    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport"] } })).toThrow(/must list .*Lawrence/);
+    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport", "Elsewhere in the metro"] } })).toThrow(/catch-all/);
   });
 
   it("rejects the old flat list", () => {
-    expect(() => parseConfig({ neighborhoods: ["Westport", "Lawrence", "Elsewhere in the metro"] })).toThrow();
+    expect(() => parseConfig({ neighborhoods: ["Westport", "Crossroads", "Elsewhere in the metro"] })).toThrow();
   });
 });
 
@@ -99,7 +95,7 @@ describe("stored neighborhoods off the list", () => {
   const other = source("Other", { neighborhood: "Crossroads" });
   const show = () => candidateAt(knuckleheads, { startDate: "2026-12-12", dateEvidence: "Sat, Dec 12 · Show 8:00 PM" });
   const withJohnsonCounty = testConfig({
-    neighborhoods: { "Central KC": ["Westport", "East Bottoms", "Crossroads"], "Johnson County": ["Olathe"], Lawrence: ["Lawrence"] },
+    neighborhoods: { "Central KC": ["Westport", "East Bottoms", "Crossroads"], "Johnson County": ["Olathe"] },
   });
   const runAt = (now: Date, dataset: Dataset, knuckleheadsPage: CannedPage, completions: CompletionResult[], config = testConfig()) =>
     runWith(now, dataset, { sources: [knuckleheads, other], pages: { [calendar]: knuckleheadsPage, [other.urls[0]!]: PAGE }, completions, config });
@@ -180,6 +176,105 @@ describe("stored neighborhoods off the list", () => {
 
     expect(markdown).toContain("| Stored neighborhoods off the list, placed again | 1 |");
     expect(markdown).toContain('- "Central KC": 1 event placed in East Bottoms');
+  });
+});
+
+describe("places outside the geography (ADR 0015)", () => {
+  const calendar = knuckleheads.urls[0]!;
+  const other = source("Other", { neighborhood: "Crossroads" });
+  const show = (overrides: Parameters<typeof candidateAt>[1] = {}) => candidateAt(knuckleheads, { startDate: "2026-12-12", dateEvidence: "Sat, Dec 12 · Show 8:00 PM", ...overrides });
+  const outside = testConfig({ outsidePlaces: ["Lawrence"] });
+  const runAt = (now: Date, dataset: Dataset, knuckleheadsPage: CannedPage, completions: CompletionResult[], config = outside) =>
+    runWith(now, dataset, { sources: [knuckleheads, other], pages: { [calendar]: knuckleheadsPage, [other.urls[0]!]: PAGE }, completions, config });
+  const storedAs = async (overrides: Partial<Event>) => {
+    const first = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show()), reply()], testConfig());
+    return { ...first.dataset, events: first.dataset.events.map((e) => ({ ...e, ...overrides })) };
+  };
+  const FORBIDDEN: CannedPage = { status: 403, body: "Forbidden" };
+
+  it("the config rejects an outside place that a region lists, in any spelling, and the catch-all", () => {
+    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport"] }, outsidePlaces: ["westport"] })).toThrow(/westport\\" is outside the geography, but Central KC lists it/);
+    expect(() => parseConfig({ outsidePlaces: ["Elsewhere in the metro"] })).toThrow(/catch-all/);
+    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport"] }, outsidePlaces: ["Central KC"] })).toThrow(/it is a region's name/);
+    expect(parseConfig({}).outsidePlaces).toEqual([]);
+  });
+
+  it("a place is matched whole, whatever its case and punctuation, and a longer place name is not it", async () => {
+    const config = testConfig({ outsidePlaces: ["Lawrence, KS"] });
+    const readings = reply(show({ title: "Lawrence Show", neighborhood: "lawrence ks" }), show({ title: "North Lawrence Show", neighborhood: "North Lawrence, KS" }));
+
+    const result = await runAt(WEEK_1, emptyDataset(), PAGE, [readings, reply()], config);
+
+    expect(result.dataset.events.map((e) => e.title)).toEqual(["North Lawrence Show"]);
+    expect(result.report.counts.outsideGeography).toBe(1);
+  });
+
+  it("a reading the model placed in one is dropped and counted as outside the geography, whatever its flag said", async () => {
+    const result = await runAt(WEEK_1, emptyDataset(), PAGE, [reply(show({ title: "Lawrence Show", neighborhood: "lawrence" }), show()), reply()]);
+
+    expect(result.dataset.events.map((e) => e.title)).toEqual(["Big Show"]);
+    expect(result.report.counts).toMatchObject({ new: 1, outsideGeography: 1 });
+    expect(result.report.unmappableNeighborhoods).toEqual([]);
+  });
+
+  it("a stored event placed in one is expired as outside the geography, never moved to the catch-all", async () => {
+    const second = await runAt(WEEK_2, await storedAs({ neighborhood: "Lawrence" }), FORBIDDEN, [reply()]);
+
+    expect(second.dataset.events[0]).toMatchObject({ neighborhood: "Lawrence", status: "expired", expiryReason: "outside-geography" });
+    expect(second.report.offListNeighborhoods).toEqual([]);
+    expect(second.report.counts.expired["outside-geography"]).toBe(1);
+    expect(renderReportMarkdown(second.report)).toContain("| Expired: outside-geography | 1 |");
+  });
+
+  it("an unverified one too, and one already expired keeps its reason", async () => {
+    const unverified = await runAt(WEEK_2, await storedAs({ neighborhood: "Lawrence", status: "unverified" }), FORBIDDEN, [reply()]);
+    const expired = await runAt(WEEK_2, await storedAs({ neighborhood: "Lawrence", status: "expired", expiryReason: "two-strike" }), FORBIDDEN, [reply()]);
+
+    expect(unverified.dataset.events[0]).toMatchObject({ status: "expired", expiryReason: "outside-geography" });
+    expect(expired.dataset.events[0]).toMatchObject({ status: "expired", expiryReason: "two-strike" });
+  });
+
+  it("one held for promotion is expired and no longer held, so the dataset still parses", async () => {
+    const held = await storedAs({ neighborhood: "Lawrence", status: "unverified", heldForPromotion: true, primaryUrl: "https://museum.test/events", lead: { lane: "discovery", query: "talks in Kansas City" } });
+
+    const second = await runAt(WEEK_2, held, FORBIDDEN, [reply()]);
+
+    expect(second.dataset.events[0]).toMatchObject({ status: "expired", expiryReason: "outside-geography" });
+    expect(second.dataset.events[0]).not.toHaveProperty("heldForPromotion");
+    expect(parseDataset(second.dataset)).toEqual(second.dataset);
+  });
+
+  it("the midweek re-verification expires one too, and reads no page to do it", async () => {
+    const stored = await storedAs({ neighborhood: "Lawrence" });
+
+    const midweek = await runWith(new Date("2026-12-10T12:00:00Z"), stored, { sources: [knuckleheads, other], pages: {}, completions: [], config: outside, reverifyOnly: { days: 10 } });
+
+    expect(midweek.dataset.events[0]).toMatchObject({ status: "expired", expiryReason: "outside-geography" });
+    expect(midweek.report.reverification.pagesRead).toBe(0);
+  });
+
+  it("a page listing an event expired as outside the geography does not bring it back, and the reading is counted outside", async () => {
+    const stored = await storedAs({ neighborhood: "Lawrence", status: "expired", expiryReason: "outside-geography" });
+
+    const second = await runAt(WEEK_2, stored, PAGE, [reply(show()), reply()]);
+
+    expect(second.dataset.events).toHaveLength(1);
+    expect(second.dataset.events[0]).toMatchObject({ status: "expired", expiryReason: "outside-geography" });
+    expect(second.report.counts).toMatchObject({ new: 0, updated: 0, outsideGeography: 1 });
+    expect(second.report.skippedAsExpired).toEqual([{ title: "Big Show", primaryUrl: calendar, reason: "outside-geography" }]);
+    expect(renderReportMarkdown(second.report)).toContain(`- Big Show: ${calendar} (expired as outside-geography; left so)`);
+  });
+
+  it("a stored event in one is expired before the run's readings merge, so a page that places it elsewhere this run does not move it", async () => {
+    const stored = await storedAs({ neighborhood: "Lawrence" });
+
+    const second = await runAt(WEEK_2, stored, PAGE, [reply(show({ neighborhood: "East Bottoms" })), reply()]);
+
+    expect(second.dataset.events).toHaveLength(1);
+    expect(second.dataset.events[0]).toMatchObject({ neighborhood: "Lawrence", status: "expired", expiryReason: "outside-geography" });
+    expect(second.report.counts).toMatchObject({ new: 0, updated: 0, outsideGeography: 1 });
+    expect(second.report.counts.expired["outside-geography"]).toBe(1);
+    expect(second.report.skippedAsExpired).toEqual([{ title: "Big Show", primaryUrl: calendar, reason: "outside-geography" }]);
   });
 });
 

@@ -60,7 +60,7 @@ describe("run", () => {
       quoteNotOnPage: 0,
       ownPageCorrected: 0,
       ownPageDropped: 0,
-      expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0, promotion: 0, "not-public": 0, stale: 0 },
+      expired: { past: 0, "two-strike": 0, cancelled: 0, "index-page": 0, duplicate: 0, promotion: 0, "not-public": 0, stale: 0, "outside-geography": 0 },
       archived: 0,
     });
     expect(report.spend).toEqual({ totalUsd: 0, capUsd: 5, capHit: false, shortfall: { pagesNotExtracted: 0, eventsNotReverified: 0, queriesNotSearched: 0, leadsNotFollowed: 0, eventsNotCurated: 0, ownPagesNotRead: 0 }, modelCalls: [] });

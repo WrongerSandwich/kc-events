@@ -8,7 +8,7 @@ import { PRODUCT, USER_AGENT } from "../../../src/adapters/identity.ts";
 import { ELSEWHERE_IN_THE_METRO, parseConfig, type RunConfig } from "../../../src/config.ts";
 import { DATASET_SCHEMA_VERSION, parseDataset, WEEKDAYS, type Event, type PickReason as JobPickReason, type Weekday } from "../../../src/dataset.ts";
 import { genericVenueName, streetAddress, venueAndRoom } from "../../../src/identity.ts";
-import { regionOf } from "../../../src/taxonomy.ts";
+import { outsidePlace, regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
 import { addDays, isDateOnly, isValidDate, localDate } from "../lib/dates";
 import { isPast } from "../lib/events";
@@ -157,7 +157,13 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; v
     throw new Error(`the build's today, ${today}, is more than ${MAX_DAYS_FROM_RUN} days from the last successful run, ${runDay}: check SITE_TODAY or the weekly run`);
   }
 
-  const active = dataset.events.filter((e) => e.status === "active");
+  // An active event in a place the config puts outside the geography is the job's to expire, at its next run (ADR 0015);
+  // until then it is held back here, since the catch-all is where it would otherwise be published.
+  const outside = dataset.events.filter((e) => e.status === "active" && outsidePlace(e.neighborhood, config));
+  if (outside.length > 0) {
+    console.warn(`site: ${outside.length} active events are in a place research.config.yaml puts outside the geography and were not published; the next run expires them: ${tally(outside.map((e) => e.neighborhood))}`);
+  }
+  const active = dataset.events.filter((e) => e.status === "active" && !outside.includes(e));
   const seen = new Set<string>();
   for (const e of active) {
     if (seen.has(e.id)) throw new Error(`duplicate active event id ${e.id}`);

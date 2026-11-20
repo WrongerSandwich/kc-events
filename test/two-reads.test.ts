@@ -192,7 +192,7 @@ describe("reads that stay single at two reads (#224)", () => {
   });
 
   it("an own page is read once", async () => {
-    const lied = source("Lied", { neighborhood: "Lawrence" });
+    const lied = source("Lied", { neighborhood: "Crossroads" });
     const LIST_URL = lied.urls[0]!;
     const OWN_URL = "https://lied.test/event/music-and-mental-health/";
     const TIME_QUOTE = "Monday • October 12, 2026 • 7:00 pm";

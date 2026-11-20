@@ -9,7 +9,7 @@ import type { Source } from "../src/registry.js";
 import { runWith } from "./fakes/run.js";
 
 /** Under the test config, which turns the own-page pass off (#254), an own page is read only for a pick (#133). */
-const granada = source("Granada", { neighborhood: "Lawrence" });
+const granada = source("Granada", { neighborhood: "Crossroads" });
 const LIST_URL = granada.urls[0]!;
 const OWN_URL = "https://granada.test/event/black-country-new-road/";
 const LIST = {

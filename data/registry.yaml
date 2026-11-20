@@ -46,6 +46,11 @@
 # Feeds are not used yet, though the brief prefers them: an event read from an ICS or RSS feed cites
 # its own page, which the run never fetches, so under cite-or-drop every one stays unverified. A
 # source's feed is kept in its notes for when that changes.
+#
+# Lawrence is not here (ADR 0015, 2026-11-20): The Bottleneck, The Granada, Replay Lounge, the Lied
+# Center of Kansas, the Lawrence Arts Center, the Spencer Museum of Art and Liberty Hall were sources
+# until then, and were taken out rather than excluded, since an excluded source's events are held as
+# through an outage and these were to go. Their stanzas are in the file's history.
 
 sources:
   # --- Music -------------------------------------------------------------------------------------
@@ -130,7 +135,7 @@ sources:
     neighborhood: Downtown
     checkHints: The homepage carries the season. Presenter; performances are at the Folly Theater, the Kauffman Center and elsewhere, so read the venue from each listing.
     status: excluded
-    reason: Its homepage names no venue for any performance, so every event is held unverified; its performances are found on the Folly Theater and Lied Center calendars, which name the hall (checked 2026-10-04). It is not rendered by script; the plain fetch reads the season, so a browser does not help (checked 2026-10-08).
+    reason: Its homepage names no venue for any performance, so every event is held unverified; its performances are found on the Folly Theater's calendar, which names the hall (checked 2026-10-04). It is not rendered by script; the plain fetch reads the season, so a browser does not help (checked 2026-10-08).
     notes: Presenter based at William Jewell College in Liberty; most shows are downtown.
 
   - name: Friends of Chamber Music
@@ -173,65 +178,6 @@ sources:
     checkHints: The ticketing homepage is the show list, at Knuckleheads, 2715 Rochester Ave; dates read like "Fri 9 Oct". Ignore the literal "%PERFORMANCESTARTDATE%" placeholders.
     fetch: browser
     waitFor: "#swPerformanceList .pl-item"
-    status: active
-
-  # --- Lawrence ----------------------------------------------------------------------------------
-
-  - name: The Bottleneck
-    urls: [https://thebottlenecklive.com/events-default/]
-    kind: music
-    neighborhood: Lawrence
-    checkHints: Club at 737 New Hampshire St, Lawrence.
-    status: active
-    notes: ICS feed at https://thebottlenecklive.com/events-default/?ical=1
-
-  - name: The Granada
-    urls: [https://thegranada.com/events-default/]
-    kind: music
-    neighborhood: Lawrence
-    checkHints: Theater at 1020 Massachusetts St, Lawrence.
-    status: active
-    notes: ICS feed at https://thegranada.com/events-default/?ical=1
-
-  - name: Replay Lounge
-    urls: [https://www.replaylounge.com/calendar-full/]
-    kind: music
-    neighborhood: Lawrence
-    checkHints: Bar at 946 Massachusetts St, Lawrence; many nights are recurring DJ or free shows. Its community nights (the Dungeons & Dragons Community Gathering) are the bar's standing nights, not events. So are its DJ nights, even under a DJ's name and with a cover (DJ Nighttrain, DJ Carma Lea, DJ Not So Silent Bob), since the bar books a rotation of DJs most nights. A band's show is an event.
-    status: active
-    notes: ICS feed at https://www.replaylounge.com/calendar-full/?ical=1
-
-  - name: Lied Center of Kansas
-    urls: [https://lied.ku.edu/events-all/]
-    kind: music
-    neighborhood: Lawrence
-    checkHints: KU's performing arts center; the list mixes the Lied Series with KU School of Music events.
-    status: active
-    notes: The list gives no times; each event's own page does, in its text (#123), read by the own-page pass (#254).
-
-  - name: Lawrence Arts Center
-    urls:
-      - https://lawrenceartscenter.org/events-at-lawrence-arts-center/
-      - https://lawrenceartscenter.org/upcoming-performances-at-lawrence-arts-center/
-    kind: art/exhibitions
-    neighborhood: Lawrence
-    checkHints: Galleries, performances and talks at 940 New Hampshire St, Lawrence. Classes are not events.
-    status: active
-
-  - name: Spencer Museum of Art
-    urls: [https://spencerart.ku.edu/exhibitions-and-events]
-    kind: art/exhibitions
-    neighborhood: Lawrence
-    checkHints: KU's art museum. Exhibitions are limited runs.
-    status: active
-
-  - name: Liberty Hall
-    urls: [https://www.liberty-hall.com/upcoming-events]
-    kind: music
-    neighborhood: Lawrence
-    checkHints: Liberty Hall, 644 Massachusetts St, Lawrence. The list carries concerts in the Big Theatre, special film screenings in the Main Auditorium, and Jazz Sundays in the Spacement; the room is on each listing. Its regular cinema schedule is a separate page, not listed here.
-    fetch: browser
-    waitFor: .eapp-events-calendar-grid-item
     status: active
 
   # --- Theater and dance -------------------------------------------------------------------------

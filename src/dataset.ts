@@ -21,7 +21,7 @@ const httpUrl = z
 
 export const RECURRENCE_CLASSES = ["one-off", "limited-run", "recurring"] as const;
 export const EVENT_STATUSES = ["active", "unverified", "expired"] as const;
-export const EXPIRY_REASONS = ["past", "two-strike", "cancelled", "index-page", "duplicate", "promotion", "not-public", "stale"] as const;
+export const EXPIRY_REASONS = ["past", "two-strike", "cancelled", "index-page", "duplicate", "promotion", "not-public", "stale", "outside-geography"] as const;
 
 /**
  * The reasons a pick can carry, the vocabulary of why an event is on the front page (ADR 0014): a chance that

@@ -7,7 +7,7 @@ export const configYaml = `
 neighborhoods:
   Central KC: [Crossroads, Downtown]
   Johnson County: [Olathe]
-  Lawrence: [Lawrence]
+  Northland: [Northland]
 `;
 
 export function activeEvent(over: Record<string, unknown> = {}) {

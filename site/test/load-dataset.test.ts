@@ -21,7 +21,7 @@ describe("loadPublished", () => {
       primaryUrl: "https://www.therecordbar.com/shows", kind: "music", recurrence: "one-off", dontMiss: false, lastVerified: "2026-10-03T21:47:36-05:00",
     });
     expect(p.events[1]!.region).toBe("Johnson County");
-    expect(p.regions).toEqual(["Central KC", "Johnson County", "Lawrence", "Elsewhere in the metro"]);
+    expect(p.regions).toEqual(["Central KC", "Johnson County", "Northland", "Elsewhere in the metro"]);
     expect(p.kinds).toContain("music");
     expect(p.lastSuccessfulRun).toBe("2026-10-05T06:30:00-05:00");
     expect(p.buildToday).toBe("2026-10-05");
@@ -68,6 +68,24 @@ describe("loadPublished", () => {
       expect(msg).toContain("Atlantis (1)");
       expect(msg).not.toContain("Johnson County");
       expect(msg).not.toContain("Narnia");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("holds back an active event in a place the config puts outside the geography, with a warning, rather than publish it under the catch-all (ADR 0015)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const p = loadPublished(write(dataset([
+        activeEvent(),
+        activeEvent({ id: "evt_000000000002", neighborhood: "lawrence, ks" }),
+        activeEvent({ id: "evt_000000000003", neighborhood: "Lawrence KS" }),
+      ]), `${configYaml}outsidePlaces: ["Lawrence, KS"]\n`));
+      expect(p.events.map((e) => e.id)).toEqual(["evt_000000000001"]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      const msg = String(warn.mock.calls[0]![0]);
+      expect(msg).toContain("2 active events");
+      expect(msg).toContain("outside the geography");
     } finally {
       warn.mockRestore();
     }

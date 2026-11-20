@@ -24,6 +24,11 @@ export function regionOf(neighborhood: string, config: RunConfig): string | unde
   return regions.find(([, neighborhoods]) => fromList(neighborhood, neighborhoods) !== undefined)?.[0];
 }
 
+/** Whether a place, as a page or a stored event names it, is one the config puts outside the geography (ADR 0015). */
+export function outsidePlace(place: string | null, config: RunConfig): boolean {
+  return fromList(place, config.outsidePlaces) !== undefined;
+}
+
 /**
  * The controlled neighborhood list: every region's neighborhoods, then the catch-all. A registry
  * source naming a neighborhood no region lists is a config error, not a new neighborhood.

@@ -23,7 +23,7 @@ describe("config", () => {
       "outdoors/community",
       "other",
     ]);
-    expect(config.geography).toMatch(/Kansas City metro.*Lawrence/);
+    expect(config.geography).toBe("Kansas City metro on both sides of the state line");
   });
 
   it("rejects a secret written into the config file", () => {

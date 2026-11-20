@@ -1,8 +1,8 @@
 // @vitest-environment node
 // The "data" project (`pnpm test:data`): what the build makes of the committed dataset, where the check needs the week
-// to hold something (a one-off, a pick, a recurring event, a Lawrence one, Always there rows). scripts/weekly-run.sh
+// to hold something (a one-off, a pick, a recurring event, one whose neighborhood is its region's name, Always there rows). scripts/weekly-run.sh
 // runs it on a run's new data, after building the site, before committing (#191). A check whose event the week lacks
-// is skipped, not failed: a week with no picks or no Lawrence event is not a broken build, and the code is held by the
+// is skipped, not failed: a week with no picks or no such event is not a broken build, and the code is held by the
 // unit tests and the end-to-end suite on fixtures. Which Always there picks found nothing goes in the run report.
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
@@ -23,7 +23,8 @@ const matchesGenerated = has("llms.txt") && read("llms.txt").includes(`Last run:
 const oneOff = events.find((e) => e.recurrence === "one-off");
 const recurring = events.find((e) => e.recurrence === "recurring");
 const pick = events.find((e) => e.dontMiss);
-const lawrence = events.find((e) => e.region === "Lawrence" && e.neighborhood === "Lawrence");
+// The first event whose neighborhood carries its region's name, whichever kind the dataset holds first: "Northland" under Northland, "Kansas City, Kansas" under its own, or the catch-all.
+const namedOnce = events.find((e) => e.region === e.neighborhood);
 const alwaysThere = pickAlwaysThere(events, alwaysTherePicks);
 
 describe("the build of the committed dataset", () => {
@@ -66,12 +67,12 @@ describe("the build of the committed dataset", () => {
     if (firstFriday) expect(detail(firstFriday.id)).toBe("Crossroads Arts District");
   });
 
-  it.skipIf(!matchesGenerated || !lawrence)("names Lawrence once in a Lawrence event's location line", () => {
+  it.skipIf(!matchesGenerated || !namedOnce)("names the place once in the location line of an event whose neighborhood is its region's name (#184)", () => {
     // The venue is a link to its page (#137); the line's text is what is read.
-    const where = /<p class="where"[^>]*>(.*?)<\/p>/.exec(read(`e/${lawrence!.id}.html`));
-    expect(where, "the Lawrence event's page has a location line").not.toBeNull();
-    // The venue's part is venueLine's, room and all ("Lied Center of Kansas · Main Auditorium"); Lawrence follows it once.
+    const where = /<p class="where"[^>]*>(.*?)<\/p>/.exec(read(`e/${namedOnce!.id}.html`));
+    expect(where, "the event's page has a location line").not.toBeNull();
+    // The venue's part is venueLine's, room and all; the place follows it once ("Northland", never "Northland · Northland").
     const text = where![1]!.replace(/<[^>]*>/g, "").replaceAll("&#39;", "'").replaceAll("&quot;", "\"").replaceAll("&amp;", "&");
-    expect(text).toBe(`${venueLine(lawrence!)} · Lawrence`);
+    expect(text).toBe(`${venueLine(namedOnce!)} · ${namedOnce!.region}`);
   });
 });

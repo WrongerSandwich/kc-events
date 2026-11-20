@@ -247,7 +247,7 @@ describe("postalAddress", () => {
 
   it("gives a suburb its own city, but the Northland and Kansas City, Kansas are Kansas City", () => {
     expect(postalAddress(event({ neighborhood: "Overland Park", region: "Johnson County" }))).toEqual({ addressLocality: "Overland Park", addressRegion: "KS" });
-    expect(postalAddress(event({ neighborhood: "Lawrence", region: "Lawrence" }))).toEqual({ addressLocality: "Lawrence", addressRegion: "KS" });
+    expect(postalAddress(event({ neighborhood: "Independence", region: "Eastern Jackson County" }))).toEqual({ addressLocality: "Independence", addressRegion: "MO" });
     expect(postalAddress(event({ neighborhood: "Kansas City, Kansas", region: "Kansas City, Kansas" }))).toEqual({ addressLocality: "Kansas City", addressRegion: "KS" });
     expect(postalAddress(event({ neighborhood: "Northland", region: "Northland" }))).toEqual({ addressLocality: "Kansas City", addressRegion: "MO" });
   });

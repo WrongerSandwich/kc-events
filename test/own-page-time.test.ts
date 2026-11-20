@@ -9,7 +9,7 @@ import type { Source } from "../src/registry.js";
 import { runWith } from "./fakes/run.js";
 
 /** A source whose list gives dates and no times, and each event's own page the time (#123), read by the own-page pass (#254). */
-const lied = source("Lied", { neighborhood: "Lawrence" });
+const lied = source("Lied", { neighborhood: "Crossroads" });
 const LIST_URL = lied.urls[0]!;
 const OWN_URL = "https://lied.test/event/music-and-mental-health/";
 const LIST = {

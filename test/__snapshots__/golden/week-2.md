@@ -37,6 +37,7 @@ Started 2026-10-09T22:15:00-05:00, finished 2026-10-09T22:15:00-05:00. Horizon 8
 | Expired: promotion | 0 |
 | Expired: not-public | 0 |
 | Expired: stale | 0 |
+| Expired: outside-geography | 0 |
 | Archived: expired more than 8 weeks back | 0 |
 | Identity churn: title or primary page changed | 0 |
 
@@ -134,7 +135,7 @@ _None._
 
 _None._
 
-## Skipped: expired as a promotion or not public
+## Skipped: expired as a promotion, not public or outside the geography
 
 _None._
 

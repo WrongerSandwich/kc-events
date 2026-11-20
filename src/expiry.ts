@@ -3,8 +3,9 @@
  * reason: past (its last date is behind us), two-strike (two consecutive strikes), cancelled
  * (its page says so), index-page (its primary page is an index page, which is never read),
  * duplicate (another record is the same event and was seen first; see foldDuplicates in run),
- * promotion or not-public (what extraction skips now, stored before it did; see skip), or stale
- * (no reading ever verified it and no page has listed it for four runs; see ageUnsighted). A
+ * promotion or not-public (what extraction skips now, stored before it did; see skip), stale
+ * (no reading ever verified it and no page has listed it for four runs; see ageUnsighted), or
+ * outside-geography (it is stored in a place the config puts outside the geography, ADR 0015). A
  * postponement is a date change, not this. An outage never expires an event; enough of them in a
  * row make it unverified.
  */
@@ -13,6 +14,7 @@ import type { Event, ExpiryReason } from "./dataset.js";
 import { isIndexPage } from "./discovery.js";
 import { calendarDate } from "./identity.js";
 import { skipReason } from "./skip.js";
+import { outsidePlace } from "./taxonomy.js";
 import { shiftDate } from "./time.js";
 
 /** Consecutive strikes after which an event expires. */
@@ -53,6 +55,15 @@ export function expirePast(event: Event, today: string): Event {
  */
 export function expireIndexCited(event: Event, config: RunConfig): Event {
   return event.status !== "expired" && isIndexPage(event.primaryUrl, config) ? expire(event, "index-page") : event;
+}
+
+/**
+ * Expires an event stored in a place the config puts outside the geography (ADR 0015): extraction drops a reading
+ * placed there now, but earlier runs stored some, and their sources are gone, so no page would strike them. It keeps
+ * its neighborhood, which is why it went. An event already expired keeps its reason.
+ */
+export function expireOutside(event: Event, config: RunConfig): Event {
+  return event.status !== "expired" && outsidePlace(event.neighborhood, config) ? expire(event, "outside-geography") : event;
 }
 
 /**

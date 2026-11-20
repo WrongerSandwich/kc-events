@@ -6,11 +6,6 @@ const DEFAULT_MODELS = { extraction: "openai/gpt-6-luna", curation: "anthropic/c
 /** The catch-all for an address that maps to nothing on the neighborhood list; it is in no region. */
 export const ELSEWHERE_IN_THE_METRO = "Elsewhere in the metro";
 
-/** Anywhere in Lawrence, Kansas (the extraction rules say so); some region must list it. */
-const LAWRENCE = "Lawrence";
-
-const DEFAULT_NEIGHBORHOODS: Record<string, string[]> = { Lawrence: [LAWRENCE] };
-
 export const DEFAULT_KINDS = [
   "music",
   "theater/dance",
@@ -113,13 +108,14 @@ const discoverySchema = z.strictObject({
  * The run config: a typed object loaded from the committed config file.
  * Strict, so a secret pasted into the file is rejected; secrets come from env only.
  */
-export const configSchema = z.strictObject({
+export const configSchema = z
+  .strictObject({
   horizonWeeks: z.number().int().positive().default(8),
   timezone: z.string().default("America/Chicago"),
   geography: z
     .string()
     .min(1)
-    .default("Kansas City metro on both sides of the state line, plus Lawrence"),
+    .default("Kansas City metro on both sides of the state line"),
   spendCapUsd: z.number().positive().default(5),
   /**
    * How many times each registry page is read with the extraction model (#224): at 2, both reads start
@@ -150,7 +146,7 @@ export const configSchema = z.strictObject({
     .min(1)
     .refine((kinds) => kinds.includes("other"), { message: 'kinds must include "other" as the escape hatch' })
     .default([...DEFAULT_KINDS]),
-  /** Region to its neighborhoods; the extractor picks from all of them plus the catch-all. */
+  /** Region to its neighborhoods; the extractor picks from all of them plus the catch-all. With none listed, every address lands in the catch-all. */
   neighborhoods: z
     .record(z.string().min(1), z.array(z.string().min(1)).min(1))
     .superRefine((regions, ctx) => {
@@ -165,9 +161,8 @@ export const configSchema = z.strictObject({
           } else regionByName.set(key, region);
         }
       }
-      if (!regionByName.has(normalizeName(LAWRENCE))) ctx.addIssue({ code: "custom", message: `some region must list "${LAWRENCE}"` });
     })
-    .default(() => structuredClone(DEFAULT_NEIGHBORHOODS)),
+    .default({}),
   discovery: discoverySchema.default(discoverySchema.parse({})),
   /**
    * Venue aliases (ADR 0007): a venue's display name to the other names it goes by, a room inside it
@@ -175,7 +170,28 @@ export const configSchema = z.strictObject({
    */
   venueAliases: z.record(z.string().min(1), z.array(z.string().min(1))).default({}),
   // A venue's neighborhood is a row of the venue table, data/venues.yaml (ADR 0013, amended #258), not of this file.
-});
+  /**
+   * Places a page may name that are outside the geography (ADR 0015): a reading placed in one is dropped as outside
+   * the geography whatever its flag said, and a stored event placed in one is expired as `outside-geography` and
+   * never moved to the catch-all. No region may list one, and none is the catch-all.
+   */
+  outsidePlaces: z.array(z.string().min(1)).default([]),
+})
+  .superRefine((config, ctx) => {
+    for (const place of config.outsidePlaces) {
+      const key = normalizeName(place);
+      if (key === normalizeName(ELSEWHERE_IN_THE_METRO)) {
+        ctx.addIssue({ code: "custom", path: ["outsidePlaces"], message: `"${place}" is the catch-all, which is inside the geography` });
+      }
+      for (const [region, neighborhoods] of Object.entries(config.neighborhoods)) {
+        if (normalizeName(region) === key) {
+          ctx.addIssue({ code: "custom", path: ["outsidePlaces"], message: `"${place}" is outside the geography, but it is a region's name` });
+        } else if (neighborhoods.some((n) => normalizeName(n) === key)) {
+          ctx.addIssue({ code: "custom", path: ["outsidePlaces"], message: `"${place}" is outside the geography, but ${region} lists it` });
+        }
+      }
+    }
+  });
 
 export type RunConfig = z.infer<typeof configSchema>;
 

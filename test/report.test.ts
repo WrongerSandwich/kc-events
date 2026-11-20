@@ -32,7 +32,7 @@ const full: RunReport = {
     quoteNotOnPage: 2,
     ownPageCorrected: 1,
     ownPageDropped: 0,
-    expired: { past: 12, "two-strike": 3, cancelled: 1, "index-page": 1, duplicate: 2, promotion: 1, "not-public": 1, stale: 1 },
+    expired: { past: 12, "two-strike": 3, cancelled: 1, "index-page": 1, duplicate: 2, promotion: 1, "not-public": 1, stale: 1, "outside-geography": 0 },
     archived: 7,
   },
   spend: {
@@ -213,6 +213,7 @@ describe("the run report", () => {
       | Expired: promotion | 1 |
       | Expired: not-public | 1 |
       | Expired: stale | 1 |
+      | Expired: outside-geography | 0 |
       | Archived: expired more than 8 weeks back | 7 |
       | Identity churn: title or primary page changed | 1 |
 
@@ -336,7 +337,7 @@ describe("the run report", () => {
 
       - https://blog.test/news says Big Show (https://venue.test/calendar) is cancelled; the event was left as it was
 
-      ## Skipped: expired as a promotion or not public
+      ## Skipped: expired as a promotion, not public or outside the geography
 
       - Speed Dating: https://venue.test/calendar (expired as promotion; left so)
 
