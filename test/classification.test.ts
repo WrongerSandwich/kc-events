@@ -136,10 +136,10 @@ describe("recurrence, kind, geography, and neighborhood", () => {
     const { dataset, report } = await runOver([
       candidate({ title: "A", neighborhood: "westport" }),
       candidate({ title: "B", neighborhood: "Crossroads" }),
-      candidate({ title: "C", neighborhood: "Lawrence" }),
+      candidate({ title: "C", neighborhood: "Kansas City, Kansas" }),
     ]);
 
-    expect(dataset.events.map((e) => e.neighborhood)).toEqual(["Westport", "Crossroads", "Lawrence"]);
+    expect(dataset.events.map((e) => e.neighborhood)).toEqual(["Westport", "Crossroads", "Kansas City, Kansas"]);
     expect(report.unmappableNeighborhoods).toEqual([]);
   });
 
@@ -160,7 +160,7 @@ describe("recurrence, kind, geography, and neighborhood", () => {
   it("the extraction request lists every region's neighborhoods, then the catch-all", async () => {
     const { requests } = await runOver([candidate()]);
 
-    expect(requests[0]!.messages[0]!.content).toContain("- Neighborhoods: Westport, East Bottoms, Crossroads, Lawrence, Elsewhere in the metro");
+    expect(requests[0]!.messages[0]!.content).toContain("- Neighborhoods: Westport, East Bottoms, Crossroads, Kansas City, Kansas, Elsewhere in the metro");
   });
 
   it("an event outside the geography is dropped and counted, never recorded", async () => {

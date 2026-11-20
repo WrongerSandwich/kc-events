@@ -6,7 +6,9 @@
 # accepts a 3-week report; the weekly workflow runs at the spec's 8-week default.
 horizonWeeks: 8
 timezone: America/Chicago
-geography: Kansas City metro on both sides of the state line, plus Lawrence
+# Lawrence was in it until 2026-11-20 (ADR 0015): a Lawrence event on a page is now outside the geography, as a
+# Topeka one is, and the extraction rules say so.
+geography: Kansas City metro on both sides of the state line
 # Per-run spend cap in USD, summed from the cost OpenRouter reports on every model call. Once it is
 # reached no further model calls are made; pages left unread and events left unchecked stay as
 # they were, and the run report records the shortfall. This is the first of two layers: the
@@ -61,8 +63,7 @@ kinds:
 # is placed again in any run in which no page re-reads it (a region's name goes to its registry
 # source's neighborhood when that region lists it, anything else to the catch-all), and the run
 # report names each such value. Every registry source's neighborhood must be listed here
-# (or be the catch-all), a neighborhood goes under one region only, and some region must list
-# "Lawrence" (the extraction rules use it for anywhere in Lawrence); the config fails otherwise.
+# (or be the catch-all), and a neighborhood goes under one region only; the config fails otherwise.
 neighborhoods:
   Central KC:
     - Downtown
@@ -112,8 +113,14 @@ neighborhoods:
     - Blue Springs
     - Raytown
     - Kingsville # Powell Gardens
-  Lawrence:
-    - Lawrence
+
+# Places a page may name that are outside the geography (ADR 0015). A reading the extractor places in one is dropped
+# as outside the geography, whatever else it said, and an event stored in one is expired as `outside-geography`,
+# never moved to the catch-all. A place here may not be on a region's list above.
+outsidePlaces:
+  - Lawrence
+  - Lawrence, Kansas # a place is matched whole, so each way a page may write it is its own line
+  - Lawrence, KS
 
 # The discovery lane: web searches (Tavily, basic depth, one credit each; needs TAVILY_API_KEY) for
 # events outside the registry. One query per kind but "other", naming the place and the horizon's
@@ -206,8 +213,8 @@ discovery:
 # Names are compared with case and punctuation ignored. A venue name goes by an entry when it is the
 # entry, the entry's words in another order, or the entry with a label added ("Bartle Exhibit Hall
 # (A – E)" is "Bartle Exhibit Hall"); a short form in use ("Kauffman Center") is an entry of its own,
-# since a name shorter than an entry never matches it. An entry made only of generic words ("Pavilion",
-# "Main Auditorium") is that name alone: "Swope Park Pavilion" is not the Lied Center's. The list is not
+# since a name shorter than an entry never matches it. An entry made only of generic words ("Galleries")
+# is that name alone: "Swope Park Galleries" is not the Nelson-Atkins's. The list is not
 # per source, so a generic entry is any page's: "Galleries" anywhere is the Nelson-Atkins. List rooms of
 # one building only: the Public Library's branches are separate buildings, and under one name the same
 # storytime at Central and at Plaza would fold into one event. The site shows each event at its display
@@ -216,7 +223,6 @@ discovery:
 venueAliases:
   Kauffman Center for the Performing Arts: [Kauffman Center, Muriel Kauffman Theatre, Helzberg Hall]
   Nelson-Atkins Museum of Art: [Nelson-Atkins Museum, Atkins Auditorium, Tivoli Cinema, Galleries, Bloch Lobby]
-  Lied Center of Kansas: [Main Auditorium, Pavilion]
   Museum of Kansas City: [JE Dunn Construction Theater, Corinthian Hall]
   Kansas City Repertory Theatre: [Copaken Stage]
   # #155: the Music Hall is part of the Convention Center complex, at its address; its calendar lists the hall's shows.
@@ -226,8 +232,6 @@ venueAliases:
   Nerman Museum of Contemporary Art: [Nerman Museum, Irma Starr Gallery, McCaffree Gallery, Oppenheimer New Media Gallery, Tony and Marti Oppenheimer Gallery, Dean E. Thompson Gallery, Kansas Focus Gallery, "The Richard I. and Jeanne S. Galamba Lobby, First Floor", "The Richard I. and Jeanne S. Galamba Lobby, First Floor and The Harrison Jedel Mezzanine, Second Floor"]
   # #197: its calendar gives some events the street address alone ("1801 East 18th Street"), and some the name in capitals.
   Zhou B Art Center KC: [Zhou B Art Center Kansas City, 1801 East 18th Street]
-  # Weekly audit 2026-10-26: some of its listings give the street address alone.
-  Liberty Hall: [644 Massachusetts St]
   # Weekly audit 2026-11-02 (#260): kcparks.org's homepage gives the center's street address alone.
   # Quoted for its comma: bare, it was two names, and "Jr. Blvd." filed any venue on that boulevard under the center.
   Bruce R. Watkins Cultural Heritage Center: ["3700 Dr. Martin Luther King, Jr. Blvd."]

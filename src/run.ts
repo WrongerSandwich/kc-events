@@ -3,7 +3,7 @@ import { EXPIRY_REASONS, ownPageAllowed, type Dataset, type Event, type ExpiryRe
 import { buildOwnPageRequest, LISTING_LINE_LENGTH, readOwnPageReply, readTicketPageReply, type Quoted } from "./own-page.js";
 import { splitArchived } from "./archive.js";
 import { runChanges } from "./changes.js";
-import { ageUnsighted, expire, expireIndexCited, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
+import { ageUnsighted, expire, expireIndexCited, expireOutside, expirePast, expireSkipped, hiddenSinceVerified, isPast, outage, startsAfterHorizon, startsAfterListing, strike } from "./expiry.js";
 import {
   afterHorizonOf,
   buildExtractionRequest,
@@ -89,7 +89,7 @@ import { likelyDuplicatePairs } from "./likely-duplicates.js";
 import { awayGame, SKIP_REASONS, skipReason, type SkipReason } from "./skip.js";
 import { deriveRecurrence } from "./recurrence.js";
 import { capSpend, SpendCapReached, type CappedModel } from "./spend.js";
-import { neighborhoodList, placeStored } from "./taxonomy.js";
+import { neighborhoodList, outsidePlace, placeStored } from "./taxonomy.js";
 import { hasTime, horizonEnd, shiftDate, toLocalDate, toLocalIso } from "./time.js";
 import { venueNeighborhoods, type VenueRow } from "./venues.js";
 
@@ -165,8 +165,11 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   // Discovery runs after the registry lane, so a page the registry already read is not read again.
   const discovery = await discover({ ...ports, model }, extractionContext, registry, registryLane.attempts.tried, suggested);
   if (!lane.runs) discovery.report.notRun = lane.notRun;
-  // Registry sightings merge first: an event both lanes found keeps its registry lead.
-  const merged = mergeSightings(dataset.events, [...extraction.sightings, ...discovery.sightings], extractionContext);
+  // An event stored in a place the config puts outside the geography expires before the merge (ADR 0015), so no
+  // sighting refreshes it first and the merge passes over any that names it. Registry sightings merge first: an
+  // event both lanes found keeps its registry lead.
+  const inside = dataset.events.map((e) => expireOutside(e, config));
+  const merged = mergeSightings(inside, [...extraction.sightings, ...discovery.sightings], extractionContext);
   // Past events, events citing an index page as their primary page, and promotions or non-public events
   // stored before the skip (#81) expire before re-verification, so nothing is fetched to check a date
   // already gone, a page that is never read, or an event no reading may keep. Duplicates fold after
@@ -834,7 +837,7 @@ export async function extractPage(
       tally[SKIPPED_AS[skipped]]++;
       continue;
     }
-    if (candidate.outsideGeography || awayGame(candidate)) {
+    if (candidate.outsideGeography || awayGame(candidate) || outsidePlace(candidate.neighborhood, context.config)) {
       tally.outsideGeography++;
       continue;
     }
@@ -947,6 +950,11 @@ export function mergeSightings(existing: Event[], sightings: Sighting[], { today
     if (skippedAs !== undefined) {
       tally[SKIPPED_AS[skippedAs]]++;
       skippedAsExpired.set(known.id, { ...titleAndUrl(known), reason: skippedAs });
+      continue;
+    }
+    // Expired as outside the geography is a call about where it is; a page listing it again is counted with the readings dropped as outside (ADR 0015).
+    if (known.status === "expired" && known.expiryReason === "outside-geography") {
+      tally.outsideGeography++;
       continue;
     }
     if (cancelled && !cancellationReaches(event, known, rule)) continue;

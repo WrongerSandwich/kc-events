@@ -70,9 +70,9 @@ describe("regionLanding", () => {
     expect(p.neighborhoods).toEqual(["Overland Park", "Olathe", "Lenexa"]);
   });
 
-  it("leaves out a neighborhood that only repeats the region's name, so Lawrence's page has no subline of Lawrence (#184)", () => {
-    expect(regionLanding("Lawrence", all, today, range, ["Lawrence"]).neighborhoods).toEqual([]);
-    expect(regionLanding("Lawrence", all, today, range, ["Lawrence", "Eudora"]).neighborhoods).toEqual(["Eudora"]);
+  it("leaves out a neighborhood that only repeats the region's name, so the Northland's page has no subline of Northland (#184)", () => {
+    expect(regionLanding("Northland", all, today, range, ["Northland"]).neighborhoods).toEqual([]);
+    expect(regionLanding("Northland", all, today, range, ["Northland", "Gladstone"]).neighborhoods).toEqual(["Gladstone"]);
   });
 
   it("reads the catch-all region as a phrase", () => {

@@ -68,13 +68,13 @@ describe("facetCounts", () => {
   it("counts each kind with the other kinds let in, and each region with the other regions, the rest as filtered", () => {
     const events = [
       event({ id: "a", start: "2026-10-09T19:00:00-05:00", kind: "music", region: "Central KC" }),
-      event({ id: "b", start: "2026-10-10", kind: "film", region: "Lawrence" }),
-      event({ id: "c", start: "2026-10-10", kind: "music", region: "Lawrence" }),
-      event({ id: "d", start: "2026-11-20", kind: "film", region: "Lawrence" }), // past the week
+      event({ id: "b", start: "2026-10-10", kind: "film", region: "Northland" }),
+      event({ id: "c", start: "2026-10-10", kind: "music", region: "Northland" }),
+      event({ id: "d", start: "2026-11-20", kind: "film", region: "Northland" }), // past the week
     ];
-    const { kinds, regions } = facetCounts(events, f({ when: { preset: "weekend" }, kinds: ["music"], regions: ["Lawrence"] }), today, none);
-    expect(Object.fromEntries(kinds)).toEqual({ music: 1, film: 1 }); // in Lawrence, this week
-    expect(Object.fromEntries(regions)).toEqual({ "Central KC": 1, Lawrence: 1 }); // music, this week
+    const { kinds, regions } = facetCounts(events, f({ when: { preset: "weekend" }, kinds: ["music"], regions: ["Northland"] }), today, none);
+    expect(Object.fromEntries(kinds)).toEqual({ music: 1, film: 1 }); // in Northland, this week
+    expect(Object.fromEntries(regions)).toEqual({ "Central KC": 1, Northland: 1 }); // music, this week
   });
 });
 
@@ -119,7 +119,7 @@ describe("keepGoing", () => {
 
 describe("matches", () => {
   const show = event({ start: "2026-10-09T19:00:00-05:00" });
-  const run = event({ id: "run", recurrence: "limited-run", start: "2026-09-20", end: "2026-10-20", kind: "art/exhibitions", region: "Lawrence", neighborhood: "Lawrence", venue: "Spencer Museum" });
+  const run = event({ id: "run", recurrence: "limited-run", start: "2026-09-20", end: "2026-10-20", kind: "art/exhibitions", region: "Northland", neighborhood: "Northland", venue: "Spencer Museum" });
   const runNoStart = event({ id: "nostart", recurrence: "limited-run", start: undefined, end: "2026-10-31" });
   const trivia = event({ id: "trivia", recurrence: "recurring", start: undefined, schedule: "Tuesdays", title: "Pub trivia" });
   const flagged = event({ id: "flag", dontMiss: true, whyLine: "A rare touring occasion for Kansas City." });
@@ -153,7 +153,7 @@ describe("matches", () => {
     expect(matches(show, f({ kinds: ["music", "film"] }), today, none)).toBe(true);
     expect(matches(show, f({ kinds: ["film"] }), today, none)).toBe(false);
     expect(matches(run, f({ kinds: ["art/exhibitions"], regions: ["Central KC"] }), today, none)).toBe(false);
-    expect(matches(run, f({ kinds: ["art/exhibitions"], regions: ["Central KC", "Lawrence"] }), today, none)).toBe(true);
+    expect(matches(run, f({ kinds: ["art/exhibitions"], regions: ["Central KC", "Northland"] }), today, none)).toBe(true);
   });
 
   it("filters don't-miss and saved", () => {

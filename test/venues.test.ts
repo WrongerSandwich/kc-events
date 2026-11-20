@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseVenueTable, venueNeighborhoods } from "../src/venues.js";
 
 const config = {
-  neighborhoods: { "Central KC": ["Westport", "Crossroads"], Lawrence: ["Lawrence"] },
+  neighborhoods: { "Central KC": ["Westport", "Crossroads"], "Kansas City, Kansas": ["Kansas City, Kansas"] },
   venueAliases: { "Kauffman Center for the Performing Arts": ["Kauffman Center", "Helzberg Hall"] },
 };
 const recordBar = { name: "recordBar", address: "1544 Grand Blvd, Kansas City, MO 64108" };
@@ -69,7 +69,7 @@ describe("parseVenueTable (ADR 0013, #258)", () => {
 
 describe("venueNeighborhoods", () => {
   it("is each row with a neighborhood, by the venue's name", () => {
-    const rows = parseVenueTable([{ ...recordBar, neighborhood: "Crossroads" }, { name: "The Bottleneck", address: "737 New Hampshire St, Lawrence, KS 66044" }], config);
+    const rows = parseVenueTable([{ ...recordBar, neighborhood: "Crossroads" }, { name: "Knuckleheads", address: "2715 Rochester Ave, Kansas City, MO 64120" }], config);
     expect(venueNeighborhoods(rows)).toEqual({ recordBar: "Crossroads" });
   });
 });

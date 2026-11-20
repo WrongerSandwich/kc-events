@@ -20181,7 +20181,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -28522,7 +28523,8 @@
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -33666,8 +33668,8 @@
       "lastVerified": "2026-10-10T19:55:27-05:00",
       "lastChanged": "2026-10-11T09:50:49-05:00",
       "lastJudged": "2026-10-10T12:46:13-05:00",
-      "status": "unverified",
-      "heldForPromotion": true,
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -33695,8 +33697,8 @@
       "lastVerified": "2026-10-10T19:55:27-05:00",
       "lastChanged": "2026-10-11T09:50:49-05:00",
       "lastJudged": "2026-10-10T12:46:13-05:00",
-      "status": "unverified",
-      "heldForPromotion": true,
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -33724,8 +33726,8 @@
       "lastVerified": "2026-10-10T19:55:27-05:00",
       "lastChanged": "2026-10-11T09:50:49-05:00",
       "lastJudged": "2026-10-10T12:46:13-05:00",
-      "status": "unverified",
-      "heldForPromotion": true,
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -33809,8 +33811,8 @@
       "lastVerified": "2026-10-10T19:55:27-05:00",
       "lastChanged": "2026-10-11T09:50:49-05:00",
       "lastJudged": "2026-10-10T12:46:13-05:00",
-      "status": "unverified",
-      "heldForPromotion": true,
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -34228,7 +34230,8 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -38644,7 +38647,8 @@
       "lastChanged": "2026-10-13T22:13:36-05:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -42109,7 +42113,8 @@
       "lastChanged": "2026-10-19T06:17:06-05:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -42151,7 +42156,8 @@
       "lastChanged": "2026-10-19T06:17:06-05:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -42194,7 +42200,8 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -42237,7 +42244,8 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -42279,7 +42287,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -42318,7 +42327,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -42364,7 +42374,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -42456,7 +42467,8 @@
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -43184,7 +43196,8 @@
       "lastChanged": "2026-10-19T19:18:51-05:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -45494,7 +45507,8 @@
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -45536,7 +45550,8 @@
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -45580,7 +45595,8 @@
       "lastChanged": "2026-10-26T06:17:08-05:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -45737,7 +45753,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -47826,7 +47843,8 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -47868,7 +47886,8 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -48222,7 +48241,8 @@
       "lastChanged": "2026-11-02T06:17:07-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -48264,7 +48284,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -48347,7 +48368,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52337,7 +52359,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52370,7 +52393,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52403,7 +52427,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52436,7 +52461,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52471,7 +52497,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52514,7 +52541,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52728,7 +52756,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52769,7 +52798,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52811,7 +52841,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52853,7 +52884,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -52919,7 +52951,8 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -55919,7 +55952,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -55952,7 +55986,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -55986,7 +56021,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56019,7 +56055,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56052,7 +56089,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56085,7 +56123,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56119,7 +56158,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56162,7 +56202,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56204,7 +56245,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56247,7 +56289,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56290,7 +56333,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56333,7 +56377,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56376,7 +56421,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56420,7 +56466,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56462,7 +56509,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56500,7 +56548,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56538,7 +56587,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56578,7 +56628,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56612,7 +56663,8 @@
       "firstSeen": "2026-11-16T06:17:06-06:00",
       "lastVerified": "2026-11-16T06:17:06-06:00",
       "lastChanged": "2026-11-16T06:17:06-06:00",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56678,7 +56730,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -56711,7 +56764,8 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
+      "expiryReason": "outside-geography",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -58304,24 +58358,6 @@
     "Midwest Trust Center": {
       "consecutiveFailures": 13
     },
-    "The Bottleneck": {
-      "consecutiveFailures": 0
-    },
-    "The Granada": {
-      "consecutiveFailures": 0
-    },
-    "Replay Lounge": {
-      "consecutiveFailures": 0
-    },
-    "Lied Center of Kansas": {
-      "consecutiveFailures": 0
-    },
-    "Lawrence Arts Center": {
-      "consecutiveFailures": 0
-    },
-    "Spencer Museum of Art": {
-      "consecutiveFailures": 0
-    },
     "Kansas City Ballet": {
       "consecutiveFailures": 0
     },
@@ -58413,9 +58449,6 @@
       "consecutiveFailures": 0
     },
     "Knuckleheads": {
-      "consecutiveFailures": 0
-    },
-    "Liberty Hall": {
       "consecutiveFailures": 0
     },
     "Sporting Kansas City": {

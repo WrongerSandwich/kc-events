@@ -68,7 +68,7 @@ weekly hub job (~/dev/assistant, scheduler primitive)
 
 - **Taste lives in a prose config file on the box, gitignored** — likes, dislikes, hard excludes, in plain language; the push job hands it to the model with the candidate list. *Why:* taste-matching was the backlog's "interesting bit," but the public/personal split makes it trivial — the public site is taste-neutral (the reader brings taste, the site brings the structure), and the personal filter is one prompt over a short list. No preference-learning, no feedback loop in v1.
 
-- **Defaults Evan can veto at build time:** research window ~8 weeks ahead (touring shows appear while tickets exist); geography = the KC metro on both sides of the state line, plus Lawrence for concerts; weekly cadence for both the run and the push.
+- **Defaults Evan can veto at build time:** research window ~8 weeks ahead (touring shows appear while tickets exist); geography = the KC metro on both sides of the state line (first with "plus Lawrence for concerts", which Evan vetoed on 2026-11-20: ADR 0015); weekly cadence for both the run and the push.
 
 - **Standalone from row 8's "shared harness"** — this instance is Radar-shaped (public product + own clock), not a hub-harness instance. *Why:* the harness doesn't exist, and the events instance turned out to have a public half that shouldn't live on the hub. What row 8's remaining instances (friend-slop, civic tripwire) inherit is the *pattern* — registry + research loop + incremental dataset with cite-or-drop + thin hub push — not code or clock.
 

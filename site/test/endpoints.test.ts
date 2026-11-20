@@ -20,7 +20,7 @@ it.runIf(process.env.CI !== undefined && !matchesGenerated)("has a build of the 
 });
 
 // What the build makes of any week's data: the pages, feeds and files every build writes. The checks that need the week
-// to hold a pick, a recurring event, a Lawrence one, or Always there rows are in endpoints.data.test.ts (#191).
+// to hold a pick, a recurring event, one in a neighborhood named as its region, or Always there rows are in endpoints.data.test.ts (#191).
 describe("built output", () => {
   describe.skipIf(!matchesGenerated)("of the generated dataset", () => {
     it("writes the calendar feeds: the picks, every dated event, and each kind's (#136)", () => {

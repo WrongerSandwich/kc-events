@@ -31,31 +31,16 @@
   lat: 39.095213
   lng: -94.576142
   url: https://www.thetrumankc.com/
-- name: Replay Lounge
-  address: 946 Massachusetts St, Lawrence, KS 66044
-  lat: 38.965835
-  lng: -95.235673
-  url: https://www.replaylounge.com/
 - name: The Midland
   address: 1228 Main St, Kansas City, MO 64105
   lat: 39.098867
   lng: -94.583720
   url: https://www.midlandkc.com/
-- name: Lawrence Arts Center
-  address: 940 New Hampshire St, Lawrence, KS 66044
-  lat: 38.966429
-  lng: -95.234372
-  url: https://lawrenceartscenter.org/
 - name: Knuckleheads
   address: 2715 Rochester Ave, Kansas City, MO 64120
   lat: 39.120497
   lng: -94.548651
   url: https://knuckleheadskc.com/
-- name: Lied Center of Kansas
-  address: 1600 Stewart Dr, Lawrence, KS 66045
-  lat: 38.955019
-  lng: -95.262700
-  url: https://lied.ku.edu/
 - name: Nelson-Atkins Museum of Art
   address: 4525 Oak St, Kansas City, MO 64111
   lat: 39.044966
@@ -81,26 +66,11 @@
   lat: 39.115797
   lng: -94.542393
   url: https://museumofkansascity.org/
-- name: Liberty Hall
-  address: 644 Massachusetts St, Lawrence, KS 66044
-  lat: 38.971473
-  lng: -95.235732
-  url: https://www.liberty-hall.com/
 - name: Folly Theater
   address: 300 W 12th St, Kansas City, MO 64105
   lat: 39.100310
   lng: -94.587292
   url: https://follytheater.org/
-- name: The Bottleneck
-  address: 737 New Hampshire St, Lawrence, KS 66044
-  lat: 38.969842
-  lng: -95.235068
-  url: https://thebottlenecklive.com/
-- name: The Granada
-  address: 1020 Massachusetts St, Lawrence, KS 66044
-  lat: 38.964768
-  lng: -95.235675
-  url: https://thegranada.com/
 - name: The Comedy Club of Kansas City
   address: 1130 W 103rd St, Kansas City, MO 64114
   lat: 38.942316

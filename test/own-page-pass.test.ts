@@ -7,7 +7,7 @@ import type { CannedPage, ScriptedReply } from "./fakes/ports.js";
 import { runWith } from "./fakes/run.js";
 
 /** An unflagged source: every upcoming event's own page is read once, before curation (#254). */
-const granada = source("Granada", { neighborhood: "Lawrence" });
+const granada = source("Granada", { neighborhood: "Crossroads" });
 const LIST_URL = granada.urls[0]!;
 const NEAR_URL = "https://granada.test/event/black-country-new-road/";
 const FAR_URL = "https://granada.test/event/second-show/";

@@ -12,7 +12,7 @@ import { normalizeName, venueAndRoom } from "./identity.js";
 /** The one shape an address may take: street, city, state, and ZIP, so the site can split it for JSON-LD. */
 export const ADDRESS = /^([^,]+), ([^,]+), (MO|KS) (\d{5})$/;
 
-/** Around the metro and Lawrence, generously: a position outside it is a swapped pair or a sign dropped. */
+/** Around the metro, generously: a position outside it is a swapped pair or a sign dropped. */
 export const METRO = { lat: [38.5, 39.7], lng: [-95.6, -93.9] } as const;
 
 const rowSchema = z

@@ -169,7 +169,7 @@ describe("applying hand picks after curation", () => {
 });
 
 describe("hand picks in a run", () => {
-  const granada = source("Granada", { neighborhood: "Lawrence" });
+  const granada = source("Granada", { neighborhood: "Crossroads" });
   const LIST_URL = granada.urls[0]!;
   const OWN_A = "https://granada.test/event/first/";
   const OWN_B = "https://granada.test/event/second/";

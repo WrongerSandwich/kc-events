@@ -120,7 +120,7 @@ describe("pages read several at once (#252)", () => {
   });
 
   it("own pages: their reads overlap, and the report's lines and problems come out as one page at a time", async () => {
-    const lied = source("Lied", { neighborhood: "Lawrence" });
+    const lied = source("Lied", { neighborhood: "Crossroads" });
     const slugs = ["one", "two", "three", "four", "five"];
     const ownUrl = (slug: string) => `https://lied.test/event/${slug}/`;
     const list: CannedPage = { status: 200, body: `<html><body>${slugs.map((s) => `<div><a href="/event/${s}/">Talk ${s}</a> Monday, October 12 · Lied Center</div>`).join("")}</body></html>` };

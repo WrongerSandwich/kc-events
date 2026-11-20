@@ -21,7 +21,7 @@ describe("loadPublished", () => {
       primaryUrl: "https://www.therecordbar.com/shows", kind: "music", recurrence: "one-off", dontMiss: false, lastVerified: "2026-10-03T21:47:36-05:00",
     });
     expect(p.events[1]!.region).toBe("Johnson County");
-    expect(p.regions).toEqual(["Central KC", "Johnson County", "Lawrence", "Elsewhere in the metro"]);
+    expect(p.regions).toEqual(["Central KC", "Johnson County", "Northland", "Elsewhere in the metro"]);
     expect(p.kinds).toContain("music");
     expect(p.lastSuccessfulRun).toBe("2026-10-05T06:30:00-05:00");
     expect(p.buildToday).toBe("2026-10-05");

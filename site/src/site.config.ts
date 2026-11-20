@@ -23,6 +23,5 @@ export const siteConfig = {
     "Kansas City, Kansas": { state: "KS", kansasCity: ["Kansas City, Kansas"] },
     "Johnson County": { state: "KS", kansasCity: [] },
     "Eastern Jackson County": { state: "MO", kansasCity: [] },
-    Lawrence: { state: "KS", kansasCity: [] },
   } as Record<string, { state: string; kansasCity: "all" | readonly string[] } | undefined>,
 } as const;

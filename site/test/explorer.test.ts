@@ -10,7 +10,7 @@ vi.mock("../src/generated/events", async () => {
   return {
     events: [
       event({ id: "a", title: "Friday jazz", start: "2026-10-09T19:00:00-05:00", kind: "music", region: "Central KC" }),
-      event({ id: "b", title: "Saturday film", start: "2026-10-10", kind: "film", region: "Lawrence", neighborhood: "Lawrence", venue: "Liberty Hall" }),
+      event({ id: "b", title: "Saturday film", start: "2026-10-10", kind: "film", region: "Northland", neighborhood: "Northland", venue: "Liberty Hall" }),
       event({ id: "c", title: "Later talk", start: "2026-10-20T18:00:00-05:00", kind: "talks/readings", region: "Central KC" }),
       event({ id: "d", title: "Exhibition", recurrence: "limited-run", start: "2026-09-01", end: "2026-10-25", kind: "art/exhibitions", region: "Central KC", dontMiss: true, pickReason: "major-run", whyLine: "A touring exhibition's one stop." }),
       event({ id: "r", title: "Trivia", recurrence: "recurring", start: undefined, schedule: "Tuesdays", kind: "food/drink", region: "Central KC" }),
@@ -18,7 +18,7 @@ vi.mock("../src/generated/events", async () => {
   };
 });
 vi.mock("../src/generated/meta", () => ({
-  meta: { kinds: ["music", "film", "talks/readings", "art/exhibitions", "food/drink"], regions: ["Central KC", "Lawrence", "Elsewhere in the metro"], lastSuccessfulRun: "2026-10-05T06:30:00-05:00", buildToday: "2026-10-05", timeZone: "America/Chicago" },
+  meta: { kinds: ["music", "film", "talks/readings", "art/exhibitions", "food/drink"], regions: ["Central KC", "Northland", "Elsewhere in the metro"], lastSuccessfulRun: "2026-10-05T06:30:00-05:00", buildToday: "2026-10-05", timeZone: "America/Chicago" },
 }));
 import Explorer from "../src/components/Explorer.svelte";
 import { events } from "../src/generated/events";
@@ -276,7 +276,7 @@ describe("Explorer", () => {
 
   it("renders the phone filter sheet closed from the first render, behind a Filters button that opens it", async () => {
     // A region: the kinds are the bar's on phones, so Filters (n) counts only what the sheet holds.
-    history.replaceState(null, "", "/explore?region=lawrence");
+    history.replaceState(null, "", "/explore?region=northland");
     const target = document.body.appendChild(document.createElement("div"));
     const component = mount(Explorer, { target });
     // The first render is the server's: closed already, so nothing closes on hydration.
@@ -340,7 +340,7 @@ describe("Explorer", () => {
     await fireEvent.click(film);
     expect(railKind("Music, 1 event")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Central KC, 0 events" })).toHaveClass("none");
-    expect(screen.getByRole("button", { name: "Lawrence, 1 event" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Northland, 1 event" })).toBeInTheDocument();
   });
 
   it("closes the phone sheet onto the results from its Show button, which says what the filters list", async () => {

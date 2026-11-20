@@ -9,7 +9,7 @@ export function testConfig(overrides: Partial<RunConfig> = {}): RunConfig {
     ...parseConfig({
       horizonWeeks: 8,
       timezone: "America/Chicago",
-      geography: "Kansas City metro on both sides of the state line, plus Lawrence",
+      geography: "Kansas City metro on both sides of the state line",
       spendCapUsd: 5,
       // One read of each page, so a test scripts one reply per page; the two-read tests set 2 (#224).
       extractionReads: 1,
@@ -19,7 +19,7 @@ export function testConfig(overrides: Partial<RunConfig> = {}): RunConfig {
       ownPageReadsPerRun: 0,
       models: { ...TEST_MODELS },
       kinds: ["music", "other"],
-      neighborhoods: { "Central KC": ["Westport", "East Bottoms", "Crossroads"], Lawrence: ["Lawrence"] },
+      neighborhoods: { "Central KC": ["Westport", "East Bottoms", "Crossroads"], "Kansas City, Kansas": ["Kansas City, Kansas"] },
     }),
     ...overrides,
   };
