@@ -73,6 +73,24 @@ describe("loadPublished", () => {
     }
   });
 
+  it("holds back an active event in a place the config puts outside the geography, with a warning, rather than publish it under the catch-all (ADR 0015)", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const p = loadPublished(write(dataset([
+        activeEvent(),
+        activeEvent({ id: "evt_000000000002", neighborhood: "lawrence, ks" }),
+        activeEvent({ id: "evt_000000000003", neighborhood: "Lawrence KS" }),
+      ]), `${configYaml}outsidePlaces: ["Lawrence, KS"]\n`));
+      expect(p.events.map((e) => e.id)).toEqual(["evt_000000000001"]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      const msg = String(warn.mock.calls[0]![0]);
+      expect(msg).toContain("2 active events");
+      expect(msg).toContain("outside the geography");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   describe("venue aliases (#91)", () => {
     const withAliases = `${configYaml}
 venueAliases:

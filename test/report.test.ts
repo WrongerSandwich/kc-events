@@ -337,7 +337,7 @@ describe("the run report", () => {
 
       - https://blog.test/news says Big Show (https://venue.test/calendar) is cancelled; the event was left as it was
 
-      ## Skipped: expired as a promotion or not public
+      ## Skipped: expired as a promotion, not public or outside the geography
 
       - Speed Dating: https://venue.test/calendar (expired as promotion; left so)
 

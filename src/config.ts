@@ -184,7 +184,9 @@ export const configSchema = z
         ctx.addIssue({ code: "custom", path: ["outsidePlaces"], message: `"${place}" is the catch-all, which is inside the geography` });
       }
       for (const [region, neighborhoods] of Object.entries(config.neighborhoods)) {
-        if (neighborhoods.some((n) => normalizeName(n) === key)) {
+        if (normalizeName(region) === key) {
+          ctx.addIssue({ code: "custom", path: ["outsidePlaces"], message: `"${place}" is outside the geography, but it is a region's name` });
+        } else if (neighborhoods.some((n) => normalizeName(n) === key)) {
           ctx.addIssue({ code: "custom", path: ["outsidePlaces"], message: `"${place}" is outside the geography, but ${region} lists it` });
         }
       }

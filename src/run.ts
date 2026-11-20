@@ -952,9 +952,10 @@ export function mergeSightings(existing: Event[], sightings: Sighting[], { today
       skippedAsExpired.set(known.id, { ...titleAndUrl(known), reason: skippedAs });
       continue;
     }
-    // Expired as outside the geography is a call about where it is; a page listing it again is counted with the readings dropped as outside (ADR 0015).
+    // Expired as outside the geography is a call about where it is; a page listing it again is counted with the readings dropped as outside, and named (ADR 0015).
     if (known.status === "expired" && known.expiryReason === "outside-geography") {
       tally.outsideGeography++;
+      skippedAsExpired.set(known.id, { ...titleAndUrl(known), reason: "outside-geography" });
       continue;
     }
     if (cancelled && !cancellationReaches(event, known, rule)) continue;

@@ -53,7 +53,11 @@ export interface OwnPagesReport {
 
 /** Candidates the run's page readings dropped or could not cite, by cause. */
 export interface CandidateTally {
-  /** Dropped because their page placed them outside the geography, or as an away game a team's schedule names no venue for (#81). */
+  /**
+   * Dropped because their page placed them outside the geography, by the model's flag or in one of the config's
+   * `outsidePlaces` (ADR 0015), or as an away game a team's schedule names no venue for (#81); or a sighting of a
+   * record expired as `outside-geography`.
+   */
   outsideGeography: number;
   /** Skipped because their title is a promotion's: a business's standing night, a watch party (#81); or a sighting of a record expired as one (#216). */
   skippedPromotion: number;
@@ -253,10 +257,11 @@ export interface RunReport {
    */
   cancellationsFromElsewhere: (EventRef & { reportedBy: string })[];
   /**
-   * Records expired as a promotion or as not public that a page listed again this run (#216), each once:
-   * left expired, the sightings counted under the skips, named here so a wrong call can be undone by hand.
+   * Records expired as a promotion or as not public (#216), or as outside the geography (ADR 0015), that a page
+   * listed again this run, each once: left expired, the sightings counted under the skips or with the readings
+   * dropped as outside, named here so a wrong call, or a wrong match, can be undone by hand.
    */
-  skippedAsExpired: (EventRef & { reason: SkipReason })[];
+  skippedAsExpired: (EventRef & { reason: SkipReason | "outside-geography" })[];
   /** Events whose title or primary page changed this run, as they are now and as they were (#82): a flap shows here the week it happens. */
   identityChurn: (EventRef & { was: EventRef })[];
   /**
@@ -441,7 +446,7 @@ export const runReportSchema: z.ZodType<RunReport, unknown> = z.strictObject({
   uncitableReadings: listSince(eventRef),
   keptOnStoredCitation: listSince(eventRef.extend({ failedQuote: z.string() })),
   cancellationsFromElsewhere: listSince(eventRef.extend({ reportedBy: z.string() })),
-  skippedAsExpired: listSince(eventRef.extend({ reason: z.enum(SKIP_REASONS) })),
+  skippedAsExpired: listSince(eventRef.extend({ reason: z.enum([...SKIP_REASONS, "outside-geography"]) })),
   identityChurn: listSince(eventRef.extend({ was: eventRef })),
   kindChanges: listSince(eventRef.extend({ was: z.string(), now: z.string() })),
   likelyDuplicates: listSince(z.strictObject({ a: likelyDuplicateRecord, b: likelyDuplicateRecord })),
@@ -600,7 +605,7 @@ ${markdownList(report.keptOnStoredCitation.map((e) => `${e.title}: ${e.primaryUr
 
 ${markdownList(report.cancellationsFromElsewhere.map((c) => `${c.reportedBy} says ${c.title} (${c.primaryUrl}) is cancelled; the event was left as it was`))}
 
-## Skipped: expired as a promotion or not public
+## Skipped: expired as a promotion, not public or outside the geography
 
 ${markdownList(report.skippedAsExpired.map((e) => `${e.title}: ${e.primaryUrl} (expired as ${e.reason}; left so)`))}
 

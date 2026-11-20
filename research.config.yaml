@@ -116,10 +116,10 @@ neighborhoods:
 
 # Places a page may name that are outside the geography (ADR 0015). A reading the extractor places in one is dropped
 # as outside the geography, whatever else it said, and an event stored in one is expired as `outside-geography`,
-# never moved to the catch-all. A place here may not be on a region's list above.
+# never moved to the catch-all. A place here may not be on a region's list above, nor a region's name.
 outsidePlaces:
   - Lawrence
-  - Lawrence, Kansas # a place is matched whole, so each way a page may write it is its own line
+  - Lawrence, Kansas # the whole neighborhood the extractor gives is matched, in any case and punctuation, so each form it may give is its own line
   - Lawrence, KS
 
 # The discovery lane: web searches (Tavily, basic depth, one credit each; needs TAVILY_API_KEY) for

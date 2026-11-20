@@ -195,7 +195,18 @@ describe("places outside the geography (ADR 0015)", () => {
   it("the config rejects an outside place that a region lists, in any spelling, and the catch-all", () => {
     expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport"] }, outsidePlaces: ["westport"] })).toThrow(/westport\\" is outside the geography, but Central KC lists it/);
     expect(() => parseConfig({ outsidePlaces: ["Elsewhere in the metro"] })).toThrow(/catch-all/);
+    expect(() => parseConfig({ neighborhoods: { "Central KC": ["Westport"] }, outsidePlaces: ["Central KC"] })).toThrow(/it is a region's name/);
     expect(parseConfig({}).outsidePlaces).toEqual([]);
+  });
+
+  it("a place is matched whole, whatever its case and punctuation, and a longer place name is not it", async () => {
+    const config = testConfig({ outsidePlaces: ["Lawrence, KS"] });
+    const readings = reply(show({ title: "Lawrence Show", neighborhood: "lawrence ks" }), show({ title: "North Lawrence Show", neighborhood: "North Lawrence, KS" }));
+
+    const result = await runAt(WEEK_1, emptyDataset(), PAGE, [readings, reply()], config);
+
+    expect(result.dataset.events.map((e) => e.title)).toEqual(["North Lawrence Show"]);
+    expect(result.report.counts.outsideGeography).toBe(1);
   });
 
   it("a reading the model placed in one is dropped and counted as outside the geography, whatever its flag said", async () => {
@@ -250,6 +261,20 @@ describe("places outside the geography (ADR 0015)", () => {
     expect(second.dataset.events).toHaveLength(1);
     expect(second.dataset.events[0]).toMatchObject({ status: "expired", expiryReason: "outside-geography" });
     expect(second.report.counts).toMatchObject({ new: 0, updated: 0, outsideGeography: 1 });
+    expect(second.report.skippedAsExpired).toEqual([{ title: "Big Show", primaryUrl: calendar, reason: "outside-geography" }]);
+    expect(renderReportMarkdown(second.report)).toContain(`- Big Show: ${calendar} (expired as outside-geography; left so)`);
+  });
+
+  it("a stored event in one is expired before the run's readings merge, so a page that places it elsewhere this run does not move it", async () => {
+    const stored = await storedAs({ neighborhood: "Lawrence" });
+
+    const second = await runAt(WEEK_2, stored, PAGE, [reply(show({ neighborhood: "East Bottoms" })), reply()]);
+
+    expect(second.dataset.events).toHaveLength(1);
+    expect(second.dataset.events[0]).toMatchObject({ neighborhood: "Lawrence", status: "expired", expiryReason: "outside-geography" });
+    expect(second.report.counts).toMatchObject({ new: 0, updated: 0, outsideGeography: 1 });
+    expect(second.report.counts.expired["outside-geography"]).toBe(1);
+    expect(second.report.skippedAsExpired).toEqual([{ title: "Big Show", primaryUrl: calendar, reason: "outside-geography" }]);
   });
 });
 

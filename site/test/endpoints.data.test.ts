@@ -23,7 +23,7 @@ const matchesGenerated = has("llms.txt") && read("llms.txt").includes(`Last run:
 const oneOff = events.find((e) => e.recurrence === "one-off");
 const recurring = events.find((e) => e.recurrence === "recurring");
 const pick = events.find((e) => e.dontMiss);
-// A neighborhood that carries its region's name: "Northland" under Northland, "Kansas City, Kansas" under its own, the catch-all.
+// The first event whose neighborhood carries its region's name, whichever kind the dataset holds first: "Northland" under Northland, "Kansas City, Kansas" under its own, or the catch-all.
 const namedOnce = events.find((e) => e.region === e.neighborhood);
 const alwaysThere = pickAlwaysThere(events, alwaysTherePicks);
 

@@ -135,7 +135,7 @@ _None._
 
 _None._
 
-## Skipped: expired as a promotion or not public
+## Skipped: expired as a promotion, not public or outside the geography
 
 _None._
 
