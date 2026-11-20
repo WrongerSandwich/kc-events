@@ -394,6 +394,13 @@ describe("the venue an alias names (#91)", () => {
     expect(venueAndRoom("recordBar", aliases)).toEqual({ venue: "recordBar" });
   });
 
+  it("gives no room for an alias that is the venue's street address", () => {
+    const byAddress = { "Liberty Hall": ["644 Massachusetts St"], "Music Theater Heritage": ["2450 Grand Blvd., Suite 301"], "Lied Center of Kansas": ["Main Auditorium"] };
+    expect(venueAndRoom("644 Massachusetts St", byAddress)).toEqual({ venue: "Liberty Hall" });
+    expect(venueAndRoom("2450 Grand Blvd., Suite 301", byAddress)).toEqual({ venue: "Music Theater Heritage" });
+    expect(venueAndRoom("Main Auditorium", byAddress)).toEqual({ venue: "Lied Center of Kansas", room: "Main Auditorium" });
+  });
+
   it("names none for a name the list does not hold, or one shorter than an entry", () => {
     expect(aliasedVenue("recordBar", aliases)).toBeUndefined();
     expect(aliasedVenue("Kauffman", aliases)).toBeUndefined();

@@ -7,7 +7,7 @@ import { parse as parseYaml } from "yaml";
 import { PRODUCT, USER_AGENT } from "../../../src/adapters/identity.ts";
 import { ELSEWHERE_IN_THE_METRO, parseConfig, type RunConfig } from "../../../src/config.ts";
 import { DATASET_SCHEMA_VERSION, parseDataset, WEEKDAYS, type Event, type PickReason as JobPickReason, type Weekday } from "../../../src/dataset.ts";
-import { genericVenueName, venueAndRoom } from "../../../src/identity.ts";
+import { genericVenueName, streetAddress, venueAndRoom } from "../../../src/identity.ts";
 import { regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
 import { addDays, isDateOnly, isValidDate, localDate } from "../lib/dates";
@@ -76,12 +76,9 @@ export function regionFor(neighborhood: string, config: RunConfig): string {
   return named ?? ELSEWHERE_IN_THE_METRO;
 }
 
-/** A house number, then a street-type word: a heuristic for a warning, which a "1600 Genessee" slips past. */
-const STREET_ADDRESS = /^\d+\s+(?:\S+\s+)*?(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|ct|court|ln|lane|pkwy|parkway|pl|place|ter|terrace|hwy|highway|cir|circle|way|trail)\b/i;
-
 /** A published venue that names no one place: generic words only ("Galleries") or a street address. */
 function vagueVenue(venue: string): boolean {
-  return genericVenueName(venue) || STREET_ADDRESS.test(venue);
+  return genericVenueName(venue) || streetAddress(venue);
 }
 
 /** "A (2), B (1)": each value with how many times it occurs, in first-seen order. */
