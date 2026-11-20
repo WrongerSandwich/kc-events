@@ -250,12 +250,19 @@ export function aliasedVenue(name: string, aliases: VenueAliases): string | unde
 
 /**
  * A page's venue name as the site shows it: the venue the alias list files it under, else the name; and the name as
- * the room when it was neither the venue's name nor a form of it ("Helzberg Hall", not "Kauffman Center").
+ * the room when it was neither the venue's name nor a form of it ("Helzberg Hall", not "Kauffman Center"), nor the
+ * venue's street address, which a calendar sometimes gives in the venue's place ("644 Massachusetts St" for Liberty
+ * Hall): that is where the venue is, not a room in it.
  */
 export function venueAndRoom(name: string, aliases: VenueAliases): { venue: string; room?: string } {
   const venue = aliasedVenue(name, aliases);
   if (venue === undefined) return { venue: name };
-  return oneVenueName(normalizeName(name), normalizeName(venue)) ? { venue } : { venue, room: name };
+  return oneVenueName(normalizeName(name), normalizeName(venue)) || opensWithStreetNumber(name) ? { venue } : { venue, room: name };
+}
+
+/** An alias that opens with a street number ("1801 East 18th Street", "2450 Grand Blvd., Suite 301"): an address, not a room. */
+function opensWithStreetNumber(name: string): boolean {
+  return /^\s*\d+\s+\p{L}/u.test(name);
 }
 
 /** Words that name a room or a kind of place, not any one venue. */
