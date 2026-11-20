@@ -14,4 +14,15 @@
 # - id: evt_000000000000
 #   title: Stewart Copeland
 #   pick: false
-[]
+# The model called it close on every reading: its ticket page is behind a waiting room the job may not enter, so it
+# has no description and the list does not say it is annual. The Kauffman Center's list names the Symphony.
+- id: evt_6cd4351a5d05
+  title: Messiah
+  pick: true
+  reason: tradition
+  why: The Kansas City Symphony's yearly performance of Handel's oratorio, a holiday-season fixture for the city's concert audience.
+# The Nutcracker is stored twice (the Kauffman Center's list and the Crossroads list); the Crossroads record,
+# evt_0fad64f01426, has the description and keeps the pick.
+- id: evt_85c33d2453a6
+  title: The Nutcracker
+  pick: false
