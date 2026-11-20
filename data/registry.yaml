@@ -6,7 +6,7 @@
 #   kind: music                            # from the kinds taxonomy in research.config.yaml
 #   neighborhood: East Bottoms             # listed under a region in research.config.yaml, or the catch-all
 #   checkHints: free text passed to the extractor
-#   fetch: browser                         # optional; only for listings rendered by script (see below)
+#   fetch: browser                         # optional; for listings rendered by script, or a site that answers 406 to Node alone (see below)
 #   waitFor: .event-card                   # optional, browser only: a CSS selector for one rendered listing
 #   eventPageWaitFor: .showtime            # optional, browser only: a CSS selector for what an event's own page renders
 #   status: active                         # or excluded, with a reason
@@ -27,6 +27,13 @@
 # where the source sets one, else for the network to go quiet; give one only once an own page is seen
 # failing. A browser does not get past a site that refuses the job, and some script-rendered sites list
 # nothing worth reading even rendered; those stay excluded with the reason.
+#
+# One other case for `fetch: browser` (ADR 0011, amended 2026-11-20): a site that answers the plain
+# fetcher HTTP 406 on any page its cache does not hold, though its listings are in the plain HTML and
+# its robots.txt allows the job. The Midland, The Truman, T-Mobile Center and Arrowhead do, on one
+# venue platform behind Fastly: the refusal follows Node's connection, not the job's user agent, which
+# Chromium sends too and is let through. Check before using it for another site that a client other
+# than Node gets the page under the job's user agent; a site that refuses that as well has refused the job.
 #
 # Growing the registry: the first runs' don't-miss picks leaned heavily to music, because concert
 # rooms and series list many dated one-offs while museums, parks and festivals mostly yield runs and
@@ -67,23 +74,29 @@ sources:
     kind: music
     neighborhood: Downtown
     checkHints: Arvest Bank Theatre at the Midland, 1228 Main St. The list links each show to an AXS ticket page.
+    fetch: browser
     status: active
-    notes: RSS feed at https://www.midlandkc.com/events/rss
+    notes: RSS feed at https://www.midlandkc.com/events/rss. The listings are in the plain HTML; the browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold, which refused 7 of its own pages on 2026-11-16 (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200 on the list and the own pages, and both go network-quiet, so neither has a selector; a selector for one listing would return the page before the rest of the list fills in. Rendered and quiet, the list carries 37 shows against the plain page's 20 (checked 2026-11-20).
 
   - name: T-Mobile Center
     urls: [https://www.t-mobilecenter.com/events]
     kind: music
     neighborhood: Downtown
     checkHints: Arena at 1407 Grand Blvd; concerts, touring family shows and sports.
+    fetch: browser
+    waitFor: .eventItem
+    eventPageWaitFor: .event_detail
     status: active
+    notes: The listings are in the plain HTML; the browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200. Neither the list nor an own page goes network-quiet, so each has a selector, one listing's and the own page's detail block. Rendered, the list carries 25 events against the plain page's 13 (checked 2026-11-20).
 
   - name: The Truman
     urls: [https://www.thetrumankc.com/]
     kind: music
     neighborhood: Midtown
     checkHints: Club at 608 E 31st St; the homepage carries the full show list.
+    fetch: browser
     status: active
-    notes: Was thetruman.com, which stopped resolving in October 2026 (eleven failed fetches); thetrumankc.com answers with the same show list (checked 2026-10-10).
+    notes: Was thetruman.com, which stopped resolving in October 2026 (eleven failed fetches); thetrumankc.com answers with the same show list (checked 2026-10-10). The listings are in the plain HTML; the browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200 on the list and the own pages, and both go network-quiet, so neither has a selector (checked 2026-11-20).
 
   - name: Azura Amphitheater
     urls: [https://www.azuraamp.com/kansas-city-concert-and-events-calendar.html]
@@ -454,8 +467,11 @@ sources:
     kind: sports
     neighborhood: Truman Sports Complex
     checkHints: Chiefs home games, each its own one-off, titled "Kansas City Chiefs vs <Opponent>" however the page orders the teams, plus concerts and other stadium events, which are one-offs too.
+    fetch: browser
+    waitFor: .eventItem
+    eventPageWaitFor: .event_detail
     status: active
-    notes: Answers HTTP 406 on some runs (10-10, 10-12, 10-19) and 200 on others, through Fastly, to a stock Chrome user agent as well as ours, so it is the site's screening, not the job's identity (#161). The listings are in the plain HTML, so the browser fetcher is not the fix. Stays active because it usually gets through; the ask to let `kc-this-week` through is in #58 (added 2026-10-19).
+    notes: Answered the plain fetcher HTTP 406 on some runs (10-10, 10-12, 10-19, 11-09, 11-16) and 200 on others, through Fastly, whatever the user agent (#161). The 406 comes on a page the cache does not hold, and to Node alone; Python and Chromium get 200 under the job's user agent (checked 2026-11-20), so the list goes through the browser though its listings are in the plain HTML (ADR 0011's amendment, #58). Neither the list nor an own page goes network-quiet, so each has a selector, one listing's and the own page's detail block. Rendered, the list carries 12 events against the plain page's 7.
 
   - name: Kansas City Mavericks
     urls: [https://kcmavericks.com/]
