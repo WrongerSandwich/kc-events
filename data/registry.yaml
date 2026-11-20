@@ -29,11 +29,14 @@
 # nothing worth reading even rendered; those stay excluded with the reason.
 #
 # One other case for `fetch: browser` (ADR 0011, amended 2026-11-20): a site that answers the plain
-# fetcher HTTP 406 on any page its cache does not hold, though its listings are in the plain HTML and
-# its robots.txt allows the job. The Midland, The Truman, T-Mobile Center and Arrowhead do, on one
-# venue platform behind Fastly: the refusal follows Node's connection, not the job's user agent, which
-# Chromium sends too and is let through. Check before using it for another site that a client other
-# than Node gets the page under the job's user agent; a site that refuses that as well has refused the job.
+# fetcher HTTP 406 on pages its cache does not hold, though the plain page has listings and its
+# robots.txt allows the job. The Midland, The Truman, T-Mobile Center and Arrowhead do, on one venue
+# platform behind Fastly: the refusal follows Node's connection, not the job's user agent, which
+# Python and Chromium send too and are let through. Check before using it for another site that a
+# client other than Node gets the page under the job's user agent; a site that refuses that as well
+# has refused the job. On that platform the plain page carries the first page of the list and script
+# appends the next after load, so a `waitFor` there names a mark the script leaves once it has
+# (never one listing, which is there from the start, so the page would come back at either length).
 #
 # Growing the registry: the first runs' don't-miss picks leaned heavily to music, because concert
 # rooms and series list many dated one-offs while museums, parks and festivals mostly yield runs and
@@ -76,7 +79,7 @@ sources:
     checkHints: Arvest Bank Theatre at the Midland, 1228 Main St. The list links each show to an AXS ticket page.
     fetch: browser
     status: active
-    notes: RSS feed at https://www.midlandkc.com/events/rss. The listings are in the plain HTML; the browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold, which refused 7 of its own pages on 2026-11-16 (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200 on the list and the own pages, and both go network-quiet, so neither has a selector; a selector for one listing would return the page before the rest of the list fills in. Rendered and quiet, the list carries 37 shows against the plain page's 20 (checked 2026-11-20).
+    notes: RSS feed at https://www.midlandkc.com/events/rss. The browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold, which refused 7 of its own pages on 2026-11-16 (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200 on the list and the own pages, and both go network-quiet, so neither has a selector. The plain page carries the first 20 shows and script appends the next page after load (37 in all, checked 2026-11-20); the browser reads the list once that request has answered. Do not give it a selector for one listing, which is there before the rest arrives; this site's script leaves no mark when the next page is empty, so there is nothing surer than the quiet network to wait for.
 
   - name: T-Mobile Center
     urls: [https://www.t-mobilecenter.com/events]
@@ -84,10 +87,10 @@ sources:
     neighborhood: Downtown
     checkHints: Arena at 1407 Grand Blvd; concerts, touring family shows and sports.
     fetch: browser
-    waitFor: .eventItem
+    waitFor: "#loadMoreEvents:not([disabled]), body.event-lazyload-no-more-events"
     eventPageWaitFor: .event_detail
     status: active
-    notes: The listings are in the plain HTML; the browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200. Neither the list nor an own page goes network-quiet, so each has a selector, one listing's and the own page's detail block. Rendered, the list carries 25 events against the plain page's 13 (checked 2026-11-20).
+    notes: The browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200. Neither the list nor an own page goes network-quiet, so each has a selector. The plain list carries the first 12 events and script appends the next 12 after load (24 in all, checked 2026-11-20), so the list's selector is not a listing's, which would match before they arrive, but the two marks the script leaves once the next page has answered, the "load more" button enabled, or the body's class when there are no more. The own page's selector is its detail block.
 
   - name: The Truman
     urls: [https://www.thetrumankc.com/]
@@ -96,7 +99,7 @@ sources:
     checkHints: Club at 608 E 31st St; the homepage carries the full show list.
     fetch: browser
     status: active
-    notes: Was thetruman.com, which stopped resolving in October 2026 (eleven failed fetches); thetrumankc.com answers with the same show list (checked 2026-10-10). The listings are in the plain HTML; the browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200 on the list and the own pages, and both go network-quiet, so neither has a selector (checked 2026-11-20).
+    notes: Was thetruman.com, which stopped resolving in October 2026 (eleven failed fetches); thetrumankc.com answers with the same show list (checked 2026-10-10). The browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200 on the list and the own pages, and both go network-quiet, so neither has a selector (checked 2026-11-20). As at the Midland, script appends to the list after load and leaves no mark when there is no more, so the quiet network is the thing to wait for.
 
   - name: Azura Amphitheater
     urls: [https://www.azuraamp.com/kansas-city-concert-and-events-calendar.html]
@@ -468,10 +471,10 @@ sources:
     neighborhood: Truman Sports Complex
     checkHints: Chiefs home games, each its own one-off, titled "Kansas City Chiefs vs <Opponent>" however the page orders the teams, plus concerts and other stadium events, which are one-offs too.
     fetch: browser
-    waitFor: .eventItem
+    waitFor: "#loadMoreEvents:not([disabled]), body.event-lazyload-no-more-events"
     eventPageWaitFor: .event_detail
     status: active
-    notes: Answered the plain fetcher HTTP 406 on some runs (10-10, 10-12, 10-19, 11-09, 11-16) and 200 on others, through Fastly, whatever the user agent (#161). The 406 comes on a page the cache does not hold, and to Node alone; Python and Chromium get 200 under the job's user agent (checked 2026-11-20), so the list goes through the browser though its listings are in the plain HTML (ADR 0011's amendment, #58). Neither the list nor an own page goes network-quiet, so each has a selector, one listing's and the own page's detail block. Rendered, the list carries 12 events against the plain page's 7.
+    notes: Answered the plain fetcher HTTP 406 on some runs (10-10, 10-12, 10-19, 11-09, 11-16) and 200 on others, through Fastly, whatever the user agent (#161). The 406 comes on a page the cache does not hold, and to Node alone; Python and Chromium get 200 under the job's user agent (checked 2026-11-20), so the list goes through the browser (ADR 0011's amendment, #58). Neither the list nor an own page goes network-quiet, so each has a selector. The plain list carries the first 6 events and script appends the next 6 after load (11 in all, checked 2026-11-20), so the list's selector is not a listing's, which would match before they arrive, but the two marks the script leaves once the next page has answered, the "load more" button enabled, or the body's class when there are no more (the off-season, with six events or fewer). The own page's selector is its detail block.
 
   - name: Kansas City Mavericks
     urls: [https://kcmavericks.com/]

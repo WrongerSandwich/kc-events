@@ -32,10 +32,13 @@ export interface BrowserFetcherOptions {
 }
 
 /**
- * The browser fetcher, for registry sources whose listings are rendered by script: loads the page
- * in headless Chromium and returns the rendered DOM's HTML as the body. Its manners are the plain
- * fetcher's: that fetcher requests the URL first and walks its redirects, robots.txt and all, and the
- * browser loads the page they end on; robots.txt is asked again, through the same cache, before any
+ * The browser fetcher, for registry sources whose listings are rendered by script, and for the few
+ * whose site answers Node 406 and Chromium 200 under the same user agent (ADR 0011, amended for #58):
+ * loads the page in headless Chromium and returns the rendered DOM's HTML as the body. Its manners
+ * are the plain fetcher's: that fetcher requests the URL first and walks its redirects, robots.txt
+ * and all, and the browser loads the page they end on, whatever status the plain request ended with
+ * (a 406 is where the walk stops, and the browser's own hops are checked as below); robots.txt is
+ * asked again, through the same cache, before any
  * navigation the page's script makes, at every redirect hop of one, and for the URL the page ends on
  * (what the page itself loads, its scripts and data, is not a page the job asked for). The plain
  * fetcher's policy holds too: no request the page makes goes to a host on the machine's own network,

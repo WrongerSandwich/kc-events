@@ -7,7 +7,7 @@ const sourceFields = {
   neighborhood: z.string().min(1),
   checkHints: z.string().optional(),
   notes: z.string().optional(),
-  /** How its pages are fetched: plainly (the default), or loaded in a browser when script renders the listings. */
+  /** How its pages are fetched: plainly (the default), or loaded in a browser when script renders the listings or the site answers Node alone 406 (#58). */
   fetch: z.enum(["plain", "browser"]).optional(),
   /** A CSS selector the browser waits for instead of the network going quiet; browser fetch only. */
   waitFor: z.string().min(1).optional(),

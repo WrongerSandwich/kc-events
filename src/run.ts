@@ -2144,7 +2144,8 @@ function combineAttempts(...all: PageAttempts[]): PageAttempts {
 
 /**
  * The fetcher a registry source's pages go through, and what it is told: the browser for a source
- * whose listings are rendered by script, the plain fetcher otherwise.
+ * the registry gives `fetch: browser` (listings rendered by script, or a site that answers the plain
+ * fetcher 406 and Chromium 200, #58), the plain fetcher otherwise.
  */
 function fetcherFor(source: Source, ports: Ports): FetchRoute {
   if (source.fetch !== "browser") return plainly(ports);
