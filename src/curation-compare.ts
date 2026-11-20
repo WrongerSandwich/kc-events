@@ -33,8 +33,11 @@ export function trialsUnder(trials: CurationTrial[], hashes: { current: string; 
   return trials.filter((t) => t.promptHash !== undefined && t.promptHash === hashes[t.prompt]);
 }
 
-/** The spec's calibration figure: picks across an eight-week horizon of about 450 eligible events. */
-export const CALIBRATION = { low: 50, high: 80 } as const;
+/**
+ * The curation prompt's calibration figure: picks across an eight-week horizon of about `eligible` events. It was 50
+ * to 80 of 450 until 2026-11-20, when the first two runs under it had picked about 8% (ADR 0014).
+ */
+export const CALIBRATION = { low: 25, high: 35, eligible: 400 } as const;
 
 /** Every eligible event, or `n` of them drawn by a seed so the same ids come up for the same seed. */
 export function sampleEligible(events: Event[], n: number | undefined, seed: string): Event[] {
@@ -186,6 +189,8 @@ export interface ComparisonMeta {
   candidateHash?: string;
   /** Events judged (the sample, or every eligible event). */
   sample: number;
+  /** `--sample` cut the horizon down, so a pick count is read as a rate. */
+  sampled?: boolean;
   minutes: number;
   capHit?: boolean;
 }
@@ -210,10 +215,8 @@ export function renderCurationComparison(scores: RepeatScore[], diff: PromptMove
   }
   lines.push("");
   for (const s of scores) {
-    const sampled = s.events;
-    const projected = sampled === 0 ? 0 : Math.round(s.picks);
     lines.push(
-      `- **${s.prompt}**: ${projected} ${projected === 1 ? "pick" : "picks"} by majority over ${sampled} event(s); the spec's calibration figure is ${CALIBRATION.low} to ${CALIBRATION.high} over an eight-week horizon of about 450 eligible events${sampled > 0 && sampled < 400 ? `, so scale by the sample (${pct(s.pickRate)} of the horizon's events)` : ""}.`,
+      `- **${s.prompt}**: ${s.picks} ${s.picks === 1 ? "pick" : "picks"} by majority over ${s.events} event(s); the prompt's calibration figure is ${CALIBRATION.low} to ${CALIBRATION.high} over an eight-week horizon of about ${CALIBRATION.eligible} eligible events${meta.sampled ? `, so scale by the sample (${pct(s.pickRate)} of the horizon's events)` : ""}.`,
     );
   }
   lines.push("");
