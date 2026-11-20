@@ -131,6 +131,7 @@ async function main() {
     currentHash: hashes.current,
     ...(hashes.candidate ? { candidateHash: hashes.candidate } : {}),
     sample: events.length,
+    ...(sample === undefined ? {} : { sampled: true }),
     minutes: (Date.now() - started) / 60_000,
     capHit,
   });

@@ -89,6 +89,12 @@ describe("scoring repeated judgments", () => {
     expect(markdown).toContain("Picks by kind (current): music 2, film 1.");
   });
 
+  it("says to scale the pick count by the sample only when the horizon was sampled", () => {
+    const meta = { date: "2026-11-09", model: "m", currentHash: "abcdefabcdef", sample: 4, minutes: 1 };
+    expect(renderCurationComparison(scoreRepeats(current, dataset), [], meta)).not.toContain("scale by the sample");
+    expect(renderCurationComparison(scoreRepeats(current, dataset), [], { ...meta, sampled: true })).toContain("so scale by the sample");
+  });
+
   it("a report re-rendered from saved trials, with no calls made, says so instead of a time", () => {
     const markdown = renderCurationComparison(scoreRepeats(current, dataset), [], { date: "2026-11-09", model: "m", currentHash: "abcdefabcdef", sample: 4, minutes: 0 });
     expect(markdown).toContain("rendered from saved trials");
@@ -131,7 +137,7 @@ describe("scoring repeated judgments", () => {
     expect(markdown).toContain("# Curation prompt comparison 2026-11-09");
     expect(markdown).toContain("25%");
     expect(markdown).toContain("2 picks");
-    expect(markdown).toContain("50 to 80");
+    expect(markdown).toContain("25 to 35 over an eight-week horizon of about 400 eligible events");
     expect(markdown).toContain("| A | pick (rare) | close |");
   });
 });

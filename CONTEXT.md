@@ -56,7 +56,7 @@ _Avoid_: special, deal
 How a recurring event repeats, in a few words from its page ("Every Tuesday, 7pm"). A recurring event carries it instead of a start and end date. A sports team's home game is a one-off, one per game; a season as a whole is not an event (#159).
 
 **Don't-miss flag**:
-The editorial call that a one-off or limited run belongs on the front page, made under one named **reason** (ADR 0014). Never applied to recurring events. The curation prompt names a density, on the order of 50 to 80 picks across an eight-week horizon of about 450 eligible events, and a similar number of close calls: a calibration for the threshold, never a quota for a batch, to be corrected to the truth after two runs. The domain's and the code's term (`dontMiss`, with `pickReason`); a reader sees a flagged event called a **pick**, tagged "Don't miss" (#185).
+The editorial call that a one-off or limited run belongs on the front page, made under one named **reason** (ADR 0014). Never applied to recurring events. The curation prompt names a density, on the order of 25 to 35 picks across an eight-week horizon of about 400 eligible events, and about twice as many close calls: a calibration for the threshold, never a quota for a batch, corrected on 2026-11-20 to what the first two runs under it gave (it had said 50 to 80 of 450, and as many close calls). The domain's and the code's term (`dontMiss`, with `pickReason`); a reader sees a flagged event called a **pick**, tagged "Don't miss" (#185).
 _Avoid_: featured, top pick, interest score, rating
 
 **Pick**:
