@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How a KC This Week run works</title>
+<style>
+:root {
+  --ground: oklch(0.985 0 0);
+  --raised: oklch(1 0 0);
+  --ink: oklch(0.21 0 0);
+  --muted: oklch(0.46 0 0);
+  --hair: oklch(0.915 0 0);
+  --rule: oklch(0.78 0 0);
+  --sunk: oklch(0.955 0 0);
+  --role-l: 0.45; --role-c: 0.14; --tint-l: 0.945; --tint-c: 0.045; --edge-l: 0.82; --edge-c: 0.07;
+  --fetch-h: 245; --model-h: 308; --judge-h: 27; --hand-h: 140; --data-h: 205; --warn-h: 62;
+  --font: "Geist Variable", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: oklch(0.17 0 0);
+    --raised: oklch(0.215 0 0);
+    --ink: oklch(0.94 0 0);
+    --muted: oklch(0.72 0 0);
+    --hair: oklch(0.3 0 0);
+    --rule: oklch(0.46 0 0);
+    --sunk: oklch(0.25 0 0);
+    --role-l: 0.84; --role-c: 0.1; --tint-l: 0.29; --tint-c: 0.055; --edge-l: 0.44; --edge-c: 0.08;
+  }
+}
+.r-fetch { --h: var(--fetch-h); }
+.r-model { --h: var(--model-h); }
+.r-judge { --h: var(--judge-h); }
+.r-hand  { --h: var(--hand-h); }
+.r-data  { --h: var(--data-h); }
+.r-warn  { --h: var(--warn-h); }
+.r-fetch, .r-model, .r-judge, .r-hand, .r-data, .r-warn {
+  --fg: oklch(var(--role-l) var(--role-c) var(--h));
+  --bg: oklch(var(--tint-l) var(--tint-c) var(--h));
+  --edge: oklch(var(--edge-l) var(--edge-c) var(--h));
+}
+.r-code { --fg: var(--muted); --bg: var(--sunk); --edge: var(--rule); }
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--ground); color: var(--ink);
+  font: 16px/1.55 var(--font); text-rendering: optimizeLegibility;
+}
+main, header.top, footer { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+header.top { padding-top: 44px; }
+h1 { font-size: clamp(1.9rem, 4.6vw, 2.8rem); line-height: 1.08; letter-spacing: -0.025em; margin: 0 0 14px; font-weight: 680; }
+h2 { font-size: 1.5rem; letter-spacing: -0.015em; line-height: 1.2; margin: 0 0 6px; font-weight: 650; }
+h3 { font-size: 1rem; margin: 26px 0 8px; font-weight: 650; }
+p { margin: 0 0 12px; max-width: 68ch; }
+.lede { font-size: 1.1rem; color: var(--muted); max-width: 62ch; }
+code { font: 0.86em var(--mono); background: var(--sunk); padding: 1px 5px; border-radius: 4px; }
+a { color: inherit; text-underline-offset: 3px; }
+section { padding: 44px 0 8px; border-top: 1px solid var(--hair); margin-top: 40px; }
+.kicker { font: 600 0.74rem/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.note { color: var(--muted); font-size: 0.9rem; }
+.small { font-size: 0.86rem; }
+
+/* figures strip */
+.figs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--hair); border: 1px solid var(--hair); border-radius: 12px; overflow: hidden; margin: 26px 0 8px; }
+.figs div { background: var(--raised); padding: 14px 16px; }
+.figs b { display: block; font-size: 1.55rem; letter-spacing: -0.02em; font-weight: 650; font-variant-numeric: tabular-nums; }
+.figs span { color: var(--muted); font-size: 0.84rem; line-height: 1.3; display: block; }
+
+/* toc */
+.toc { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 22px 0 0; padding: 0; list-style: none; }
+.toc a { display: block; text-decoration: none; border: 1px solid var(--hair); background: var(--raised); border-radius: 999px; padding: 4px 12px; font-size: 0.86rem; }
+.toc a:hover { border-color: var(--rule); }
+
+/* role chips */
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 600 0.72rem/1 var(--font); letter-spacing: 0.01em; padding: 4px 8px; border-radius: 999px; color: var(--fg); background: var(--bg); border: 1px solid var(--edge); white-space: nowrap; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--fg); }
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px 18px; margin: 18px 0 4px; padding: 14px 16px; border: 1px solid var(--hair); border-radius: 12px; background: var(--raised); }
+.legend div { font-size: 0.86rem; color: var(--muted); display: flex; flex-direction: column; gap: 5px; align-items: flex-start; }
+
+/* generic figure frame */
+.fig { margin: 20px 0 10px; border: 1px solid var(--hair); background: var(--raised); border-radius: 14px; padding: 18px; }
+.fig > figcaption, .cap { color: var(--muted); font-size: 0.84rem; margin-top: 12px; max-width: 80ch; }
+figure { margin: 0; }
+.scroll { overflow-x: auto; }
+
+/* week grid */
+.week { display: grid; grid-template-columns: 118px repeat(7, minmax(92px, 1fr)); gap: 6px; min-width: 820px; }
+.week .dh { font: 600 0.74rem/1 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 4px 2px 8px; }
+.week .lane { font-size: 0.82rem; font-weight: 600; padding: 8px 6px 8px 0; color: var(--muted); align-self: center; line-height: 1.25; }
+.week .cell { min-height: 46px; border-radius: 8px; background: var(--sunk); opacity: 0.55; }
+.week .ev { border-radius: 8px; padding: 7px 9px; font-size: 0.8rem; line-height: 1.3; color: var(--fg); background: var(--bg); border: 1px solid var(--edge); }
+.week .ev b { display: block; font-weight: 650; }
+.week .ev i { font-style: normal; font: 600 0.72rem var(--mono); display: block; margin-bottom: 2px; }
+.week .span7 { grid-column: 2 / span 7; }
+.week .span6 { grid-column: 3 / span 6; }
+
+/* gate chain (wrapper + guards) */
+.gates { list-style: none; margin: 0; padding: 0; counter-reset: g; display: grid; gap: 0; }
+.gates li { counter-increment: g; display: grid; grid-template-columns: 34px minmax(0, 1.25fr) minmax(0, 1fr); gap: 0 14px; position: relative; padding-bottom: 14px; }
+.gates li::before { content: counter(g); width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--rule); background: var(--raised); display: grid; place-items: center; font: 600 0.78rem var(--mono); z-index: 1; }
+.gates li::after { content: ""; position: absolute; left: 13.5px; top: 28px; bottom: 0; width: 1.5px; background: var(--rule); }
+.gates li:last-child::after { display: none; }
+.gates .do b { font-weight: 650; }
+.gates .do { font-size: 0.93rem; padding-top: 2px; }
+.gates .do span { display: block; color: var(--muted); font-size: 0.85rem; }
+.gates .if { font-size: 0.83rem; color: var(--fg); background: var(--bg); border: 1px solid var(--edge); border-radius: 8px; padding: 6px 10px; align-self: start; }
+.gates .if::before { content: "if it fails  "; font: 600 0.68rem var(--mono); text-transform: uppercase; letter-spacing: 0.06em; display: block; opacity: 0.85; }
+.gates li.line .do b { color: oklch(var(--role-l) var(--role-c) var(--judge-h)); }
+.gates li.line::before { border-color: oklch(var(--role-l) var(--role-c) var(--judge-h)); background: oklch(var(--tint-l) var(--tint-c) var(--judge-h)); }
+
+/* seam diagram */
+.seam { display: grid; grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1.05fr) 30px minmax(0, 0.9fr); align-items: center; gap: 0; }
+.seam .col { display: grid; gap: 6px; }
+.seam .colh { font: 600 0.72rem var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+.file { font: 0.8rem var(--mono); padding: 6px 9px; border-radius: 7px; background: var(--bg); border: 1px solid var(--edge); color: var(--fg); overflow-wrap: anywhere; }
+.file small { display: block; font: 0.76rem var(--font); opacity: 0.9; margin-top: 1px; }
+.arrow { text-align: center; color: var(--rule); font-size: 1.3rem; }
+.core { border: 2px solid var(--ink); border-radius: 14px; padding: 16px; text-align: center; background: var(--ground); }
+.core b { font: 650 1.25rem var(--mono); display: block; }
+.core p { font-size: 0.84rem; color: var(--muted); margin: 6px auto 12px; }
+.ports { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.port { font-size: 0.76rem; border: 1px dashed var(--rule); border-radius: 999px; padding: 3px 9px; background: var(--raised); }
+.port b { font: 600 0.76rem var(--font); display: inline; }
+
+/* pipeline */
+.pipe { display: grid; gap: 0; }
+.pipe .hd, .pipe .stage, .pipe .phase { display: grid; grid-template-columns: 34px minmax(0, 1fr) 40px 40px; gap: 0 12px; }
+.pipe .hd { font: 600 0.7rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); text-align: center; padding-bottom: 6px; position: sticky; top: 0; background: var(--raised); z-index: 3; }
+.pipe .phase { margin-top: 14px; }
+.pipe .phase:first-of-type { margin-top: 0; }
+.pipe .phase span { grid-column: 1 / -1; font: 650 0.74rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; padding: 5px 10px; border-radius: 6px; background: var(--ink); color: var(--ground); justify-self: start; }
+.pipe .phase em { font-style: normal; font-weight: 400; letter-spacing: 0; text-transform: none; opacity: 0.8; margin-left: 8px; font-family: var(--font); }
+.pipe .stage { padding: 12px 0 0; position: relative; }
+.pipe .stage::before { content: ""; position: absolute; left: 13.5px; top: 0; bottom: 0; width: 1.5px; background: var(--rule); }
+.pipe .n { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--rule); background: var(--raised); display: grid; place-items: center; font: 600 0.78rem var(--mono); z-index: 1; position: relative; }
+.pipe .body { border: 1px solid var(--hair); border-radius: 10px; padding: 10px 12px; background: var(--ground); }
+.pipe .t { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.pipe .t b { font-weight: 650; margin-right: 2px; }
+.pipe .d { font-size: 0.88rem; color: var(--muted); margin: 5px 0 0; max-width: none; }
+.pipe .m { font: 0.76rem var(--mono); margin-top: 6px; color: var(--ink); opacity: 0.85; }
+.pipe .day { display: grid; place-items: start center; padding-top: 16px; }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--rule); }
+.dot.on { background: var(--ink); border-color: var(--ink); }
+.dot.half { background: linear-gradient(90deg, var(--ink) 50%, transparent 50%); border-color: var(--ink); }
+
+/* ladders (decision lists) */
+.ladder { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.ladder li { display: grid; grid-template-columns: minmax(0, 1.1fr) 46px minmax(0, 1fr); align-items: center; position: relative; padding-bottom: 20px; }
+.ladder li::after { content: "no ↓"; position: absolute; left: 18px; bottom: 2px; font: 600 0.66rem var(--mono); color: var(--muted); letter-spacing: 0.05em; }
+.ladder li:last-child { padding-bottom: 0; }
+.ladder li:last-child::after { display: none; }
+.ladder .q { border: 1.5px solid var(--rule); border-radius: 10px; padding: 8px 12px; font-size: 0.9rem; background: var(--ground); }
+.ladder .q small { display: block; color: var(--muted); font-size: 0.8rem; }
+.ladder .y { text-align: center; font: 600 0.66rem var(--mono); color: var(--muted); letter-spacing: 0.05em; }
+.ladder .y::after { content: " →"; }
+.ladder .a { border-radius: 10px; padding: 8px 12px; font-size: 0.88rem; color: var(--fg); background: var(--bg); border: 1px solid var(--edge); }
+.ladder .a b { font-weight: 650; }
+.ladder li.end { grid-template-columns: 1fr; }
+.ladder li.end .a { text-align: center; }
+.ladder.first li::after { content: "no match ↓"; }
+
+/* horizontal box flow */
+.hflow { display: grid; grid-template-columns: minmax(0,1fr) 26px minmax(0,1.15fr) 26px minmax(0,1.3fr); align-items: stretch; }
+.hflow .bx { border: 1px solid var(--edge); background: var(--bg); color: var(--fg); border-radius: 10px; padding: 10px 12px; font-size: 0.86rem; }
+.hflow .bx b { display: block; font-weight: 650; margin-bottom: 4px; }
+.hflow .bx ul { margin: 4px 0 0; padding-left: 16px; }
+.hflow .bx pre { margin: 6px 0 0; font: 0.74rem/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.hflow .arrow { align-self: center; }
+
+/* matrix */
+table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+th { font: 600 0.72rem var(--mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+td.c, th.c { text-align: center; }
+.yes { color: oklch(var(--role-l) var(--role-c) var(--hand-h)); font-weight: 700; }
+.nope { color: var(--rule); }
+tr:last-child td { border-bottom: 0; }
+.scroll table { min-width: 600px; }
+
+/* cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.card { border: 1px solid var(--edge, var(--hair)); background: var(--bg, var(--ground)); color: var(--fg, inherit); border-radius: 10px; padding: 10px 12px; font-size: 0.86rem; }
+.card b { display: block; font-weight: 650; font-size: 0.92rem; margin-bottom: 2px; }
+.card code { background: transparent; padding: 0; font-weight: 600; }
+.card .n2 { font: 650 1.3rem var(--font); display: block; letter-spacing: -0.02em; }
+.cards.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.down { text-align: center; color: var(--rule); font-size: 1.2rem; line-height: 1; padding: 8px 0; }
+.rowlab { font: 600 0.7rem var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+
+/* slabs */
+.slabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.slab { border: 1px solid var(--hair); border-top: 4px solid var(--fg, var(--rule)); border-radius: 10px; padding: 10px 12px; background: var(--ground); font-size: 0.84rem; }
+.slab b { display: block; font-size: 0.92rem; margin-bottom: 6px; }
+.slab ul { margin: 0; padding-left: 16px; color: var(--muted); }
+.slab li { margin-bottom: 5px; }
+
+/* svg */
+svg text { font-family: var(--font); fill: var(--ink); }
+svg .sub { fill: var(--muted); font-size: 12px; }
+svg .lab { font-size: 12px; fill: var(--ink); paint-order: stroke; stroke: var(--raised); stroke-width: 5px; stroke-linejoin: round; }
+svg .ttl { font-size: 15px; font-weight: 650; }
+svg .edge { fill: none; stroke: var(--rule); stroke-width: 1.6; }
+svg .box { stroke-width: 1.4; }
+
+footer { color: var(--muted); font-size: 0.84rem; padding-top: 30px; padding-bottom: 60px; margin-top: 40px; border-top: 1px solid var(--hair); }
+
+@media (max-width: 760px) {
+  .seam, .hflow { grid-template-columns: 1fr; }
+  .seam .arrow, .hflow .arrow { transform: rotate(90deg); padding: 4px 0; }
+  .gates li { grid-template-columns: 34px minmax(0, 1fr); }
+  .gates .if { grid-column: 2; margin-top: 6px; }
+  .ladder li { grid-template-columns: 1fr; gap: 4px; padding-bottom: 26px; }
+  .ladder .y { text-align: left; padding-left: 18px; }
+  .ladder .y::after { content: " ↓"; }
+  .ladder li::after { left: auto; right: 14px; }
+  .slabs, .cards.three { grid-template-columns: 1fr; }
+  .pipe .hd, .pipe .stage, .pipe .phase { grid-template-columns: 28px minmax(0, 1fr) 20px 20px; gap: 0 6px; }
+  .pipe .n { width: 24px; height: 24px; }
+  .pipe .stage::before { left: 11.5px; }
+  .pipe .hd { font-size: 0.6rem; letter-spacing: 0; }
+  main, header.top, footer { padding: 0 14px; }
+  header.top { padding-top: 32px; }
+  .fig { padding: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="kicker">KC This Week · how the job works</div>
+  <h1>How a research run works, and how it gets reviewed</h1>
+  <p class="lede">Every Monday a job on the home machine reads about fifty venue calendars, checks each event against the page it came from, judges which ones are picks, and commits the result. Then a second pass, and you, look over what it did. This page walks through both in pictures.</p>
+
+  <div class="figs">
+    <div><b>52</b><span>active sources in the registry, 10 read through a headless browser</span></div>
+    <div><b>366</b><span>active events in the dataset today, 28 of them picks</span></div>
+    <div><b>23 min</b><span>the 2026-11-16 weekly run, start to finish</span></div>
+    <div><b>$0.69</b><span>its model spend, of a $5 cap</span></div>
+    <div><b>376</b><span>model calls it made, none failed</span></div>
+  </div>
+
+  <ul class="toc">
+    <li><a href="#week">1 · The week</a></li>
+    <li><a href="#wrapper">2 · Around the run</a></li>
+    <li><a href="#pipeline">3 · Inside the run</a></li>
+    <li><a href="#cite">4 · Page to sighting</a></li>
+    <li><a href="#identity">5 · Matching</a></li>
+    <li><a href="#life">6 · Life of an event</a></li>
+    <li><a href="#strike">7 · Strike or outage</a></li>
+    <li><a href="#curation">8 · Picks</a></li>
+    <li><a href="#guards">9 · Guards</a></li>
+    <li><a href="#review">10 · Review loop</a></li>
+  </ul>
+
+  <div class="legend" aria-label="Colour key">
+    <div><span class="chip r-fetch">Network</span>A page fetched, plainly or in headless Chromium, or a web search.</div>
+    <div><span class="chip r-model">Extraction model</span><span><code>openai/gpt-6-luna</code> reads one page and reports what it lists.</span></div>
+    <div><span class="chip r-judge">Curation model</span><span><code>anthropic/claude-sonnet-5.5</code> judges a batch of events.</span></div>
+    <div><span class="chip r-code">Code</span>Rules in TypeScript. No model, no network.</div>
+    <div><span class="chip r-hand">Hand</span>A file you edit or a call you make.</div>
+  </div>
+</header>
+
+<main>
+
+<!-- 1 ---------------------------------------------------------------->
+<section id="week">
+  <div class="kicker">1 · The week</div>
+  <h2>Three scheduled things, and you</h2>
+  <p>Two cron lines on the home machine do the research. A third rebuilds the site each night so its dates stay right. A Claude routine audits Monday's run and emails you.</p>
+
+  <figure class="fig">
+    <div class="scroll">
+      <div class="week">
+        <div></div>
+        <div class="dh">Mon</div><div class="dh">Tue</div><div class="dh">Wed</div><div class="dh">Thu</div><div class="dh">Fri</div><div class="dh">Sat</div><div class="dh">Sun</div>
+
+        <div class="lane">Research<br>(home cron)</div>
+        <div class="ev r-model"><i>6:17 a.m.</i><b>Weekly run</b>reads every source, about 25 min, about $0.70</div>
+        <div class="cell"></div><div class="cell"></div>
+        <div class="ev r-fetch"><i>6:17 a.m.</i><b>Midweek re-verification</b>next 10 days only, about 5 min, $0.15</div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+        <div class="lane">Audit<br>(Claude routine)</div>
+        <div class="ev r-judge"><i>8:47 a.m.</i><b>Weekly audit</b>Opus, read-only, emails a digest</div>
+        <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+
+        <div class="lane">You</div>
+        <div class="ev r-hand"><b>Read the digest</b>and the report's Curation section</div>
+        <div class="ev r-hand span6"><b>Any day:</b> triage issues, hand edits to the registry and rules, entries in <code>data/picks.yaml</code>, promote a host</div>
+
+        <div class="lane">Site<br>(Vercel)</div>
+        <div class="ev r-code span7"><i>12:05 a.m. every day</i><b>Daily rebuild</b>a POST to the deploy hook, so "today" on the pages is today. Every push to <code>main</code> also deploys, so a run or a hand edit is live in minutes.</div>
+      </div>
+    </div>
+    <figcaption>All times Central. The discovery lane rides along with the first weekly run of each calendar month; the other Mondays skip it.</figcaption>
+  </figure>
+</section>
+
+<!-- 2 ---------------------------------------------------------------->
+<section id="wrapper">
+  <div class="kicker">2 · Around the run</div>
+  <h2>What <code>scripts/weekly-run.sh</code> does before and after</h2>
+  <p>The script runs in its own clone, <code>~/kc-this-week-run</code>, so nothing you have open can collide with it. Everything above the red line can fail without touching <code>main</code>.</p>
+
+  <figure class="fig">
+    <ol class="gates">
+      <li><div class="do"><b>Take the lock</b><span>One run at a time on the machine.</span></div><div class="if r-warn">Another run holds it: this one is reported as failed and stops.</div></li>
+      <li><div class="do"><b>Reset the clone to <code>origin/main</code></b><span>Abandons any stopped rebase or undelivered commit a past run left.</span></div><div></div></li>
+      <li><div class="do"><b>Refuse a second run for today</b><span>Looks for today's "Weekly research run" (or "Midweek re-verification") commit on <code>main</code>.</span></div><div></div></li>
+      <li><div class="do"><b>Install dependencies and Chromium</b></div><div class="if r-warn">No Chromium: the run goes on, and the ten browser sources fail for this run.</div></li>
+      <li><div class="do"><b><code>pnpm research</code>, under a 90-minute timeout</b><span>The whole of section 3. Writes <code>data/events.json</code>, the report's <code>.md</code> and <code>.json</code>, and any archive file.</span></div><div class="if r-warn">It writes nothing unless everything is ready, so a failed run leaves the data as it was.</div></li>
+      <li><div class="do"><b>Build the site from the new data</b><span>The build refuses a dataset with fewer than 50 published events.</span></div><div class="if r-warn">No commit.</div></li>
+      <li><div class="do"><b>Run <code>test:data</code> on that build</b><span>The checks of what the build makes of the real dataset. "Always there" warnings go into the report's Site checks, never failing it.</span></div><div class="if r-warn">No commit.</div></li>
+      <li><div class="do"><b>Commit, rebase on <code>main</code></b><span>"Weekly research run 2026-11-16". If something landed meanwhile and conflicts, the run's files are re-applied on top of it.</span></div><div></div></li>
+      <li class="line"><div class="do"><b>Push to <code>main</code>: the line</b><span>From here the data is public history, and Vercel starts building.</span></div><div></div></li>
+      <li><div class="do"><b>Wait up to 15 minutes for Vercel's status</b></div><div class="if r-judge">A failed run with its data already pushed. The site keeps showing the last deploy that built.</div></li>
+      <li><div class="do"><b>Report</b><span>A comment on the open <code>weekly-run-health</code> issue: one line on success, the log's last 40 lines on failure. A ping to healthchecks.io, which posts to Slack on a failure or when a Monday run never starts.</span></div><div></div></li>
+    </ol>
+    <figcaption>The health issue is the record and notifies no one. Slack is the alarm. The Thursday run uses the same script with <code>--reverify-only</code> and pings healthchecks only on failure, so a Thursday success cannot hide a missed Monday. If the home machine misses a week, the same run can be started by hand on GitHub Actions, where two sources refuse GitHub's addresses.</figcaption>
+  </figure>
+</section>
+
+<!-- 3 ---------------------------------------------------------------->
+<section id="pipeline">
+  <div class="kicker">3 · Inside the run</div>
+  <h2>One function, fourteen steps</h2>
+  <p>All the logic is <code>run()</code> in <code>src/run.ts</code>. It does no I/O of its own: it is handed files that were already read and five ports to the outside world, and it hands back a new dataset and a report. That is why the tests can run a whole week with fakes.</p>
+
+  <figure class="fig">
+    <div class="seam">
+      <div class="col">
+        <div class="colh">Reads</div>
+        <div class="file r-hand">research.config.yaml<small>horizon, cap, models, geography</small></div>
+        <div class="file r-hand">data/registry.yaml<small>the sources, hand-kept</small></div>
+        <div class="file r-hand">prompts/extraction-rules.md<br>prompts/event-page-rules.md<br>prompts/curation-prompt.md<small>the three editorial surfaces</small></div>
+        <div class="file r-hand">data/picks.yaml · data/venues.yaml<small>your picks, the venue table</small></div>
+        <div class="file r-data">data/events.json<small>what last run left</small></div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="core">
+        <b>run()</b>
+        <p>Pure: the same inputs and port answers give the same dataset and report.</p>
+        <div class="ports">
+          <span class="port"><b>model</b> · OpenRouter</span>
+          <span class="port"><b>search</b> · Tavily</span>
+          <span class="port"><b>fetcher</b> · plain HTTP</span>
+          <span class="port"><b>browser fetcher</b> · Chromium</span>
+          <span class="port"><b>clock</b></span>
+        </div>
+      </div>
+      <div class="arrow">→</div>
+      <div class="col">
+        <div class="colh">Writes</div>
+        <div class="file r-data">data/events.json<small>every record: active, unverified, expired</small></div>
+        <div class="file r-data">data/runs/&lt;date&gt;.md<br>data/runs/&lt;date&gt;.json<small>the run report and its twin</small></div>
+        <div class="file r-data">data/archive/&lt;year&gt;.json<small>expired records over 8 weeks gone</small></div>
+      </div>
+    </div>
+    <figcaption>Every model call goes through one wrapper that adds up cost and stops calling at the cap. Every fetch goes through one policy: robots.txt at each redirect hop, public hosts only, 5 MB at most, a pause per origin.</figcaption>
+  </figure>
+
+  <h3>The steps, in the order the code runs them</h3>
+  <p class="note">The two columns on the right show which steps run on Monday and on Thursday. Figures are from the 2026-11-16 weekly run unless marked.</p>
+
+  <figure class="fig">
+    <div class="pipe">
+      <div class="hd"><div></div><div></div><div>Mon</div><div>Thu</div></div>
+
+      <div class="phase"><span>Find <em>what do the pages list right now?</em></span></div>
+
+      <div class="stage"><div class="n">1</div>
+        <div class="body"><div class="t"><b>Registry lane</b><span class="chip r-fetch">Network</span></div>
+          <p class="d">Fetch every active source's listing pages: plainly by default, through headless Chromium where script renders the list or the site refuses Node's connection. A source that fails three runs running is named under "Failing sources". If no source at all can be fetched, the run stops here.</p>
+          <div class="m">52 sources tried · 2 failed (HTTP 403, HTTP 406)</div></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot"></span></div></div>
+
+      <div class="stage"><div class="n">2</div>
+        <div class="body"><div class="t"><b>Extraction</b><span class="chip r-model">Extraction model</span><span class="chip r-code">Code</span></div>
+          <p class="d">Each page is read twice, side by side, with <code>extraction-rules.md</code> and the source's check hints. Every event the model reports is a candidate; cite-or-drop turns it into a sighting or drops it (section 4). The second read confirms the first or covers what it missed.</p>
+          <div class="m">136 calls · $0.24 · 413 sightings</div></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot"></span></div></div>
+
+      <div class="stage"><div class="n">3</div>
+        <div class="body"><div class="t"><b>Discovery lane</b><span class="chip r-fetch">Network</span><span class="chip r-model">Extraction model</span></div>
+          <p class="d">Monthly. One web search per kind, five results each. A result on an aggregator is read only for its links; any other result is fetched and extracted like a registry page. It finds and never admits: what it finds on a host nobody has looked at is held in step 5.</p>
+          <div class="m">not run on 11-16 · last ran 2026-11-02 · next: the first run of December</div></div>
+        <div class="day"><span class="dot half" title="First run of the month only"></span></div><div class="day"><span class="dot"></span></div></div>
+
+      <div class="phase"><span>Reconcile <em>square the sightings with what is stored</em></span></div>
+
+      <div class="stage"><div class="n">4</div>
+        <div class="body"><div class="t"><b>Merge sightings</b><span class="chip r-code">Code</span></div>
+          <p class="d">Stored events in an outside place (Lawrence) expire first. Then each sighting is matched against the stored events by identity (section 5). No match makes a new event. A match refreshes, cancels or leaves the stored event alone, depending on whether the sighting's page speaks for it.</p>
+          <div class="m">413 found · 84 new · 326 updated</div></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot"></span></div></div>
+
+      <div class="stage"><div class="n">5</div>
+        <div class="body"><div class="t"><b>Clear out, fold, hold</b><span class="chip r-code">Code</span></div>
+          <p class="d">Expire what is past, what cites an index page, and stored promotions or non-public events. Fold duplicates into the record seen first. Hold discovery's finds on hosts no registry source is on, for promotion. All before re-verification, so nothing is fetched to check a record that is already going.</p>
+          <div class="m">89 expired as past · 4 as duplicates</div></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot on"></span></div></div>
+
+      <div class="phase"><span>Check <em>is everything nobody saw still there?</em></span></div>
+
+      <div class="stage"><div class="n">6</div>
+        <div class="body"><div class="t"><b>Re-verification</b><span class="chip r-fetch">Network</span><span class="chip r-model">Extraction model</span><span class="chip r-code">Code</span></div>
+          <p class="d">Every active event no lane sighted this run, and every one hidden since it was last verified, has its primary page fetched and read once. The reading refreshes it, strikes it, or counts an outage (section 7). On Monday the registry lane has already seen nearly everything, so little is left. On Thursday this step is the whole run, for events in the next ten days.</p>
+          <div class="m">Mon 11-16: 2 pages re-read · Thu 11-12: 48 pages, 177 events re-verified, $0.13</div></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot on"></span></div></div>
+
+      <div class="stage"><div class="n">7</div>
+        <div class="body"><div class="t"><b>Age the never-verified</b><span class="chip r-code">Code</span></div>
+          <p class="d">A record no reading ever verified is never re-verified, so only a sighting says it is still listed. Four weekly runs without one, where a lane could have seen it, and it expires as stale.</p></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot"></span></div></div>
+
+      <div class="phase"><span>Enrich <em>fill in what the list line left out</em></span></div>
+
+      <div class="stage"><div class="n">8</div>
+        <div class="body"><div class="t"><b>Own pages</b><span class="chip r-fetch">Network</span><span class="chip r-model">Extraction model</span></div>
+          <p class="d">Each upcoming event's own page (its details or tickets link) is fetched and read once with <code>event-page-rules.md</code>: time, price, age limit, a fuller description, the weekdays a run plays, and the venue when the list gave none. Nearest start first, at most 400 a run. A page is read again only when the event's date or own page changes.</p>
+          <div class="m">228 read · $0.14 · 47 times, 101 prices, 137 descriptions · 96 kept from earlier · 38 failures</div></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot"></span></div></div>
+
+      <div class="stage"><div class="n">9</div>
+        <div class="body"><div class="t"><b>Fold again, then place</b><span class="chip r-code">Code</span></div>
+          <p class="d">If step 8 gave any record a venue, duplicates fold a second time. Then neighborhoods: a venue with a row in <code>data/venues.yaml</code> goes where the row says, the rest where the page's reading put them, and anything off the config's list lands in "Elsewhere in the metro" and is named in the report.</p></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot on"></span></div></div>
+
+      <div class="phase"><span>Judge <em>which of these would a friend bring up?</em></span></div>
+
+      <div class="stage"><div class="n">10</div>
+        <div class="body"><div class="t"><b>Curation</b><span class="chip r-judge">Curation model</span></div>
+          <p class="d">Active one-offs and limited runs that are new, changed, or were judged under an older prompt go to the curation model in batches of 25, sorted by kind then date. Each gets pick, close or no (section 8).</p>
+          <div class="m">Mon: 204 judged in 9 calls · $0.30 · 10 picked, 35 close · Thu: 1 call</div></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot on"></span></div></div>
+
+      <div class="stage"><div class="n">11</div>
+        <div class="body"><div class="t"><b>Hand picks</b><span class="chip r-hand">Hand</span><span class="chip r-code">Code</span></div>
+          <p class="d">Your entries in <code>data/picks.yaml</code> are applied over the model's verdicts, every run, until you remove them. The model's own judgment is kept beside it and comes back when the entry goes.</p></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot on"></span></div></div>
+
+      <div class="stage"><div class="n">12</div>
+        <div class="body"><div class="t"><b>Picks' own pages</b><span class="chip r-fetch">Network</span><span class="chip r-model">Extraction model</span></div>
+          <p class="d">Any pick step 8's ceiling passed over gets its own page read now, so no pick is published from its list line alone.</p></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot"></span></div></div>
+
+      <div class="phase"><span>Write</span></div>
+
+      <div class="stage"><div class="n">13</div>
+        <div class="body"><div class="t"><b>Archive and report</b><span class="chip r-code">Code</span></div>
+          <p class="d">Expired records whose last day and last change are both more than eight weeks back leave the live file. The report is assembled: counts, spend by stage, a line per source, every pick and close call, what changed since the last run. If model calls were made and none succeeded, the run throws here.</p></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot on"></span></div></div>
+
+      <div class="stage"><div class="n">14</div>
+        <div class="body"><div class="t"><b>Write the files</b><span class="chip r-code">Code</span></div>
+          <p class="d">Outside <code>run()</code>, in <code>src/research.ts</code>. The new dataset must pass the schema or nothing is written. Each file goes to a <code>.tmp</code> beside it and all are renamed into place together, so none is ever left half-written.</p></div>
+        <div class="day"><span class="dot on"></span></div><div class="day"><span class="dot on"></span></div></div>
+    </div>
+    <figcaption>Steps 1, 2, 6, 8 and 12 read several pages at once (<code>concurrency: 4</code>) and take the results up in page order, so the output never depends on which page answered first.</figcaption>
+  </figure>
+
+  <h3>Where the money goes</h3>
+  <figure class="fig">
+    <div class="scroll"><svg viewBox="0 0 900 132" style="min-width:680px" role="img" aria-label="Spend by stage on the 2026-11-16 weekly run: curation $0.30, extraction $0.24, own pages $0.14, re-verification under one cent.">
+      <g font-size="12">
+        <rect x="0" y="34" width="391" height="34" rx="5" fill="oklch(var(--tint-l) var(--tint-c) var(--judge-h))" stroke="oklch(var(--edge-l) var(--edge-c) var(--judge-h))"/>
+        <rect x="394" y="34" width="313" height="34" rx="5" fill="oklch(var(--tint-l) var(--tint-c) var(--model-h))" stroke="oklch(var(--edge-l) var(--edge-c) var(--model-h))"/>
+        <rect x="710" y="34" width="182" height="34" rx="5" fill="oklch(var(--tint-l) var(--tint-c) var(--fetch-h))" stroke="oklch(var(--edge-l) var(--edge-c) var(--fetch-h))"/>
+        <rect x="895" y="34" width="5" height="34" rx="2" fill="var(--rule)"/>
+        <text x="8" y="22" class="ttl" font-size="13">Curation · $0.30</text>
+        <text x="8" y="56">9 calls of 25 events each</text>
+        <text x="402" y="22" class="ttl" font-size="13">Extraction · $0.24</text>
+        <text x="402" y="56">136 calls, two per page</text>
+        <text x="718" y="22" class="ttl" font-size="13">Own pages · $0.14</text>
+        <text x="718" y="56">229 calls, one per page</text>
+        <text x="900" y="88" text-anchor="end" class="sub">re-verification: 2 calls, half a cent</text>
+        <line x1="0" y1="104" x2="900" y2="104" stroke="var(--hair)"/>
+        <text x="0" y="124" class="sub">$0.69 of the $5 cap. The cap stops model calls mid-run; a monthly limit on the OpenRouter key backstops a bug in the cap.</text>
+      </g>
+    </svg></div>
+  </figure>
+</section>
+
+<!-- 4 ---------------------------------------------------------------->
+<section id="cite">
+  <div class="kicker">4 · Page to sighting</div>
+  <h2>Cite-or-drop: nothing publishes without a quote</h2>
+  <p>The model is never trusted on its word. For every event it reports it must quote the page for the date and for the venue, and code checks that both quotes are really there.</p>
+
+  <figure class="fig">
+    <div class="hflow">
+      <div class="bx r-fetch"><b>The page as fetched</b>HTML from the venue's calendar, or JSON carrying HTML for a calendar that loads by script.</div>
+      <div class="arrow">→</div>
+      <div class="bx r-code"><b>The page as the model sees it</b>
+        <ul><li>visible text only</li><li>each link numbered: <code>[12]</code></li><li>schema.org event data appended, one line per event</li><li>cut at 70,000 characters, and the report says so</li></ul></div>
+      <div class="arrow">→</div>
+      <div class="bx r-model"><b>A candidate in the model's reply</b>
+<pre>title: "Bernadette Peters"
+startDate: 2026-11-21
+startTime: 19:30
+venue: "Folly Theater"
+dateEvidence: "Sat, Nov 21 · 7:30 PM"
+venueEvidence: "Folly Theater"
+eventLink: 12</pre>The two evidence fields are quotes from the page. The link is its own page, by number. Also: kind, neighborhood, description, notice.</div>
+    </div>
+
+    <div class="down">↓ then code asks, in this order</div>
+
+    <ol class="ladder">
+      <li><div class="q">A promotion or not public?<small>Happy hour, trivia, watch party, gala, graduation, online only. The rules tell the model to leave these out; code catches by title what it lets through.</small></div><div class="y">yes</div><div class="a r-code"><b>Skipped</b>, counted in the report</div></li>
+      <li><div class="q">Outside the geography?<small>The model's flag, an away game, or a neighborhood on the config's <code>outsidePlaces</code>.</small></div><div class="y">yes</div><div class="a r-code"><b>Dropped</b>, counted</div></li>
+      <li><div class="q">A field past its length cap?<small>A runaway title or quote.</small></div><div class="y">yes</div><div class="a r-code"><b>Dropped</b>, counted</div></li>
+      <li><div class="q">A date that does not exist, or an end before the start?</div><div class="y">yes</div><div class="a r-warn"><b>Unverified</b>: stored, never shown</div></li>
+      <li><div class="q">Missing a date, a venue, or either quote?</div><div class="y">yes</div><div class="a r-warn"><b>Unverified</b><br><span class="small">One way out: a dated event with no venue can take one quoted from its own page on the same site, in step 8.</span></div></li>
+      <li><div class="q">Is either quote not on the page?<small>Compared ignoring case, whitespace, curly quotes, dashes and the link numbers.</small></div><div class="y">yes</div><div class="a r-warn"><b>Unverified</b>, and the source's report line shows the quote that failed</div></li>
+      <li class="end"><div class="a r-hand"><b>An active sighting.</b> Date and venue were both read from the fetched page, and the quotes are stored beside them as evidence.</div></li>
+    </ol>
+    <figcaption>On 11-16 this funnel skipped 2 promotions, dropped 1 as outside the geography, and held 1 for a quote not on its page. The second read of each page exists because the model's quoting wobbles: on Screenland Armour's page the second read added 28 sightings the first missed.</figcaption>
+  </figure>
+</section>
+
+<!-- 5 ---------------------------------------------------------------->
+<section id="identity">
+  <div class="kicker">5 · Matching</div>
+  <h2>Is this sighting an event we already have?</h2>
+  <p>An event is recorded once, however many pages list it and however its date moves. Each sighting climbs down this ladder; the first rule that matches a stored event wins.</p>
+
+  <figure class="fig">
+    <ol class="ladder first">
+      <li><div class="q">Same primary page and same title<small>Among several, the one with the nearest date.</small></div><div class="y">match</div><div class="a r-data">The base rule: identity is page plus title, so a date can move.</div></li>
+      <li><div class="q">Same own page on the same calendar date</div><div class="y">match</div><div class="a r-data">Two lists linking one ticket page mean one event.</div></li>
+      <li><div class="q">Same title, same venue, start within 3 days<small>The venue through its aliases: a room or a program counts as its building.</small></div><div class="y">match</div><div class="a r-data">The fuzzy match: a venue's list and a promoter's list.</div></li>
+      <li><div class="q">Same title, same venue, same end date</div><div class="y">match</div><div class="a r-data">A limited run is named by when it closes. The stored start is kept.</div></li>
+      <li><div class="q">Sports: same matchup, venue and day</div><div class="y">match</div><div class="a r-data">"Chiefs vs Cardinals" and "Arizona at Kansas City".</div></li>
+      <li><div class="q">Recurring: same title at the same venue</div><div class="y">match</div><div class="a r-data">Whatever words its schedule is given in.</div></li>
+      <li><div class="q">No venue on the sighting: a stored event with its title on its date</div><div class="y">match</div><div class="a r-data">If two fit and neither is preferred, nothing is created.</div></li>
+      <li><div class="q">One dated month of a stored recurring event</div><div class="y">match</div><div class="a r-data">Confirms the recurring event and changes nothing in it.</div></li>
+      <li class="end"><div class="a r-hand"><b>A new event</b>, with a fresh <code>evt_…</code> id.</div></li>
+    </ol>
+  </figure>
+
+  <h3>Then: does that page get a say?</h3>
+  <p>A match only says the sighting is about a known event. What it may do to that event depends on where it was read.</p>
+  <figure class="fig">
+    <div class="scroll">
+    <table>
+      <thead><tr><th>The sighting was read from…</th><th class="c">Refresh the reading</th><th class="c">Cancel it</th><th class="c">Clear its strikes</th><th class="c">Hide it on a reading with nothing citable</th></tr></thead>
+      <tbody>
+        <tr><td><b>The event's own primary page</b></td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
+        <tr><td><b>A page that speaks for it</b><br><span class="note">a registry source's page, or another page on the event's own site</span></td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c nope">–</td></tr>
+        <tr><td><b>Any other page</b><br><span class="note">a discovery find on someone else's site</span></td><td class="c nope">–</td><td class="c nope">–</td><td class="c nope">–</td><td class="c nope">–</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <figcaption>A page with no say leaves the event exactly as it was, and re-verification then reads the event's own page, which decides. A cancellation claimed from elsewhere is only a line in the report.</figcaption>
+  </figure>
+</section>
+
+<!-- 6 ---------------------------------------------------------------->
+<section id="life">
+  <div class="kicker">6 · Life of an event</div>
+  <h2>Three statuses, and the ways between them</h2>
+  <p>The site publishes <b>active</b> events and nothing else. Everything else stays in <code>data/events.json</code> so the job remembers what it has already seen and decided.</p>
+
+  <figure class="fig">
+    <div class="scroll">
+    <svg viewBox="0 0 960 480" style="min-width:760px" role="img" aria-label="State diagram: a candidate becomes active or unverified; active and unverified events move between each other and into expired; expired events are archived after eight weeks.">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--rule)"/></marker>
+      </defs>
+
+      <!-- edges -->
+      <path class="edge" marker-end="url(#ah)" d="M172,172 C240,150 270,95 328,78"/>
+      <path class="edge" marker-end="url(#ah)" d="M172,206 C240,225 270,268 328,286"/>
+      <path class="edge" marker-end="url(#ah)" d="M478,112 L478,248"/>
+      <path class="edge" marker-end="url(#ah)" d="M388,248 L388,112"/>
+      <path class="edge" marker-end="url(#ah)" d="M532,62 C610,62 640,120 698,138"/>
+      <path class="edge" marker-end="url(#ah)" d="M532,298 C610,298 640,232 698,214"/>
+      <path class="edge" marker-end="url(#ah)" d="M805,242 L805,378"/>
+      <path class="edge" marker-end="url(#ah)" d="M430,388 L430,332"/>
+
+      <!-- nodes -->
+      <g>
+        <rect class="box" x="8" y="150" width="164" height="76" rx="12" fill="oklch(var(--tint-l) var(--tint-c) var(--model-h))" stroke="oklch(var(--edge-l) var(--edge-c) var(--model-h))"/>
+        <text x="90" y="182" text-anchor="middle" class="ttl">Candidate</text>
+        <text x="90" y="202" text-anchor="middle" class="sub">one reading of one page</text>
+
+        <rect class="box" x="330" y="30" width="200" height="80" rx="12" fill="oklch(var(--tint-l) var(--tint-c) var(--hand-h))" stroke="oklch(var(--edge-l) var(--edge-c) var(--hand-h))"/>
+        <text x="430" y="62" text-anchor="middle" class="ttl">Active</text>
+        <text x="430" y="82" text-anchor="middle" class="sub">shown on the site</text>
+        <text x="430" y="99" text-anchor="middle" class="sub">366 today</text>
+
+        <rect class="box" x="330" y="250" width="200" height="80" rx="12" fill="oklch(var(--tint-l) var(--tint-c) var(--warn-h))" stroke="oklch(var(--edge-l) var(--edge-c) var(--warn-h))"/>
+        <text x="430" y="282" text-anchor="middle" class="ttl">Unverified</text>
+        <text x="430" y="302" text-anchor="middle" class="sub">stored, never shown</text>
+        <text x="430" y="319" text-anchor="middle" class="sub">52 today</text>
+
+        <rect class="box" x="330" y="390" width="200" height="66" rx="12" fill="none" stroke="oklch(var(--edge-l) var(--edge-c) var(--warn-h))" stroke-dasharray="5 4"/>
+        <text x="430" y="418" text-anchor="middle" class="ttl">Held for promotion</text>
+        <text x="430" y="438" text-anchor="middle" class="sub">44 of the 52, not re-verified</text>
+
+        <rect class="box" x="700" y="100" width="230" height="140" rx="12" fill="var(--sunk)" stroke="var(--rule)"/>
+        <text x="815" y="130" text-anchor="middle" class="ttl">Expired</text>
+        <text x="815" y="150" text-anchor="middle" class="sub">kept in events.json, with a reason</text>
+        <text x="815" y="176" text-anchor="middle" font-size="12" font-family="ui-monospace, Menlo, monospace">past · two-strike · cancelled</text>
+        <text x="815" y="194" text-anchor="middle" font-size="12" font-family="ui-monospace, Menlo, monospace">duplicate · index-page · stale</text>
+        <text x="815" y="212" text-anchor="middle" font-size="12" font-family="ui-monospace, Menlo, monospace">promotion · not-public</text>
+        <text x="815" y="230" text-anchor="middle" font-size="12" font-family="ui-monospace, Menlo, monospace">outside-geography</text>
+
+        <rect class="box" x="700" y="380" width="230" height="66" rx="12" fill="none" stroke="var(--rule)" stroke-dasharray="5 4"/>
+        <text x="815" y="408" text-anchor="middle" class="ttl">Archive</text>
+        <text x="815" y="428" text-anchor="middle" class="sub">data/archive/&lt;year&gt;.json</text>
+      </g>
+
+      <!-- labels -->
+      <text class="lab" x="180" y="100">date and venue both</text>
+      <text class="lab" x="180" y="116">quoted from the page</text>
+      <text class="lab" x="196" y="276">anything less</text>
+
+      <text class="lab" x="378" y="172" text-anchor="end">a verified</text>
+      <text class="lab" x="378" y="188" text-anchor="end">reading</text>
+
+      <text class="lab" x="488" y="164">3 outages in a row, or its</text>
+      <text class="lab" x="488" y="180">own page re-read with</text>
+      <text class="lab" x="488" y="196">nothing citable</text>
+
+      <text class="lab" x="560" y="40">its last day passes · its page says</text>
+      <text class="lab" x="560" y="56">cancelled · a second strike · a duplicate</text>
+
+      <text class="lab" x="548" y="336">its last day passes · stale: never</text>
+      <text class="lab" x="548" y="352">verified, unsighted for 4 weekly runs</text>
+
+      <text class="lab" x="815" y="296">8 weeks after its</text>
+      <text class="lab" x="815" y="312">last day and its</text>
+      <text class="lab" x="815" y="328">last change</text>
+
+      <text class="lab" x="420" y="358" text-anchor="end">you promote its host</text>
+      <text class="lab" x="420" y="374" text-anchor="end">into the registry</text>
+    </svg>
+    </div>
+    <figcaption>The live file holds 1,905 records today: 366 active, 52 unverified, 1,487 expired. An expired duplicate names the record it was folded into, so a later sighting of the duplicate counts as a sighting of the survivor. Nothing reads the archive to run.</figcaption>
+  </figure>
+</section>
+
+<!-- 7 ---------------------------------------------------------------->
+<section id="strike">
+  <div class="kicker">7 · Strike or outage</div>
+  <h2>What re-verification concludes when it re-reads a page</h2>
+  <p>The principle is ADR 0008: <b>an outage holds an event; only a reading strikes it.</b> A page that could not be read says nothing about whether the show is still on. Most of this ladder exists to tell "the venue dropped it" apart from every other reason an event might not be in a reading.</p>
+
+  <figure class="fig">
+    <ol class="ladder">
+      <li><div class="q">Is the page an excluded source's?<small>You took the source out of the run.</small></div><div class="y">yes</div><div class="a r-warn"><b>Held</b>, not fetched, named in the report</div></li>
+      <li><div class="q">Did the page fail to load?<small>Connection failed, the site refused or errored, or the fetch policy refused it.</small></div><div class="y">yes</div><div class="a r-warn"><b>Outage.</b> Held as it was. The third in a row makes it unverified until the page loads and lists it again.</div></li>
+      <li><div class="q">Did it load but read as listing nothing, where 3 or more active events cite it?</div><div class="y">yes</div><div class="a r-warn"><b>Outage for all of them.</b> A page that rendered empty, or the model's wobble, is not news about each event.</div></li>
+      <li><div class="q">Does the reading list the event?</div><div class="y">yes</div><div class="a r-hand"><b>Verified:</b> refreshed, strikes and outages cleared.<br><b>Says cancelled:</b> expired.<br><b>Quote not on the page:</b> kept on its stored citation if the stored quotes are still there and the day and venue agree; otherwise unverified.</div></li>
+      <li><div class="q">Was the page only partly read?<small>A candidate was dropped at a length cap.</small></div><div class="y">yes</div><div class="a r-code"><b>Nothing.</b> The event may be in what was lost.</div></li>
+      <li><div class="q">Is the page gone (404, 410) or newly disallowed by robots.txt?</div><div class="y">yes</div><div class="a r-judge"><b>Strike</b></div></li>
+      <li><div class="q">Does the event start after the horizon, less two days?<small>The model is only asked for events inside the 8 weeks.</small></div><div class="y">yes</div><div class="a r-code"><b>Not struck.</b> The reading was never going to include it.</div></li>
+      <li><div class="q">Does it start after the latest start the page listed?<small>"The next 20 shows", a month view.</small></div><div class="y">yes</div><div class="a r-code"><b>Not struck.</b> The page's window stops short of it.</div></li>
+      <li class="end"><div class="a r-judge"><b>Strike.</b> The page loaded, covered the event's date, and no longer lists it. One strike changes nothing a reader sees. A second in a row expires the event as <code>two-strike</code>. Any listing in between clears the count.</div></li>
+    </ol>
+    <figcaption>On 11-16: 3 held through an outage, 1 not struck for starting after the horizon, 2 not struck for starting after the page's last date, 2 expired on a second strike. The Thursday pass applies the same ladder, so a cancellation or a moved date in the coming ten days shows before the weekend rather than the Monday after.</figcaption>
+  </figure>
+</section>
+
+<!-- 8 ---------------------------------------------------------------->
+<section id="curation">
+  <div class="kicker">8 · Picks</div>
+  <h2>How an event becomes a pick</h2>
+  <p>Curation asks one question of each event: picture a mixed group of friends planning something to do; would someone bring this up, and why? The answer is a verdict with a named reason, not a score.</p>
+
+  <figure class="fig">
+    <p class="rowlab">Who is judged this run</p>
+    <div class="cards">
+      <div class="card"><span class="n2">366</span>active events</div>
+      <div class="card"><span class="n2">352</span>after leaving out the 14 recurring ones, which are never picks</div>
+      <div class="card"><span class="n2">204</span>were due on 11-16: new, changed since last judged (title, date, venue, status, or a description the own page filled in), or judged under another prompt</div>
+      <div class="card r-judge"><span class="n2">9 calls</span>batches of 25, sorted by kind then date, each sent with <code>curation-prompt.md</code></div>
+    </div>
+    <div class="down">↓ one verdict per event</div>
+    <div class="cards">
+      <div class="card r-judge"><b>pick</b>A clear yes under exactly one reason, with a why-line: one sentence under 200 characters a reader could disagree with. Published, with its reason.</div>
+      <div class="card r-warn"><b>close</b>A friend might bring it up, but no reason's test is clearly met. Stored with a note naming the reason it nearly met. Listed in the report, never published.</div>
+      <div class="card r-code"><b>no</b>The default. Most events. Unsure between pick and close means close; unsure between close and no means no.</div>
+    </div>
+    <div class="down">↓ then your file</div>
+    <div class="cards">
+      <div class="card r-hand" style="grid-column: 1 / -1"><b>data/picks.yaml stands over the model</b>A pick or an un-pick by event id, applied on every run until you remove the entry. The event is marked <code>pickedBy: hand</code>. An entry whose event is gone, folded or retitled is reported as stale and not applied. Today it holds one entry: Messiah, picked as a tradition.</div>
+    </div>
+
+    <h3>The six reasons</h3>
+    <div class="cards three">
+      <div class="card"><b><code>rare</code></b>A chance that seldom comes to Kansas City. The scene's pick.</div>
+      <div class="card"><b><code>big-name</code></b>A name most people would recognise. Everyone's pick.</div>
+      <div class="card"><b><code>occasion</code></b>A large communal event much of the city turns out for.</div>
+      <div class="card"><b><code>tradition</code></b>Once a year, with a season to it.</div>
+      <div class="card"><b><code>unusual</code></b>The form or the setting is the draw.</div>
+      <div class="card"><b><code>major-run</code></b>A notable limited run worth planning around.</div>
+    </div>
+    <figcaption>Today: 28 picks and 69 close calls among the 352 eligible. The prompt's calibration figure is 25 to 35 picks across an eight-week horizon, a check on the threshold and never a quota. Each judgment records a hash of the prompt it was made under, so any edit to the prompt re-judges every eligible event once on the next run. A prompt edit lands with a <code>pnpm compare-curation</code> report measuring how verdicts flip.</figcaption>
+  </figure>
+</section>
+
+<!-- 9 ---------------------------------------------------------------->
+<section id="guards">
+  <div class="kicker">9 · Guards</div>
+  <h2>What stands between a bad run and the site</h2>
+  <p>Five layers, left to right. A run has to get through all of them before a reader sees its data.</p>
+
+  <figure class="fig">
+    <div class="slabs">
+      <div class="slab r-judge"><b>Spend</b><ul>
+        <li>$5 cap per run, checked before every model call</li>
+        <li>Past the cap, pages stay unread and events unjudged, and the report counts the shortfall</li>
+        <li>A monthly limit on the OpenRouter key, set by hand</li></ul></div>
+      <div class="slab r-fetch"><b>Dead-world fuses</b><ul>
+        <li>No source could be fetched: stop before any model call</li>
+        <li>Model calls made and none succeeded: throw</li>
+        <li>Thursday: pages fetched and none came back: stop</li></ul></div>
+      <div class="slab r-data"><b>The write</b><ul>
+        <li><code>picks.yaml</code> or <code>venues.yaml</code> does not parse: stop before any write</li>
+        <li>New dataset fails the schema: nothing written; the refused records go to a gitignored <code>.failed.json</code></li>
+        <li>All files renamed into place together</li></ul></div>
+      <div class="slab r-warn"><b>Before the push</b><ul>
+        <li>The site must build from the new data, with 50 or more events</li>
+        <li><code>test:data</code> must pass on that build</li>
+        <li>Either failing: no commit</li></ul></div>
+      <div class="slab r-hand"><b>On the site</b><ul>
+        <li>Only <code>active</code> events are published</li>
+        <li>Vercel's build is watched for 15 minutes</li>
+        <li>A staleness banner shows when the last good run is over 9 days old</li></ul></div>
+    </div>
+    <figcaption>The softer failures cost only their own piece: one failed model call leaves its page or batch as it was and adds a line to the report.</figcaption>
+  </figure>
+</section>
+
+<!-- 10 --------------------------------------------------------------->
+<section id="review">
+  <div class="kicker">10 · Review loop</div>
+  <h2>How a run gets reviewed, and how a finding becomes a fix</h2>
+  <p>Nothing in the run reviews itself beyond the guards above. The review is a loop around it with three readers: the Monday audit routine, you, and the site's readers.</p>
+
+  <figure class="fig">
+    <p class="rowlab">What a run leaves behind</p>
+    <div class="cards">
+      <div class="card r-data"><b>The run report</b><code>data/runs/&lt;date&gt;.md</code> and <code>.json</code>, committed with the data. The JSON lists every model call.</div>
+      <div class="card r-data"><b>The diff</b>What changed in <code>data/events.json</code> since the last run, and the site's <code>/changes</code> page built from it.</div>
+      <div class="card r-data"><b>A health comment</b>One line on the <code>weekly-run-health</code> issue, or the log tail on failure, plus the Slack alert.</div>
+    </div>
+    <div class="down">↓ who reads it</div>
+    <div class="cards">
+      <div class="card r-judge"><b>The weekly audit routine</b>Mondays 8:47, Claude Opus, on the home machine, read-only. It diffs the dataset against last Monday's baseline and audits every new record, every likely-duplicate pair, every record whose title, start, venue, status or pick changed, and the report's problems, against the two rule documents and <code>CONTEXT.md</code>. It opens a primary page only on real doubt. It labels records a hand edit changed.</div>
+      <div class="card r-hand"><b>You</b>The audit's emailed digest. The report's Curation section: every pick and close call, what moved and why. "Promotion suggestions" and "Venues without a row" when you have time.</div>
+      <div class="card r-fetch"><b>Readers</b>The wrong-listing form on every event page posts to <code>/api/report</code>, which files a GitHub issue, or comments on an open one for the same event.</div>
+    </div>
+    <div class="down">↓ where findings land</div>
+    <div class="cards">
+      <div class="card"><b><code>post-run-check</code> issue</b>One open at a time. The audit's findings as checkboxes, plus boxes from finished tickets that only a real run can confirm.</div>
+      <div class="card"><b><code>needs-triage</code> issues</b>From the audit when a finding is a bug in the rules (five a week at most), and from readers' reports.</div>
+      <div class="card"><b><code>data/picks.yaml</code></b>Where you disagree with a verdict, directly. Also the record of where you and the model differed.</div>
+    </div>
+    <div class="down">↓ triage: verify the claim, then choose the smallest fix</div>
+    <div class="cards">
+      <div class="card r-hand"><b>A hand edit</b>A rule in a prompt, a source's URL or check hints, a venue row, a pick. Committed straight to <code>main</code>.</div>
+      <div class="card r-code"><b>A ticket for code</b><code>ready-for-agent</code>, worked in its own worktree: tests at the <code>run()</code> seam with fakes, a review by a second agent, a fix-up commit, then landed.</div>
+      <div class="card"><b>Won't fix</b>Closed with the reason, so the same finding is recognised next time.</div>
+    </div>
+    <div class="down">↓ the next run confirms it ↺</div>
+    <div class="cards">
+      <div class="card r-model" style="grid-column: 1 / -1"><b>Back to the top</b>After each Monday run the open <code>post-run-check</code> issue is read against the new report and dataset, and each box that passed is ticked with the run that confirmed it. A fix is not called done on the strength of its tests alone when what it changes is what a live page yields.</div>
+    </div>
+  </figure>
+
+  <h3>Where each kind of wrong gets fixed</h3>
+  <figure class="fig">
+    <div class="scroll">
+    <table>
+      <thead><tr><th>What you see</th><th>It is a bug in</th><th>Check in the report</th></tr></thead>
+      <tbody>
+        <tr><td>A wrong date or venue, a promotion listed as an event</td><td><code>prompts/extraction-rules.md</code>, or the source's <code>checkHints</code></td><td>The source's line under Sources</td></tr>
+        <tr><td>A wrong time, price or age limit</td><td><code>prompts/event-page-rules.md</code></td><td>Own pages</td></tr>
+        <tr><td>A pick that reads as arbitrary, or a miss</td><td><code>prompts/curation-prompt.md</code> for a pattern, <code>data/picks.yaml</code> for one event</td><td>Curation: Picks, Close calls, Moved this run</td></tr>
+        <tr><td>A source yielding nothing, or failing</td><td><code>data/registry.yaml</code>: its URL, <code>fetch: browser</code>, <code>waitFor</code>, or exclude it with a reason</td><td>Sources, Failing sources</td></tr>
+        <tr><td>One event listed twice</td><td>A venue alias in the config, or the identity rules in <code>src/identity.ts</code></td><td>Likely duplicates, Identity churn</td></tr>
+        <tr><td>An event in the wrong part of town</td><td>A row's <code>neighborhood</code> in <code>data/venues.yaml</code></td><td>Venue neighborhoods, Unmappable neighborhoods</td></tr>
+        <tr><td>A venue or organizer the list never sees</td><td>The registry: <code>pnpm promote &lt;host&gt;</code> drafts the stanza from what discovery held</td><td>Promotion suggestions (7 hosts waiting on 11-16)</td></tr>
+        <tr><td>Events vanishing that are still on</td><td>Usually an outage read as a reading; the ladder in section 7</td><td>Unverified by outage limit, Unverified by an uncitable re-reading, Kept on its stored citation</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </figure>
+</section>
+
+</main>
+
+<footer>
+  Drawn from the repository at <code>54589e0</code> on 2026-11-21: <code>src/run.ts</code>, <code>scripts/weekly-run.sh</code>, <code>CONTEXT.md</code>, <code>research.config.yaml</code>, and the reports of 2026-11-16 (weekly) and 2026-11-12 (midweek). Dataset counts are today's file, after the Lawrence sources left on 11-20; run figures are from 11-16, when they were still in. Constants quoted here (two strikes, three outages, four runs to stale, batches of 25, a 70,000-character page, 400 own pages a run) are the code's as of that commit.
+</footer>
+
+</body>
+</html>
