@@ -1578,8 +1578,9 @@ async function reverify(
     if (excludedSourceOf(origin, url, registry) || lane.attempts.outages.has(key) || lane.attempts.tried.has(key)) return undefined;
     if (ports.model.exhausted()) return "cap";
     // The page is fetched the way its source's pages are; a discovered page the way the pages of the active source on its host are, else plainly (#287).
-    const source = origin.lane === "registry" ? origin.source : activeSourceOnHost(url, registry);
-    return fetchAndRead(url, source ? fetcherFor(source, ports) : plainly(ports), origin, "reverification", ports.model, context, turn);
+    const onSourceHost = origin.lane === "discovery" ? activeSourceOnHost(url, registry, context.config) : undefined;
+    const route = origin.lane === "registry" ? fetcherFor(origin.source, ports) : onSourceHost ? discoveredPageFetcherFor(onSourceHost, url, ports) : plainly(ports);
+    return fetchAndRead(url, route, origin, "reverification", ports.model, context, turn);
   });
 
   for (const [i, url] of urls.entries()) {
@@ -1799,7 +1800,7 @@ async function readOwnPages(
 
   const gate = robotsGate();
   const chosen = planned.map((i) => events[i]!);
-  const plans = chosen.map((event) => ({ route: ownPageRouteFor(event, registry, ports), line, gate, ...(wantsVenue(event) ? { venue: true as const } : {}) }));
+  const plans = chosen.map((event) => ({ route: ownPageRouteFor(event, registry, config, ports), line, gate, ...(wantsVenue(event) ? { venue: true as const } : {}) }));
   const outcomes = await readOwnPagesTogether(chosen, plans, ports, context, rules);
   line.problems.push(...gate.lines());
 
@@ -1829,13 +1830,13 @@ function compareNearness(a: Event, b: Event, today: string): number {
  * The way an event's own page is fetched: its active registry source's way (ownPageFetcherFor), or for a
  * discovered event the way of the active source on the own page's host (#287), else plainly.
  */
-function ownPageRouteFor(event: Event, registry: Registry, ports: Ports): FetchRoute {
+function ownPageRouteFor(event: Event, registry: Registry, config: RunConfig, ports: Ports): FetchRoute {
   const { lead, eventUrl } = event;
   const source =
     lead.lane === "registry"
       ? registry.sources.find((s): s is Source => s.name === lead.source && s.status === "active")
       : eventUrl !== undefined
-        ? activeSourceOnHost(eventUrl, registry)
+        ? activeSourceOnHost(eventUrl, registry, config)
         : undefined;
   return source ? ownPageFetcherFor(source, ports) : plainly(ports);
 }
@@ -1917,7 +1918,7 @@ async function readPicks(
       plans.push(undefined);
       continue;
     }
-    plans.push({ route: ownPageRouteFor(event, registry, ports), line });
+    plans.push({ route: ownPageRouteFor(event, registry, config, ports), line });
   }
   const outcomes = await readOwnPagesTogether(events, plans, ports, context, rules);
   const out = events.map((event, i) => {
@@ -2179,6 +2180,17 @@ function fetcherFor(source: Source, ports: Ports): FetchRoute {
 function ownPageFetcherFor(source: Source, ports: Ports): FetchRoute {
   if (source.fetch !== "browser") return plainly(ports);
   return [ports.browserFetcher, source.eventPageWaitFor ? { waitFor: source.eventPageWaitFor } : undefined];
+}
+
+/**
+ * The fetcher a page discovery found on an active source's host goes through for re-verification (#287):
+ * the source's, waiting for the list's `waitFor` only on one of the source's listing pages (its URLs, or
+ * the `listedAt` they make one listing at); any other page there renders no listing, so it waits as an
+ * own page does (ownPageFetcherFor), never for a selector it will not show.
+ */
+function discoveredPageFetcherFor(source: Source, url: string, ports: Ports): FetchRoute {
+  const listing = [...source.urls, ...(source.listedAt ? [source.listedAt] : [])].some((u) => samePage(u, url));
+  return listing ? fetcherFor(source, ports) : ownPageFetcherFor(source, ports);
 }
 
 type FetchRoute = [fetcher: FetchPort, options?: FetchOptions];

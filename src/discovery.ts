@@ -141,9 +141,11 @@ export function excludedSourceOnHost(url: string, registry: Registry): ExcludedS
 /**
  * The active registry source whose host a URL is on, or on a subdomain of, if any. A page discovery
  * found there is fetched that source's way (#287): a site its source meets through the browser, one
- * that answers the plain fetcher 406 (#58), is met so whichever lane found the event.
+ * that answers the plain fetcher 406 (#58), is met so whichever lane found the event. A ticketing
+ * platform's page is on no source's host, whatever source sits on the platform: it is no one source.
  */
-export function activeSourceOnHost(url: string, registry: Registry): Source | undefined {
+export function activeSourceOnHost(url: string, registry: Registry, config: RunConfig): Source | undefined {
+  if (onHost(url, config.discovery.platformHosts)) return undefined;
   return registry.sources.find((s): s is Source => s.status === "active" && onHost(url, hostsOf([s])));
 }
 
