@@ -28,8 +28,8 @@ const OWN_PAGE = { status: 200, body: `<html><body><h1>Nightshades</h1><p>When N
 /** Charlotte Street's reading: a date, a link to the own page, and no venue. */
 const venueless = (day: number) =>
   candidateAt(charlotte, { title: "Nightshades", startDate: `2026-11-${day}`, startTime: null, eventLink: 1, dateEvidence: `November ${day}, 2026`, venue: null, venueEvidence: null });
-/** A list's reading of the show on November 13 at a venue it names. */
-const at = (list: Source, venue: string, overrides: Record<string, unknown> = {}) =>
+/** A list's reading of the show on November 13 at a venue it names (or none). */
+const at = (list: Source, venue: string | null, overrides: Record<string, unknown> = {}) =>
   candidateAt(list, { title: "Nightshades", startDate: "2026-11-13", startTime: null, dateEvidence: "Friday, November 13", venue, venueEvidence: `${venue}, 3333 Wyoming St`, ...overrides });
 
 const listed = (...events: Record<string, unknown>[]): ScriptedReply => ({ value: { events }, costUsd: 0.01 });
@@ -131,9 +131,119 @@ describe("the fold again after the own-page pass (#289)", () => {
     expect(judgedIds(requests)).toEqual([held.id]);
     expect(requests.filter((r) => r.stage === "own-page")).toHaveLength(1);
     expect(report.ownPages).toEqual([expect.objectContaining({ source: "Upcoming events", read: 1 })]);
+    // On a registry source's page now, it is released, and the report counts it as the first fold's hold would.
+    expect(report.counts.releasedForPromotion).toBe(1);
+    expect(report.releasedForPromotion).toEqual([{ host: "charlottestreet.test", events: 1 }]);
   });
 
-  it("a run whose own-page pass gives no record a venue or another date folds once: a pair re-verification made waits for the next run's fold, as before", async () => {
+  it("a held record the fold keeps, taking an active reading on a page no source is on, is held again, not published", async () => {
+    // A Stern Theater record whose page moved off the registry's hosts: re-read there, it names no venue, and its own page names one.
+    const MOVED_URL = "https://sterntickets.test/nightshades";
+    const MOVED_OWN_URL = "https://sterntickets.test/event/nightshades/";
+    const held = storedEvent("Nightshades", {
+      start: "2026-11-13",
+      venue: VENUE,
+      neighborhood: "Crossroads",
+      primaryUrl: "https://blog.test/nightshades",
+      status: "unverified",
+      lead: { lane: "discovery", query: "music events" },
+      heldForPromotion: true,
+      evidence: { date: "Friday, November 13", venue: `${VENUE}, 3333 Wyoming St` },
+    });
+    const moved = storedEvent("Nightshades", {
+      start: "2026-11-13",
+      venue: "Somewhere Else",
+      neighborhood: "Crossroads",
+      primaryUrl: MOVED_URL,
+      firstSeen: "2026-10-05T12:00:00-05:00",
+      lead: { lane: "registry", source: stern.name },
+      evidence: { date: "Friday, November 13", venue: "Somewhere Else, 1 Main St" },
+    });
+
+    const { dataset, report } = await runAt(WEEK_2, {
+      dataset: { ...emptyDataset(), events: [held, moved] },
+      sources: [stern],
+      pages: {
+        [STERN_URL]: CALENDAR,
+        [MOVED_URL]: { status: 200, body: '<html><body><div><a href="/event/nightshades/">Nightshades</a> November 13, 2026</div></body></html>' },
+        [MOVED_OWN_URL]: OWN_PAGE,
+      },
+      completions: [listed(), listed(at(stern, null, { eventLink: 1, dateEvidence: "November 13, 2026", venueEvidence: null })), placedAtStern("2026-11-13")],
+    });
+
+    expect(report.ownPages).toEqual([expect.objectContaining({ read: 1 })]);
+    expect(dataset.events.find((e) => e.id === moved.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: held.id });
+    expect(dataset.events.find((e) => e.id === held.id)).toMatchObject({ status: "unverified", heldForPromotion: true, primaryUrl: MOVED_URL });
+    expect(dataset.events.filter((e) => e.status === "active")).toEqual([]);
+    expect(report.counts).toMatchObject({ heldForPromotion: 0, releasedForPromotion: 0 });
+  });
+
+  it("the Nutcracker (#284): the Crossroads run its own page places in the Muriel Kauffman Theatre folds into the Kauffman Center's run, seen first", async () => {
+    const kauffman = source("Kauffman Center for the Performing Arts", { neighborhood: "Crossroads", kind: "theater/dance" });
+    const crossroads = source("Crossroads Arts District", { neighborhood: "Crossroads", kind: "theater/dance" });
+    const folly = source("Folly Theater", { neighborhood: "Crossroads", kind: "theater/dance" });
+    const CROSSROADS_URL = crossroads.urls[0]!;
+    const BALLET_URL = "https://crossroadsartsdistrict.test/crossroads-events/kansas-city-ballet-presents-the-nutcracker-5/";
+    const MURIEL = "Muriel Kauffman Theatre at the Kauffman Center for the Performing Arts";
+    const RUN = "November 28 – December 24, 2026";
+    const run = { start: "2026-11-28", end: "2026-12-24", recurrence: "limited-run" as const, kind: "theater/dance", neighborhood: "Crossroads" };
+    const kauffmans = storedEvent("The Nutcracker", {
+      ...run,
+      venue: kauffman.name,
+      primaryUrl: kauffman.urls[0]!,
+      firstSeen: "2026-10-01T21:47:36-05:00",
+      lead: { lane: "registry", source: kauffman.name },
+      evidence: { date: RUN, venue: `${kauffman.name}, 1601 Broadway` },
+    });
+    const { venue: _venue, lastVerified: _lastVerified, ...venueLess } = storedEvent("The Nutcracker", {
+      ...run,
+      primaryUrl: CROSSROADS_URL,
+      eventUrl: BALLET_URL,
+      firstSeen: "2026-10-07T20:43:52-05:00",
+      status: "unverified",
+      lead: { lane: "registry", source: crossroads.name },
+      evidence: { date: RUN },
+    });
+    // Another company's Nutcracker on the opening night leaves the venue-less record two candidates, so the first fold leaves it be.
+    const follys = storedEvent("The Nutcracker", {
+      start: "2026-11-28T19:30:00-06:00",
+      venue: folly.name,
+      neighborhood: "Crossroads",
+      kind: "theater/dance",
+      primaryUrl: folly.urls[0]!,
+      lead: { lane: "registry", source: folly.name },
+      evidence: { date: "Sat, Nov 28 · 7:30 PM", venue: `${folly.name}, 300 W 12th St` },
+    });
+    const nutcracker = (at: Source, overrides: Record<string, unknown>) =>
+      candidateAt(at, { title: "The Nutcracker", startDate: "2026-11-28", endDate: "2026-12-24", startTime: null, dateEvidence: RUN, ...overrides });
+
+    const { dataset, report, requests } = await runWith(WEEK_2, { ...emptyDataset(), events: [kauffmans, venueLess, follys] }, {
+      sources: [kauffman, crossroads, folly],
+      pages: {
+        [kauffman.urls[0]!]: CALENDAR,
+        [CROSSROADS_URL]: { status: 200, body: `<html><body><div><a href="/crossroads-events/kansas-city-ballet-presents-the-nutcracker-5/">The Nutcracker</a> ${RUN}</div></body></html>` },
+        [folly.urls[0]!]: CALENDAR,
+        [BALLET_URL]: { status: 200, body: `<html><body><h1>Kansas City Ballet presents The Nutcracker</h1><p>${RUN}</p><p>${MURIEL}, 1601 Broadway</p></body></html>` },
+      },
+      completions: [
+        listed(nutcracker(kauffman, { venueEvidence: `${kauffman.name}, 1601 Broadway` })),
+        listed(nutcracker(crossroads, { eventLink: 1, venue: null, venueEvidence: null })),
+        listed(nutcracker(folly, { endDate: null, startTime: "19:30", dateEvidence: "Sat, Nov 28 · 7:30 PM", venueEvidence: `${folly.name}, 300 W 12th St` })),
+        ownPage("2026-11-28", { venue: MURIEL, venueEvidence: `${MURIEL}, 1601 Broadway` }),
+      ],
+      config: testConfig({ ownPageReadsPerRun: 150, venueAliases: { [kauffman.name]: ["Kauffman Center", "Muriel Kauffman Theatre", "Helzberg Hall"] } }),
+      curate: pickAll,
+    });
+
+    expect(dataset.events.find((e) => e.id === venueLess.id)).toMatchObject({ status: "expired", expiryReason: "duplicate", duplicateOf: kauffmans.id, venue: MURIEL });
+    expect(dataset.events.find((e) => e.id === kauffmans.id)).toMatchObject({ status: "active", venue: kauffman.name, dontMiss: true });
+    expect(live(dataset).map((e) => e.id)).toEqual([kauffmans.id, follys.id]);
+    // One pick for the Nutcracker at the Kauffman, never two.
+    expect(new Set(judgedIds(requests))).toEqual(new Set([kauffmans.id, follys.id]));
+    expect(report.counts.expired.duplicate).toBe(1);
+  });
+
+  it("a run whose own-page pass gives no record a venue folds once: a pair re-verification made waits for the next run's fold, as before", async () => {
     // The Stern's show page, stored with another venue, is re-read this run and now gives the Stern Theater.
     const SHOW_URL = "https://sterntheater.test/shows/nightshades";
     const STERN_OWN_URL = "https://sterntheater.test/event/nightshades/";

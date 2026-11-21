@@ -175,7 +175,7 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   // stored before the skip (#81) expire before re-verification, so nothing is fetched to check a date
   // already gone, a page that is never read, or an event no reading may keep. Duplicates fold after
   // that, among what is left, and before re-verification, so a duplicate is not checked either (and again after the
-  // own-page pass, below, when it gave a record a venue or another date).
+  // own-page pass, below, when it gave a record a venue).
   const folded = foldDuplicates(
     merged.events.map((e) => expireSkipped(expireIndexCited(expirePast(e, today), config))),
     config.venueAliases,
@@ -206,9 +206,13 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
     ? { events: aged, report: [], notRead: 0, covered: new Set<string>(), venued: new Set<string>() }
     : await readOwnPages(aged, new Set([...merged.awaitingVenue, ...reverified.awaitingVenue]), registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   // A venue the pass gave a record (#267) can make it one event with another that the fold before it left as two (#289):
-  // when the pass gave any record a venue or another date, the records fold again, by the same rules, before anything
-  // places or judges them. A pass that did neither folds nothing more, so a run without one writes what it did before.
-  const refolded = venuedOrMoved(aged, ownPages.events) ? foldAgain(ownPages.events, ownPages.covered, config.venueAliases) : ownPages;
+  // when the pass gave any record a venue, the records fold again, by the same rules and with the same hold after,
+  // before anything places or judges them. A run whose pass gave no record a venue folds once and writes what it did before.
+  const refolded = gaveVenue(aged, ownPages.events)
+    ? foldAgain(ownPages.events, ownPages.covered, registry, config)
+    : { events: ownPages.events, covered: ownPages.covered, heldByHost: [], releasedByHost: [] };
+  const heldByHost = addHostCounts(held.heldByHost, refolded.heldByHost);
+  const releasedByHost = addHostCounts(held.releasedByHost, refolded.releasedByHost);
   // A venue the table places puts every event at it there, read this run or not (#150, #258); a reading places the
   // rest from its page, and one no page placed this run is placed from what is stored. The table goes first: its
   // neighborhoods are on the list (the table's parse checks), so the off-list placement leaves them be and reports
@@ -272,8 +276,8 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
       unverifiedByUncitableReading: uncitable.length,
       keptOnStoredCitation: kept.length,
       venuelessAmbiguous: merged.counts.venuelessAmbiguous,
-      heldForPromotion: countEvents(held.heldByHost),
-      releasedForPromotion: countEvents(held.releasedByHost),
+      heldForPromotion: countEvents(heldByHost),
+      releasedForPromotion: countEvents(releasedByHost),
       ...sumTallies(extraction.tally, discovery.tally, reverified.tally, merged.tally),
       expired: countExpired(dataset.events, events),
       archived: archived.length,
@@ -306,8 +310,8 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
     venuesWithoutRow: venuesWithoutRow(events, venues, config),
     unmappableNeighborhoods: unmappableNeighborhoods(dataset.events, live),
     promotionSuggestions: promotion.promotionSuggestions,
-    heldForPromotion: held.heldByHost,
-    releasedForPromotion: held.releasedByHost,
+    heldForPromotion: heldByHost,
+    releasedForPromotion: releasedByHost,
     outageLimited: reverified.outageLimited.map(titleAndUrl),
     uncitableReadings: uncitable.map(titleAndUrl),
     keptOnStoredCitation: kept.map((e) => ({ ...titleAndUrl(e), failedQuote: keptOn.get(e.id)! })),
@@ -431,8 +435,20 @@ function holdForPromotion(
     }
     return marked ? unmarked : event;
   });
-  const listed = (counts: Map<string, number>): HostCounts => [...counts].map(([host, events]) => ({ host, events })).sort((a, b) => b.events - a.events || a.host.localeCompare(b.host));
-  return { events: checked, released, heldByHost: listed(heldByHost), releasedByHost: listed(releasedByHost) };
+  return { events: checked, released, heldByHost: listedByHost(heldByHost), releasedByHost: listedByHost(releasedByHost) };
+}
+
+/** Counts by host as the report lists them: most events first, then by host. */
+function listedByHost(counts: Map<string, number>): HostCounts {
+  return [...counts].map(([host, events]) => ({ host, events })).sort((a, b) => b.events - a.events || a.host.localeCompare(b.host));
+}
+
+/** Two holds' counts by host as one (#289). */
+function addHostCounts(a: HostCounts, b: HostCounts): HostCounts {
+  if (b.length === 0) return a;
+  const counts = new Map(a.map(({ host, events }) => [host, events]));
+  for (const { host, events } of b) counts.set(host, (counts.get(host) ?? 0) + events);
+  return listedByHost(counts);
 }
 
 /**
@@ -1822,25 +1838,29 @@ async function readOwnPages(
 }
 
 /**
- * Whether the own-page pass gave any record a venue or another calendar date (#289), which can make it match another
- * record: the pass leaves the events in the order it was given them. A time joining a start on its date cannot make a
- * match (sameMoment), so it is no reason to fold again.
+ * Whether the own-page pass gave any record a venue (#289), which can make it match another record: the pass leaves
+ * the events in the order it was given them. A venue is all it can change that identity compares: another date leaves
+ * the event as the list read it, and a time joining a start on its date cannot make a match (sameMoment).
  */
-function venuedOrMoved(before: Event[], after: Event[]): boolean {
-  return after.some((event, i) => {
-    const was = before[i]!;
-    return event.venue !== was.venue || calendarDate(event.start) !== calendarDate(was.start) || calendarDate(event.end) !== calendarDate(was.end);
-  });
+function gaveVenue(before: Event[], after: Event[]): boolean {
+  return after.some((event, i) => event.venue !== before[i]!.venue);
 }
 
 /**
- * The fold again after the own-page pass (#289): the fold before re-verification (foldDuplicates), over the records as
- * the pass left them, so curation never judges two records of one event. A kept record that now has the own page of a
- * duplicate the pass covered (it took the duplicate's reading, or they shared the page) is covered too, so the picks'
- * pass does not read that page again.
+ * foldDuplicates again (#289), over the records as the own-page pass left them, so curation never judges two records
+ * of one event; then the hold for promotion, as after the first fold, since a kept record that takes a duplicate's
+ * reading takes its primary page too (ADR 0012). The hold is judged against the records as they came to this fold, so
+ * its counts are only what this fold changed, for the report to add to the first's. A kept record that now has the
+ * own page of a duplicate the pass covered (it took the duplicate's reading, or they shared the page) is covered too,
+ * so the picks' pass after curation neither lists it as kept nor tries again a page whose read failed.
  */
-function foldAgain(events: Event[], covered: Set<string>, aliases: VenueAliases): { events: Event[]; covered: Set<string> } {
-  const folded = foldDuplicates(events, aliases);
+function foldAgain(
+  events: Event[],
+  covered: Set<string>,
+  registry: Registry,
+  config: RunConfig,
+): { events: Event[]; covered: Set<string>; heldByHost: HostCounts; releasedByHost: HostCounts } {
+  const folded = foldDuplicates(events, config.venueAliases);
   const before = new Map(events.map((e) => [e.id, e]));
   const after = new Map(folded.events.map((e) => [e.id, e]));
   const stillCovered = new Set(covered);
@@ -1849,7 +1869,9 @@ function foldAgain(events: Event[], covered: Set<string>, aliases: VenueAliases)
     const keptPage = after.get(kept)!.eventUrl;
     if (covered.has(duplicate) && page !== undefined && keptPage !== undefined && samePage(page, keptPage)) stillCovered.add(kept);
   }
-  return { events: folded.events, covered: stillCovered };
+  // The run's first hold judged against the dataset the run started from; this one against what that hold left.
+  const held = holdForPromotion(folded.events, events, registry, config);
+  return { events: held.events, covered: stillCovered, heldByHost: held.heldByHost, releasedByHost: held.releasedByHost };
 }
 
 /**
