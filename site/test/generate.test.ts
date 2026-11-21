@@ -3,8 +3,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { PRODUCT, USER_AGENT } from "../../src/adapters/identity";
+import { CALIBRATION } from "../../src/curation-compare";
 import { PICK_REASONS } from "../../src/dataset";
-import { MAX_PICKS, writeGenerated } from "../src/build/write-generated";
+import { FRONT_PAGE_BYTES, MAX_PICKS, writeGenerated } from "../src/build/write-generated";
 import { activeEvent, configYaml, dataset } from "./fixtures/dataset";
 import { tempDir } from "./fixtures/temp-dir";
 
@@ -100,7 +101,11 @@ describe("writeGenerated", () => {
     expect(published).not.toContain("barrel room");
   });
 
-  it("warns when the front page would carry more picks than its budget was sized for, and not at the ceiling", () => {
+  it("sizes the front page for the top of the curation prompt's calibration figure (#290)", () => {
+    expect(MAX_PICKS).toBe(CALIBRATION.high);
+  });
+
+  it("warns when the front page would carry more picks than the curation prompt's figure, and not within it", () => {
     const picks = (n: number) =>
       dataset(Array.from({ length: n }, (_, i) => activeEvent({ id: `evt_${String(i + 1).padStart(12, "0")}`, dontMiss: true, pickReason: "rare", whyLine: "A rare occasion." })));
     const run = (n: number) => {
@@ -111,11 +116,16 @@ describe("writeGenerated", () => {
     };
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
+      // 28 is what the committed dataset published as of 2026-11-16, inside the prompt's figure: no warning (#290).
+      run(28);
       run(MAX_PICKS);
       expect(warn).not.toHaveBeenCalled();
-      run(MAX_PICKS + 1);
+      run(36);
       expect(warn).toHaveBeenCalledTimes(1);
-      expect(String(warn.mock.calls[0]![0])).toContain(`${MAX_PICKS + 1} don't-miss picks, over the ${MAX_PICKS}`);
+      const message = String(warn.mock.calls[0]![0]);
+      expect(message).toBe(
+        `site: 36 don't-miss picks, over the curation prompt's ${CALIBRATION.low} to ${CALIBRATION.high} and the ${MAX_PICKS} the front page's ${FRONT_PAGE_BYTES / 1000} KB budget was sized for; curation is flagging more than it should`,
+      );
     } finally {
       warn.mockRestore();
     }
