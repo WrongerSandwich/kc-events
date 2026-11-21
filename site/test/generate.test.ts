@@ -116,16 +116,16 @@ describe("writeGenerated", () => {
     };
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      // 28 is what the 2026-11-16 run published, inside the prompt's figure: no warning (#290).
+      // 28 is what the committed dataset published as of 2026-11-16, inside the prompt's figure: no warning (#290).
       run(28);
       run(MAX_PICKS);
       expect(warn).not.toHaveBeenCalled();
       run(36);
       expect(warn).toHaveBeenCalledTimes(1);
       const message = String(warn.mock.calls[0]![0]);
-      expect(message).toContain(`36 don't-miss picks, over the curation prompt's ${CALIBRATION.low} to ${CALIBRATION.high}`);
-      expect(message).toContain(`the front page's ${FRONT_PAGE_BYTES / 1000} KB budget`);
-      expect(message).toContain("curation is flagging more than it should");
+      expect(message).toBe(
+        `site: 36 don't-miss picks, over the curation prompt's ${CALIBRATION.low} to ${CALIBRATION.high} and the ${MAX_PICKS} the front page's ${FRONT_PAGE_BYTES / 1000} KB budget was sized for; curation is flagging more than it should`,
+      );
     } finally {
       warn.mockRestore();
     }

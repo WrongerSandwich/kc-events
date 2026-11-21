@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { promptDiff, renderCurationComparison, sampleEligible, scoreRepeats, trialsUnder, type CurationTrial } from "../src/curation-compare.js";
+import { CALIBRATION, promptDiff, renderCurationComparison, sampleEligible, scoreRepeats, trialsUnder, type CurationTrial } from "../src/curation-compare.js";
 import { storedEvent as stored } from "./fakes/fixtures.js";
 
 const trial = (prompt: CurationTrial["prompt"], repeat: number, id: string, verdict: CurationTrial["verdict"], reason: CurationTrial["reason"], why = ""): CurationTrial => ({
@@ -10,6 +11,13 @@ const trial = (prompt: CurationTrial["prompt"], repeat: number, id: string, verd
   reason,
   why,
   costUsd: 0.01,
+});
+
+// The site sizes its front page for CALIBRATION.high picks (MAX_PICKS, #290), so the figure is held to the prompt's words.
+it("carries the curation prompt's own calibration figure", () => {
+  expect(readFileSync(new URL("../prompts/curation-prompt.md", import.meta.url), "utf8")).toContain(
+    `across an eight-week horizon of about ${CALIBRATION.eligible} eligible events, the list expects on the order of ${CALIBRATION.low} to ${CALIBRATION.high} picks`,
+  );
 });
 
 describe("the events a comparison judges", () => {

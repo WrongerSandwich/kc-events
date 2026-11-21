@@ -61,7 +61,7 @@ export const PICK_BYTES = 375;
 /** The pick ceiling the front page was first sized for (#92), at PICK_BYTES a pick. */
 export const FIRST_PICK_CEILING = 20;
 /**
- * What each pick past FIRST_PICK_CEILING adds, gzipped (#290; measured 2026-11-21 on the 11-16 run, real data either way:
+ * What each pick past FIRST_PICK_CEILING adds, gzipped (#290; measured 2026-11-21 on the committed dataset built as of 11-16:
  * 15 of its 28 picks taken off came to 3,623 bytes, 15 of its close calls made picks to 3,522).
  */
 export const MORE_PICK_BYTES = 240;
