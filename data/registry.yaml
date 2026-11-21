@@ -98,13 +98,13 @@ sources:
     notes: The browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200. Neither the list nor an own page goes network-quiet, so each has a selector. The plain list carries the first 12 events and script appends the next 12 after load (24 in all, checked 2026-11-20), so the list's selector is not a listing's, which would match before they arrive, but the two marks the script leaves once the next page has answered, the "load more" button enabled, or the body's class when there are no more. The own page's selector is its detail block.
 
   - name: The Truman
-    urls: [https://www.thetrumankc.com/]
+    urls: [https://www.thetrumankc.com/events]
     kind: music
     neighborhood: Midtown
-    checkHints: Club at 608 E 31st St; the homepage carries the full show list.
+    checkHints: Club at 608 E 31st St; the events page carries the full show list.
     fetch: browser
     status: active
-    notes: Was thetruman.com, which stopped resolving in October 2026 (eleven failed fetches); thetrumankc.com answers with the same show list (checked 2026-10-10). The browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200 on the list and the own pages, and both go network-quiet, so neither has a selector (checked 2026-11-20). As at the Midland, script appends to the list after load and leaves no mark when there is no more, so the quiet network is the thing to wait for.
+    notes: Was thetruman.com, which stopped resolving in October 2026 (eleven failed fetches); thetrumankc.com answers with the same show list (checked 2026-10-10). The browser fetch is for the HTTP 406 the site answers Node on a page its cache does not hold (ADR 0011's amendment, #58). Chromium under the job's user agent gets 200 on the list and the own pages, and both go network-quiet, so neither has a selector (checked 2026-11-20). As at the Midland, script appends to the list after load and leaves no mark when there is no more, so the quiet network is the thing to wait for. The URL was the homepage until 2026-11-21, which renders 20 shows to /events' 25 (#284); /events through the job's browser fetcher answered 200 with 25 shows on 2026-11-21.
 
   - name: Azura Amphitheater
     urls: [https://www.azuraamp.com/kansas-city-concert-and-events-calendar.html]
@@ -175,7 +175,7 @@ sources:
     urls: [https://tickets.knuckleheadskc.com/]
     kind: music
     neighborhood: East Bottoms
-    checkHints: The ticketing homepage is the show list, at Knuckleheads, 2715 Rochester Ave; dates read like "Fri 9 Oct". Ignore the literal "%PERFORMANCESTARTDATE%" placeholders.
+    checkHints: The ticketing homepage is the show list, at Knuckleheads, 2715 Rochester Ave; dates read like "Fri 9 Oct". Ignore the literal "%PERFORMANCESTARTDATE%" placeholders. The weekend open jams (sign up to play) are the bar's open mic, not shows.
     fetch: browser
     waitFor: "#swPerformanceList .pl-item"
     status: active
@@ -511,12 +511,14 @@ sources:
     status: active
 
   - name: Kansas City Renaissance Festival
-    urls: [https://www.kcrenfest.com/]
+    urls:
+      - https://www.kcrenfest.com/
+      - https://kcknightsoflights.com/
     kind: festivals/markets
     neighborhood: Bonner Springs
-    checkHints: One seasonal run, Saturdays and Sundays from early September to mid-October plus a couple of Mondays, at the festival grounds in Bonner Springs; the homepage banner gives the season's dates. Theme weekends are part of that run, not separate events. Some theme-weekend pages still carry last year's dates.
+    checkHints: One seasonal run, Saturdays and Sundays from early September to mid-October plus a couple of Mondays, at the festival grounds in Bonner Springs; the homepage banner gives the season's dates. Theme weekends are part of that run, not separate events. Some theme-weekend pages still carry last year's dates. Knights of Lights, the winter run at the same grounds, has its own site, read as one limited run from its first open night to its last, the weekdays of its weekly open nights its days; the festival homepage gives only its opening.
     status: active
-    notes: Refuses any user agent containing "research" (HTTP 403); fetchable since the job's user agent became kc-this-week (ADR 0011, 2026-10-08).
+    notes: Refuses any user agent containing "research" (HTTP 403); fetchable since the job's user agent became kc-this-week (ADR 0011, 2026-10-08). kcknightsoflights.com added 2026-11-21 (#276), since the homepage's "starting November 27" stored Knights of Lights as one night; its own site gives the open nights, plain fetch, robots.txt allows all.
 
   # --- Excluded: known, deliberately not fetched -------------------------------------------------
 

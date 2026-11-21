@@ -6265,7 +6265,7 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -6279,7 +6279,9 @@
           "page": "https://artsjoco.org/acjc/calendar-of-events?city-center-live&event_id=101928",
           "quote": "This free performing arts series"
         }
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_1d3e72fec86a"
     },
     {
       "id": "evt_4e40996c27f8",
@@ -13067,7 +13069,8 @@
       "evidence": {
         "date": "Nov 28 - Dec 24",
         "venue": "Kauffman Center for the Performing Arts"
-      }
+      },
+      "description": "The ballet adapts E.T.A. Hoffmann’s tale into a Victorian-era story featuring Clara, the Nutcracker Prince, Dr. Drosselmeier and the Sugar Plum Fairy, with elaborate costumes, scenery and choreography."
     },
     {
       "id": "evt_c3c38e1b1c15",
@@ -26067,7 +26070,7 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-16T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -26080,7 +26083,9 @@
           "page": "https://kccrossroads.org/crossroads-events/kansas-city-ballet-presents-the-nutcracker-5/",
           "quote": "Muriel Kauffman Theatre at the Kauffman Center for the Performing Arts"
         }
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_85c33d2453a6"
     },
     {
       "id": "evt_d80c86eadad9",
@@ -53667,7 +53672,7 @@
       "lastChanged": "2026-11-09T06:17:06-06:00",
       "lastJudged": "2026-11-09T06:17:06-06:00",
       "judgedWith": "c0f3b3a71334",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -53681,7 +53686,8 @@
           "page": "https://www.kemperart.org/program/charm-bar",
           "quote": "Who All Ages"
         }
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_0dacd146ecdb",
