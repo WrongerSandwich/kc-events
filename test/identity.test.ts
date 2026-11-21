@@ -401,6 +401,31 @@ describe("the venue an alias names (#91)", () => {
     expect(venueAndRoom("Main Auditorium", byAddress)).toEqual({ venue: "Lied Center of Kansas", room: "Main Auditorium" });
   });
 
+  it("gives no room for an alias that only spells out the venue's KC, either way, in any case or punctuation (#291)", () => {
+    const zhou = { "Zhou B Art Center KC": ["Zhou B Art Center Kansas City", "1801 East 18th Street"] };
+    const spelled = { "Zhou B Art Center Kansas City": ["Zhou B Art Center KC"] };
+    expect(venueAndRoom("Zhou B Art Center Kansas City", zhou)).toEqual({ venue: "Zhou B Art Center KC" });
+    expect(venueAndRoom("Zhou B Art Center KC", spelled)).toEqual({ venue: "Zhou B Art Center Kansas City" });
+    for (const name of ["ZHOU B ART CENTER KANSAS CITY", "The Zhou B. Art Center, Kansas-City"]) {
+      expect(venueAndRoom(name, zhou)).toEqual({ venue: "Zhou B Art Center KC" });
+      expect(venueAndRoom(name, spelled)).toEqual({ venue: "Zhou B Art Center Kansas City" });
+    }
+    expect(venueAndRoom("zhou b art center, kc", spelled)).toEqual({ venue: "Zhou B Art Center Kansas City" });
+  });
+
+  it("still splits a real room from a venue whose name the KC rule would touch (#291)", () => {
+    const rooms = {
+      "Kauffman Center for the Performing Arts": ["Kauffman Center", "Muriel Kauffman Theatre", "Helzberg Hall"],
+      "Kansas City Convention Center": ["Bartle Hall", "Kansas City Music Hall"],
+    };
+    expect(venueAndRoom("Muriel Kauffman Theatre", rooms)).toEqual({ venue: "Kauffman Center for the Performing Arts", room: "Muriel Kauffman Theatre" });
+    // A name that holds the venue's whole name is a form of it, as before: the room is not cut out of it.
+    expect(venueAndRoom("Muriel Kauffman Theatre at the Kauffman Center for the Performing Arts", rooms)).toEqual({ venue: "Kauffman Center for the Performing Arts" });
+    expect(venueAndRoom("Kansas City Music Hall", rooms)).toEqual({ venue: "Kansas City Convention Center", room: "Kansas City Music Hall" });
+    expect(venueAndRoom("Bartle Hall", rooms)).toEqual({ venue: "Kansas City Convention Center", room: "Bartle Hall" });
+    expect(venueAndRoom("Kansas City Convention Center", rooms)).toEqual({ venue: "Kansas City Convention Center" });
+  });
+
   it("names none for a name the list does not hold, or one shorter than an entry", () => {
     expect(aliasedVenue("recordBar", aliases)).toBeUndefined();
     expect(aliasedVenue("Kauffman", aliases)).toBeUndefined();

@@ -252,12 +252,21 @@ export function aliasedVenue(name: string, aliases: VenueAliases): string | unde
  * A page's venue name as the site shows it: the venue the alias list files it under, else the name; and the name as
  * the room when it was neither the venue's name nor a form of it ("Helzberg Hall", not "Kauffman Center"), nor the
  * venue's street address, which a calendar sometimes gives in the venue's place ("644 Massachusetts St" for Liberty
- * Hall): that is where the venue is, not a room in it.
+ * Hall): that is where the venue is, not a room in it. A name is a form of the venue's too when it only spells out
+ * the venue's "KC" as "Kansas City", or the other way (#291): "Zhou B Art Center Kansas City" is Zhou B Art Center KC.
  */
 export function venueAndRoom(name: string, aliases: VenueAliases): { venue: string; room?: string } {
   const venue = aliasedVenue(name, aliases);
   if (venue === undefined) return { venue: name };
-  return oneVenueName(normalizeName(name), normalizeName(venue)) || streetAddress(name) ? { venue } : { venue, room: name };
+  return oneVenueName(kcShortened(name), kcShortened(venue)) || streetAddress(name) ? { venue } : { venue, room: name };
+}
+
+/**
+ * A venue name normalized, with "Kansas City" written "KC": for the site's split of a room alone (#291). Event identity
+ * does not read it, so a "KC" form a page gives is one venue with the "Kansas City" form only when the alias list says so.
+ */
+function kcShortened(name: string): string {
+  return normalizeName(name).replace(/(?<=^| )kansas city(?= |$)/gu, "kc");
 }
 
 /**
