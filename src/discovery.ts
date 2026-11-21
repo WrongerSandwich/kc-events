@@ -139,6 +139,15 @@ export function excludedSourceOnHost(url: string, registry: Registry): ExcludedS
 }
 
 /**
+ * The active registry source whose host a URL is on, or on a subdomain of, if any. A page discovery
+ * found there is fetched that source's way (#287): a site its source meets through the browser, one
+ * that answers the plain fetcher 406 (#58), is met so whichever lane found the event.
+ */
+export function activeSourceOnHost(url: string, registry: Registry): Source | undefined {
+  return registry.sources.find((s): s is Source => s.status === "active" && onHost(url, hostsOf([s])));
+}
+
+/**
  * Whether the lane runs this run (#255), and why not when it does not: never in a midweek pass or when the
  * config turns it off, and under a monthly cadence only when it has not yet run this calendar month.
  */

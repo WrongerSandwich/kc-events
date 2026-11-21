@@ -47,6 +47,7 @@ import {
   type CurationContext,
 } from "./curation.js";
 import {
+  activeSourceOnHost,
   discoveryQueries,
   discoveryThisRun,
   excludedSourceOnHost,
@@ -1576,8 +1577,9 @@ async function reverify(
     const origin = origins[i]!;
     if (excludedSourceOf(origin, url, registry) || lane.attempts.outages.has(key) || lane.attempts.tried.has(key)) return undefined;
     if (ports.model.exhausted()) return "cap";
-    // The page is fetched the way its source's pages are; a discovered page always plainly.
-    return fetchAndRead(url, origin.lane === "registry" ? fetcherFor(origin.source, ports) : plainly(ports), origin, "reverification", ports.model, context, turn);
+    // The page is fetched the way its source's pages are; a discovered page the way the pages of the active source on its host are, else plainly (#287).
+    const source = origin.lane === "registry" ? origin.source : activeSourceOnHost(url, registry);
+    return fetchAndRead(url, source ? fetcherFor(source, ports) : plainly(ports), origin, "reverification", ports.model, context, turn);
   });
 
   for (const [i, url] of urls.entries()) {
@@ -1823,10 +1825,18 @@ function compareNearness(a: Event, b: Event, today: string): number {
   return x! < y! ? -1 : x! > y! ? 1 : 0;
 }
 
-/** The way an event's own page is fetched: its active registry source's way (ownPageFetcherFor), else plainly. */
+/**
+ * The way an event's own page is fetched: its active registry source's way (ownPageFetcherFor), or for a
+ * discovered event the way of the active source on the own page's host (#287), else plainly.
+ */
 function ownPageRouteFor(event: Event, registry: Registry, ports: Ports): FetchRoute {
-  const { lead } = event;
-  const source = lead.lane === "registry" ? registry.sources.find((s): s is Source => s.name === lead.source && s.status === "active") : undefined;
+  const { lead, eventUrl } = event;
+  const source =
+    lead.lane === "registry"
+      ? registry.sources.find((s): s is Source => s.name === lead.source && s.status === "active")
+      : eventUrl !== undefined
+        ? activeSourceOnHost(eventUrl, registry)
+        : undefined;
   return source ? ownPageFetcherFor(source, ports) : plainly(ports);
 }
 
