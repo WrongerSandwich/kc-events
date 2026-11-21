@@ -262,7 +262,7 @@ export function venueAndRoom(name: string, aliases: VenueAliases): { venue: stri
 }
 
 /**
- * A venue name normalized, with "Kansas City" written "KC": for the site's split of a room alone (#291). Event identity
+ * A venue name normalized, with "Kansas City" written "KC", for the venue and room split the site shows and nothing else (#291). Event identity
  * does not read it, so a "KC" form a page gives is one venue with the "Kansas City" form only when the alias list says so.
  */
 function kcShortened(name: string): string {
