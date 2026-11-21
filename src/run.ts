@@ -174,7 +174,8 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   // Past events, events citing an index page as their primary page, and promotions or non-public events
   // stored before the skip (#81) expire before re-verification, so nothing is fetched to check a date
   // already gone, a page that is never read, or an event no reading may keep. Duplicates fold after
-  // that, among what is left, and before re-verification, so a duplicate is not checked either.
+  // that, among what is left, and before re-verification, so a duplicate is not checked either (and again after the
+  // own-page pass, below, when it gave a record a venue or another date).
   const folded = foldDuplicates(
     merged.events.map((e) => expireSkipped(expireIndexCited(expirePast(e, today), config))),
     config.venueAliases,
@@ -204,11 +205,15 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   const ownPages = reverifyOnly
     ? { events: aged, report: [], notRead: 0, covered: new Set<string>(), venued: new Set<string>() }
     : await readOwnPages(aged, new Set([...merged.awaitingVenue, ...reverified.awaitingVenue]), registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
+  // A venue the pass gave a record (#267) can make it one event with another that the fold before it left as two (#289):
+  // when the pass gave any record a venue or another date, the records fold again, by the same rules, before anything
+  // places or judges them. A pass that did neither folds nothing more, so a run without one writes what it did before.
+  const refolded = venuedOrMoved(aged, ownPages.events) ? foldAgain(ownPages.events, ownPages.covered, config.venueAliases) : ownPages;
   // A venue the table places puts every event at it there, read this run or not (#150, #258); a reading places the
   // rest from its page, and one no page placed this run is placed from what is stored. The table goes first: its
   // neighborhoods are on the list (the table's parse checks), so the off-list placement leaves them be and reports
   // only what the table did not place.
-  const mappedVenues = placeMappedVenues(ownPages.events, neighborhoods, config, venues);
+  const mappedVenues = placeMappedVenues(refolded.events, neighborhoods, config, venues);
   const placed = placeOffList(mappedVenues.events, neighborhoods, config, registry);
   // Made unverified by an uncitable re-reading and still so: a verified reading later this run brought it back, and a past one expired.
   const madeUncitable = new Set([...merged.uncitable, ...reverified.uncitable]);
@@ -223,7 +228,7 @@ export async function run({ config: givenConfig, prompts, dataset, registry, por
   // A pick the pass did not read this run (its ceiling left it) has its own page read now, once per date and own page (#133).
   const picks = reverifyOnly
     ? { events: overridden.events, report: [], notRead: 0 }
-    : await readPicks(overridden.events, ownPages.covered, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
+    : await readPicks(overridden.events, refolded.covered, registry, { ...ports, model }, extractionContext, prompts.eventPageRules);
   assertModelReached(model);
   // Stored why-lines are cleaned as new ones are, so a dirty one is fixed without re-judging.
   const events = picks.events.map(cleanStoredWhyLine);
@@ -1814,6 +1819,37 @@ async function readOwnPages(
     if (outcome !== "not-read" && events[index]!.status !== "active" && outcome?.status === "active") venued.add(outcome.id);
   });
   return { events: out, report: line.kept + nearest.length > 0 ? [line] : [], notRead, covered, venued };
+}
+
+/**
+ * Whether the own-page pass gave any record a venue or another calendar date (#289), which can make it match another
+ * record: the pass leaves the events in the order it was given them. A time joining a start on its date cannot make a
+ * match (sameMoment), so it is no reason to fold again.
+ */
+function venuedOrMoved(before: Event[], after: Event[]): boolean {
+  return after.some((event, i) => {
+    const was = before[i]!;
+    return event.venue !== was.venue || calendarDate(event.start) !== calendarDate(was.start) || calendarDate(event.end) !== calendarDate(was.end);
+  });
+}
+
+/**
+ * The fold again after the own-page pass (#289): the fold before re-verification (foldDuplicates), over the records as
+ * the pass left them, so curation never judges two records of one event. A kept record that now has the own page of a
+ * duplicate the pass covered (it took the duplicate's reading, or they shared the page) is covered too, so the picks'
+ * pass does not read that page again.
+ */
+function foldAgain(events: Event[], covered: Set<string>, aliases: VenueAliases): { events: Event[]; covered: Set<string> } {
+  const folded = foldDuplicates(events, aliases);
+  const before = new Map(events.map((e) => [e.id, e]));
+  const after = new Map(folded.events.map((e) => [e.id, e]));
+  const stillCovered = new Set(covered);
+  for (const [duplicate, kept] of folded.foldedInto) {
+    const page = before.get(duplicate)!.eventUrl;
+    const keptPage = after.get(kept)!.eventUrl;
+    if (covered.has(duplicate) && page !== undefined && keptPage !== undefined && samePage(page, keptPage)) stillCovered.add(kept);
+  }
+  return { events: folded.events, covered: stillCovered };
 }
 
 /**
