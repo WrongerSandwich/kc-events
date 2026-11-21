@@ -1853,25 +1853,13 @@ interface RobotsGate {
  * the host's later own pages are held back for the rest of the pass: no fetch and no call. A host, not a path,
  * as the refusals met so far are a whole site's (Kauffman's own pages all pass through queue-it). The fetch policy
  * already pauses between pages of one origin, so taking a host's pages in turn costs no time. `lines` gives one
- * report line per refusing host, naming the page refused and counting those held back. A refusal on a redirect's
- * hop (Kauffman's ticket host sends to queue-it only while its waiting room is up, #288) is held on the host asked,
- * which the job would ask again, and its line names the page refused and where the redirect came from.
+ * report line per refusing host, naming the page refused (robotsRefusal's problem) and counting those held back.
+ * A refusal on a redirect's hop to another host (#288) is held on the host asked, which the job would ask again,
+ * and the line says that is where the held pages are.
  */
 function robotsGate(): RobotsGate {
   const last = new Map<string, Promise<void>>();
-  type Refusal = { url: string; title: string; held: number; refusedAt?: string };
-  const refused = new Map<string, Refusal>();
-  const line = (host: string, { url, title, held, refusedAt }: Refusal) => {
-    const at = refusedAt === undefined ? undefined : (hostOf(refusedAt) ?? refusedAt);
-    const refusal =
-      refusedAt === undefined
-        ? `robots.txt disallows ${url}`
-        : at === host
-          ? `robots.txt disallows ${refusedAt}, where ${url} redirects`
-          : `robots.txt of ${at} (where ${host} redirects) disallows ${refusedAt}, reached from ${url}`;
-    const on = at === undefined || at === host ? "it" : host;
-    return `${host}: ${refusal} ("${title}")${held > 0 ? `; ${plural(held, "more own page")} on ${on} not fetched this run` : ""}`;
-  };
+  const refused = new Map<string, { problem: string; title: string; held: number; elsewhere: boolean }>();
   return {
     async fetch(url, title, fetch) {
       const host = hostOf(url) ?? url;
@@ -1886,13 +1874,19 @@ function robotsGate(): RobotsGate {
           return "held";
         }
         const fetched = await fetch();
-        if (!("page" in fetched) && fetched.failure === "disallowed") refused.set(host, { url, title, held: 0, ...(fetched.refusedAt ? { refusedAt: fetched.refusedAt } : {}) });
+        if (!("page" in fetched) && fetched.failure === "disallowed") {
+          const elsewhere = fetched.refusedAt !== undefined && (hostOf(fetched.refusedAt) ?? fetched.refusedAt) !== host;
+          refused.set(host, { problem: fetched.problem, title, held: 0, elsewhere });
+        }
         return fetched;
       } finally {
         done();
       }
     },
-    lines: () => [...refused].map(([host, r]) => line(host, r)),
+    lines: () =>
+      [...refused].map(
+        ([host, r]) => `${host}: ${r.problem} ("${r.title}")${r.held > 0 ? `; ${plural(r.held, "more own page")} on ${r.elsewhere ? host : "it"} not fetched this run` : ""}`,
+      ),
   };
 }
 
@@ -2262,12 +2256,24 @@ async function fetchAndRead(
 async function fetchReadable(url: string, fetcher: FetchPort, options?: FetchOptions): Promise<Fetched> {
   try {
     const page = await fetcher.fetch(url, options);
-    if (!page.robotsAllowed) return { problem: `robots.txt disallows ${url}`, failure: "disallowed", ...(page.finalUrl !== url ? { refusedAt: page.finalUrl } : {}) };
+    if (!page.robotsAllowed) return robotsRefusal(url, page.finalUrl);
     if (page.status >= 200 && page.status < 300) return { page };
     return { problem: `${url}: HTTP ${page.status}`, failure: GONE_STATUSES.has(page.status) ? "gone" : "outage" };
   } catch (error) {
     return { problem: `${url}: ${errorMessage(error)}`, failure: "outage" };
   }
+}
+
+/**
+ * A page robots.txt disallowed. A refusal on a redirect's hop (`at`, the fetch result's `finalUrl`) names the hop,
+ * and the host whose robots.txt refused it when that is another, since the host asked may answer 200 another day
+ * (Kauffman's ticket host sends to queue-it only while its waiting room is up, #288).
+ */
+function robotsRefusal(url: string, at: string): NotFetched {
+  if (at === url) return { problem: `robots.txt disallows ${url}`, failure: "disallowed" };
+  const host = hostOf(at);
+  const of = host !== undefined && host !== hostOf(url) ? ` of ${host}` : "";
+  return { problem: `robots.txt${of} disallows ${at}, where ${url} redirects`, failure: "disallowed", refusedAt: at };
 }
 
 /** What the discovery lane found, and what it leaves for merging, re-verification, and the report. */

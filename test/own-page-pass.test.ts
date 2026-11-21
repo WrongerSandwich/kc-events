@@ -183,12 +183,26 @@ describe("every upcoming event's own page read once (#254)", () => {
         line({
           failed: 1,
           problems: [
-            `granada.test: robots.txt of granada.queue.test (where granada.test redirects) disallows ${queue}, reached from ${NEAR_URL} ("Black Country, New Road"); 1 more own page on granada.test not fetched this run`,
+            `granada.test: robots.txt of granada.queue.test disallows ${queue}, where ${NEAR_URL} redirects ("Black Country, New Road"); 1 more own page on granada.test not fetched this run`,
           ],
         }),
       ]);
     },
   );
+
+  it("a pick read after curation whose redirect's hop is refused names the host that refused (#288)", async () => {
+    const queue = "https://granada.queue.test/?c=granada";
+    const { requests, report } = await runAt(WEEK_1, { ceiling: 0, flag: true, pages: { [NEAR_URL]: { robotsBlockedAt: queue } }, completions: [listed(near())] });
+
+    expect(requests.map((r) => r.model)).toEqual(["test/extraction", "test/curation"]);
+    expect(report.ownPages).toEqual([
+      line({
+        source: "Picks",
+        failed: 1,
+        problems: [`"Black Country, New Road": robots.txt of granada.queue.test disallows ${queue}, where ${NEAR_URL} redirects; nothing taken`],
+      }),
+    ]);
+  });
 
   it("a refusal on a redirect's hop on the same host names both pages (#288)", async () => {
     const moved = "https://granada.test/tickets/black-country-new-road/";
