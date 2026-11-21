@@ -53,15 +53,31 @@ export function measure(dist: string, page: string): { bytes: number; assets: st
   return { bytes, assets: [...seen] };
 }
 
-/** About what one more don't-miss pick adds to the front page, gzipped (measured 2026-10-11: 16 real picks against the fixture's 4). */
+/**
+ * About what one more don't-miss pick adds to the front page, gzipped, up to FIRST_PICK_CEILING (measured 2026-10-11:
+ * 16 real picks against the fixture's 4, so the real week's other weight on the page is in it too).
+ */
 export const PICK_BYTES = 375;
+/** The pick ceiling the front page was first sized for (#92), at PICK_BYTES a pick. */
+export const FIRST_PICK_CEILING = 20;
+/**
+ * What each pick past FIRST_PICK_CEILING adds, gzipped (#290; measured 2026-11-21 on the 11-16 run, real data either way:
+ * 15 of its 28 picks taken off came to 3,623 bytes, 15 of its close calls made picks to 3,522).
+ */
+export const MORE_PICK_BYTES = 240;
 /** The don't-miss picks the fixture build publishes (e2e/fixtures/events.json on its SITE_TODAY; a test holds it). */
 export const FIXTURE_PICKS = 4;
 
 /** Each page's budget in gzipped bytes and the build it is measured on: "real" is dist/, "fixture" is the end-to-end build. */
 export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" }[] = [
-  // The front page's code budget: what is left of its real-data budget once a week at the pick ceiling is paid for.
-  { page: "index.html", budget: FRONT_PAGE_BYTES - (MAX_PICKS - FIXTURE_PICKS) * PICK_BYTES, build: "fixture" },
+  // The front page's code budget: what is left of its real-data budget once a week at the pick ceiling is paid for, the
+  // picks to the first ceiling at PICK_BYTES and those past it at MORE_PICK_BYTES, so raising the ceiling (#290) grew
+  // the real-data budget by the picks' cost alone and gave the code no more room.
+  {
+    page: "index.html",
+    budget: FRONT_PAGE_BYTES - (FIRST_PICK_CEILING - FIXTURE_PICKS) * PICK_BYTES - (MAX_PICKS - FIRST_PICK_CEILING) * MORE_PICK_BYTES,
+    build: "fixture",
+  },
   // 50 KB, plus 200 bytes for a run's days (#143), 250 for each row's link to its venue's page (#137), and 100 for the calendar
   // writer's page link and extra properties, which the feeds use (#136), and 300 for the report form's two CSP hashes, which every
   // page's policy carries (#129), and the dependency bump of #152, and 200 each for the saved view's own empty state and for the

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
-import { BUDGETS, FIXTURE_PICKS, measure, PICK_BYTES } from "../scripts/size-check";
+import { BUDGETS, FIRST_PICK_CEILING, FIXTURE_PICKS, measure, MORE_PICK_BYTES, PICK_BYTES } from "../scripts/size-check";
 import { loadPublished } from "../src/build/load-dataset";
 import { FRONT_PAGE_BYTES, MAX_PICKS } from "../src/build/write-generated";
 import { tempDir } from "./fixtures/temp-dir";
@@ -48,12 +48,14 @@ describe("budgets", () => {
     expect(real[0]!.budget).toBe(200_000);
   });
 
+  // The picks to the first ceiling at the 2026-10-11 measure, those past it to the curation prompt's figure at their own
+  // (#290), so raising the ceiling grew the real-data budget by the picks' cost alone and left the code no more room.
   it("leaves the front page room for a week at the pick ceiling, counting the picks the fixture build publishes", () => {
     const site = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url));
     const fixture = loadPublished({ datasetPath: site("e2e/fixtures/events.json"), configPath: site("../research.config.yaml"), today: "2026-10-05" });
     expect(fixture.events.filter((e) => e.dontMiss)).toHaveLength(FIXTURE_PICKS);
     expect(readFileSync(site("package.json"), "utf8")).toContain("SITE_TODAY=2026-10-05 SITE_DATASET=e2e/fixtures/events.json");
     const front = found(BUDGETS.find((b) => b.page === "index.html"), "the front page's budget").budget;
-    expect(front + (MAX_PICKS - FIXTURE_PICKS) * PICK_BYTES).toBe(FRONT_PAGE_BYTES);
+    expect(front + (FIRST_PICK_CEILING - FIXTURE_PICKS) * PICK_BYTES + (MAX_PICKS - FIRST_PICK_CEILING) * MORE_PICK_BYTES).toBe(FRONT_PAGE_BYTES);
   });
 });
