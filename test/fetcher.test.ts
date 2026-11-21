@@ -201,6 +201,11 @@ describe("the canned fetcher matches the real one", () => {
     ["a redirected page", { status: 200, body: "<p>Shows</p>", finalUrl: MOVED }, { ...venue(NO_ROBOTS, redirect(MOVED)), [MOVED]: html("<p>Shows</p>") }],
     ["a page that is gone", "gone", venue(NO_ROBOTS, status(404, "Not Found"))],
     ["a page robots.txt disallows", "robots-blocked", venue(recordedRobots("disallows-us"))],
+    [
+      "a redirect to a page robots.txt disallows",
+      { robotsBlockedAt: "https://tickets.test/calendar" },
+      { ...venue(NO_ROBOTS, redirect("https://tickets.test/calendar")), "https://tickets.test/robots.txt": robots("User-agent: *\nDisallow: /calendar\n") },
+    ],
   ])("%s", async (_, canned, network) => {
     routes(network);
     expect(await cannedFetcher({ [CALENDAR]: canned }).fetch(CALENDAR)).toEqual(await fetcher().fetch(CALENDAR));

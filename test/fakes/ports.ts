@@ -17,11 +17,19 @@ function nothingFlagged(request: CompletionRequest): CompletionResult {
 /**
  * A canned response: a page with a status (and where its redirects ended, if anywhere else), a page
  * that is gone (a 404, read as the real fetcher reads one: no body), a robots.txt block, a
+ * redirect to a URL whose robots.txt blocks it (`robotsBlockedAt`, the hop refused), a
  * robots.txt that cannot be reached (thrown, as the real fetcher does), a page the fetch policy
  * refuses (a private host, a body over budget, an unreadable content type: a `FetchRefused`
  * thrown), or a network failure.
  */
-export type CannedPage = { status: number; body: string; finalUrl?: string } | "gone" | "robots-blocked" | "robots-unreachable" | "refused" | Error;
+export type CannedPage =
+  | { status: number; body: string; finalUrl?: string }
+  | { robotsBlockedAt: string }
+  | "gone"
+  | "robots-blocked"
+  | "robots-unreachable"
+  | "refused"
+  | Error;
 
 /** A scripted model reply, or an Error the call throws, as a connection reset partway through would. */
 export type ScriptedReply = CompletionResult | Error;
@@ -51,7 +59,7 @@ function carryingQuotes(pages: Record<string, CannedPage>, completions: Scripted
   });
   if (quotes.length === 0) return pages;
   const lines = quotes.map((q) => `\n<p>${q}</p>`).join("");
-  return Object.fromEntries(Object.entries(pages).map(([url, page]) => [url, typeof page === "object" && !(page instanceof Error) && page.body !== "" ? { ...page, body: page.body + lines } : page]));
+  return Object.fromEntries(Object.entries(pages).map(([url, page]) => [url, typeof page === "object" && "body" in page && page.body !== "" ? { ...page, body: page.body + lines } : page]));
 }
 
 /** Fake ports that record every call; none of them reach the network. */
@@ -100,6 +108,10 @@ export function cannedFetcher(pages: Record<string, CannedPage>, calls: string[]
       if (page === "robots-blocked") {
         record("robots-blocked", url);
         return { url, finalUrl: url, status: 0, body: "", robotsAllowed: false };
+      }
+      if (typeof page === "object" && "robotsBlockedAt" in page) {
+        record("robots-blocked", url);
+        return { url, finalUrl: page.robotsBlockedAt, status: 0, body: "", robotsAllowed: false };
       }
       if (page === "robots-unreachable") {
         record("robots-unreachable", url);

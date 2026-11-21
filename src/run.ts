@@ -1853,11 +1853,25 @@ interface RobotsGate {
  * the host's later own pages are held back for the rest of the pass: no fetch and no call. A host, not a path,
  * as the refusals met so far are a whole site's (Kauffman's own pages all pass through queue-it). The fetch policy
  * already pauses between pages of one origin, so taking a host's pages in turn costs no time. `lines` gives one
- * report line per refusing host, naming the page refused and counting those held back.
+ * report line per refusing host, naming the page refused and counting those held back. A refusal on a redirect's
+ * hop (Kauffman's ticket host sends to queue-it only while its waiting room is up, #288) is held on the host asked,
+ * which the job would ask again, and its line names the page refused and where the redirect came from.
  */
 function robotsGate(): RobotsGate {
   const last = new Map<string, Promise<void>>();
-  const refused = new Map<string, { url: string; title: string; held: number }>();
+  type Refusal = { url: string; title: string; held: number; refusedAt?: string };
+  const refused = new Map<string, Refusal>();
+  const line = (host: string, { url, title, held, refusedAt }: Refusal) => {
+    const at = refusedAt === undefined ? undefined : (hostOf(refusedAt) ?? refusedAt);
+    const refusal =
+      refusedAt === undefined
+        ? `robots.txt disallows ${url}`
+        : at === host
+          ? `robots.txt disallows ${refusedAt}, where ${url} redirects`
+          : `robots.txt of ${at} (where ${host} redirects) disallows ${refusedAt}, reached from ${url}`;
+    const on = at === undefined || at === host ? "it" : host;
+    return `${host}: ${refusal} ("${title}")${held > 0 ? `; ${plural(held, "more own page")} on ${on} not fetched this run` : ""}`;
+  };
   return {
     async fetch(url, title, fetch) {
       const host = hostOf(url) ?? url;
@@ -1872,14 +1886,13 @@ function robotsGate(): RobotsGate {
           return "held";
         }
         const fetched = await fetch();
-        if (!("page" in fetched) && fetched.failure === "disallowed") refused.set(host, { url, title, held: 0 });
+        if (!("page" in fetched) && fetched.failure === "disallowed") refused.set(host, { url, title, held: 0, ...(fetched.refusedAt ? { refusedAt: fetched.refusedAt } : {}) });
         return fetched;
       } finally {
         done();
       }
     },
-    lines: () =>
-      [...refused].map(([host, r]) => `${host}: robots.txt disallows ${r.url} ("${r.title}")${r.held > 0 ? `; ${plural(r.held, "more own page")} on it not fetched this run` : ""}`),
+    lines: () => [...refused].map(([host, r]) => line(host, r)),
   };
 }
 
@@ -2200,7 +2213,8 @@ const plainly = (ports: Ports): FetchRoute => [ports.fetcher];
 /** HTTP statuses that say a page is gone, which is a reading of it; any other failure is an outage. */
 const GONE_STATUSES = new Set([404, 410]);
 
-type NotFetched = { problem: string; failure: "outage" | "gone" | "disallowed" };
+/** A page not fetched; one robots.txt disallowed on a redirect's hop carries that hop's URL, the fetch result's `finalUrl`, as `refusedAt` (#288). */
+type NotFetched = { problem: string; failure: "outage" | "gone" | "disallowed"; refusedAt?: string };
 type Fetched = { page: FetchResult } | NotFetched;
 
 /**
@@ -2242,12 +2256,13 @@ async function fetchAndRead(
 /**
  * A page that came back readable, or the problem with it and what kind of failure it was: an
  * outage (it could not be loaded: a thrown network error, which includes a robots.txt that could
- * not be reached, or a failing status), gone (404, 410), or disallowed by robots.txt.
+ * not be reached, or a failing status), gone (404, 410), or disallowed by robots.txt, at the URL asked or at a
+ * redirect's hop (refusedAt).
  */
 async function fetchReadable(url: string, fetcher: FetchPort, options?: FetchOptions): Promise<Fetched> {
   try {
     const page = await fetcher.fetch(url, options);
-    if (!page.robotsAllowed) return { problem: `robots.txt disallows ${url}`, failure: "disallowed" };
+    if (!page.robotsAllowed) return { problem: `robots.txt disallows ${url}`, failure: "disallowed", ...(page.finalUrl !== url ? { refusedAt: page.finalUrl } : {}) };
     if (page.status >= 200 && page.status < 300) return { page };
     return { problem: `${url}: HTTP ${page.status}`, failure: GONE_STATUSES.has(page.status) ? "gone" : "outage" };
   } catch (error) {

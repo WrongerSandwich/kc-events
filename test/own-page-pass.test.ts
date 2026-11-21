@@ -167,6 +167,36 @@ describe("every upcoming event's own page read once (#254)", () => {
     ]);
   });
 
+  it.each([1, 4])(
+    "a refusal on a redirect's hop names the host that refused and the host asked, and holds the host asked (%i at once, #288)",
+    async (concurrency) => {
+      const queue = "https://granada.queue.test/?c=granada";
+      const { calls, requests, report } = await runAt(WEEK_1, {
+        pages: { [NEAR_URL]: { robotsBlockedAt: queue }, [FAR_URL]: ownPageBody("Second Show") },
+        completions: [listed(far, near())],
+        concurrency,
+      });
+
+      expect(calls.filter((c) => c.endsWith(FAR_URL))).toEqual([]);
+      expect(requests.map((r) => r.model)).toEqual(["test/extraction", "test/curation"]);
+      expect(report.ownPages).toEqual([
+        line({
+          failed: 1,
+          problems: [
+            `granada.test: robots.txt of granada.queue.test (where granada.test redirects) disallows ${queue}, reached from ${NEAR_URL} ("Black Country, New Road"); 1 more own page on granada.test not fetched this run`,
+          ],
+        }),
+      ]);
+    },
+  );
+
+  it("a refusal on a redirect's hop on the same host names both pages (#288)", async () => {
+    const moved = "https://granada.test/tickets/black-country-new-road/";
+    const { report } = await runAt(WEEK_1, { pages: { [NEAR_URL]: { robotsBlockedAt: moved } }, completions: [listed(near())] });
+
+    expect(report.ownPages).toEqual([line({ failed: 1, problems: [`granada.test: robots.txt disallows ${moved}, where ${NEAR_URL} redirects ("Black Country, New Road")`] })]);
+  });
+
   it("an event already judged is judged again once its own page gives it a description", async () => {
     const first = await runAt(WEEK_1, { pages: { [NEAR_URL]: "gone" } });
     expect(first.dataset.events[0]).not.toHaveProperty("description");
