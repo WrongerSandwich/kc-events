@@ -104,6 +104,39 @@ export type RunFigures = {
   stages: { stage: string; calls: number; usd: number }[];
 };
 
+/** The job's and the site's constants the How it works page states (CONSTANTS in src/build/how-it-works.ts). */
+export type HowItWorksConstants = Record<
+  | "strikesToExpire" | "outagesToUnverify" | "runsToStale" | "horizonSlackDays" | "fuzzyDateWindowDays" | "failingSourceRuns"
+  | "emptyReadingGuard" | "reverifyDays" | "archiveAfterWeeks" | "curationBatchSize" | "whyLineCap" | "maxPageChars" | "maxBodyBytes"
+  | "defaultCrawlDelayMs" | "maxCrawlDelayMs" | "calibrationLow" | "calibrationHigh" | "minPublished" | "staleAfterDays",
+  number
+>;
+
+/** What the How it works page is given at build (src/generated/how-it-works.ts), so that no figure on it is typed from a run by hand. */
+export type PublishedHowItWorks = {
+  /** research.config.yaml's settings the page names. */
+  settings: {
+    horizonWeeks: number;
+    spendCapUsd: number;
+    extractionReads: number;
+    concurrency: number;
+    ownPageReadsPerRun: number;
+    extractionModel: string;
+    curationModel: string;
+    discoveryCadence: string;
+    discoveryResultsPerQuery: number;
+    /** How many kinds the config lists: discovery makes one search for each. */
+    kinds: number;
+  };
+  constants: HowItWorksConstants;
+  /** The cron lines of the weekly run, the midweek pass and the nightly rebuild, and the run's two waits, in minutes. */
+  schedule: { weeklyCron: string; midweekCron: string; deployCron: string; runTimeoutMinutes: number; deployWaitMinutes: number };
+  /** What this build publishes. */
+  counts: { activeEvents: number; picks: number };
+  /** The newest weekly run's figures; absent when no weekly report was found beside the dataset. */
+  run?: RunFigures;
+};
+
 /** An event that went this run: listed as text with its page, since it has no page of its own any more. */
 export type GoneEvent = {
   title: string;
@@ -156,6 +189,7 @@ export type PublishedVenue = {
 
 /**
  * What loadPublished returns; the generator writes `events` to src/generated/events.ts, `descriptions` to
- * descriptions.ts, `about` to about.ts, `changes` to changes.ts, `venues` to venues.ts, and the rest to meta.ts.
+ * descriptions.ts, `about` to about.ts, `changes` to changes.ts, `venues` to venues.ts, `howItWorks` to how-it-works.ts,
+ * and the rest to meta.ts.
  */
-export type Published = PublishedMeta & { events: PublishedEvent[]; descriptions: PublishedDescriptions; about: PublishedAbout; changes: PublishedChanges; venues: PublishedVenue[] };
+export type Published = PublishedMeta & { events: PublishedEvent[]; descriptions: PublishedDescriptions; about: PublishedAbout; changes: PublishedChanges; venues: PublishedVenue[]; howItWorks: PublishedHowItWorks };

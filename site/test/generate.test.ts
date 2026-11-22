@@ -1,10 +1,12 @@
 // @vitest-environment node
-import { readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { PRODUCT, USER_AGENT } from "../../src/adapters/identity";
 import { CALIBRATION } from "../../src/curation-compare";
 import { PICK_REASONS } from "../../src/dataset";
+import { CONSTANTS, SCHEDULE } from "../src/build/how-it-works";
 import { FRONT_PAGE_BYTES, MAX_PICKS, writeGenerated } from "../src/build/write-generated";
 import { activeEvent, configYaml, dataset } from "./fixtures/dataset";
 import { tempDir } from "./fixtures/temp-dir";
@@ -67,6 +69,33 @@ describe("writeGenerated", () => {
     }
     expect(published.events.filter((e: { dontMiss: boolean }) => e.dontMiss)).toHaveLength(1);
     expect(published.events[1]).toEqual({ ...exported(join(outDir, "events.ts"))[1], description: "A three-piece playing their first record." });
+  });
+
+  it("writes what the How it works page states: the config's settings, the held constants, what is published, and the newest weekly run", () => {
+    const dir = tempDir("kc-generate-");
+    const datasetPath = join(dir, "events.json");
+    const configPath = join(dir, "research.config.yaml");
+    writeFileSync(datasetPath, JSON.stringify(dataset([activeEvent({ id: "evt_000000000001", dontMiss: true, pickReason: "rare", whyLine: "A rare occasion." }), activeEvent({ id: "evt_000000000002" })])));
+    writeFileSync(configPath, configYaml);
+    const outDir = join(dir, "generated");
+    const generate = () => writeGenerated({ datasetPath, configPath, outDir, publicDir: join(dir, "public"), today: "2026-10-05", now: new Date("2026-10-05T14:00:00Z") });
+
+    // No report beside the dataset: the module is written all the same, with no run on it.
+    generate();
+    const without = exported(join(outDir, "how-it-works.ts"));
+    expect(without).not.toHaveProperty("run");
+    expect(without.settings).toMatchObject({ horizonWeeks: 8, spendCapUsd: 5, extractionReads: 2, concurrency: 4, discoveryCadence: "weekly", discoveryResultsPerQuery: 5 });
+    expect(without.settings.extractionModel).toEqual(expect.any(String));
+    expect(without.settings.curationModel).toEqual(expect.any(String));
+    expect(without.counts).toEqual({ activeEvents: 2, picks: 1 });
+    expect(without.constants).toEqual(CONSTANTS);
+    expect(without.schedule).toEqual(SCHEDULE);
+    expect(exported(join(outDir, "meta.ts"))).not.toHaveProperty("howItWorks");
+
+    mkdirSync(join(dir, "runs"));
+    copyFileSync(fileURLToPath(new URL("../e2e/fixtures/runs/2026-10-05.json", import.meta.url)), join(dir, "runs", "2026-10-05.json"));
+    generate();
+    expect(exported(join(outDir, "how-it-works.ts")).run).toMatchObject({ runDate: "2026-10-05", minutes: 30 });
   });
 
   it("leaves an event held for promotion (ADR 0012) out of every generated module and the published events.json, verified reading or not", () => {

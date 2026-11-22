@@ -4,9 +4,70 @@
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import type { RunConfig } from "../../../src/config.ts";
 import { parseRunReport, type RunReport } from "../../../src/report.ts";
 import { localDate } from "../lib/dates";
-import type { RunFigures } from "../lib/types";
+import type { HowItWorksConstants, PublishedHowItWorks, RunFigures } from "../lib/types";
+
+/**
+ * The job's constants the page states, as literals: importing them would load the run's whole module graph in the
+ * generate step, which a production build has tripped on before (test/import-order.test.ts in the job).
+ * test/how-it-works-constants.test.ts holds every one to where the job defines it.
+ */
+export const CONSTANTS = {
+  strikesToExpire: 2,
+  outagesToUnverify: 3,
+  runsToStale: 4,
+  horizonSlackDays: 2,
+  fuzzyDateWindowDays: 3,
+  failingSourceRuns: 3,
+  emptyReadingGuard: 3,
+  reverifyDays: 10,
+  archiveAfterWeeks: 8,
+  curationBatchSize: 25,
+  whyLineCap: 200,
+  maxPageChars: 70_000,
+  maxBodyBytes: 5_000_000,
+  defaultCrawlDelayMs: 1_000,
+  maxCrawlDelayMs: 10_000,
+  calibrationLow: 25,
+  calibrationHigh: 35,
+  minPublished: 50,
+  staleAfterDays: 9,
+} as const satisfies HowItWorksConstants;
+
+/** The cron lines and waits in scripts/, which are shell and so cannot be imported; the same test holds them. */
+export const SCHEDULE = {
+  weeklyCron: "17 6 * * 1",
+  midweekCron: "17 6 * * 4",
+  deployCron: "5 0 * * *",
+  runTimeoutMinutes: 90,
+  deployWaitMinutes: 15,
+} as const;
+
+/** Everything the How it works page is given: the config's settings, the literals above, what is published, and the newest weekly run. */
+export function howItWorks(opts: { config: RunConfig; datasetPath: string; lastSuccessfulRun: string; activeEvents: number; picks: number }): PublishedHowItWorks {
+  const { config } = opts;
+  const report = readWeeklyReport(opts.datasetPath, opts.lastSuccessfulRun);
+  return {
+    settings: {
+      horizonWeeks: config.horizonWeeks,
+      spendCapUsd: config.spendCapUsd,
+      extractionReads: config.extractionReads,
+      concurrency: config.concurrency,
+      ownPageReadsPerRun: config.ownPageReadsPerRun,
+      extractionModel: config.models.extraction,
+      curationModel: config.models.curation,
+      discoveryCadence: config.discovery.cadence,
+      discoveryResultsPerQuery: config.discovery.resultsPerQuery,
+      kinds: config.kinds.length,
+    },
+    constants: CONSTANTS,
+    schedule: SCHEDULE,
+    counts: { activeEvents: opts.activeEvents, picks: opts.picks },
+    ...(report !== undefined && { run: runFigures(report) }),
+  };
+}
 
 /** A report's file name: its run date. Its Markdown twin and a failed run's refused records (`.failed.json`) are not reports. */
 const REPORT_FILE = /^(\d{4}-\d{2}-\d{2})\.json$/;

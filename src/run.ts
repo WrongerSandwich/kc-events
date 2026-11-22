@@ -95,10 +95,10 @@ import { hasTime, horizonEnd, shiftDate, toLocalDate, toLocalIso } from "./time.
 import { venueNeighborhoods, type VenueRow } from "./venues.js";
 
 /** Consecutive failed runs after which a source is flagged in the report. */
-const FAILING_SOURCE_THRESHOLD = 3;
+export const FAILING_SOURCE_THRESHOLD = 3;
 
 /** Active events a page must be about to strike before a reading of nothing on it counts as an outage instead (#78). */
-const EMPTY_READING_GUARD = 3;
+export const EMPTY_READING_GUARD = 3;
 
 /** The editable prompt documents, read by the CLI and passed in as values. */
 export interface Prompts {

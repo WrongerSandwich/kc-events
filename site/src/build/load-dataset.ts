@@ -14,6 +14,7 @@ import { addDays, isDateOnly, isValidDate, localDate } from "../lib/dates";
 import { isPast } from "../lib/events";
 import type { PickReason, Published, PublishedDescriptions, PublishedEvent } from "../lib/types";
 import { publishedChanges, readRunChanges } from "./changes.ts";
+import { howItWorks } from "./how-it-works.ts";
 import { href } from "./href.ts";
 import { isProductionBuild, knownOrigin } from "./origin.ts";
 import { buildVenues, readVenueTable } from "./venues.ts";
@@ -221,5 +222,6 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; v
     buildToday: today,
     timeZone: config.timezone,
     about: { crawler: PRODUCT, userAgent: USER_AGENT, geography: config.geography, horizonWeeks: config.horizonWeeks, neighborhoods: config.neighborhoods },
+    howItWorks: howItWorks({ config, datasetPath: opts.datasetPath, lastSuccessfulRun: dataset.lastSuccessfulRun, activeEvents: events.length, picks: events.filter((e) => e.dontMiss).length }),
   };
 }
