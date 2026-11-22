@@ -13,9 +13,10 @@
 # The licences ship beside the files, in src/fonts/LICENSE-*.txt.
 set -euo pipefail
 
-# What the display face sets: capitals (the site's name among them; a test holds it in), figures for a heading's or a
-# label's date, and the punctuation those carry. A letter outside it (an accent in a venue's name) falls to Geist.
-DISPLAY="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 &',.:;!?()/+-–—’‘“”·"
+# What the display face sets: capitals (the site's name among them; a test holds it in), the accented capitals a
+# venue's name may carry (Café, Salón), figures for a heading's or a label's date, and the punctuation those carry.
+# A character outside it falls to Geist.
+DISPLAY="ABCDEFGHIJKLMNOPQRSTUVWXYZÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜÝ0123456789 &',.:;!?()/+-–—’‘“”·@|#%*"
 
 geist=node_modules/@fontsource-variable/geist
 josefin=node_modules/@fontsource/josefin-sans

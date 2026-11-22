@@ -124,11 +124,13 @@ a.chip:hover { text-decoration: underline; }
 .section-heading::after { content: ""; flex: 1; min-width: var(--space-4); height: 4px; border-top: 1px solid var(--fg); border-bottom: 1px solid var(--fg); transform: translateY(-0.1em); }
 /* Forced colours (Windows High Contrast) drop backgrounds, and with them the crown: it keeps its own, in the text colour. */
 @media (forced-colors: active) { .section-heading::before { forced-color-adjust: none; background: CanvasText; } }
-/* Phones: a screen holds less, so the gap between sections closes a step and the heading a size; the double hairline
-   drops under the words, the column's width, so a heading that wraps keeps its rule. */
+/* Phones: a screen holds less, so the gap between sections closes a step and the heading a size. The heading is a
+   block there, not a row: the crown sits in the first line, on the capitals' baseline, so words that wrap do so after
+   it and never leave it alone on a line; the double hairline goes under the words, the column's width. */
 @media (max-width: 30rem) {
-  .section-heading { flex-wrap: wrap; gap: var(--space-2); font-size: 0.9375rem; letter-spacing: 0.1em; margin-top: var(--space-12); }
-  .section-heading::after { flex: none; width: 100%; }
+  .section-heading { display: block; font-size: 0.9375rem; letter-spacing: 0.1em; margin-top: var(--space-12); }
+  .section-heading::before { display: inline-block; margin-right: var(--space-2); transform: none; }
+  .section-heading::after { display: block; margin-top: var(--space-2); transform: none; }
 }
 
 /* The explorer's group, a day or a venue: smaller, and stuck just under the result bar (the explorer measures the bar

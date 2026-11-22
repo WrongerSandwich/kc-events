@@ -34,7 +34,7 @@ describe("the site's fonts", () => {
   });
 
   it("keeps the display face's file small and gives the subset another name than the reserved one", () => {
-    expect(statSync(new URL("../src/fonts/display-700.woff2", import.meta.url)).size).toBeLessThan(4_500);
+    expect(statSync(new URL("../src/fonts/display-700.woff2", import.meta.url)).size).toBeLessThan(5_500);
     expect(read("../src/styles/tokens.css")).toMatch(/--font-display: "KC Display"/);
     expect(read("../src/styles/fonts.css")).not.toMatch(/font-family: "Josefin Sans"/);
   });

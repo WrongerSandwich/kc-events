@@ -206,14 +206,14 @@ All neutrals are true greys (chroma 0), on purpose: a tinted neutral would bring
 ## 3. Typography
 
 **Body Font:** Geist Variable (with system-ui, sans-serif), cut to weights 400 to 600
-**Display Font:** KC Display, a subset of Josefin Sans Bold holding capitals, figures and punctuation, and no lower case
+**Display Font:** KC Display, a subset of Josefin Sans Bold holding capitals (the accented ones a venue's name may carry among them), figures and punctuation, and no lower case
 
 **Character:** A neutral, exact sans does everything that is read, in three weights and a tight scale. Over it, a 1920s geometric in tracked capitals sets the site's own words: the period note, for a skyline that is mostly Art Deco.
 
 ### Hierarchy
 - **Display** (700, 1.25rem, tracked 0.16em, uppercase): the site's name in the header. 0.875rem and 0.08em on phones under 26rem, so the nav keeps its row.
-- **Headline** (display face, 700, 2rem, 1.15, tracked 0.07em, uppercase): a page's one h1, over a short thick and thin flourish. 1.5rem on the front page on phones; 1.75rem for a venue's name or a list's (1.25rem on phones). An event page's h1 is not this: it is the event's title, in Geist at 600 and 1.75rem.
-- **Section** (display face, 700, 1.125rem, 1.2, tracked 0.12em, uppercase): horizon buckets, Always there, More <kind>, between the crown and a double hairline. 0.9375rem on phones. The explorer's sticky day or venue heading is not this: it stays Geist at 600 and 0.875rem.
+- **Headline** (display face, 700, 2rem, 1.15, tracked 0.07em, uppercase): a page's one h1, over a short thick and thin flourish. 1.5rem on the front page on phones; 1.75rem on the explorer and for a venue's name or a list's (1.25rem for those names on phones). An event page's h1 is not this: it is the event's title, in Geist at 600 and 1.75rem.
+- **Section** (display face, 700, 1.125rem, 1.2, tracked 0.12em, uppercase): horizon buckets, Always there, More <kind>, between the crown and a double hairline. 0.9375rem and 0.1em on phones. The explorer's sticky day or venue heading is not this: it stays Geist at 600 and 0.875rem.
 - **Caps label** (display face, 700, 0.6875rem, tracked 0.12em, uppercase): a date tile's weekday and month, the week strip's weekdays (0.625rem), the one-line list's dates.
 - **Title** (600, 1.125rem, 1.25, -0.01em): an event's name on a card. On an explorer row it is 1rem at 500.
 - **Body** (400, 1rem, 1.5): the why line, descriptions, prose. Lines capped near 38rem on a card, 70ch on a row, 42rem on a page.
@@ -261,8 +261,8 @@ Quiet instruments: precise edges, ink words, colour only where a kind lives.
 ### Rules and ornaments (Deco)
 All in ink (`fg`) or the strong rule's grey, never a hue, and all decoration: none carries meaning a reader needs.
 - **Thick and thin rule:** 3px, a 3px gap, 1px, the page's width. It closes the header; turned over (thin, then thick) it opens the footer. A 4.5rem cut of it is the flourish under a page's heading.
-- **Crown:** a stepped ziggurat, three steps to a flat top (`--crown`, a clip path that fits any box), 26 by 15px. It leads a section's heading and sits over today's tile in the week strip, and nowhere else: one stepped motif, used sparingly.
-- **Double hairline:** two 1px lines 2px apart, running from a section's heading to the column's edge; on phones it drops under the words, the column's width.
+- **Crown:** a stepped ziggurat, three steps to a flat top (`--crown`, a clip path that fits any box). It leads a section's heading, 26 by 15px, and sits over today's tile in the week strip, 26 by 13px, and nowhere else: one stepped motif, used sparingly.
+- **Double hairline:** two 1px lines 2px apart, running from a section's heading to the column's edge. On phones the heading is a block: the crown sits in the first line of the words, so a heading that wraps never leaves it alone, and the hairline goes under them, the column's width.
 - **Sunburst:** a half sun's eleven rays, short and long by turns, in the strong rule's grey, rising from the footer's rule with the fountain mark at its centre. Once a page, at its foot.
 - In forced colours the crown keeps a fill in the text colour; the rules are borders and survive on their own.
 

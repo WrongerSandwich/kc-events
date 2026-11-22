@@ -81,7 +81,9 @@
   .empty .num { color: var(--fg-faint); font-weight: var(--weight-regular); }
   /* Today: drawn in ink under a heavy bar and the section heading's crown, so the eye starts there. It keeps its
      weekday: the card's tile is what says "Today" (#184). */
-  .today { position: relative; border: 1px solid var(--fg); border-top-width: 3px; }
+  .today { position: relative; border: 1px solid var(--fg); border-top-width: 3px; padding-top: calc(var(--space-2) - 2px); }
+  /* A day's hover greys its edge; today's stays ink, or its bar would go grey under the crown. */
+  a.day.today:hover { border-color: var(--fg); }
   .today::before { content: ""; position: absolute; left: 50%; top: -3px; width: 26px; height: 13px; transform: translate(-50%, -100%); background: var(--fg); clip-path: var(--crown); }
   .today .name { color: var(--fg); }
   .today .num { color: var(--fg); font-weight: var(--weight-strong); }

@@ -274,7 +274,7 @@
   }
   .later li:last-child { border-bottom: 0; }
   /* A row's date, a label: in the display capitals, as a tile's weekday and month are (#293). */
-  .later .when { font-family: var(--font-display); font-weight: 700; font-size: var(--text-2xs); letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-muted); }
+  .later .when { font-family: var(--font-display); font-weight: 700; font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-muted); }
   /* Icon, then title, with a hanging indent: a wrapped title lines up under itself, not under the icon. */
   .later a { display: flex; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
   .later .where { font-size: var(--text-sm); color: var(--fg-muted); max-width: 18rem; text-wrap: pretty; }

@@ -140,7 +140,6 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   /* Once it has passed (EventPageIsland shows .passed): the tile greys, and there is nothing left to go to or put in a
      calendar. A grey fill, not a ring: the tile's stepped shoulders would cut a ring at its corners. */
   .event:has(.passed:not([hidden])) :global(.tile) { background: var(--pressed-tint); color: var(--fg-muted); }
-  .event:has(.passed:not([hidden])) :global(.tile.today)::before { background: var(--pressed-tint); }
   .event:has(.passed:not([hidden])) .primary, .event:has(.passed:not([hidden])) :global(.calendar) { display: none; }
   .passed {
     display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3);
