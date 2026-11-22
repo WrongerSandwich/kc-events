@@ -2,6 +2,8 @@
 import "../../styles/how-it-works.css";
 import Figure from "../../components/how/Figure.astro";
 import RoleTag from "../../components/how/RoleTag.astro";
+import ARun from "../../components/how/sections/ARun.astro";
+import TheWeek from "../../components/how/sections/TheWeek.astro";
 import { howItWorks } from "../../generated/how-it-works";
 import { meta } from "../../generated/meta";
 import Base from "../../layouts/Base.astro";
@@ -13,10 +15,10 @@ const { run, settings, constants } = howItWorks;
 const repo = (path: string) => `${siteConfig.repoUrl}/blob/main/${path}`;
 const sources = run === undefined ? "about fifty" : inWords(run.sourcesTried);
 
-/** The sections, in order: the contents row and the page share the list. */
+/** The sections, in order: the contents row and the page share the list. A section's body is its component. */
 const sections = [
-  { id: "week", title: "The week" },
-  { id: "run", title: "A run, step by step" },
+  { id: "week", title: "The week", Body: TheWeek },
+  { id: "run", title: "A run, step by step", Body: ARun },
   { id: "listing", title: "From a page to a listing" },
   { id: "matching", title: "Matching" },
   { id: "life", title: "Life of a listing" },
@@ -64,6 +66,7 @@ const sections = [
     {sections.map((s) => (
       <section id={s.id} aria-labelledby={`${s.id}-heading`}>
         <h2 id={`${s.id}-heading`} class="section-heading">{s.title}</h2>
+        {s.Body !== undefined && <s.Body />}
       </section>
     ))}
 

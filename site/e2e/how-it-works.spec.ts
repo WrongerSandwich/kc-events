@@ -41,6 +41,7 @@ test("the key names the five roles, and every role tag on the page says its role
 
 test("every figure that scrolls sideways is a labelled region the keyboard can reach", async ({ page }) => {
   await open(page);
+  expect(await page.locator(".how-scroll").count()).toBeGreaterThan(0);
   for (const region of await page.locator(".how-scroll").all()) {
     await expect(region).toHaveAttribute("tabindex", "0");
     await expect(region).toHaveAttribute("role", "region");
@@ -53,6 +54,43 @@ test("the contents row links every section, and every link lands on one", async 
   const hrefs = await page.locator(".how-contents a").evaluateAll((links) => links.map((a) => a.getAttribute("href")));
   expect(hrefs).toEqual(["#week", "#run", "#listing", "#matching", "#life", "#strikes", "#picks", "#safeguards", "#corrections"]);
   for (const href of hrefs) await expect(page.locator(`section${href} > h2.section-heading`)).toHaveCount(1);
+});
+
+test("the week gives the three scheduled times, from the schedule the scripts hold", async ({ page }) => {
+  await open(page);
+  const week = page.locator("#week");
+  await expect(week.locator(".how-scroll")).toHaveAttribute("aria-label", /week/i);
+  await expect(week.locator(".how-week-item time")).toHaveText(["6:17 am", "6:17 am", "12:05 am, every day"]);
+  await expect(week.locator(".how-week-day")).toHaveText(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
+  // The audit is placed after the run, with no clock time of its own (it is scheduled outside the repository).
+  await expect(week.locator(".how-week-item", { hasText: "Audit, after the run" })).not.toContainText(/\d:\d\d/);
+});
+
+test("a run is fourteen steps in six phases, each saying who does it and on which days", async ({ page }) => {
+  await open(page);
+  const steps = page.locator("#run .how-step");
+  await expect(steps).toHaveCount(14);
+  await expect(page.locator("#run .how-phase")).toHaveCount(6);
+  await expect(page.locator("#run .how-step-n")).toHaveText(Array.from({ length: 14 }, (_, i) => String(i + 1)));
+  for (const step of await steps.all()) {
+    expect(await step.locator(".how-role").count()).toBeGreaterThan(0);
+    const days = await step.locator(".how-mark").allTextContents();
+    expect(days).toHaveLength(2);
+    expect(days[0]).toMatch(/Monday/);
+    expect(days[1]).toMatch(/Thursday/);
+  }
+  // The midweek pass reads no list: its first step is the clearing out before re-verification.
+  await expect(steps.nth(0).locator(".how-mark").nth(1)).toHaveText("Does not run on Thursday");
+  await expect(steps.nth(5).locator(".how-mark").nth(1)).toHaveText("Runs on Thursday");
+});
+
+test("the spend bar has a segment for each stage that spent anything, and says each one's dollars", async ({ page }) => {
+  await open(page);
+  const bar = page.locator("#run .how-bar");
+  await expect(bar.locator("> span")).toHaveCount(3);
+  await expect(bar).toHaveAttribute("role", "img");
+  await expect(bar).toHaveAttribute("aria-label", "Spend by stage in the weekly run of October 5: Curation $0.22, Reading list pages $0.15, Own pages $0.05.");
+  await expect(page.locator("#run .how-bar-key li b")).toHaveText(["Curation: $0.22", "Reading list pages: $0.15", "Own pages: $0.05"]);
 });
 
 test("the page carries no script or inline style of its own: its styles are a linked sheet", () => {
