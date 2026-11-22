@@ -312,6 +312,8 @@
   .started[open] summary :global(.ui-icon) { transform: rotate(90deg); }
   .started .later { margin-top: 0; }
   .started .later a { color: var(--fg-muted); }
+  /* Its rows give a time, not a date, and a time stays in the text face's figures. */
+  .started .later .when { font-family: var(--font); font-weight: var(--weight-regular); font-size: var(--text-sm); letter-spacing: 0; text-transform: none; }
   /* What kind of week it is, at a glance; each chip narrows the section to those picks (links to the explorer
      without JavaScript). */
   .kinds { list-style: none; padding: 0; margin: var(--space-3) 0 var(--space-2); display: flex; flex-wrap: wrap; gap: var(--space-2); }
