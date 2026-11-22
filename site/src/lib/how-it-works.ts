@@ -28,6 +28,13 @@ export const STAGE_NAMES: Record<string, string> = {
   curation: "Curation",
 };
 
+const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+
+/** A count for running prose: a word up to twelve (the site's house style), figures with their commas past it. */
+export function inWords(n: number): string {
+  return WORDS[n] ?? n.toLocaleString("en-US");
+}
+
 /** "$0.69"; an amount that would round to no cents is "under $0.01", and nothing at all is "$0.00". */
 export function usd(n: number): string {
   if (n > 0 && n < 0.005) return "under $0.01";

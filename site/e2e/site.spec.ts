@@ -1105,7 +1105,7 @@ for (const path of ["/", "/explore?kind=music", "/e/evt_e2e000000001"]) {
   });
 }
 
-for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/v/recordbar", "/v/kauffman-center-for-the-performing-arts", "/venues", "/changes", "/about", "/404"]) {
+for (const path of ["/", "/explore", "/e/evt_e2e000000001", "/v/recordbar", "/v/kauffman-center-for-the-performing-arts", "/venues", "/changes", "/about", "/about/how-it-works", "/404"]) {
   test(`${path} makes no third-party requests and does not scroll sideways at 320px`, async ({ page }) => {
     const foreign: string[] = [];
     page.on("request", (r) => { if (!r.url().startsWith("http://localhost:4321")) foreign.push(r.url()); });

@@ -1,0 +1,13 @@
+---
+/**
+ * A diagram on the How it works page, framed, with its caption. `scroll` names a diagram too wide to restack on a
+ * phone (the week, a table, a drawn diagram): it then scrolls sideways inside the frame, as a region the keyboard can
+ * reach and a screen reader hears named.
+ */
+interface Props { caption?: string; scroll?: string }
+const { caption, scroll } = Astro.props;
+---
+<figure class="how-figure">
+  {scroll === undefined ? <slot /> : <div class="how-scroll" role="region" tabindex="0" aria-label={scroll}><slot /></div>}
+  {(caption !== undefined || Astro.slots.has("caption")) && <figcaption><slot name="caption">{caption}</slot></figcaption>}
+</figure>
