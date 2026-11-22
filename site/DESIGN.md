@@ -200,6 +200,8 @@ All neutrals are true greys (chroma 0), on purpose: a tinted neutral would bring
 
 **The Matched-Pair Rule.** A new kind gets the same lightness and chroma as the others and a hue in the widest gap on the wheel. Every shade must clear 4.5:1 on its own tint and on both grounds, in both schemes.
 
+**The Diagram-Roles Exception.** One page breaks the Only-Kinds-Bring-Colour Rule: How it works (`/about/how-it-works`), whose diagrams colour a step by who does it (the network, the extraction model, the curation model, plain code, a person), with two more tones for the dataset and a warning. The rule exists because a hue beside events is read as a kind; that page lists no event and shows no kind, and the colour is how a reader finds the steps that call a model. Its terms: the tones are defined in `src/styles/how-it-works.css` and never in `tokens.css`; they are used inside that page's figures and its key and nowhere else, never on a link, a heading or a rule; each is a kind's own pair (the kinds' hues, lightness and chroma, so the Matched-Pair contrast holds); none is the flag carmine, which stays the pick's; and every role and outcome is also said in words, so the page reads in greyscale, in forced colours and to a screen reader.
+
 ## 3. Typography
 
 **Body Font:** Geist Variable (with system-ui, sans-serif), cut to weights 400 to 600
@@ -307,6 +309,7 @@ A row of square day tiles (raised surface, hairline edge): the weekday in the ca
 - **Don't** build social-feed mechanics: infinite scroll, engagement bait, algorithmic ordering.
 - **Don't** dress it as a hand-written newsletter or editorial magazine: no serif "voice" type, no chatty personal copy, no curator persona.
 - **Don't** colour a link, a selection, a hover or the saved state with a hue; it would read as one more kind.
+- **Don't** use a diagram's role colour outside the How it works page's figures and key, or borrow the exception for another page.
 - **Don't** set an event's title, a button, a chip, a sentence, or any tag but a pick's reason in the display face, or anything in it in lower case; and never set Geist at 700.
 - **Don't** fill or tint anything with the flag's carmine, or set words in it: a pick's diamond and the staleness sign are all of it.
 - **Don't** give an ornament a hue, or add a second stepped motif: the crown and the tile's shoulders are the two.

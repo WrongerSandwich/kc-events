@@ -18,20 +18,20 @@ import { outsidePlace } from "./taxonomy.js";
 import { shiftDate } from "./time.js";
 
 /** Consecutive strikes after which an event expires. */
-const STRIKES_TO_EXPIRE = 2;
+export const STRIKES_TO_EXPIRE = 2;
 
 /** Consecutive runs unsighted after which a record no reading ever verified expires as stale (#82). */
-const RUNS_TO_STALE = 4;
+export const RUNS_TO_STALE = 4;
 
 /** Consecutive outages after which an active event becomes unverified (ADR 0008). */
-const OUTAGES_TO_UNVERIFY = 3;
+export const OUTAGES_TO_UNVERIFY = 3;
 
 /**
  * Days at the end of the horizon in which an omission still says nothing (#78): the model is told the
  * weeks and the last date, and one that reads "the next N weeks" a day or two short leaves out an
  * event the job counts as asked for.
  */
-const HORIZON_SLACK_DAYS = 2;
+export const HORIZON_SLACK_DAYS = 2;
 
 export function expire(event: Event, reason: ExpiryReason): Event {
   return { ...event, status: "expired", expiryReason: reason };

@@ -1,5 +1,6 @@
 {
   "runDate": "2026-10-05",
+  "mode": "weekly",
   "startedAt": "2026-10-05T06:00:00-05:00",
   "finishedAt": "2026-10-05T06:30:00-05:00",
   "horizonWeeks": 3,
@@ -13,7 +14,7 @@
     "expired": {}
   },
   "spend": {
-    "totalUsd": 0,
+    "totalUsd": 0.42,
     "capUsd": 5,
     "capHit": false,
     "shortfall": {
@@ -22,7 +23,45 @@
       "queriesNotSearched": 0,
       "leadsNotFollowed": 0,
       "eventsNotCurated": 0
-    }
+    },
+    "modelCalls": [
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "extraction",
+        "ms": 21000,
+        "costUsd": 0.08
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "extraction",
+        "ms": 19000,
+        "costUsd": 0.07
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "own-page",
+        "ms": 9000,
+        "costUsd": 0.05
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "own-page",
+        "ms": 8000,
+        "error": "timed out after 120000 ms"
+      },
+      {
+        "model": "anthropic/claude-sonnet-5.5",
+        "stage": "curation",
+        "ms": 41000,
+        "costUsd": 0.12
+      },
+      {
+        "model": "anthropic/claude-sonnet-5.5",
+        "stage": "curation",
+        "ms": 38000,
+        "costUsd": 0.1
+      }
+    ]
   },
   "discovery": {
     "enabled": false,
@@ -37,7 +76,35 @@
     "flagged": 0,
     "problems": []
   },
-  "sources": [],
+  "sources": [
+    {
+      "name": "recordBar",
+      "result": "fetched",
+      "extracted": 6
+    },
+    {
+      "name": "Kauffman Center for the Performing Arts",
+      "result": "fetched",
+      "extracted": 5
+    },
+    {
+      "name": "Screenland Armour",
+      "result": "fetched",
+      "extracted": 3
+    },
+    {
+      "name": "The Truman",
+      "result": "failed",
+      "extracted": 0,
+      "detail": "HTTP 406"
+    },
+    {
+      "name": "An excluded source",
+      "result": "excluded",
+      "extracted": 0,
+      "detail": "excluded: robots.txt"
+    }
+  ],
   "failingSources": [],
   "unmappableNeighborhoods": [],
   "promotionSuggestions": [],

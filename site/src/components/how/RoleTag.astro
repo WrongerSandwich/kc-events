@@ -1,0 +1,7 @@
+---
+/** Who does a step, in the role's colour and always in its words (DESIGN.md, The Diagram-Roles Exception). */
+import { ROLE_NAMES, type Role } from "../../lib/how-it-works";
+interface Props { role: Role }
+const { role } = Astro.props;
+---
+<span class={`how-role how-tone-${role}`}>{ROLE_NAMES[role]}</span>

@@ -111,6 +111,12 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // script (#195; audit 2026-10-21, A18). The 404 stands for those pages: 13.3 KB with the Deco direction's shared
   // pieces (#293; measured 678 over a 12,654 build), against 32.8 KB with the runtime, so this trips if it comes back.
   { page: "404.html", budget: 13_700, build: "fixture" },
+  // How it works: the page with the most markup, nine sections of diagrams drawn in HTML, and the one stylesheet of its
+  // own (src/styles/how-it-works.css, 3.2 KB), with no island and no script. Its content does not grow with the week:
+  // a run changes the strip's figures and the spend bar's segments, never their number. 29.6 KB measured (16 KB over
+  // the 404's shell; the facts pass's corrections were 380 bytes of it), so this trips on a runtime or a second copy
+  // of the sheet, and on a section added without a look.
+  { page: "about/how-it-works.html", budget: 30_000, build: "fixture" },
 ];
 
 function main(): void {

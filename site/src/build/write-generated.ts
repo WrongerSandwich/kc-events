@@ -1,8 +1,8 @@
 /**
- * Writes meta.ts, events.ts, dont-miss.ts, descriptions.ts, changes.ts, venues.ts, and about.ts for the pages and
- * islands to import (seven modules so each page and island ships only what it renders; descriptions go to the event
- * page alone, the changes to the changes page, and the venues and what the site says about the job to the Astro
- * pages), and events.json in the public directory: the published events with their descriptions, never the job's raw
+ * Writes meta.ts, events.ts, dont-miss.ts, descriptions.ts, changes.ts, venues.ts, about.ts, and how-it-works.ts for
+ * the pages and islands to import (eight modules so each page and island ships only what it renders; descriptions go
+ * to the event page alone, the changes to the changes page, the venues and what the site says about the job to the
+ * Astro pages, and a run's figures to the How it works page), and events.json in the public directory: the published events with their descriptions, never the job's raw
  * file, whose evidence, leads, counters, and held-back records stay in git. Paths and the clock are parameters so a
  * test can write somewhere else.
  */
@@ -25,7 +25,7 @@ export const MAX_PICKS = 35;
 const PROMPT_LOW_PICKS = 25;
 
 export function writeGenerated(opts: { datasetPath: string; configPath: string; venuesPath?: string; outDir: string; publicDir: string; today?: string; now?: Date }): { eventCount: number; buildToday: string } {
-  const { events, descriptions, about, changes, venues, ...meta } = loadPublished({
+  const { events, descriptions, about, changes, venues, howItWorks, ...meta } = loadPublished({
     datasetPath: opts.datasetPath,
     configPath: opts.configPath,
     ...(opts.venuesPath === undefined ? {} : { venuesPath: opts.venuesPath }),
@@ -40,6 +40,7 @@ export function writeGenerated(opts: { datasetPath: string; configPath: string; 
   writeFileSync(join(opts.outDir, "changes.ts"), `${header}import type { PublishedChanges } from "../lib/types";\nexport const changes: PublishedChanges = ${JSON.stringify(changes)};\n`);
   writeFileSync(join(opts.outDir, "venues.ts"), `${header}import type { PublishedVenue } from "../lib/types";\nexport const venues: PublishedVenue[] = ${JSON.stringify(venues)};\n`);
   writeFileSync(join(opts.outDir, "about.ts"), `${header}import type { PublishedAbout } from "../lib/types";\nexport const about: PublishedAbout = ${JSON.stringify(about)};\n`);
+  writeFileSync(join(opts.outDir, "how-it-works.ts"), `${header}import type { PublishedHowItWorks } from "../lib/types";\nexport const howItWorks: PublishedHowItWorks = ${JSON.stringify(howItWorks)};\n`);
   const dontMiss = events.filter((e) => e.dontMiss);
   writeFileSync(join(opts.outDir, "dont-miss.ts"), `${header}import type { PublishedEvent } from "../lib/types";\nexport const dontMiss: PublishedEvent[] = ${JSON.stringify(dontMiss)};\n`);
   if (dontMiss.length > MAX_PICKS) {

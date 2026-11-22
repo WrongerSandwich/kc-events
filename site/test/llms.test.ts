@@ -69,6 +69,12 @@ describe("llmsTxt (#188)", () => {
     expect(s).toContain("https://www.kcthisweek.com/explore?kind=music&region=central-kc");
   });
 
+  it("lists the About page and the page under it that says how the list is researched", () => {
+    const s = section("Pages");
+    expect(s).toContain("- https://www.kcthisweek.com/about : ");
+    expect(s).toContain("- https://www.kcthisweek.com/about/how-it-works : ");
+  });
+
   it("names every events.json field and the schema version", () => {
     const s = section("The dataset");
     expect(s).toContain("schemaVersion (2,");

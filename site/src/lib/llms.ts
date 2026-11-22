@@ -104,6 +104,7 @@ Cite as: ${i.siteName}, ${i.origin.replace(/\/$/, "")} (data under CC BY 4.0)
 - ${at("/explore")} : active events, filterable by date, kind, region, picks, and search (filters are in the query string, applied in the browser); its HTML lists today through Sunday whatever the query, so read every event from /events.json below
 - ${pattern("/e/<id>")} : one event; add .ics for a calendar file
 - ${at("/about")} : how the site is made and where to report a wrong listing
+- ${at("/about/how-it-works")} : how the weekly research run works, step by step: what it reads, how a date and venue are checked against their page, how events are matched, kept, struck and picked
 
 ## Lists
 

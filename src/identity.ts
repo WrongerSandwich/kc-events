@@ -17,7 +17,7 @@ import { hostOf, samePage } from "./hosts.js";
 import { hasTime } from "./time.js";
 
 /** How far apart two dates can be and still be the same event under the fuzzy match. */
-const FUZZY_DATE_WINDOW_DAYS = 3;
+export const FUZZY_DATE_WINDOW_DAYS = 3;
 const DAY_MS = 86_400_000;
 
 /**

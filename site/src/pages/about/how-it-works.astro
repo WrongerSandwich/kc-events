@@ -1,0 +1,85 @@
+---
+import "../../styles/how-it-works.css";
+import Figure from "../../components/how/Figure.astro";
+import RoleTag from "../../components/how/RoleTag.astro";
+import ARun from "../../components/how/sections/ARun.astro";
+import Corrections from "../../components/how/sections/Corrections.astro";
+import LifeOfAListing from "../../components/how/sections/LifeOfAListing.astro";
+import Matching from "../../components/how/sections/Matching.astro";
+import PageToListing from "../../components/how/sections/PageToListing.astro";
+import Picks from "../../components/how/sections/Picks.astro";
+import Safeguards from "../../components/how/sections/Safeguards.astro";
+import StrikeOrOutage from "../../components/how/sections/StrikeOrOutage.astro";
+import TheWeek from "../../components/how/sections/TheWeek.astro";
+import { howItWorks } from "../../generated/how-it-works";
+import { meta } from "../../generated/meta";
+import Base from "../../layouts/Base.astro";
+import { formatLong } from "../../lib/dates";
+import { duration, inWords, roughly, runDay, usd } from "../../lib/how-it-works";
+import { siteConfig } from "../../site.config";
+
+const { run, settings, constants } = howItWorks;
+const repo = (path: string) => `${siteConfig.repoUrl}/blob/main/${path}`;
+/** Sources the newest weekly run fetched: those it tried, less those that failed. */
+const sourcesRead = run === undefined ? 0 : run.sourcesTried - run.sourcesFailed;
+// With no report to count from (or one that lists no source), the lede gives the registry's size in round words.
+const sources = sourcesRead === 0 ? "about fifty" : roughly(sourcesRead);
+
+/** The sections, in order: the contents row and the page share the list. A section's body is its component. */
+const sections = [
+  { id: "week", title: "The week", Body: TheWeek },
+  { id: "run", title: "A run, step by step", Body: ARun },
+  { id: "listing", title: "From a page to a listing", Body: PageToListing },
+  { id: "matching", title: "Matching", Body: Matching },
+  { id: "life", title: "Life of a listing", Body: LifeOfAListing },
+  { id: "strikes", title: "Strike or outage", Body: StrikeOrOutage },
+  { id: "picks", title: "Picks", Body: Picks },
+  { id: "safeguards", title: "Safeguards", Body: Safeguards },
+  { id: "corrections", title: "Corrections and fixes", Body: Corrections },
+];
+---
+<Base title="How it works" description="How the weekly research job reads venue pages, checks what it read, and keeps the list current.">
+  <article class="how">
+    <nav class="how-back" aria-label="Breadcrumb"><a href="/about">About</a> <span aria-hidden="true">/</span> <span aria-current="page">How it works</span></nav>
+    <h1>How it works</h1>
+    <p class="lede">Once a week a research job reads {sources} venue and organizer calendars, checks every date and venue it read against the page it came from, decides which events are picks, and publishes the result. A shorter pass on Thursday checks the coming {inWords(constants.reverifyDays)} days again. This page shows how, step by step.</p>
+
+    {run !== undefined && (
+      <section class="how-strip" aria-labelledby="how-strip">
+        <p id="how-strip" class="how-label">The weekly run of {runDay(run.runDate)}</p>
+        <dl>
+          <div><dt>Sources read</dt><dd>{sourcesRead}</dd></div>
+          <div><dt>Sources that failed</dt><dd>{run.sourcesFailed}</dd></div>
+          <div><dt>Events sighted on their pages</dt><dd>{run.found.toLocaleString("en-US")}</dd></div>
+          <div><dt>New records, shown or held back</dt><dd>{run.new.toLocaleString("en-US")}</dd></div>
+          <div><dt>Model calls</dt><dd>{run.modelCalls.toLocaleString("en-US")}</dd></div>
+          <div><dt>Spent on models, of a {usd(run.capUsd)} cap</dt><dd>{usd(run.spendUsd)}</dd></div>
+          <div><dt>Start to finish</dt><dd>{duration(run.minutes)}</dd></div>
+        </dl>
+      </section>
+    )}
+
+    <nav class="how-contents" aria-label="On this page">
+      <ol>{sections.map((s, i) => <li><a href={`#${s.id}`}>{i + 1}. {s.title}</a></li>)}</ol>
+    </nav>
+
+    <Figure caption="The color on a step or a box says who does it. Every diagram below uses these five.">
+      <div class="how-key">
+        <div><RoleTag role="network" />A page fetched, plainly or in a headless browser, or a web search.</div>
+        <div><RoleTag role="extraction" /><span><code>{settings.extractionModel}</code> reads one page and reports what it lists.</span></div>
+        <div><RoleTag role="curation" /><span><code>{settings.curationModel}</code> judges a batch of events.</span></div>
+        <div><RoleTag role="code" />Rules written as code. No model and no network.</div>
+        <div><RoleTag role="hand" />A file a person edits, or a call a person makes.</div>
+      </div>
+    </Figure>
+
+    {sections.map((s) => (
+      <section id={s.id} aria-labelledby={`${s.id}-heading`}>
+        <h2 id={`${s.id}-heading`} class="section-heading">{s.title}</h2>
+        <s.Body />
+      </section>
+    ))}
+
+    <p class="how-foot">Drawn from the code in <a href={siteConfig.repoUrl}>the repository</a> as it stood when this page was built, on {formatLong(meta.buildToday)}{run !== undefined && <>; the run's figures are from its report</>}. The terms used here are defined in <a href={repo("CONTEXT.md")}>the glossary</a>, and the decisions behind them are recorded in <a href={`${siteConfig.repoUrl}/tree/main/docs/adr`}>the decision records</a>.</p>
+  </article>
+</Base>

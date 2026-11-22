@@ -1,0 +1,240 @@
+---
+/**
+ * Section 2: what a run reads and writes, its steps in the order the code runs them, and where its spend goes. Every
+ * number in a step is the config's or one of the held constants; the bar is the newest weekly run's.
+ */
+import { howItWorks } from "../../../generated/how-it-works";
+import { barShares, inWords, runDay, STAGE_NAMES, usd, type Role } from "../../../lib/how-it-works";
+import { siteConfig } from "../../../site.config";
+import Figure from "../Figure.astro";
+import RoleTag from "../RoleTag.astro";
+
+const { run, settings, constants } = howItWorks;
+const file = (path: string) => `${siteConfig.repoUrl}/blob/main/${path}`;
+const dir = (path: string) => `${siteConfig.repoUrl}/tree/main/${path}`;
+const megabytes = constants.maxBodyBytes / 1_000_000;
+const monthly = settings.discoveryCadence === "monthly";
+
+/** A step runs on a day, does not, or (discovery, on a monthly cadence) only in the month's first run. */
+type Day = "on" | "off" | "first";
+const dayWords = (day: Day, name: string) => (day === "on" ? `Runs on ${name}` : day === "off" ? `Does not run on ${name}` : `On ${name}, in the first run of the month only`);
+const markClass = { on: "how-mark how-mark-on", off: "how-mark", first: "how-mark how-mark-half" };
+
+const phases: { name: string; question?: string; steps: { title: string; roles: Role[]; mon: Day; thu: Day; text: string }[] }[] = [
+  {
+    name: "Find",
+    question: "What do the pages list right now?",
+    steps: [
+      {
+        title: "Registry lane",
+        roles: ["network"],
+        mon: "on",
+        thu: "off",
+        text: `Every active source's listing pages are fetched: plainly by default, and through a headless browser where a script draws the list or the site turns a plain request away. A source that fails ${inWords(constants.failingSourceRuns)} runs in a row is named in the report. If no source at all can be fetched, the run stops here.`,
+      },
+      {
+        title: "Extraction",
+        roles: ["extraction", "code"],
+        mon: "on",
+        thu: "off",
+        text: `Each page is read ${settings.extractionReads === 2 ? "twice, side by side," : "once"} under the <a href="${file("prompts/extraction-rules.md")}">extraction rules</a> and the source's own hints. Every event the model reports is a candidate, which code then keeps as a sighting or drops (<a href="#listing">From a page to a listing</a>).${settings.extractionReads === 2 ? " The second read confirms the first or covers what it missed." : ""}`,
+      },
+      {
+        title: "Discovery lane",
+        roles: ["network", "extraction"],
+        mon: monthly ? "first" : "on",
+        thu: "off",
+        text: `${monthly ? "Monthly. " : ""}One web search for each of the ${inWords(settings.discoverySearches)} kinds of event the config names (the catch-all kind has none), ${inWords(settings.discoveryResultsPerQuery)} results each. A result on a listings site is read only for its links; any other is fetched plainly and read once, under the same rules as a source's page. Discovery finds and never admits: an event found on a site nobody has looked at is held in step 5.`,
+      },
+    ],
+  },
+  {
+    name: "Reconcile",
+    question: "Which of these are already known?",
+    steps: [
+      {
+        title: "Merge sightings",
+        roles: ["code"],
+        mon: "on",
+        thu: "off",
+        text: `Each sighting is matched against the stored events (<a href="#matching">Matching</a>). No match makes a new event. A match refreshes the stored event, cancels it or leaves it alone, depending on whether the sighting's page has a say over it.`,
+      },
+      {
+        title: "Clear out, fold, hold",
+        roles: ["code"],
+        mon: "on",
+        thu: "on",
+        text: `A stored event in a place outside the covered area expires (in the weekly run, before the merge, so that no sighting refreshes it first). What is past expires too, and so does anything that cites an index page, a promotion, or an event that is not open to the public. Duplicates fold into the record seen first. Discovery's finds on sites no source covers are held until a person adds the site to the source list. All of this comes before re-verification, so that nothing is fetched to check a record that is already going.`,
+      },
+    ],
+  },
+  {
+    name: "Check",
+    question: "Is everything nobody saw still there?",
+    steps: [
+      {
+        title: "Re-verification",
+        roles: ["network", "extraction", "code"],
+        mon: "on",
+        thu: "on",
+        text: `Every active event that no lane sighted in this run, and every one that was verified once and has been hidden since, has its primary page fetched and read once. The reading refreshes the event, strikes it, or counts an outage (<a href="#strikes">Strike or outage</a>). On Monday the registry lane has already seen nearly everything, so little is left. On Thursday this is the one step that reads pages: no list is read and nothing is searched, and it checks the events of the next ${inWords(constants.reverifyDays)} days.`,
+      },
+      {
+        title: "Aging the never-verified",
+        roles: ["code"],
+        mon: "on",
+        thu: "off",
+        text: `A record that no reading ever verified is never re-verified, so only a sighting can say it is still listed. After ${inWords(constants.runsToStale)} weekly runs without one, where a lane could have seen it, it expires as stale.`,
+      },
+    ],
+  },
+  {
+    name: "Enrich",
+    question: "What did the list's line leave out?",
+    steps: [
+      {
+        title: "Own pages",
+        roles: ["network", "extraction"],
+        mon: "on",
+        thu: "off",
+        text: `Each upcoming event's own page (its details or tickets link) is fetched and read once under the <a href="${file("prompts/event-page-rules.md")}">event page rules</a>: its time, price and age limit, a fuller description, the weekdays a run plays, and the venue when the list gave none. Nearest start first, at most ${inWords(settings.ownPageReadsPerRun)} in a run. A page is read again only when the event's date or its own page changes.`,
+      },
+      {
+        title: "A second fold, then places",
+        roles: ["code"],
+        mon: "on",
+        thu: "on",
+        text: `If step 8 gave any record a venue, duplicates fold a second time. Then neighborhoods: a venue with a row in the <a href="${file("data/venues.yaml")}">venue table</a> goes where the row says, the rest go where the page's reading put them, and anything not on the config's list lands in "Elsewhere in the metro" and is named in the report.`,
+      },
+    ],
+  },
+  {
+    name: "Judge",
+    question: "Which of these would a friend bring up?",
+    steps: [
+      {
+        title: "Curation",
+        roles: ["curation"],
+        mon: "on",
+        thu: "on",
+        text: `Active one-offs and limited runs that are new, that have changed, or that were judged under an earlier version of the prompt go to the curation model in batches of ${constants.curationBatchSize}, sorted by kind and then by date. Each is answered pick, close or no (<a href="#picks">Picks</a>).`,
+      },
+      {
+        title: "Hand picks",
+        roles: ["hand", "code"],
+        mon: "on",
+        thu: "on",
+        text: `The entries in the <a href="${file("data/picks.yaml")}">hand picks file</a> are applied over the model's verdicts, on every run, until they are taken out. The model's own judgment is kept beside each and comes back when the entry goes.`,
+      },
+      {
+        title: "The picks' own pages",
+        roles: ["network", "extraction"],
+        mon: "on",
+        thu: "off",
+        text: `A pick that step 8's ceiling passed over has its own page read now, so that the ceiling never leaves a pick with its list line alone.`,
+      },
+    ],
+  },
+  {
+    name: "Write",
+    steps: [
+      {
+        title: "Archive and report",
+        roles: ["code"],
+        mon: "on",
+        thu: "on",
+        text: `Expired records whose last day and last change are both more than ${inWords(constants.archiveAfterWeeks)} weeks back leave the live file for the archive. The report is put together: counts, spend by stage, a line for each source, every pick and close call, and what changed since the last run. If model calls were made and none succeeded, the run fails here.`,
+      },
+      {
+        title: "Writing the files",
+        roles: ["code"],
+        mon: "on",
+        thu: "on",
+        text: `Outside <code>run()</code>. The new dataset must pass its schema or nothing is written. Each file is written in full to a temporary copy beside it, and only then are they renamed into place, one after another, so that none is ever left half written.`,
+      },
+    ],
+  },
+];
+// Steps are numbered through the phases, 1 to 14.
+let n = 0;
+const numbered = phases.map((phase) => ({ ...phase, steps: phase.steps.map((step) => ({ ...step, n: ++n })) }));
+
+const shares = run === undefined ? [] : barShares(run.stages);
+const stageName = (stage: string) => STAGE_NAMES[stage] ?? stage;
+/** Curation is the curation model's stage; every other stage is the extraction model reading a page. */
+const stageRole = (stage: string): Role => (stage === "curation" ? "curation" : "extraction");
+---
+<p>All of a run's logic is one function, <a href={file("src/run.ts")}><code>run()</code></a>. It reads and writes nothing itself: it is handed files that were already read and five ports to the outside world, and it hands back a new dataset and a report. That is why the tests can run a whole week of it, with stand-ins for the network and the models.</p>
+
+<Figure>
+  <div class="how-seam">
+    <div class="how-seam-col">
+      <p class="how-label">Reads</p>
+      <div class="how-file how-tone-hand"><a href={file("research.config.yaml")}>research.config.yaml</a><small>The horizon, the spend cap, the models, the area covered.</small></div>
+      <div class="how-file how-tone-hand"><a href={file("data/registry.yaml")}>data/registry.yaml</a><small>The source list, kept by hand.</small></div>
+      <div class="how-file how-tone-hand"><a href={dir("prompts")}>prompts/</a><small>The three sets of written rules the models read by.</small></div>
+      <div class="how-file how-tone-hand"><a href={file("data/picks.yaml")}>data/picks.yaml</a>, <a href={file("data/venues.yaml")}>data/venues.yaml</a><small>Hand picks, and the venue table.</small></div>
+      <div class="how-file how-tone-data"><a href={file("data/events.json")}>data/events.json</a><small>What the last run left.</small></div>
+    </div>
+    <div class="how-arrow" aria-hidden="true">→</div>
+    <div class="how-core">
+      <b>run()</b>
+      <p>The same inputs, and the same answers from its ports, give the same dataset and report.</p>
+      <ul class="how-ports" aria-label="Its five ports">
+        <li><b>model</b>: OpenRouter</li>
+        <li><b>search</b>: Tavily</li>
+        <li><b>fetcher</b>: plain HTTP</li>
+        <li><b>browser fetcher</b>: headless Chromium</li>
+        <li><b>clock</b></li>
+      </ul>
+    </div>
+    <div class="how-arrow" aria-hidden="true">→</div>
+    <div class="how-seam-col">
+      <p class="how-label">Writes</p>
+      <div class="how-file how-tone-data"><a href={file("data/events.json")}>data/events.json</a><small>Every record: active, unverified and expired.</small></div>
+      <div class="how-file how-tone-data"><a href={dir("data/runs")}>data/runs/</a><small>The run's report, once for people and once for programs.</small></div>
+      <div class="how-file how-tone-data"><a href={dir("data/archive")}>data/archive/</a><small>Expired records more than {inWords(constants.archiveAfterWeeks)} weeks gone.</small></div>
+    </div>
+  </div>
+  <Fragment slot="caption">Every model call goes through one wrapper, which adds up the cost and stops calling at the cap. Every fetch goes through one policy: <code>robots.txt</code> at each redirect, public hosts only, {megabytes} MB at most, and a pause between requests to one site.</Fragment>
+</Figure>
+
+<h3>The steps, in the order the code runs them</h3>
+<p class="how-note">The two marks on the right of a step say whether it runs on Monday, in the weekly run, and on Thursday, in the midweek pass.</p>
+
+<Figure>
+  <ol class="how-pipe">
+    {numbered.map((phase) => (
+      <>
+        <li class="how-phase"><b>{phase.name}{phase.question !== undefined && <span>: {phase.question}</span>}</b><i aria-hidden="true">Mon</i><i aria-hidden="true">Thu</i></li>
+        {phase.steps.map((step) => (
+          <li class="how-step">
+            <span class="how-step-n">{step.n}</span>
+            <div class="how-step-body">
+              <h4>{step.title}{step.roles.map((role) => <RoleTag role={role} />)}</h4>
+              <p set:html={step.text} />
+            </div>
+            <span class={markClass[step.mon]}><span class="visually-hidden">{dayWords(step.mon, "Monday")}</span></span>
+            <span class={markClass[step.thu]}><span class="visually-hidden">{dayWords(step.thu, "Thursday")}</span></span>
+          </li>
+        ))}
+      </>
+    ))}
+  </ol>
+  <Fragment slot="caption">A half-filled mark is the first run of the month only. Steps 2, 3, 6, 8 and 12 read {inWords(settings.concurrency)} pages at once and take the results up in page order, so that what a run writes never depends on which page answered first. Step 1 fetches its pages one at a time.</Fragment>
+</Figure>
+
+{shares.length > 0 && run !== undefined && (
+  <>
+    <h3>Where the money goes</h3>
+    <Figure>
+      <div class="how-bar" role="img" aria-label={`Spend by stage in the weekly run of ${runDay(run.runDate)}: ${shares.map((s) => `${stageName(s.stage)} ${usd(s.usd)}`).join(", ")}.`}>
+        {shares.map((s) => <span class={`how-tone-${stageRole(s.stage)}`} style={`flex: 0 1 ${s.share}%`} />)}
+      </div>
+      <ul class="how-bar-key">
+        {shares.map((s) => <li><b>{stageName(s.stage)}: {usd(s.usd)}</b><span>{s.calls.toLocaleString("en-US")} {s.calls === 1 ? "call" : "calls"} to the {stageRole(s.stage)} model</span></li>)}
+      </ul>
+      <Fragment slot="caption">{usd(run.spendUsd)} of the {usd(run.capUsd)} cap, in the weekly run of {runDay(run.runDate)}. The cap stops model calls in the middle of a run; a monthly limit on the model provider's key, set by hand, backstops a bug in the cap.</Fragment>
+    </Figure>
+  </>
+)}

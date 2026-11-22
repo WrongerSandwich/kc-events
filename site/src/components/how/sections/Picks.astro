@@ -1,0 +1,51 @@
+---
+/** Section 7: how an event becomes a pick (ADR 0014). The reasons' words are the About page's and the pick tag's. */
+import { howItWorks } from "../../../generated/how-it-works";
+import { reasonWord } from "../../../lib/events";
+import { inWords } from "../../../lib/how-it-works";
+import type { PickReason } from "../../../lib/types";
+import { siteConfig } from "../../../site.config";
+import PickTag from "../../PickTag.svelte";
+import Figure from "../Figure.astro";
+
+const { counts, constants, settings } = howItWorks;
+const prompt = `${siteConfig.repoUrl}/blob/main/prompts/curation-prompt.md`;
+const handPicks = `${siteConfig.repoUrl}/blob/main/data/picks.yaml`;
+const reasons: [PickReason, string][] = [
+  ["rare", "A chance that seldom comes to Kansas City."],
+  ["big-name", "A name most people would recognize."],
+  ["occasion", "A large event much of the city turns out for."],
+  ["tradition", "Once a year, with a season to it."],
+  ["unusual", "Unlike anything else on the list."],
+  ["major-run", "A limited run worth planning around."],
+];
+---
+<p>Curation asks one question of each event: picture a mixed group of friends planning something to do; would one of them bring this up, and why? The answer is a verdict with a named reason, never a score. The question and the tests for each reason are <a href={prompt}>the curation prompt</a>.</p>
+
+<Figure>
+  <p class="how-label">Who is judged</p>
+  <ul class="how-cards">
+    <li class="how-card"><span class="how-num">{counts.activeEvents.toLocaleString("en-US")}</span>events are on the site today. Recurring ones are left out: they are never picks.</li>
+    <li class="how-card"><span class="how-num">{counts.picks.toLocaleString("en-US")}</span>of them are picks today.</li>
+    <li class="how-card">Of the rest, an event is judged when it is new, when it has changed since it was last judged (its title, date, venue or status, or a description its own page filled in), or when it was judged under another version of the prompt.</li>
+    <li class="how-card how-tone-curation">Those go to the curation model in batches of {constants.curationBatchSize}, sorted by kind and then by date, each batch with the prompt.</li>
+  </ul>
+  <p class="how-down">One verdict for each event <span aria-hidden="true">↓</span></p>
+  <ul class="how-cards how-cards-3">
+    <li class="how-card how-verdict"><b>Pick</b>A clear yes under exactly one reason, with a why-line: one sentence, under {constants.whyLineCap} characters, that a reader could disagree with. Published, with its reason on a tag: <PickTag reason="rare" /></li>
+    <li class="how-card how-verdict how-tone-warn"><b>Close</b>A friend might bring it up, but no reason's test is clearly met. Stored with a note that names the reason it nearly met. Listed in the run's report, never published.</li>
+    <li class="how-card how-verdict how-tone-plain"><b>No</b>The default, and most events. Unsure between pick and close means close; unsure between close and no means no.</li>
+  </ul>
+  <p class="how-down">Then the hand picks file <span aria-hidden="true">↓</span></p>
+  <ul class="how-cards">
+    <li class="how-card how-tone-hand"><b>The hand picks file stands over the model</b>A pick or a drop in <a href={handPicks}>the file</a>, by the event's id, is applied on every run until the entry is taken out, and the event is marked as picked by hand. An entry whose event is gone, folded into another or retitled is reported as stale and not applied.</li>
+  </ul>
+  <Fragment slot="caption">The prompt's own figure for picks is {constants.calibrationLow} to {constants.calibrationHigh} across the {inWords(settings.horizonWeeks)}-week horizon: a check on where the line sits, never a quota. Each judgment records a fingerprint of the prompt it was made under, so an edit to the prompt has every eligible event judged again, once, at the next run; and an edit lands together with a measurement of how many verdicts it flips.</Fragment>
+</Figure>
+
+<h3>The six reasons</h3>
+<Figure>
+  <ul class="how-cards how-cards-3">
+    {reasons.map(([reason, claim]) => <li class="how-card how-reason"><b>{reasonWord(reason)}</b>{claim}</li>)}
+  </ul>
+</Figure>

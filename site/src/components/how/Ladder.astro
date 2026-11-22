@@ -1,0 +1,25 @@
+---
+/**
+ * A ladder of questions asked in order: a rung's `yes` leaves for its answer, its `no` falls to the next rung, and
+ * the last falls to `end`. The questions and answers are this site's own words, written as HTML.
+ */
+import type { Tone } from "../../lib/how-it-works";
+interface Props {
+  rungs: { q: string; note?: string; a: string; tone: Tone }[];
+  end: { a: string; tone: Tone };
+  yes?: string;
+  no?: string;
+}
+const { rungs, end, yes = "yes", no = "no" } = Astro.props;
+---
+<ol class="how-ladder">
+  {rungs.map((rung) => (
+    <li>
+      <div class="how-q"><span set:html={rung.q} />{rung.note !== undefined && <small set:html={rung.note} />}</div>
+      <div class="how-y">{yes} <span aria-hidden="true">→</span></div>
+      <div class={`how-a how-tone-${rung.tone}`} set:html={rung.a} />
+      <div class="how-n">{no} <span aria-hidden="true">↓</span></div>
+    </li>
+  ))}
+  <li class="how-end"><div class={`how-a how-tone-${end.tone}`} set:html={end.a} /></li>
+</ol>
