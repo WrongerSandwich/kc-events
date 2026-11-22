@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-24T19:46:05.225Z",
+  "generatedAt": "2026-11-22T17:52:21.528Z",
   "title": "Design System: KC This Week",
   "extensions": {
     "colorMeta": {
@@ -335,20 +335,24 @@
     },
     "typographyMeta": {
       "display": {
-        "displayName": "Wordmark",
-        "purpose": "The site's name in the header, uppercase, and nowhere else."
+        "displayName": "Display",
+        "purpose": "The site's name in the header, in tracked capitals; 0.875rem and 0.08em on phones under 26rem."
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "A page's one h1; 1.75rem on phones."
+        "purpose": "A page's one h1, in capitals over a short thick and thin flourish; 1.5rem on the front page on phones. Never an event's title, which stays in Geist."
       },
       "section": {
         "displayName": "Section",
-        "purpose": "Horizon buckets, Always there, More <kind>; 1.375rem on phones."
+        "purpose": "Horizon buckets, Always there, More <kind>, between the crown and a double hairline; 0.9375rem on phones."
+      },
+      "caps-label": {
+        "displayName": "Caps label",
+        "purpose": "A date tile's weekday and month, the week strip's weekdays, a list's dates and sticky group headings, the explorer rail's group names, and a pick's tag."
       },
       "title": {
         "displayName": "Title",
-        "purpose": "An event's name on a card."
+        "purpose": "An event's name on a card; 1rem at 500 on an explorer row."
       },
       "body": {
         "displayName": "Body",
@@ -360,7 +364,7 @@
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Chips, tags, counts, the date tile's weekday and month."
+        "purpose": "Chips, a passed save's tag, counts."
       }
     },
     "shadows": [
@@ -373,11 +377,6 @@
         "name": "hairline-cut",
         "value": "0 1px 0 var(--rule)",
         "purpose": "Under a sticky group heading, so rows scrolling beneath are cut by a rule."
-      },
-      {
-        "name": "today-ring",
-        "value": "inset 0 0 0 1.5px var(--hue)",
-        "purpose": "Today's date tile, ringed in its kind's shade."
       }
     ],
     "motion": [
@@ -450,9 +449,9 @@
       "name": "Kind chip",
       "kind": "chip",
       "refersTo": "kind-chip",
-      "description": "A kind's shade on its tint, as a pill. Never colour alone: the word is always there.",
-      "html": "<span class=\"ds-chip ds-kind\">Music</span>",
-      "css": ".ds-kind { --hue: var(--kind-music); --hue-tint: var(--kind-music-tint); } .ds-chip { display: inline-flex; align-items: center; gap: 0.3em; font-family: var(--font); font-size: 0.75rem; font-weight: 500; line-height: 1.6; color: var(--hue); background: var(--hue-tint); border-radius: 999px; padding: 0 0.5rem; white-space: nowrap; }"
+      "description": "A kind's shade on its tint, as a pill, icon then name. Never colour alone: the icon and the word are always there. As a link to the kind's page it drops the pill.",
+      "html": "<span class=\"ds-chip ds-kind\"><svg class=\"ds-icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M9 18V5l12-2v13\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><circle cx=\"18\" cy=\"16\" r=\"3\"/></svg>Music</span>",
+      "css": ".ds-kind { --hue: var(--kind-music); --hue-tint: var(--kind-music-tint); } .ds-chip { display: inline-flex; align-items: center; gap: 0.3em; font-family: var(--font); font-size: 0.75rem; font-weight: 500; line-height: 1.6; color: var(--hue); background: var(--hue-tint); border-radius: 999px; padding: 0 0.5rem; white-space: nowrap; } .ds-icon { width: 1.15em; height: 1.15em; flex: none; }"
     },
     {
       "name": "Filter chip",
@@ -463,20 +462,27 @@
       "css": ".ds-kind { --hue: var(--kind-music); --hue-tint: var(--kind-music-tint); } .ds-filter { font-family: var(--font); font-size: 0.75rem; background: none; color: var(--fg-muted); border: 1px solid var(--control-border); border-radius: 999px; padding: 0.25rem 0.5rem; cursor: pointer; } .ds-filter[aria-pressed=\"true\"] { color: var(--hue); background: var(--hue-tint); border-color: var(--hue); font-weight: 500; } .ds-n { margin-left: 0.35em; color: var(--fg-faint); font-variant-numeric: tabular-nums; font-weight: 400; } .ds-filter[aria-pressed=\"true\"] .ds-n { color: inherit; } .ds-filter:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }"
     },
     {
-      "name": "Don't-miss tag",
-      "kind": "chip",
+      "name": "Pick tag",
+      "kind": "custom",
       "refersTo": "dont-miss-tag",
-      "description": "The one state that is not a kind: solid flag carmine, in words.",
-      "html": "<span class=\"ds-dont-miss\">Don’t miss</span>",
-      "css": ".ds-dont-miss { display: inline-flex; align-items: center; font-family: var(--font); font-size: 0.75rem; font-weight: 500; line-height: 1.6; color: var(--flag-red-fg); background: var(--flag-red); border: 1px solid var(--flag-red); border-radius: 999px; padding: 0 0.5rem; white-space: nowrap; }"
+      "description": "The one state that is not a kind: a small flag carmine diamond, then the pick's reason in ink capitals. A point, never a fill.",
+      "html": "<span class=\"ds-pick\"><span class=\"ds-vh\">Pick: </span>Tradition</span>",
+      "css": ".ds-pick { display: inline-block; font-family: var(--font-display); font-weight: 700; font-size: 0.6875rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg); white-space: nowrap; } .ds-pick::before { content: \"\"; display: inline-block; width: 0.5em; height: 0.5em; margin-right: 0.6em; background: var(--flag-red); transform: translateY(-0.12em) rotate(45deg); } .ds-vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }"
     },
     {
       "name": "Date tile",
       "kind": "custom",
       "refersTo": "date-tile",
-      "description": "A card's date in its kind's tint and shade; today is ringed.",
-      "html": "<div class=\"ds-tile ds-kind\"><span class=\"ds-top\">Sat</span><span class=\"ds-day\">25</span><span class=\"ds-top\">Oct</span></div>",
-      "css": ".ds-kind { --hue: var(--kind-music); --hue-tint: var(--kind-music-tint); } .ds-tile { display: inline-flex; flex-direction: column; align-items: center; width: 4rem; padding-block: 0.5rem; border-radius: 6px; background: var(--hue-tint); color: var(--hue); font-family: var(--font); font-variant-numeric: tabular-nums; line-height: 1.1; box-shadow: inset 0 0 0 1.5px var(--hue); } .ds-top { font-size: 0.75rem; font-weight: 500; } .ds-day { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; }"
+      "description": "A card's date in its kind's tint and shade, stepped at the shoulders like a setback tower, a double line at its foot; weekday and month in the caps label, the day in Geist's figures.",
+      "html": "<div class=\"ds-tile ds-kind\"><span class=\"ds-top\">Sat</span><span class=\"ds-day\">28</span><span class=\"ds-top\">Nov</span></div>",
+      "css": ".ds-kind { --hue: var(--kind-music); --hue-tint: var(--kind-music-tint); } .ds-tile { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; width: 4rem; padding: calc(0.5rem + 8px) 0 0.5rem; clip-path: var(--shoulders); background: var(--hue-tint); color: var(--hue); font-family: var(--font); font-variant-numeric: tabular-nums; line-height: 1.1; } .ds-top { font-family: var(--font-display); font-weight: 700; font-size: 0.6875rem; letter-spacing: 0.12em; text-transform: uppercase; } .ds-day { font-size: 1.75rem; font-weight: 600; letter-spacing: -0.02em; } .ds-tile::after { content: \"\"; width: calc(100% - 20px); height: 4px; margin-top: 5px; border-top: 1px solid currentColor; border-bottom: 1px solid currentColor; }"
+    },
+    {
+      "name": "Section heading",
+      "kind": "custom",
+      "description": "The crown, the words in the Section capitals, then a double hairline out to the column's edge.",
+      "html": "<h2 class=\"ds-section\">Always there</h2>",
+      "css": ".ds-section { display: flex; align-items: center; gap: 0.75rem; margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 1.125rem; line-height: 1.2; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg); } .ds-section::before { content: \"\"; flex: none; width: 26px; height: 15px; background: var(--fg); clip-path: var(--crown); transform: translateY(-0.1em); } .ds-section::after { content: \"\"; flex: 1; min-width: 1rem; height: 4px; border-top: 1px solid var(--fg); border-bottom: 1px solid var(--fg); transform: translateY(-0.1em); }"
     },
     {
       "name": "Search field",
@@ -497,11 +503,12 @@
   ],
   "narrative": {
     "northStar": "The Color-Coded Almanac",
-    "overview": "A reference you scan, not a feed you scroll. The interface is set in true greys, ink on an off-white ground, and the only colour on most screens comes from the eleven kinds of event: talks, food, comedy, festivals, outdoors, art, sports, film, music, theater, other. Each kind is a filing tab in a strong shade and a tint, so a glance down a column of events sorts it before a word is read. The page is calm and dense at once: many events fit a screen, separated by space and the odd hairline, with nothing competing for attention.\n\nThe system serves PRODUCT.md's \"sleek, colorful, honest tool\": the delight of a well-made instrument, closer to Fantastical's colour-coded calendar and Linear's exact chrome than to any magazine. Its one nod to the city is the header's fountain mark (five drops in kind colours, which play once on hover) and the flag's carmine, kept for the single state that is not a kind: don't miss. It rejects, by name, ad-laden local aggregators (thumbnails, sponsored slots, undifferentiated volume), ticketing marketplaces (big event images, countdowns, scarcity pressure, buy buttons), social feeds (infinite scroll, engagement bait), and the hand-written newsletter (serif voice type, a curator persona).\n\nLayout is two widths: a reading measure (42rem) for the front page, event pages and prose, and a wide frame (80rem, 86rem from 1440px) for the explorer's rail and one-line rows. Sections sit twice as far apart as the cards inside them (4rem between sections, 1rem between cards; 3rem between sections on phones). Motion is state feedback only: 150ms ease-out-quart transitions on controls, a 260ms cross-document view transition that glides a card's date tile and title into the event page's, and the fountain. All of it switches off under `prefers-reduced-motion`.",
+    "overview": "A reference you scan, not a feed you scroll. The interface is set in true greys, ink on an off-white ground, and the only colour on most screens comes from the eleven kinds of event: talks, food, comedy, festivals, outdoors, art, sports, film, music, theater, other. Each kind is a filing tab in a strong shade and a tint, so a glance down a column of events sorts it before a word is read. The page is calm and dense at once: many events fit a screen, separated by space and the odd hairline, with nothing competing for attention.\n\nThe system serves PRODUCT.md's \"sleek, colorful, honest tool\": the delight of a well-made instrument, closer to Fantastical's colour-coded calendar and Linear's exact chrome than to any magazine. Its dress is the city's: Art Deco, for a skyline that mostly is (#293, chosen 2026-11-21, and the style of the venue illustrations commissioned for #149). Headings and small labels are tracked geometric capitals; date tiles are stepped at the shoulders like a setback tower; rules come thick and thin; a sunburst closes the page. All of that ornament is ink or grey. Beside it sit the header's fountain mark (five drops in kind colours, which play once on hover) and the flag's carmine, kept for the single state that is not a kind: a pick. It rejects, by name, ad-laden local aggregators (thumbnails, sponsored slots, undifferentiated volume), ticketing marketplaces (big event images, countdowns, scarcity pressure, buy buttons), social feeds (infinite scroll, engagement bait), and the hand-written newsletter (serif voice type, a curator persona).\n\nLayout is two widths: a reading measure (42rem) for the front page, event pages and prose, and a wide frame (80rem, 86rem from 1440px) for the explorer's rail and one-line rows. Sections sit twice as far apart as the cards inside them (4rem between sections, 1rem between cards; 3rem between sections on phones). Motion is state feedback only: 150ms ease-out-quart transitions on controls, a 260ms cross-document view transition that glides a card's date tile and title into the event page's, and the fountain. All of it switches off under `prefers-reduced-motion`.",
     "keyCharacteristics": [
       "Monochrome chrome; colour arrives only with a kind or a state.",
       "Eleven kind hues at matched lightness and chroma, about evenly spaced around the wheel.",
-      "One sans (Geist, 400 to 600) for everything; the wordmark is the only display type.",
+      "One sans (Geist, 400 to 600) for everything read; one display face in tracked capitals for the site's own headings and labels.",
+      "Deco ornament in ink and grey only: the stepped crown, the stepped tile, thick and thin rules, the sunburst.",
       "Flat surfaces, hairline rules, one shadow in the whole system.",
       "Light and dark schemes follow the reader's system, both WCAG AA for every pairing.",
       "44px tap targets for actions, 32px filter chips on phones."
@@ -513,8 +520,8 @@
         "section": "colors"
       },
       {
-        "name": "The Solid-Means-State Rule",
-        "body": "A kind is always a tint with its shade on it. A state that is not a kind (don't miss) is a solid fill, so it can never be mistaken for a kind, and it says its name in words so it reads in greyscale and to a screen reader.",
+        "name": "The A-Pick-Is-A-Point Rule",
+        "body": "A kind is always a tint with its shade on it, or its shade as words. A state that is not a kind (a pick) is neither: a small carmine diamond, then its reason in ink capitals (Rare, Big name, Occasion, Tradition, Unusual, Major run), one mark for all six. The red is a point to find down a list, never an area, so it is not mistaken for a kind and does not outweigh the title beside it; the word reads in greyscale and to a screen reader, which hears \"Pick:\" before it. (Until 2026-11-22 a pick was a solid carmine pill, the Solid-Means-State Rule: the loudest thing on every row it sat in.)",
         "section": "colors"
       },
       {
@@ -523,8 +530,13 @@
         "section": "colors"
       },
       {
-        "name": "The One-Display-Line Rule",
-        "body": "The wordmark face sets \"KC THIS WEEK\" and nothing else: never a heading, a label or a button. Headings are Geist at 600.",
+        "name": "The Capitals-Are-The-Site's Rule",
+        "body": "The display face sets the site's own words (its name, a page's heading, a section's heading, a weekday, a month, a list's date) and a place's name, always in capitals: its file has no lower case. It never sets an event's title, which is quoted from its source and stays in Geist as written; nor a button, a chip, or a sentence. Of the tags it sets one, a pick's reason, which is the site's own word and one of six. Figures in it are the face's weak spot, so the date tile's day and every time stay in Geist's tabular figures.",
+        "section": "typography"
+      },
+      {
+        "name": "The Three-Labels-In-The-Explorer Rule",
+        "body": "Inside the explorer three things are set in capitals and nothing else (an e2e check holds it, #297): the rail's group names, the list's group headings, and a pick's tag, one or two short words on the rows that have one. Its rows are dense, so a row's own words, a chip, a control and a count stay in Geist, as written.",
         "section": "typography"
       },
       {
@@ -546,7 +558,7 @@
     "dos": [
       "Do keep every neutral a true grey (chroma 0) and let only the kinds and the flag's two colours carry hue.",
       "Do pair a kind's shade with its own tint, and check 4.5:1 for every new pairing in both the light and dark scheme.",
-      "Do say a state in words as well as colour: \"Don't miss\" is written on its red pill; kind is never conveyed by colour alone.",
+      "Do say a state in words as well as colour: a pick's reason is written after its red diamond; kind is never conveyed by colour alone.",
       "Do separate with space first, hairlines second: 4rem between sections, 1rem between cards.",
       "Do give every action a 44px target and every filter chip at least 32px on phones.",
       "Do use tabular figures for dates, times and counts.",
@@ -558,7 +570,9 @@
       "Don't build social-feed mechanics: infinite scroll, engagement bait, algorithmic ordering.",
       "Don't dress it as a hand-written newsletter or editorial magazine: no serif \"voice\" type, no chatty personal copy, no curator persona.",
       "Don't colour a link, a selection, a hover or the saved state with a hue; it would read as one more kind.",
-      "Don't set anything but the site's name in the wordmark face, and never set Geist at 700.",
+      "Don't set an event's title, a button, a chip, a sentence, or any tag but a pick's reason in the display face, or anything in it in lower case; and never set Geist at 700.",
+      "Don't fill or tint anything with the flag's carmine, or set words in it: a pick's diamond and the staleness sign are all of it.",
+      "Don't give an ornament a hue, or add a second stepped motif: the crown and the tile's shoulders are the two.",
       "Don't put a shadow on a card, row, chip or button; the calendar menu is the only thing that floats.",
       "Don't use a `border-left` or `border-right` over 1px as a coloured stripe; a card's kind lives in its date tile.",
       "Don't use gradient text, glassmorphism, or a hero-metric block.",
