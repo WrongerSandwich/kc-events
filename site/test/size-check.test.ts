@@ -42,6 +42,10 @@ describe("budgets", () => {
     expect(BUDGETS.find((b) => b.page === "index.html")?.build).toBe("fixture");
   });
 
+  it("holds the How it works page on the fixture build, the page with the most markup and a stylesheet of its own", () => {
+    expect(BUDGETS.find((b) => b.page === "about/how-it-works.html")?.build).toBe("fixture");
+  });
+
   it("also holds the real explorer, the week's data and all, under a generous ceiling, so a jump in the data is noticed (audit E9)", () => {
     const real = BUDGETS.filter((b) => b.page === "explore.html" && b.build === "real");
     expect(real).toHaveLength(1);

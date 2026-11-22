@@ -15,12 +15,12 @@ import { howItWorks } from "../../generated/how-it-works";
 import { meta } from "../../generated/meta";
 import Base from "../../layouts/Base.astro";
 import { formatLong } from "../../lib/dates";
-import { duration, inWords, runDay, usd } from "../../lib/how-it-works";
+import { duration, inWords, roughly, runDay, usd } from "../../lib/how-it-works";
 import { siteConfig } from "../../site.config";
 
 const { run, settings, constants } = howItWorks;
 const repo = (path: string) => `${siteConfig.repoUrl}/blob/main/${path}`;
-const sources = run === undefined ? "about fifty" : inWords(run.sourcesTried);
+const sources = run === undefined ? "about fifty" : roughly(run.sourcesTried);
 
 /** The sections, in order: the contents row and the page share the list. A section's body is its component. */
 const sections = [

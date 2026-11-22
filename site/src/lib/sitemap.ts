@@ -8,7 +8,7 @@ import type { PublishedEvent, PublishedVenue } from "./types";
  */
 export function sitemapXml(events: PublishedEvent[], venues: PublishedVenue[], opts: { origin: string; lastSuccessfulRun: string; kinds: readonly string[]; regions: readonly string[] }): string {
   const entries = [
-    ...["/", "/explore", "/changes", "/venues", "/about"].map((p) => ({ path: p, lastmod: opts.lastSuccessfulRun })),
+    ...["/", "/explore", "/changes", "/venues", "/about", "/about/how-it-works"].map((p) => ({ path: p, lastmod: opts.lastSuccessfulRun })),
     ...landingPaths(opts.kinds, opts.regions).map((p) => ({ path: p, lastmod: opts.lastSuccessfulRun })),
     ...venues.map((v) => ({ path: `/v/${v.slug}`, lastmod: opts.lastSuccessfulRun })),
     ...events.map((e) => ({ path: `/e/${e.id}`, lastmod: e.lastVerified })),

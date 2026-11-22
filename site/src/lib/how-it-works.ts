@@ -35,6 +35,14 @@ export function inWords(n: number): string {
   return WORDS[n] ?? n.toLocaleString("en-US");
 }
 
+/**
+ * One run's count where a sentence speaks of every run ("reads about 60 calendars"): the nearest ten from twenty up,
+ * since next week's count will differ by a few, and the count itself below that.
+ */
+export function roughly(n: number): string {
+  return n < 20 ? inWords(n) : `about ${Math.round(n / 10) * 10}`;
+}
+
 /** "$0.69"; an amount that would round to no cents is "under $0.01", and nothing at all is "$0.00". */
 export function usd(n: number): string {
   if (n > 0 && n < 0.005) return "under $0.01";

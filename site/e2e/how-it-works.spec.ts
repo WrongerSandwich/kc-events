@@ -21,6 +21,19 @@ test("the page is under About, with its way back above the heading", async ({ pa
   await expect(back).toHaveAttribute("href", "/about");
 });
 
+test("About links here as the longer account, and to the picks section from what a pick is", async ({ page }) => {
+  await page.clock.setFixedTime(BUILD_DAY);
+  await page.goto("/about");
+  await page.getByRole("link", { name: "How it works" }).click();
+  await expect(page).toHaveURL(/\/about\/how-it-works$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("How it works");
+
+  await page.goto("/about");
+  await page.getByRole("link", { name: "How a pick is made" }).click();
+  await expect(page).toHaveURL(/\/about\/how-it-works#picks$/);
+  await expect(page.locator("#picks-heading")).toBeInViewport();
+});
+
 test("the strip gives the newest weekly run's figures, and says which run", async ({ page }) => {
   await open(page);
   const strip = page.locator(".how-strip");

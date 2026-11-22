@@ -115,6 +115,7 @@ describe("built output", () => {
       expect(canonical(`e/${events[0]!.id}.html`)).toMatch(new RegExp(`/e/${events[0]!.id}$`));
       expect(canonical("index.html")).toMatch(/\/$/);
       expect(canonical("about.html")).toMatch(/\/about$/);
+      expect(canonical("about/how-it-works.html")).toMatch(/\/about\/how-it-works$/);
     });
     it("reaches every page type from the front page within two clicks (#188)", () => {
       // The audit's links.mjs method: follow same-site links from / breadth-first, two levels deep.
