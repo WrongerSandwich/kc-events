@@ -690,6 +690,24 @@ test("the explorer sets nothing in uppercase", async ({ page }) => {
   expect(shouting).toEqual([]);
 });
 
+// A section heading's crown is a pseudo-element in the words' first line on a phone (#293): as a flex row that wrapped,
+// a heading too long for one line left the crown alone above its words, which then started at the column's edge.
+test("on a phone a section heading's words start beside its crown, however long", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 });
+  await on(page, BUILD_DAY, "/");
+  await expect(page.locator(".section-heading").first()).toBeVisible();
+  const headings = await page.locator(".section-heading:not(.group)").evaluateAll((els) =>
+    els.map((el) => {
+      const words = document.createRange();
+      words.selectNodeContents(el);
+      const lines = words.getClientRects();
+      return { text: el.textContent, lines: lines.length, indent: Math.round(lines[0]!.left - el.getBoundingClientRect().left) };
+    }),
+  );
+  expect(headings.some((h) => h.lines > 1)).toBe(true); // the fixture has a heading that wraps at this width
+  expect(headings.filter((h) => h.indent < 26)).toEqual([]);
+});
+
 test("From and To wait behind Custom dates…, out of the Tab order until it opens", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await on(page, BUILD_DAY, "/explore");

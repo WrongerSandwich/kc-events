@@ -113,7 +113,10 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   }
   /* Wraps: beside the tile at 320 px, "outdoors/community" and the pick tag together are wider than the column (audit 2026-10-21, A2). */
   .kind { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: 0; }
-  h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: var(--space-2) 0; }
+  /* An event's title is quoted from its source, so it is set in the text face, as written, with none of a page
+     heading's capitals or flourish (#293). */
+  h1 { font-family: var(--font); font-weight: var(--weight-strong); font-size: var(--text-2xl); line-height: var(--leading-tight); letter-spacing: var(--tracking-display); text-transform: none; padding-top: 0; margin: var(--space-2) 0; }
+  h1::after { display: none; }
   /* When is the first answer, so the date line is the heaviest line under the title. */
   .date { font-size: var(--text-lg); font-weight: var(--weight-medium); margin: 0; }
   .where, .admission { color: var(--fg-muted); margin: 0; }
@@ -134,8 +137,9 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   .actions :global(.control) { background: none; border-color: transparent; color: var(--fg-muted); }
   .actions :global(.control:hover), .actions :global(details[open] > .control) { color: var(--fg); background: var(--hue-tint); border-color: transparent; }
   .actions :global(.control[aria-pressed="true"]) { color: var(--fg); background: var(--hue-tint); }
-  /* Once it has passed (EventPageIsland shows .passed): the tile greys, and there is nothing left to go to or put in a calendar. */
-  .event:has(.passed:not([hidden])) :global(.tile) { background: none; color: var(--fg-muted); box-shadow: inset 0 0 0 1px var(--rule); }
+  /* Once it has passed (EventPageIsland shows .passed): the tile greys, and there is nothing left to go to or put in a
+     calendar. A grey fill, not a ring: the tile's stepped shoulders would cut a ring at its corners. */
+  .event:has(.passed:not([hidden])) :global(.tile) { background: var(--pressed-tint); color: var(--fg-muted); }
   .event:has(.passed:not([hidden])) .primary, .event:has(.passed:not([hidden])) :global(.calendar) { display: none; }
   .passed {
     display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3);
@@ -144,8 +148,6 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   }
   .passed[hidden] { display: none; }
   .passed p { margin: 0; }
-  /* Under the title, not level with it: the page's h1 is --text-2xl, as a section heading is on the front page. */
-  #more { font-size: var(--text-xl); }
   .verified { font-size: var(--text-xs); color: var(--fg-faint); }
   /* Rows as the site's own lists draw them, not an aggregator's link list: tile, title, then when and where, no underline. */
   .more { list-style: none; padding: 0; margin: var(--space-3) 0 0; }

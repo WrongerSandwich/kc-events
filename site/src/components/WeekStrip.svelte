@@ -50,17 +50,18 @@
 </nav>
 
 <style>
-  .week { display: grid; grid-template-columns: repeat(var(--days), minmax(0, 1fr)); gap: var(--space-1); margin: var(--space-3) 0 var(--space-2); }
+  /* Square tiles, the weekday in the display capitals (#293); the room above the row is today's crown's. */
+  .week { display: grid; grid-template-columns: repeat(var(--days), minmax(0, 1fr)); gap: var(--space-1); margin: calc(var(--space-3) + 10px) 0 var(--space-2); }
   .day {
     display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
-    padding: var(--space-2) var(--space-1); border-radius: var(--radius);
+    padding: var(--space-2) var(--space-1);
     background: var(--bg-raised); border: 1px solid var(--rule); color: var(--fg);
     font-variant-numeric: tabular-nums; line-height: 1.15; text-decoration: none;
     transition: border-color 150ms var(--ease-out), transform 150ms var(--ease-out);
   }
   a.day:hover { border-color: var(--control-border); text-decoration: none; }
   a.day:active { transform: translateY(1px); }
-  .name { font-size: var(--text-xs); color: var(--fg-muted); }
+  .name { font-family: var(--font-display); font-weight: 700; font-size: 0.625rem; letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-muted); padding-top: 0.15em; }
   .num { font-size: var(--text-lg); font-weight: var(--weight-strong); }
   /* Clipped to the tile: a row of icons wider than the tile would paint into the next day's (audit 2026-10-21, A3). */
   .icons { display: flex; align-items: center; justify-content: center; gap: 0.15rem; min-height: 1.15rem; max-width: 100%; overflow: hidden; font-size: var(--text-sm); }
@@ -78,10 +79,18 @@
   @media (forced-colors: active) { .lane.open { forced-color-adjust: none; background: CanvasText; } }
   .empty { background: none; border-style: dashed; }
   .empty .num { color: var(--fg-faint); font-weight: var(--weight-regular); }
-  /* Today: drawn in ink, so the eye starts there. It keeps its weekday: the card's tile is what says "Today" (#184). */
-  .today { border: 1px solid var(--fg); }
-  .today .name, .today .num { color: var(--fg); font-weight: var(--weight-strong); }
-  @media (forced-colors: active) { .today:not(:focus-visible) { outline: 2px solid CanvasText; outline-offset: -1px; } }
+  /* Today: drawn in ink under a heavy bar and the section heading's crown, so the eye starts there. It keeps its
+     weekday: the card's tile is what says "Today" (#184). */
+  .today { position: relative; border: 1px solid var(--fg); border-top-width: 3px; padding-top: calc(var(--space-2) - 2px); }
+  /* A day's hover greys its edge; today's stays ink, or its bar would go grey under the crown. */
+  a.day.today:hover { border-color: var(--fg); }
+  .today::before { content: ""; position: absolute; left: 50%; top: -3px; width: 26px; height: 13px; transform: translate(-50%, -100%); background: var(--fg); clip-path: var(--crown); }
+  .today .name { color: var(--fg); }
+  .today .num { color: var(--fg); font-weight: var(--weight-strong); }
+  @media (forced-colors: active) {
+    .today:not(:focus-visible) { outline: 2px solid CanvasText; outline-offset: -1px; }
+    .today::before { forced-color-adjust: none; background: CanvasText; }
+  }
   @media (prefers-reduced-motion: reduce) { .day { transition: none; } a.day:active { transform: none; } }
   /* Phones: a week of columns at 320 px leaves ~40 px each, and even five columns at 390 px leave 66 px, less than
      three icons and "+n" need (~84 px); the icons drop to one and "+n" counts the rest, up to where a tile is ~92 px. */

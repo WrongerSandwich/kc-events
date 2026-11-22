@@ -273,7 +273,8 @@
     padding-block: var(--space-2); border-bottom: 1px solid var(--rule);
   }
   .later li:last-child { border-bottom: 0; }
-  .later .when { font-size: var(--text-sm); color: var(--fg-muted); }
+  /* A row's date, a label: in the display capitals, as a tile's weekday and month are (#293). */
+  .later .when { font-family: var(--font-display); font-weight: 700; font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-muted); }
   /* Icon, then title, with a hanging indent: a wrapped title lines up under itself, not under the icon. */
   .later a { display: flex; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
   .later .where { font-size: var(--text-sm); color: var(--fg-muted); max-width: 18rem; text-wrap: pretty; }
@@ -311,6 +312,8 @@
   .started[open] summary :global(.ui-icon) { transform: rotate(90deg); }
   .started .later { margin-top: 0; }
   .started .later a { color: var(--fg-muted); }
+  /* Its rows give a time, not a date, and a time stays in the text face's figures. */
+  .started .later .when { font-family: var(--font); font-weight: var(--weight-regular); font-size: var(--text-sm); letter-spacing: 0; text-transform: none; }
   /* What kind of week it is, at a glance; each chip narrows the section to those picks (links to the explorer
      without JavaScript). */
   .kinds { list-style: none; padding: 0; margin: var(--space-3) 0 var(--space-2); display: flex; flex-wrap: wrap; gap: var(--space-2); }

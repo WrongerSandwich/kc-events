@@ -37,23 +37,29 @@ colors:
   kind-other-tint: "oklch(0.94 0 0)"
 typography:
   display:
-    fontFamily: "KC Wordmark, Geist Variable, system-ui, sans-serif"
-    fontSize: "1.0625rem"
+    fontFamily: "KC Display, Geist Variable, system-ui, sans-serif"
+    fontSize: "1.25rem"
     fontWeight: 700
     lineHeight: 1.25
-    letterSpacing: "0.14em"
+    letterSpacing: "0.16em"
   headline:
-    fontFamily: "Geist Variable, system-ui, sans-serif"
-    fontSize: "2.25rem"
-    fontWeight: 600
-    lineHeight: 1.25
-    letterSpacing: "-0.03em"
+    fontFamily: "KC Display, Geist Variable, system-ui, sans-serif"
+    fontSize: "2rem"
+    fontWeight: 700
+    lineHeight: 1.15
+    letterSpacing: "0.07em"
   section:
-    fontFamily: "Geist Variable, system-ui, sans-serif"
-    fontSize: "1.75rem"
-    fontWeight: 600
-    lineHeight: 1.25
-    letterSpacing: "-0.02em"
+    fontFamily: "KC Display, Geist Variable, system-ui, sans-serif"
+    fontSize: "1.125rem"
+    fontWeight: 700
+    lineHeight: 1.2
+    letterSpacing: "0.12em"
+  caps-label:
+    fontFamily: "KC Display, Geist Variable, system-ui, sans-serif"
+    fontSize: "0.6875rem"
+    fontWeight: 700
+    lineHeight: 1.1
+    letterSpacing: "0.12em"
   title:
     fontFamily: "Geist Variable, system-ui, sans-serif"
     fontSize: "1.125rem"
@@ -135,7 +141,6 @@ components:
   date-tile:
     backgroundColor: "{colors.kind-film-tint}"
     textColor: "{colors.kind-film}"
-    rounded: "{rounded.md}"
     width: "4rem"
   field:
     backgroundColor: "{colors.raised-surface}"
@@ -152,14 +157,15 @@ components:
 
 A reference you scan, not a feed you scroll. The interface is set in true greys, ink on an off-white ground, and the only colour on most screens comes from the eleven kinds of event: talks, food, comedy, festivals, outdoors, art, sports, film, music, theater, other. Each kind is a filing tab in a strong shade and a tint, so a glance down a column of events sorts it before a word is read. The page is calm and dense at once: many events fit a screen, separated by space and the odd hairline, with nothing competing for attention.
 
-The system serves PRODUCT.md's "sleek, colorful, honest tool": the delight of a well-made instrument, closer to Fantastical's colour-coded calendar and Linear's exact chrome than to any magazine. Its one nod to the city is the header's fountain mark (five drops in kind colours, which play once on hover) and the flag's carmine, kept for the single state that is not a kind: a pick. It rejects, by name, ad-laden local aggregators (thumbnails, sponsored slots, undifferentiated volume), ticketing marketplaces (big event images, countdowns, scarcity pressure, buy buttons), social feeds (infinite scroll, engagement bait), and the hand-written newsletter (serif voice type, a curator persona).
+The system serves PRODUCT.md's "sleek, colorful, honest tool": the delight of a well-made instrument, closer to Fantastical's colour-coded calendar and Linear's exact chrome than to any magazine. Its dress is the city's: Art Deco, for a skyline that mostly is (#293, chosen 2026-11-21, and the style of the venue illustrations commissioned for #149). Headings and small labels are tracked geometric capitals; date tiles are stepped at the shoulders like a setback tower; rules come thick and thin; a sunburst closes the page. All of that ornament is ink or grey. Beside it sit the header's fountain mark (five drops in kind colours, which play once on hover) and the flag's carmine, kept for the single state that is not a kind: a pick. It rejects, by name, ad-laden local aggregators (thumbnails, sponsored slots, undifferentiated volume), ticketing marketplaces (big event images, countdowns, scarcity pressure, buy buttons), social feeds (infinite scroll, engagement bait), and the hand-written newsletter (serif voice type, a curator persona).
 
 Layout is two widths: a reading measure (42rem) for the front page, event pages and prose, and a wide frame (80rem, 86rem from 1440px) for the explorer's rail and one-line rows. Sections sit twice as far apart as the cards inside them (4rem between sections, 1rem between cards; 3rem between sections on phones). Motion is state feedback only: 150ms ease-out-quart transitions on controls, a 260ms cross-document view transition that glides a card's date tile and title into the event page's, and the fountain. All of it switches off under `prefers-reduced-motion`.
 
 **Key Characteristics:**
 - Monochrome chrome; colour arrives only with a kind or a state.
 - Eleven kind hues at matched lightness and chroma, about evenly spaced around the wheel.
-- One sans (Geist, 400 to 600) for everything; the wordmark is the only display type.
+- One sans (Geist, 400 to 600) for everything read; one display face in tracked capitals for the site's own headings and labels.
+- Deco ornament in ink and grey only: the stepped crown, the stepped tile, thick and thin rules, the sunburst.
 - Flat surfaces, hairline rules, one shadow in the whole system.
 - Light and dark schemes follow the reader's system, both WCAG AA for every pairing.
 - 44px tap targets for actions, 32px filter chips on phones.
@@ -200,21 +206,24 @@ All neutrals are true greys (chroma 0), on purpose: a tinted neutral would bring
 ## 3. Typography
 
 **Body Font:** Geist Variable (with system-ui, sans-serif), cut to weights 400 to 600
-**Display Font:** KC Wordmark, a subset of Josefin Sans Bold holding only the capitals of the site's name
+**Display Font:** KC Display, a subset of Josefin Sans Bold holding capitals (the accented ones a venue's name may carry among them), figures and punctuation, and no lower case
 
-**Character:** One neutral, exact sans does every job, in three weights and a tight scale. The wordmark's 1920s geometric capitals are the single period note, for a skyline that is mostly Art Deco.
+**Character:** A neutral, exact sans does everything that is read, in three weights and a tight scale. Over it, a 1920s geometric in tracked capitals sets the site's own words: the period note, for a skyline that is mostly Art Deco.
 
 ### Hierarchy
-- **Display** (700, 1.0625rem, tracked 0.14em, uppercase): the site's name in the header, and nowhere else. 0.875rem and 0.08em on phones under 26rem.
-- **Headline** (600, 2.25rem, 1.25, -0.03em): a page's one h1. Phones set it at 1.75rem.
-- **Section** (600, 1.75rem, 1.25, -0.02em): horizon buckets, Always there, More <kind>. 1.375rem on phones, a step under the h1. The explorer's sticky day or venue heading is the same element at 0.875rem.
+- **Display** (700, 1.25rem, tracked 0.16em, uppercase): the site's name in the header. 0.875rem and 0.08em on phones under 26rem, so the nav keeps its row.
+- **Headline** (display face, 700, 2rem, 1.15, tracked 0.07em, uppercase): a page's one h1, over a short thick and thin flourish. 1.5rem on the front page on phones; 1.75rem on the explorer and for a venue's name or a list's (1.25rem for those names on phones). An event page's h1 is not this: it is the event's title, in Geist at 600 and 1.75rem.
+- **Section** (display face, 700, 1.125rem, 1.2, tracked 0.12em, uppercase): horizon buckets, Always there, More <kind>, between the crown and a double hairline. 0.9375rem and 0.1em on phones. The explorer's sticky day or venue heading is not this: it stays Geist at 600 and 0.875rem.
+- **Caps label** (display face, 700, 0.6875rem, tracked 0.12em, uppercase): a date tile's weekday and month, the week strip's weekdays (0.625rem), the one-line list's dates.
 - **Title** (600, 1.125rem, 1.25, -0.01em): an event's name on a card. On an explorer row it is 1rem at 500.
 - **Body** (400, 1rem, 1.5): the why line, descriptions, prose. Lines capped near 38rem on a card, 70ch on a row, 42rem on a page.
 - **Meta** (400, 0.875rem, 1.5, tabular figures): dates, times, venue lines, nav links.
 - **Label** (500, 0.75rem, 1.6): chips, tags, counts, the date tile's weekday and month.
 
 ### Named Rules
-**The One-Display-Line Rule.** The wordmark face sets "KC THIS WEEK" and nothing else: never a heading, a label or a button. Headings are Geist at 600.
+**The Capitals-Are-The-Site's Rule.** The display face sets the site's own words (its name, a page's heading, a section's heading, a weekday, a month, a list's date) and a place's name, always in capitals: its file has no lower case. It never sets an event's title, which is quoted from its source and stays in Geist as written; nor a button, a chip, a tag, or a sentence. Figures in it are the face's weak spot, so the date tile's day and every time stay in Geist's tabular figures.
+
+**The Explorer-Stays-Plain Rule.** Inside the explorer nothing is set in capitals (an e2e check holds it) until the explorer has had its own design pass: its rows are dense, and its day and venue headings repeat down the list.
 
 **The Figures-Only-Where-They-Line-Up Rule.** Tabular figures go on dates, times and counts, never on running text, where tnum widens the hyphen in "ad-free".
 
@@ -227,7 +236,7 @@ Flat. Depth comes from the raised surface against the ground (a step of 0.015 li
 ### Shadow Vocabulary
 - **Menu lift** (`box-shadow: 0 4px 16px oklch(0 0 0 / 0.12)`): the calendar choice's dropdown, which hangs over the content below it.
 - **Hairline cut** (`box-shadow: 0 1px 0 var(--rule)`): under a sticky group heading, so a row scrolling beneath is cut by a rule rather than showing through. A rule, not depth.
-- **Today ring** (`box-shadow: inset 0 0 0 1.5px var(--hue)`): today's date tile, ringed in its kind's shade. A mark, not depth.
+- **Today ring**: today's date tile, ringed 1.5px in its kind's shade. Not a shadow since the tile took its stepped shoulders (#293), which would cut one: the tile fills with the shade and a second stepped shape, set in by the ring's width, lays the tint over it. A mark, not depth.
 
 ### Named Rules
 **The One-Shadow Rule.** Only an element that genuinely floats over content casts a shadow. Cards, rows, chips and buttons never do. If a surface needs separating, use a hairline or space.
@@ -249,8 +258,19 @@ Quiet instruments: precise edges, ink words, colour only where a kind lives.
 - **Kind row (explorer bar, phones):** every kind's filter chip in one line that swipes sideways, fading at its end until swiped there, Filters at its end; kind is the explorer's lens, since the list is in date order already and the picks lead the front page (Picks only is a Show switch like the others). The sheet keeps the dates, regions and switches; wide windows keep the rail's Kind group.
 - **Pick tag** (`PickTag.svelte`): a solid Flag Carmine pill with the pick's reason in white: Rare, Big name, Occasion, Tradition, Unusual or Major run (ADR 0014, #273). One fill for all six, so the colour says pick and the word says why; a visually hidden "Pick:" precedes the word for a screen reader. It replaced a pill that said "Don't miss" on every pick, an imperative with the scarcity tone the system rejects, and said less. On a row it rides the date line or sits beside the title, the front page's one-line rows after this week among them (under the date on a phone, on the date line on the narrowest), since a row has no why line and the word is all of the why it can carry; on an event page it sits beside the kind chip; on a card it leads the why line, since every card is a pick and the word is what differs between them. The six reasons are explained once, on the About page. A passed save's tag sits in the tag's place, outlined in a hairline, muted.
 
+### Rules and ornaments (Deco)
+All in ink (`fg`) or the strong rule's grey, never a hue, and all decoration: none carries meaning a reader needs.
+- **Thick and thin rule:** 3px, a 3px gap, 1px, the page's width. It closes the header; turned over (thin, then thick) it opens the footer. A 4.5rem cut of it is the flourish under a page's heading.
+- **Crown:** a stepped ziggurat, three steps to a flat top (`--crown`, a clip path that fits any box). It leads a section's heading, 26 by 15px, and sits over today's tile in the week strip, 26 by 13px, and nowhere else: one stepped motif, used sparingly.
+- **Double hairline:** two 1px lines 2px apart, running from a section's heading to the column's edge. On phones the heading is a block: the crown sits in the first line of the words, so a heading that wraps never leaves it alone, and the hairline goes under them, the column's width.
+- **Sunburst:** a half sun's eleven rays, short and long by turns, in the strong rule's grey, rising from the footer's rule with the fountain mark at its centre. Once a page, at its foot.
+- In forced colours the crown keeps a fill in the text colour; the rules are borders and survive on their own.
+
+### Section Heading
+The crown, the words in the Section style, then the double hairline. Sections sit 4rem apart (3rem on phones), so a heading reads as the start of a group.
+
 ### Date Tile (signature)
-The kind's tint with its shade, weekday and month in label type around a 1.75rem/600 day number in tabular figures, 6px radius, 4rem wide on a card (3.5rem on phones, 5rem large on an event page). Today is ringed in its own shade. On navigation it glides into the event page's tile.
+The kind's tint with its shade, stepped at the shoulders like a setback tower (two 5px steps at each top corner, `--shoulders`) with a double line at its foot in its own shade. Weekday and month in the caps label around a 1.75rem/600 day number in Geist's tabular figures. 4rem wide on a card (3.5rem on phones, 5rem large on an event page). Today is ringed in its own shade, the ring following the steps. A passed event's tile is a flat grey (`pressed-tint`), no ring. On navigation it glides into the event page's tile.
 
 ### Pick Card
 Not a box. A three-column grid: the date tile, the words (title, a meta line of icon-led facts, the why line in ink led by the pick tag, chips and a muted source link), then the action column with Save over Add to calendar. On phones the actions fold into a row under the words. Cards are separated by 1rem of space, never a border or shadow.
@@ -264,10 +284,10 @@ One shape on every row: the date line, the title, the kind chip leading the venu
 - **Checkboxes:** 13px, ink accent colour rather than the browser's blue.
 
 ### Navigation
-The header: the fountain mark and wordmark at left, nav links at right in muted ink at 0.875rem, each padded to 44px, ink on hover with no underline. A hairline under the header. Phones shrink and tighten the wordmark so the nav keeps its row.
+The header: the fountain mark and the name at left, nav links at right in muted ink at 0.875rem (Geist: a link is not a label), each padded to 44px, ink on hover with no underline. The thick and thin rule under the header. Phones shrink and tighten the name so the nav keeps its row. The footer: the rule turned over under the sunburst, then two short lines and five links in muted ink.
 
 ### Week Strip (signature)
-A row of day tiles (raised surface, hairline edge, 6px radius): weekday, the day number at 1.125rem/600, then the kinds on that day as icons in their shades, then each running exhibition or show as a 3px band in its kind's shade (2px radius), left empty on a day it is closed so the bands keep their rows. Today is edged in ink; an empty day goes dashed and faint. The week's shape in colour before any title is read. On phones a tile keeps one icon and counts the rest as "+n".
+A row of square day tiles (raised surface, hairline edge): the weekday in the caps label, the day number at 1.125rem/600, then the kinds on that day as icons in their shades, then each running exhibition or show as a 3px band in its kind's shade (2px radius), left empty on a day it is closed so the bands keep their rows. Today is edged in ink under a 3px bar, with the crown over it; an empty day goes dashed and faint. The week's shape in colour before any title is read. On phones a tile keeps one icon and counts the rest as "+n".
 
 ## 6. Do's and Don'ts
 
@@ -286,7 +306,8 @@ A row of day tiles (raised surface, hairline edge, 6px radius): weekday, the day
 - **Don't** build social-feed mechanics: infinite scroll, engagement bait, algorithmic ordering.
 - **Don't** dress it as a hand-written newsletter or editorial magazine: no serif "voice" type, no chatty personal copy, no curator persona.
 - **Don't** colour a link, a selection, a hover or the saved state with a hue; it would read as one more kind.
-- **Don't** set anything but the site's name in the wordmark face, and never set Geist at 700.
+- **Don't** set an event's title, a button, a chip, a tag or a sentence in the display face, or anything in it in lower case; and never set Geist at 700.
+- **Don't** give an ornament a hue, or add a second stepped motif: the crown and the tile's shoulders are the two.
 - **Don't** put a shadow on a card, row, chip or button; the calendar menu is the only thing that floats.
 - **Don't** use a `border-left` or `border-right` over 1px as a coloured stripe; a card's kind lives in its date tile.
 - **Don't** use gradient text, glassmorphism, or a hero-metric block.

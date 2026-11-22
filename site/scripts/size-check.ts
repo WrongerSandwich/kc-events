@@ -101,14 +101,16 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // (measured 1,670 against a 55,006 build), and 400 for the pick tag carrying the reason on each row, with the six
   // reasons' words and the "Pick:" a screen reader hears (#273; measured 363), and 100 for a run with days listed under
   // the day it can next be gone to, its closing day when none of its weekdays is left, open or still to open (measured 51
-  // against a 57,049 build)
-  { page: "explore.html", budget: 57_200, build: "fixture" },
+  // against a 57,049 build), and 700 for the Deco direction's shared pieces (#293): the display capitals on the page's
+  // heading, the thick and thin rules, the stepped shapes' tokens and the footer's sunburst (measured 681 against a
+  // 57,079 build)
+  { page: "explore.html", budget: 57_900, build: "fixture" },
   // The real explorer, the week's events and all: about 190 KB at the raw-payload guard, so this trips only on a jump.
   { page: "explore.html", budget: 200_000, build: "real" },
   // A page with no island of its own loads no Svelte runtime: the header's Saved link and staleness banner are plain
-  // script (#195; audit 2026-10-21, A18). The 404 stands for those pages: 12.6 KB, against 32.8 KB with the runtime,
-  // so this trips if it comes back.
-  { page: "404.html", budget: 13_000, build: "fixture" },
+  // script (#195; audit 2026-10-21, A18). The 404 stands for those pages: 13.3 KB with the Deco direction's shared
+  // pieces (#293; measured 678 over a 12,654 build), against 32.8 KB with the runtime, so this trips if it comes back.
+  { page: "404.html", budget: 13_700, build: "fixture" },
 ];
 
 function main(): void {

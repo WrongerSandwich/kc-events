@@ -21,7 +21,8 @@ const runDay = localDate(meta.lastSuccessfulRun);
 </script>
 
 <style>
-  .banner { background: var(--bg-raised); border-block: 1px solid var(--rule); padding-block: var(--space-2); font-size: var(--text-sm); color: var(--fg); }
+  /* A hairline above it only: the header's thick and thin rule closes it below (#293). */
+  .banner { background: var(--bg-raised); border-top: 1px solid var(--rule); padding-block: var(--space-2); font-size: var(--text-sm); color: var(--fg); }
   /* The pick tag's red, the site's one alarm colour, on the sign alone; the words stay ink. */
   .mark { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -0.18em; color: var(--flag-red); }
   strong { font-weight: var(--weight-strong); }

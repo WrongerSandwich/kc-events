@@ -1,10 +1,24 @@
 ---
 import { about } from "../generated/about";
+import { MARK_INNER } from "../lib/mark";
 import { siteConfig } from "../site.config";
 
 // The header's width on every page (#181).
+
+// The sunburst over the footer's rule (#293): a half sun's eleven rays, short and long by turns, around an arc, drawn
+// in a 220 by 110 box whose foot is the rule, on whole coordinates: it is on every page, and the box draws at 176 px.
+// The fountain mark stands at its centre, on the rule.
+const point = (radius: number, degrees: number) => {
+  const a = (degrees * Math.PI) / 180;
+  return `${Math.round(110 + radius * Math.cos(a))} ${Math.round(110 - radius * Math.sin(a))}`;
+};
+const rays = Array.from({ length: 11 }, (_, i) => `M${point(54, (i + 1) * 15)}L${point(i % 2 === 0 ? 84 : 108, (i + 1) * 15)}`).join("");
 ---
 <footer class="site-footer">
+  <svg class="sunburst" viewBox="0 0 220 110" aria-hidden="true">
+    <path d={`${rays}M56 110a54 54 0 0 1 108 0`} />
+    <g class="mark" transform="translate(86 66.5) scale(1.5)" set:html={MARK_INNER} />
+  </svg>
   <div class="inner wide">
     <div>
       <p>No ads, no accounts, no cookies.</p>
@@ -21,7 +35,18 @@ import { siteConfig } from "../site.config";
 </footer>
 
 <style>
-  .site-footer { margin-top: var(--space-12); border-top: 1px solid var(--rule); font-size: var(--text-sm); color: var(--fg-muted); }
+  /* The footer opens on the header's rule, turned over: thin, then thick. The page's last content stands clear of the
+     sunburst that rises from it. */
+  .site-footer { position: relative; margin-top: calc(var(--space-12) + 4rem); font-size: var(--text-sm); color: var(--fg-muted); }
+  .site-footer::before { content: ""; display: block; height: 7px; border-top: 1px solid var(--fg); border-bottom: 3px solid var(--fg); }
+  /* Rays in the strong rule's grey, the mark in ink with its drops in five kinds' hues, as in the header. Decorative. */
+  .sunburst { position: absolute; left: 50%; top: 0; width: 11rem; height: 5.5rem; transform: translate(-50%, -100%); overflow: visible; fill: none; stroke: var(--rule-strong); stroke-width: 1.5; }
+  .mark { fill: var(--fg); stroke: none; }
+  .mark :global(.drop-1) { fill: var(--kind-talks-readings); }
+  .mark :global(.drop-2) { fill: var(--kind-comedy); }
+  .mark :global(.drop-3) { fill: var(--kind-festivals-markets); }
+  .mark :global(.drop-4) { fill: var(--kind-sports); }
+  .mark :global(.drop-5) { fill: var(--kind-music); }
   .inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2) var(--space-6); padding-block: var(--space-6) var(--space-8); }
   div p + p { margin-top: var(--space-1); }
   ul { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); list-style: none; padding: 0; margin: 0; }

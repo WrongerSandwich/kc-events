@@ -5,7 +5,9 @@
  * explorer's weight. Imported by those pages only; the classes are prefixed to keep them theirs.
  */
 .venue-head { margin: var(--space-8) 0 var(--space-4); }
-.venue-head h1 { font-size: var(--text-2xl); line-height: var(--leading-tight); margin: 0 0 var(--space-2); }
+/* A place's name, or a list's, in the page heading's capitals: a size down, since a venue's name runs long. */
+.venue-head h1 { font-size: var(--text-2xl); margin: 0 0 var(--space-4); }
+@media (max-width: 30rem) { .venue-head h1 { font-size: 1.25rem; } }
 .venue-head p { margin: 0; }
 .venue-head .venue-hood { color: var(--fg-muted); }
 .venue-links { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: var(--space-3) 0 0; }
@@ -15,7 +17,7 @@
 
 .directory h1 { margin-top: var(--space-8); }
 .directory .lede { color: var(--fg-muted); margin-top: var(--space-2); }
-.directory .section-heading { font-size: var(--text-xl); margin-top: var(--space-12); }
+.directory .section-heading { margin-top: var(--space-12); }
 .directory ul { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
 .directory li { display: grid; gap: 2px; padding-block: var(--space-2); border-bottom: 1px solid var(--rule); }
 .directory li a { font-weight: var(--weight-medium); color: var(--fg); }
