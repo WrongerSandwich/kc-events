@@ -24,7 +24,7 @@ const buckets = bucketDontMiss(dontMiss, meta.buildToday);
 const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta.lastSuccessfulRun);
 ---
 <Base title="Kansas City events this week" description={siteConfig.tagline} jsonLd={jsonLd}>
-  <h1>Worth doing in Kansas City</h1>
+  <h1>What's on in Kansas City</h1>
   {/* Who makes the picks is the About page's to say, behind "here's how", and an event page's verified line's; the
       lede names no one, so it never implies a person either. */}
   <p class="lede">

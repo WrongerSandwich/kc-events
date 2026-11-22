@@ -9,7 +9,7 @@ async function on(page: Page, when: Date, path: string) {
 
 test("the front page buckets the fixture's don't-miss events", async ({ page }) => {
   await on(page, BUILD_DAY, "/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Worth doing in Kansas City");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("What's on in Kansas City");
   // The lede says where a date comes from (the venue's list, as the event page's verified line says) and names no one
   // as making the picks, a model or a person: the About page says who, behind the lede's link.
   await expect(page.locator(".lede")).toHaveText("The picks worth going out of your way for, each with its reason. Every date is read from the venue's or organizer's own page; here's how.");
