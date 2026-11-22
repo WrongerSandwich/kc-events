@@ -624,6 +624,7 @@ test("the pick tag says the reason on the card, the row and the event page, and 
   // diamond, and the word itself is ink, on no fill.
   const mark = (el: Element) => getComputedStyle(el, "::before").backgroundColor;
   const fill = await tag.evaluate(mark);
+  expect(fill).not.toBe("rgba(0, 0, 0, 0)");
   expect(fill).not.toBe(await tag.evaluate((el) => getComputedStyle(el).color));
   await expect(tag).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await on(page, BUILD_DAY, "/explore?when=all");

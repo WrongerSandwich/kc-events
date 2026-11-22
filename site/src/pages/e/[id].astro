@@ -130,6 +130,10 @@ const located = venue?.address === undefined ? undefined : { name: venue.name, a
   }
   /* Wraps: beside the tile at 320 px, "outdoors/community" and the pick tag together are wider than the column (audit 2026-10-21, A2). */
   .kind { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); align-items: baseline; margin: 0; }
+  /* The chip centres its icon on its words, so its baseline would be the icon's foot; here its words set it, and the
+     pick tag's capitals sit on the same line. */
+  .kind :global(.chip) { align-items: baseline; }
+  .kind :global(.kind-icon) { align-self: center; }
   /* An event's title is quoted from its source, so it is set in the text face, as written, with none of a page
      heading's capitals or flourish (#293). */
   h1 { font-family: var(--font); font-weight: var(--weight-strong); font-size: var(--text-2xl); line-height: var(--leading-tight); letter-spacing: var(--tracking-display); text-transform: none; padding-top: 0; margin: var(--space-2) 0; }

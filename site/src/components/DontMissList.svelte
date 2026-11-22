@@ -283,7 +283,8 @@
   .later .what { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
   .later :global(.dont-miss) { flex: none; }
   @media (max-width: 34rem) {
-    .later li { grid-template-columns: 5.5rem minmax(0, 1fr); }
+    /* The date column holds the widest pick tag under the date ("Major run" and its diamond, 94 px). */
+    .later li { grid-template-columns: 6rem minmax(0, 1fr); }
     .later .where { grid-column: 2; max-width: none; }
     /* The tag drops under the date, beside the venue: the room a two-line row leaves empty, so the title keeps its line. */
     .later .what { display: contents; }
