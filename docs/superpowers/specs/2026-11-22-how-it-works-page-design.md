@@ -31,12 +31,12 @@ The About page's "How it is made" stays the two-paragraph version. This page is 
 - **Selling.** No sentence claims the system is careful, robust or trustworthy. The page describes what happens; the reader concludes.
 - **An operator's manual.** Where the home machine keeps its clone, which channel an alert posts to, what a token may do, how tickets are labelled and worked: none of it helps this reader, and it stays out, though all of it is in the public repository.
 - **A page that is quietly wrong.** A stated constant that the code has since changed is worse than no page.
-- **A second visual language.** The artifact's five role hues would break DESIGN.md's Only-Kinds-Bring-Colour Rule.
+- **A second visual language.** The diagrams' role colours are an exception DESIGN.md records and this page alone uses (see "Colour and roles"); everything else on the page is the site's.
 
 ## Constraints
 
 - **Voice** (DESIGN.md, About): no "we", no exclamation marks, no slogans; headings are nouns; neutral copy with no curator persona. The artifact's "you" (Evan) goes everywhere. Numbers up to twelve in running prose are words, as on About; figures in diagrams, tables, measures and money stay figures.
-- **Colour** (DESIGN.md): no new hue. See "Colour and roles" below.
+- **Colour** (DESIGN.md): no new hue outside the diagrams' roles. See "Colour and roles" below.
 - **Type**: the display face sets the page's heading and section headings only, in capitals; never a diagram's sentence, a button or a label that is a sentence.
 - **Content Security Policy**: every page's policy carries the hashes of every inline script and style in the build, so an inline stylesheet or script on this page would add bytes to the explorer, whose budget has about nothing left. This page's CSS ships as a linked stylesheet and it has no script of its own. `style` attributes are allowed (`style-src-attr`).
 - **Budgets**: `pnpm size` must pass with `explore.html`, `index.html` and `404.html` unchanged in their budgets. The new page gets its own entry (see "Tests").
@@ -72,11 +72,19 @@ Prose stays at the site's measure (42rem). A figure may be wider than the prose 
 
 ### Colour and roles
 
-The artifact colours every step by who does it: network (blue), extraction model (violet), curation model (red), code (grey), hand (green), with amber for a warning and teal for data. On the site a hue means a kind, and carmine means a pick, so none of that can come across as it is.
+The artifact colours every step by who does it: network (blue), extraction model (violet), curation model (red), code (grey), hand (green), with amber for a warning and teal for data. On the site a hue means a kind, and carmine means a pick (DESIGN.md's Only-Kinds-Bring-Colour Rule).
 
-Claude's call: the diagrams are ink and grey. A role is a small labelled tag, told apart by its words first and by its mark second (for instance a filled, an outlined, a dashed and a hatched swatch); an outcome (verified, unverified, strike, outage, dropped) is said in words and by weight (ink, muted, a dashed edge). The one hue on the page is the site's own pick tag, on the "pick" verdict in the Picks section, where it is exactly what it means everywhere else. The page's own tokens, if it needs any, are greys.
+Evan's suggestion, and Claude's recommendation, 2026-11-22: the role colours come across, as an exception for this page's diagrams. The rule's reason is that a hue beside events would be read as a kind; this page lists no events and shows no kind, and the colour does real work in the pipeline, where a reader scans for which steps touch the network, which call a model and which are plain code. The first draft of this design made the diagrams ink and grey; that was dropped as a mark system invented only to be replaced in the Deco pass.
 
-This is the largest visual change from the artifact, and the first thing to look at on the preview. If the page reads as flat, the answer is in the follow-up's Deco pass (pattern, rule weight, stepped shapes in ink), not in hue.
+The terms of the exception:
+
+- **Scoped.** The role tokens are defined in this page's stylesheet, not in `tokens.css`, and are used inside its figures and its key and nowhere else: not on a link, a heading, a rule or the page's chrome.
+- **Matched pairs.** Each role is a shade on its own tint at the kinds' lightness and chroma in both schemes (0.47 / 0.14 on 0.945 / 0.045 light; 0.82 / 0.11 on 0.31 / 0.06 dark), so the contrast the kinds already clear holds here; the axe run confirms it.
+- **Words first.** A role is always named beside its colour (the tag's label), and an outcome (verified, unverified, strike, outage, dropped) is always said in words, so the page reads in greyscale, in forced colours and to a screen reader.
+- **Carmine stays the pick.** The artifact's curation-model red (hue 27) is the flag carmine's hue; the curation model's role takes another hue, and the artifact's "strike" answers, which borrowed that red, take the warning's. The pick tag itself appears once, on the "pick" verdict in the Picks section, as the site's own component.
+- **Recorded.** DESIGN.md gains a short named exception under its colour rules, saying the above, so the next audit does not flag it and the next page does not borrow it.
+
+The hues themselves are the builder's call within those terms; starting from the artifact's (245 network, 308 extraction model, 140 hand, 205 data, 62 warning, grey for code) and moving only the curation model's is the cheapest path. The Deco follow-up may revisit the whole scheme.
 
 ### Sections
 
@@ -84,7 +92,7 @@ Titles are working titles; the builder may reword them as nouns that read well i
 
 1. **The week** (artifact 1). The week grid: Monday's weekly run, Thursday's midweek re-verification, the nightly rebuild that keeps "today" right, the Monday audit in which a second, stronger model reviews what the run changed, and a "by hand" lane (corrections, edits to the rules and the source list, hand picks). The three cron times stay (they are in the repository and a test holds them); the lane labelled "You" becomes "By hand"; where each job runs is dropped. Discovery's monthly cadence stays in the caption.
 
-   The audit is the one thing on the page that is not in the repository: it is a scheduled Claude routine (Mondays at 8:47 Central, read-only, live and last run on 2026-11-16; the artifact's "on the home machine" is where it reads the repository, not a cron line). No test can hold it. Claude's call, for Evan to confirm: it is on the page, described by what it does and placed "after the Monday run" with no clock time and no model name, so a change to its schedule or model does not make the page wrong; if it is ever stopped, the page is edited by hand, and AGENTS.md says so. If Evan would rather not describe it publicly, the lane and section 9's card come out and nothing else changes.
+   The audit is the one thing on the page that is not in the repository: it is a scheduled Claude routine (Mondays at 8:47 Central, read-only, live and last run on 2026-11-16; the artifact's "on the home machine" is where it reads the repository, not a cron line). No test can hold it. Confirmed by Evan, 2026-11-22: it is on the page, described by what it does and placed "after the Monday run" with no clock time and no model name, so a change to its schedule or model does not make the page wrong; if it is ever stopped, the page is edited by hand, and AGENTS.md says so.
 2. **A run, step by step** (artifact 3). The seam diagram (what a run reads, the one function with its five ports, what it writes), with file names as links into the repository; then the fourteen steps in their five phases with the Monday and Thursday columns; then the spend bar, generated. The prose keeps the point that the function does no I/O of its own, which is why a whole week can be tested with fakes. The steps' texts are rewritten for this reader (no ticket numbers, no "your entries") and refer to later sections by anchor.
 3. **From a page to a listing** (artifact 4). The three-box flow (the page as fetched, as the model sees it, a candidate in the model's reply) and the cite-or-drop ladder. The example candidate may stay as an illustration, marked as one. The caption's 11-16 counts are dropped.
 4. **Matching** (artifact 5). The identity ladder and the table of which page gets a say.
@@ -139,12 +147,12 @@ A site ticket: a pull request from the branch, with the Vercel preview's URL for
 
 ## Follow-up (filed as an issue when this lands, not built here)
 
-**Deco diagrams.** Give the diagrams the site's Art Deco language: rule weights, stepped corners, the display capitals on a diagram's labels where DESIGN.md allows, pattern in place of the role marks. DESIGN.md currently allows two stepped motifs and "once a page" ornaments, so that pass starts by deciding what a diagram may use, and amends DESIGN.md. Because eight of the ten diagrams are HTML and CSS, most of it is a stylesheet change.
+**Deco diagrams.** Give the diagrams the site's Art Deco language: rule weights, stepped corners, the display capitals on a diagram's labels where DESIGN.md allows, and a second look at the role colours. DESIGN.md currently allows two stepped motifs and "once a page" ornaments, so that pass starts by deciding what a diagram may use, and amends DESIGN.md. Because eight of the ten diagrams are HTML and CSS, most of it is a stylesheet change.
 
 ## Left to the builder
 
 - The markup: one `.astro` page with scoped styles, or small components per diagram shape (ladder, gates, cards). The data for a ladder or the pipeline may live in a small typed module if that keeps the page readable.
-- The exact marks for the five roles and the weights for outcomes, within "ink and grey, words first".
+- The role hues and how an outcome is weighted, within the terms under "Colour and roles".
 - Section titles and all sentence-level wording, within the voice rules.
 - Whether the state diagram and the spend bar stay SVG or become HTML and CSS.
 - The breakout mechanics for wide figures, and the phone treatment per diagram.
