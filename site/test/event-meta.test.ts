@@ -66,17 +66,57 @@ describe("clip", () => {
   });
 });
 
-describe("eventPageTitle (#189)", () => {
-  it("is the title when no other published event shares it", () => {
-    const e = event({ id: "evt_a", title: "Floating Pumpkin Patch" });
-    expect(eventPageTitle(e, [e, event({ id: "evt_b", title: "Pumpkin Patch" })])).toBe("Floating Pumpkin Patch");
+describe("eventPageTitle (#189, #301)", () => {
+  it("names a one-off's venue and day", () => {
+    const e = event({ title: "Floating Pumpkin Patch", venue: "Lake Lenexa", start: "2026-10-25T18:00:00-05:00" });
+    expect(eventPageTitle(e, [e])).toBe("Floating Pumpkin Patch at Lake Lenexa, Sun Oct 25");
   });
 
-  it("adds a short date when another published event has the same title", () => {
-    const a = event({ id: "evt_a", title: "Floating Pumpkin Patch", start: "2026-10-25" });
-    const b = event({ id: "evt_b", title: "Floating Pumpkin Patch", start: "2026-10-24T18:00:00-05:00" });
-    expect(eventPageTitle(a, [a, b])).toBe("Floating Pumpkin Patch, Oct 25");
-    expect(eventPageTitle(b, [a, b])).toBe("Floating Pumpkin Patch, Oct 24");
+  it("names a run's venue and no day", () => {
+    const run = event({ title: "A Christmas Carol", venue: "KC Rep", recurrence: "limited-run", start: "2026-11-20", end: "2026-12-27" });
+    const weekly = event({ id: "evt_b", title: "Trivia", venue: "recordBar", recurrence: "recurring", start: undefined, schedule: "Tuesdays" });
+    expect(eventPageTitle(run, [run, weekly])).toBe("A Christmas Carol at KC Rep");
+    expect(eventPageTitle(weekly, [run, weekly])).toBe("Trivia at recordBar");
+  });
+
+  it("drops the day first, then the venue, to stay within 60 characters", () => {
+    const venue = "Kauffman Center for the Performing Arts";
+    const noDay = event({ title: "Handel's Messiah with the Symphony", venue }); // 34 + 43 = 77
+    expect(eventPageTitle(noDay, [noDay])).toBe("Handel's Messiah with the Symphony");
+    const withVenue = event({ title: "Handel's Messiah, Symphony Chorus", venue: "Helzberg Hall" }); // 33 + 16 + 12 = 61
+    expect(eventPageTitle(withVenue, [withVenue])).toBe("Handel's Messiah, Symphony Chorus at Helzberg Hall");
+    const long = event({ title: "An Evening with the Kansas City Symphony Chamber Players and Friends in the Lobby", venue });
+    expect(eventPageTitle(long, [long])).toBe("An Evening with the Kansas City Symphony Chamber Players and Friends in the Lobby");
+  });
+
+  it("leaves the venue out when the title already names it", () => {
+    const e = event({ title: "Holiday Lights at Powell Gardens", venue: "Powell Gardens", start: "2026-12-05" });
+    expect(eventPageTitle(e, [e])).toBe("Holiday Lights at Powell Gardens, Sat Dec 5");
+    const lower = event({ title: "RECORDBAR anniversary party", start: "2026-10-09" });
+    expect(eventPageTitle(lower, [lower])).toBe("RECORDBAR anniversary party, Fri Oct 9");
+  });
+
+  it("tells apart two events that would share a title, the day first", () => {
+    const venue = "Kauffman Center for the Performing Arts";
+    const title = "The Nutcracker, performed by the Kansas City Ballet";
+    const a = event({ id: "evt_a", title, venue, start: "2026-12-05" });
+    const b = event({ id: "evt_b", title, venue, start: "2026-12-06T14:00:00-06:00" });
+    expect(eventPageTitle(a, [a, b])).toBe(`${title}, Sat Dec 5`);
+    expect(eventPageTitle(b, [a, b])).toBe(`${title}, Sun Dec 6`);
+  });
+
+  it("tells apart two showings on one day by their times", () => {
+    const a = event({ id: "evt_a", title: "Nosferatu", venue: "Screenland Armour", start: "2026-10-25T19:00:00-05:00" });
+    const b = event({ id: "evt_b", title: "Nosferatu", venue: "Screenland Armour", start: "2026-10-25T21:30:00-05:00" });
+    expect(eventPageTitle(a, [a, b])).toBe("Nosferatu at Screenland Armour, Sun Oct 25, 7:00 pm");
+    expect(eventPageTitle(b, [a, b])).toBe("Nosferatu at Screenland Armour, Sun Oct 25, 9:30 pm");
+  });
+
+  it("never gives two published events the same title", () => {
+    const same = { title: "Open Studio", venue: "Charlotte Street", recurrence: "recurring" as const, start: undefined };
+    const all = [event({ ...same, id: "evt_a" }), event({ ...same, id: "evt_b" }), event({ ...same, id: "evt_c" })];
+    const titles = all.map((e) => eventPageTitle(e, all).toLowerCase());
+    expect(new Set(titles).size).toBe(3);
   });
 });
 
@@ -88,14 +128,14 @@ describe("eventJsonLd", () => {
     expect(ld).toMatchObject({ "@type": "Event", name: "A show", startDate: "2026-10-09T19:00:00-05:00", endDate: "2026-10-09T22:00:00-05:00" });
   });
 
-  it("is the site's own page, by url and @id, with the venue's page as sameAs (#189)", () => {
-    const ld = eventJsonLd(event({ id: "evt_87ced2675ef5", eventUrl: "https://www.therecordbar.com/shows/a-show" }), opts);
+  it("is the site's own page, by url and @id, and no other (#189, #301)", () => {
+    const ld = eventJsonLd(event({ id: "evt_87ced2675ef5", eventUrl: "https://www.therecordbar.com/shows/a-show", price: "$20" }), opts);
     expect(ld).toMatchObject({
       "@id": "https://www.kcthisweek.com/e/evt_87ced2675ef5",
       url: "https://www.kcthisweek.com/e/evt_87ced2675ef5",
-      sameAs: "https://www.therecordbar.com/shows/a-show",
     });
-    expect(eventJsonLd(event(), opts)).toMatchObject({ sameAs: "https://www.therecordbar.com/shows" });
+    expect(ld).not.toHaveProperty("sameAs");
+    expect(eventJsonLd(event(), opts)).not.toHaveProperty("sameAs");
   });
 
   it("keeps the venue's page as the offers' url", () => {
@@ -198,7 +238,7 @@ describe("eventJsonLd's fields for Google's Event result", () => {
     });
   });
 
-  it("gives the street address and position when the venue's table row has them (#137)", () => {
+  it("gives the venue's name alone, its street address and position when the venue's table row has them (#137, #301)", () => {
     const venue = {
       slug: "recordbar", name: "recordBar",
       address: { street: "1544 Grand Blvd", locality: "Kansas City", region: "MO" as const, postalCode: "64108" },
@@ -206,15 +246,15 @@ describe("eventJsonLd's fields for Google's Event result", () => {
     };
     expect((eventJsonLd(event(), { ...opts, venue }) as { location: object }).location).toEqual({
       "@type": "Place",
-      name: "recordBar, Crossroads",
+      name: "recordBar",
       address: { "@type": "PostalAddress", streetAddress: "1544 Grand Blvd", addressLocality: "Kansas City", addressRegion: "MO", postalCode: "64108", addressCountry: "US" },
       geo: { "@type": "GeoCoordinates", latitude: 39.0921, longitude: -94.5813 },
     });
   });
 
-  it("addresses the place to the city when the venue's page has no row", () => {
+  it("names the neighborhood and addresses the place to the city when the venue's page has no row", () => {
     expect(eventJsonLd(event(), { ...opts, venue: { slug: "recordbar", name: "recordBar" } })).toMatchObject({
-      location: { address: { addressLocality: "Kansas City", addressRegion: "MO" } },
+      location: { name: "recordBar, Crossroads", address: { addressLocality: "Kansas City", addressRegion: "MO" } },
     });
   });
 

@@ -1,5 +1,5 @@
 import { longDateLine } from "./date-line";
-import { formatShort, isDateOnly, localDate } from "./dates";
+import { formatDay, formatTime, isDateOnly, localDate } from "./dates";
 import { firstDay, hasStartDay, detailsUrl, venueLine } from "./events";
 import { kindName } from "./landing";
 import { siteConfig } from "../site.config";
@@ -48,14 +48,64 @@ export function eventDescription(e: PublishedEvent, today: string, about?: strin
   return tail === undefined || tail === "" || room < 24 ? head : `${head} ${clip(tail, room)}`;
 }
 
+/** The most an event page's title takes before Base's " · KC This Week" (#301), about what a search result shows. */
+const PAGE_TITLE_MAX = 60;
+
 /**
- * The event page's title: the event's, with a short date when another published event has the same title (#189), so
- * the two pages' titles differ in a search result or a tab: "Floating Pumpkin Patch, Oct 25".
+ * The title an event's page would have with no other event to tell it from: what it is, where, and for a one-off
+ * when, "Floating Pumpkin Patch at Lake Lenexa, Sun Oct 25" (#301). A part that does not fit in 60 characters goes,
+ * the day first, then the venue; the venue goes too when the title already names it.
+ */
+function baseTitle(e: PublishedEvent): string {
+  const title = e.title.trim();
+  const venue = venueLine(e);
+  const at = title.toLowerCase().includes(venue.toLowerCase()) ? "" : ` at ${venue}`;
+  const day = firstDay(e);
+  const when = e.recurrence === "one-off" && day !== undefined ? `, ${formatDay(day)}` : "";
+  return [`${title}${at}${when}`, `${title}${at}`].find((t) => t.length <= PAGE_TITLE_MAX) ?? title;
+}
+
+/** What tells two events of one title apart, in turn: the day, then the time, beyond the 60 characters (#189). */
+function told(e: PublishedEvent, title: string): string {
+  const day = firstDay(e);
+  if (day === undefined) return title;
+  if (!title.endsWith(formatDay(day))) return `${title}, ${formatDay(day)}`;
+  return isDateOnly(e.start!) ? title : `${title}, ${formatTime(e.start!)}`;
+}
+
+/** Every published event's page title by id; one per list, since each page's title depends on all the others. */
+const titlesOf = new WeakMap<readonly PublishedEvent[], Map<string, string>>();
+
+/** Titles grouped by their lowercase form, the way a reader would take two of them as one. */
+function sharing(titles: Map<string, string>): Map<string, string[]> {
+  const by = new Map<string, string[]>();
+  for (const [id, t] of titles) by.set(t.toLowerCase(), [...(by.get(t.toLowerCase()) ?? []), id]);
+  return by;
+}
+
+function pageTitles(events: readonly PublishedEvent[]): Map<string, string> {
+  const byId = new Map(events.map((e) => [e.id, e]));
+  const titles = new Map(events.map((e) => [e.id, baseTitle(e)]));
+  // Twice: a day, and then for two showings that day a time, each added only to titles still shared.
+  for (let pass = 0; pass < 2; pass++) {
+    for (const ids of sharing(titles).values()) if (ids.length > 1) for (const id of ids) titles.set(id, told(byId.get(id)!, titles.get(id)!));
+  }
+  // Whatever is still shared (two weekly events of one name at one venue) is numbered, in id order.
+  for (const ids of sharing(titles).values()) {
+    if (ids.length > 1) [...ids].sort().forEach((id, i) => i > 0 && titles.set(id, `${titles.get(id)} (${i + 1})`));
+  }
+  return titles;
+}
+
+/**
+ * The event page's title (#301): the event's, at its venue, on its day for a one-off, in at most 60 characters
+ * (baseTitle). Two published events never share one: a day and then a time tell apart two that would (#189), past
+ * the 60 characters if need be. The h1 and the share card keep the bare title.
  */
 export function eventPageTitle(e: PublishedEvent, events: readonly PublishedEvent[]): string {
-  const day = firstDay(e);
-  const shared = events.some((o) => o.id !== e.id && o.title.trim().toLowerCase() === e.title.trim().toLowerCase());
-  return shared && day !== undefined ? `${e.title}, ${formatShort(day)}` : e.title;
+  let titles = titlesOf.get(events);
+  if (titles === undefined) titlesOf.set(events, (titles = pageTitles(events)));
+  return titles.get(e.id) ?? baseTitle(e);
 }
 
 /**
@@ -149,12 +199,14 @@ function eventSchedule(e: PublishedEvent): object | undefined {
  * schema.org/Event, or undefined when there is no start date to state: a recurring event has none, and a run read
  * after it began has only an end date, which Event consumers read as a malformed listing, so both omit it.
  * The entity is the site's own page (`url` and `@id`, as the front and landing pages' ItemLists and the breadcrumb
- * name it); the venue's page stays as `sameAs` and the offers' `url` (#189). The description is the page's description
- * text, then the why-line, else the meta description's when-and-where sentence, so it is never empty. `image` is the
- * site's share card (no event imagery, spec section 7). The neighborhood goes in the place's name, since it is not a
- * postal locality. Offers only when the own page stated a price (eventOffers). The venue's table row (#137), when it
- * has one, gives the place its street address and position in place of the neighborhood's city, and is the organizer
- * when the event was read from its site (organizerLd).
+ * name it), with no `sameAs`: that names another page about the same thing, which the venue's listing is not (#301).
+ * The venue's page is the offers' `url` (#189). The description is the page's description text, then the why-line,
+ * else the meta description's when-and-where sentence, so it is never empty. `image` is the site's share card (no
+ * event imagery, spec section 7). Offers only when the own page stated a price (eventOffers). The venue's table row
+ * (#137), when it has an address, gives the place its street address and position, and the place is named by the
+ * venue's name alone (#301); without one the neighborhood goes in the place's name, since it is not a postal locality
+ * and the city the address gives is all else that says where (#189). The row is the organizer when the event was read
+ * from the venue's site (organizerLd).
  */
 export function eventJsonLd(
   e: PublishedEvent,
@@ -177,13 +229,12 @@ export function eventJsonLd(
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     location: {
       "@type": "Place",
-      name: `${e.venue}, ${e.neighborhood}`,
+      name: opts.venue?.address !== undefined ? opts.venue.name : `${e.venue}, ${e.neighborhood}`,
       address: opts.venue?.address !== undefined ? postalAddressLd(opts.venue.address) : { "@type": "PostalAddress", ...postalAddress(e), addressCountry: "US" },
       ...(opts.venue?.geo !== undefined && { geo: geoLd(opts.venue.geo) }),
     },
     image: [opts.image],
     url: page,
-    sameAs: detailsUrl(e),
     description: stated !== "" ? stated : datePlaceSentence(e, opts.today),
     ...(organizer !== undefined && { organizer }),
     ...(offers !== undefined && { offers }),

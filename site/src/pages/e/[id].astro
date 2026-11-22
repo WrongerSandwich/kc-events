@@ -15,9 +15,10 @@ import { addressLine, mapUrl, venueNamed, venuePath } from "../../lib/venues";
 import { meta } from "../../generated/meta";
 import { formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd, eventPageTitle } from "../../lib/event-meta";
+import { moreLikeThis } from "../../lib/more-like-this";
 import { breadcrumbJsonLd, kindName, kindPath } from "../../lib/landing";
 import { longDateLine } from "../../lib/date-line";
-import { admissionLine, detailsLabel, firstDay, hasStartDay, hostOf, isDated, lastDay, detailsUrl, modelNote, neighborhoodLine, neighborhoodShown, venueLine, verifiedLabel } from "../../lib/events";
+import { admissionLine, detailsLabel, hostOf, isDated, lastDay, detailsUrl, modelNote, neighborhoodLine, neighborhoodShown, venueLine, verifiedLabel } from "../../lib/events";
 import ReportForm from "../../components/ReportForm.astro";
 import { googleCalendarUrl, locatedForCalendar } from "../../lib/ics";
 import { siteConfig } from "../../site.config";
@@ -34,12 +35,8 @@ const metaDescription = eventDescription(event, meta.buildToday, description);
 // The reader lands on the event's own page when the job found one; the verified line still names the list it was read from.
 const details = detailsUrl(event);
 const report = { title: event.title, event: `${origin}/e/${event.id}`, primaryUrl: event.primaryUrl, ...(event.eventUrl && { eventUrl: event.eventUrl }) };
-// Three of the kind still ahead, the picks first, then by day: a short list that hands off to the kind's page reads as
-// chosen, where a long one reads as an aggregator's filler.
-const sameKind = events
-  .filter((e) => e.id !== event.id && e.kind === event.kind && hasStartDay(e) && firstDay(e)! >= meta.buildToday)
-  .sort((a, b) => Number(b.dontMiss) - Number(a.dontMiss) || firstDay(a)!.localeCompare(firstDay(b)!) || a.title.localeCompare(b.title));
-const moreLikeThis = sameKind.slice(0, 3);
+// Three still ahead, by the venue, then the kind, then the picks, so each page's three are its own (#301).
+const more = moreLikeThis(event, events, meta.buildToday);
 const admission = admissionLine(event);
 const written = modelNote(event.whyLine, description);
 const venue = venueNamed(venues, event.venue);
@@ -93,14 +90,15 @@ const located = venue?.address === undefined ? undefined : { name: venue.name, a
     </section>
   )}
 
-  {moreLikeThis.length > 0 && (
+  {more.length > 0 && (
     <section aria-labelledby="more" class={`kind-${slugify(event.kind)}`}>
-      <h2 id="more" class="section-heading">More {kindName(event.kind).toLowerCase()}</h2>
+      <h2 id="more" class="section-heading">More like this</h2>
       <ul class="more">
-        {moreLikeThis.map((e) => {
+        {more.map((e) => {
           const tile = dateTile(e, meta.buildToday);
+          // In its own kind's tint: what else is at the venue, or a pick, may be another kind.
           return (
-            <li>
+            <li class={`kind-${slugify(e.kind)}`}>
               {/* The whole row is the link, its tile in the kind's tint as on a card; it glides into that page's tile. */}
               <a href={`/e/${e.id}`}>
                 <DateTile tile={tile} id={e.id} />

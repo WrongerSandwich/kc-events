@@ -75,4 +75,14 @@ describe("the build of the committed dataset", () => {
     const text = where![1]!.replace(/<[^>]*>/g, "").replaceAll("&#39;", "'").replaceAll("&quot;", "\"").replaceAll("&amp;", "&");
     expect(text).toBe(`${venueLine(namedOnce!)} · ${namedOnce!.region}`);
   });
+
+  it.skipIf(!matchesGenerated)("gives no two event pages the same title (#189, #301)", () => {
+    const titles = new Map<string, string[]>();
+    for (const e of events) {
+      const title = /<title>(.*?)<\/title>/.exec(read(`e/${e.id}.html`))?.[1];
+      expect(title, `e/${e.id}.html has a title`).toBeDefined();
+      titles.set(title!.toLowerCase(), [...(titles.get(title!.toLowerCase()) ?? []), e.id]);
+    }
+    expect([...titles].filter(([, ids]) => ids.length > 1)).toEqual([]);
+  });
 });

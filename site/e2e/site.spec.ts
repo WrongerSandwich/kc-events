@@ -1145,7 +1145,7 @@ test("the changes page lists the run's new picks, moves, new events by kind, and
 test("an event page with a long kind label and a pick tag does not scroll sideways at 320 px (WCAG 1.4.10)", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await on(page, BUILD_DAY, "/e/evt_e2e000000005"); // a festivals/markets pick
-  await expect(page.locator(".dont-miss")).toBeVisible();
+  await expect(page.locator(".head .dont-miss")).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBe(0);
 });
