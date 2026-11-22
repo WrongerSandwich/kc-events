@@ -251,6 +251,7 @@ Quiet instruments: precise edges, ink words, colour only where a kind lives.
 - **Hover / Focus:** the edge darkens to faint ink over 150ms ease-out-quart; pressing nudges it down 1px; focus is the Fountain Blue ring.
 - **Pressed toggle:** a saved Save fills with ink, words in the ground colour.
 - **Quiet on a card:** on a pick's card the controls drop their box and sit in muted ink, gaining the card's kind tint on hover, so five cards are not ten buttons. The 44px target stays.
+- **The main control (event page):** "Details at …" or "Tickets at …", the page's one filled control, in ink with the ground's colour for its words, and the one square control (#295): it takes the shape of the rules around it, where every other control keeps its 6px corner. The column's width on phones. Once the event has passed, the banner's "See what's on this week" is the same control, and takes its place.
 
 ### Chips
 - **Kind chip:** a pill (999px) in the kind's tint with its shade for the icon and words, label type. As a link to the kind's page it drops the pill, keeping icon and words, underlined on hover: only a filter is pill-shaped.
@@ -271,6 +272,9 @@ The crown, the words in the Section style, then the double hairline. Sections si
 
 ### Date Tile (signature)
 The kind's tint with its shade, stepped at the shoulders like a setback tower (two 5px steps at each top corner, `--shoulders`) with a double line at its foot in its own shade. Weekday and month in the caps label around a 1.75rem/600 day number in Geist's tabular figures. 4rem wide on a card (3.5rem on phones, 5rem large on an event page). Today is ringed in its own shade, the ring following the steps. A passed event's tile is a flat grey (`pressed-tint`), no ring. On navigation it glides into the event page's tile.
+
+### Venue Block (event page)
+Under the event and before More <kind>, a section headed "The venue" (#295): the venue's name at 500, its street address in muted meta type, then two ways on in ink at 500, each a 44px target: "Everything at this venue" to the venue's page and "Map". Shown only when the venue table has an address for the venue; without one it would repeat the line under the title. One column of words: a venue's illustration, when it has one (#149), sits to their left, and no empty slot is drawn before then.
 
 ### Pick Card
 Not a box. A three-column grid: the date tile, the words (title, a meta line of icon-led facts, the why line in ink led by the pick tag, chips and a muted source link), then the action column with Save over Add to calendar. On phones the actions fold into a row under the words. Cards are separated by 1rem of space, never a border or shadow.
