@@ -1,0 +1,53 @@
+---
+/** Section 8: what stands between a bad run and a reader. The waits and floors are the scripts' and the site's, held by a test. */
+import { howItWorks } from "../../../generated/how-it-works";
+import { inWords, usd } from "../../../lib/how-it-works";
+import Figure from "../Figure.astro";
+
+const { constants, schedule, settings } = howItWorks;
+const cap = usd(settings.spendCapUsd);
+---
+<p>A run has to get through every one of these before a reader sees what it wrote. The first figure is the order of events around a run; the second is the guards by kind.</p>
+
+<Figure>
+  <ol class="how-gates">
+    <li><div class="how-gate-do"><b>The research run</b><span>Under a {schedule.runTimeoutMinutes}-minute timeout. It writes nothing unless everything is ready to be written.</span></div><div class="how-gate-if how-tone-warn"><b>If it fails</b>The data stays as it was.</div></li>
+    <li><div class="how-gate-do"><b>The site is built from the new data</b><span>A build refuses a dataset with fewer than {constants.minPublished} events to publish.</span></div><div class="how-gate-if how-tone-warn"><b>If it fails</b>Nothing is committed.</div></li>
+    <li><div class="how-gate-do"><b>Checks run on that build</b><span>Tests of what the build made of the new dataset.</span></div><div class="how-gate-if how-tone-warn"><b>If they fail</b>Nothing is committed.</div></li>
+    <li class="how-gate-line"><div class="how-gate-do"><b>The run is committed and published</b><span>From here the data is public history, and the site's host starts to build it.</span></div><div></div></li>
+    <li><div class="how-gate-do"><b>The deploy is watched</b><span>For up to {schedule.deployWaitMinutes} minutes.</span></div><div class="how-gate-if how-tone-warn"><b>If it fails</b>A failed run, with its data already published. The site goes on showing the last deploy that built.</div></li>
+    <li><div class="how-gate-do"><b>The outcome is recorded</b><span>On a public issue in the repository: a line for a success, the end of the log for a failure. A failure raises an alert, and so does a Monday on which no run starts.</span></div><div></div></li>
+  </ol>
+  <Fragment slot="caption">Everything above the double rule can fail without touching the site. If the machine that runs the job misses a week, the same run can be started by hand elsewhere.</Fragment>
+</Figure>
+
+<Figure>
+  <ul class="how-slabs">
+    <li class="how-slab"><b>Spend</b><ul>
+      <li>A cap of {cap} on each run, checked before every model call.</li>
+      <li>Past the cap, pages stay unread and events unjudged, and the report counts what was left.</li>
+      <li>A monthly limit on the model provider's key, set by hand.</li>
+    </ul></li>
+    <li class="how-slab"><b>Outages</b><ul>
+      <li>No source could be fetched: the run stops before any model call.</li>
+      <li>Model calls were made and none succeeded: the run fails.</li>
+      <li>Midweek, pages were fetched and none came back: the run stops before it writes.</li>
+    </ul></li>
+    <li class="how-slab"><b>The write</b><ul>
+      <li>The hand picks file or the venue table does not parse: the run stops before any write.</li>
+      <li>The new dataset fails its schema: nothing is written, and the refused records are set aside to be read.</li>
+      <li>All the files are renamed into place together.</li>
+    </ul></li>
+    <li class="how-slab"><b>Before publishing</b><ul>
+      <li>The site must build from the new data, with {constants.minPublished} events or more.</li>
+      <li>The checks of that build must pass.</li>
+      <li>Either one failing: nothing is committed.</li>
+    </ul></li>
+    <li class="how-slab"><b>On the site</b><ul>
+      <li>Only active events are published.</li>
+      <li>The deploy is watched for {schedule.deployWaitMinutes} minutes.</li>
+      <li>A banner on every page says so when the last good run is more than {inWords(constants.staleAfterDays)} days old.</li>
+    </ul></li>
+  </ul>
+  <Fragment slot="caption">A smaller failure costs only its own piece: one failed model call leaves its page or its batch as it was, and adds a line to the report.</Fragment>
+</Figure>

@@ -133,6 +133,50 @@ test("strike or outage opens with its principle, then eight questions before a s
   await expect(page.locator("#strikes .how-ladder .how-end")).toContainText("Strike.");
 });
 
+test("picks: who is judged, the three verdicts, the six reasons in the site's words, and the pick tag once", async ({ page }) => {
+  await open(page);
+  const published = (await (await page.request.get("/events.json")).json()).events as { dontMiss: boolean }[];
+  const picks = page.locator("#picks");
+  await expect(picks.locator(".how-num")).toHaveText([String(published.length), String(published.filter((e) => e.dontMiss).length)]);
+  await expect(picks.locator(".how-verdict > b")).toHaveText(["Pick", "Close", "No"]);
+  await expect(picks.locator(".how-reason > b")).toHaveText(["Rare", "Big name", "Occasion", "Tradition", "Unusual", "Major run"]);
+  // The one hue on the page that is not a role's: the site's own pick tag, where it means what it means everywhere.
+  await expect(picks.locator(".dont-miss")).toHaveCount(1);
+  await expect(page.locator("main .dont-miss")).toHaveCount(1);
+});
+
+test("safeguards: six gates with the line where a run is published, and five kinds of guard", async ({ page }) => {
+  await open(page);
+  const gates = page.locator("#safeguards .how-gates > li");
+  await expect(gates).toHaveCount(6);
+  await expect(page.locator("#safeguards .how-gate-line")).toHaveCount(1);
+  await expect(page.locator("#safeguards .how-gate-line")).toContainText("published");
+  await expect(gates.nth(0)).toContainText("90-minute");
+  await expect(gates.nth(4)).toContainText("15 minutes");
+  await expect(page.locator("#safeguards .how-slab")).toHaveCount(5);
+});
+
+test("corrections: what a run leaves, who reads it, where a fix lands, and where each kind of wrong is fixed", async ({ page }) => {
+  await open(page);
+  const fixes = page.locator("#corrections");
+  await expect(fixes.locator(".how-table thead th")).toHaveCount(2);
+  await expect(fixes.locator(".how-table tbody tr")).toHaveCount(8);
+  await expect(fixes.getByRole("link", { name: "About" })).toHaveAttribute("href", "/about#wrong-listing");
+  await expect(fixes.getByRole("link", { name: "What changed" })).toHaveAttribute("href", "/changes");
+});
+
+test("the page keeps the site's voice, and none of the operator's notes", async ({ page }) => {
+  await open(page);
+  const text = await page.locator("main").innerText();
+  const found = (pattern: RegExp) => text.match(pattern)?.[0];
+  expect(found(/\b(you|your|yours|we|our|us)\b/i)).toBeUndefined(); // no reader addressed, no "we"
+  expect(found(/!/)).toBeUndefined();
+  expect(found(/#\d{2,}/)).toBeUndefined(); // a ticket number
+  expect(found(/\b[0-9a-f]{7}\b/)).toBeUndefined(); // a commit hash
+  expect(found(/~\//)).toBeUndefined(); // a path on the machine that runs the job
+  expect(found(/Slack|healthchecks|worktree|needs-triage|post-run-check|pnpm |crontab/i)).toBeUndefined();
+});
+
 test("the page carries no script or inline style of its own: its styles are a linked sheet", () => {
   const page = built("about/how-it-works.html");
   const plain = built("404.html");

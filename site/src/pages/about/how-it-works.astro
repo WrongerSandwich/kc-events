@@ -3,9 +3,12 @@ import "../../styles/how-it-works.css";
 import Figure from "../../components/how/Figure.astro";
 import RoleTag from "../../components/how/RoleTag.astro";
 import ARun from "../../components/how/sections/ARun.astro";
+import Corrections from "../../components/how/sections/Corrections.astro";
 import LifeOfAListing from "../../components/how/sections/LifeOfAListing.astro";
 import Matching from "../../components/how/sections/Matching.astro";
 import PageToListing from "../../components/how/sections/PageToListing.astro";
+import Picks from "../../components/how/sections/Picks.astro";
+import Safeguards from "../../components/how/sections/Safeguards.astro";
 import StrikeOrOutage from "../../components/how/sections/StrikeOrOutage.astro";
 import TheWeek from "../../components/how/sections/TheWeek.astro";
 import { howItWorks } from "../../generated/how-it-works";
@@ -27,9 +30,9 @@ const sections = [
   { id: "matching", title: "Matching", Body: Matching },
   { id: "life", title: "Life of a listing", Body: LifeOfAListing },
   { id: "strikes", title: "Strike or outage", Body: StrikeOrOutage },
-  { id: "picks", title: "Picks" },
-  { id: "safeguards", title: "Safeguards" },
-  { id: "corrections", title: "Corrections and fixes" },
+  { id: "picks", title: "Picks", Body: Picks },
+  { id: "safeguards", title: "Safeguards", Body: Safeguards },
+  { id: "corrections", title: "Corrections and fixes", Body: Corrections },
 ];
 ---
 <Base title="How it works" description="How the weekly research job reads venue pages, checks what it read, and keeps the list current.">
@@ -57,7 +60,7 @@ const sections = [
       <ol>{sections.map((s, i) => <li><a href={`#${s.id}`}>{i + 1}. {s.title}</a></li>)}</ol>
     </nav>
 
-    <Figure caption="The colour on a step or a box says who does it. Every diagram below uses these five.">
+    <Figure caption="The color on a step or a box says who does it. Every diagram below uses these five.">
       <div class="how-key">
         <div><RoleTag role="network" />A page fetched, plainly or in a headless browser, or a web search.</div>
         <div><RoleTag role="extraction" /><span><code>{settings.extractionModel}</code> reads one page and reports what it lists.</span></div>
@@ -70,7 +73,7 @@ const sections = [
     {sections.map((s) => (
       <section id={s.id} aria-labelledby={`${s.id}-heading`}>
         <h2 id={`${s.id}-heading`} class="section-heading">{s.title}</h2>
-        {s.Body !== undefined && <s.Body />}
+        <s.Body />
       </section>
     ))}
 

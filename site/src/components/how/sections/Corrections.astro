@@ -1,0 +1,55 @@
+---
+/** Section 9: how a run is reviewed, and where a finding becomes a fix. Each kind of wrong has one home. */
+import { siteConfig } from "../../../site.config";
+import Figure from "../Figure.astro";
+
+const file = (path: string) => `${siteConfig.repoUrl}/blob/main/${path}`;
+const link = (path: string, words: string) => `<a href="${file(path)}">${words}</a>`;
+/** What a reader or the audit sees, and the one place it is put right. */
+const fixes: [string, string][] = [
+  ["A wrong date or venue, or a promotion listed as an event", `${link("prompts/extraction-rules.md", "The extraction rules")}, or that source's own hints in ${link("data/registry.yaml", "the source list")}.`],
+  ["A wrong time, price or age limit", `${link("prompts/event-page-rules.md", "The event page rules")}.`],
+  ["A pick that reads as arbitrary, or a miss", `${link("prompts/curation-prompt.md", "The curation prompt")} for a pattern; ${link("data/picks.yaml", "the hand picks file")} for one event.`],
+  ["A source that yields nothing, or fails", `${link("data/registry.yaml", "The source list")}: the source's address, how it is fetched, or its exclusion with a reason.`],
+  ["One event listed twice", `A venue's other names in ${link("research.config.yaml", "the config")}, or ${link("src/identity.ts", "the matching rules")}.`],
+  ["An event in the wrong part of town", `The venue's row in ${link("data/venues.yaml", "the venue table")}.`],
+  ["A venue or an organizer the list never sees", `${link("data/registry.yaml", "The source list")}: a new source, drafted from what discovery held for that site.`],
+  ["Events vanishing that are still on", `Usually an outage taken for a reading: the ladder under <a href="#strikes">Strike or outage</a>.`],
+];
+---
+<p>Nothing in a run reviews itself beyond the safeguards above. The review is a loop around it, with three readers: the audit after Monday's run, the person who maintains the list, and the site's readers.</p>
+
+<Figure>
+  <p class="how-label">What a run leaves behind</p>
+  <ul class="how-cards">
+    <li class="how-card how-tone-data"><b>The run's report</b>Committed with the data, in <a href={`${siteConfig.repoUrl}/tree/main/data/runs`}>the repository</a>: once for people and once for programs. The second lists every model call.</li>
+    <li class="how-card how-tone-data"><b>The difference</b>What changed in the dataset since the last run, which the site's <a href="/changes">What changed</a> page is built from.</li>
+    <li class="how-card how-tone-data"><b>A health record</b>A line on a public issue for a success, or the end of the log for a failure.</li>
+  </ul>
+  <p class="how-down">Who reads it <span aria-hidden="true">↓</span></p>
+  <ul class="how-cards">
+    <li class="how-card"><b>The audit</b>A second model compares the dataset with the one of a week before. It checks every new record, every likely duplicate, every record whose title, date, venue, status or pick changed, and the problems the report names, against the written rules. It opens a page only on real doubt, and it changes nothing.</li>
+    <li class="how-card how-tone-hand"><b>The maintainer</b>The audit's findings, and the report's account of the picks: every pick and close call, what moved and why.</li>
+    <li class="how-card"><b>Readers</b>The form on every event's page, and on <a href="/about#wrong-listing">About</a>, files a public report of a wrong listing.</li>
+  </ul>
+  <p class="how-down">Where a finding goes <span aria-hidden="true">↓</span></p>
+  <ul class="how-cards">
+    <li class="how-card how-tone-hand"><b>An edit by hand</b>A rule in one of the three rule documents, a source's address or its hints, a row of the venue table, a pick.</li>
+    <li class="how-card how-tone-code"><b>A change to the code</b>Tested against a whole run with stand-ins for the network and the models, and reviewed before it lands.</li>
+    <li class="how-card"><b>Nothing</b>Closed with the reason, so that the same finding is recognized the next time.</li>
+  </ul>
+  <p class="how-down">The next run confirms it <span aria-hidden="true">↺</span></p>
+  <ul class="how-cards">
+    <li class="how-card how-tone-plain">A fix that changes what a live page yields is not called done on its tests alone: the next run's report and dataset are read for it.</li>
+  </ul>
+</Figure>
+
+<h3>Where each kind of wrong is fixed</h3>
+<Figure scroll="Where each kind of wrong is fixed">
+  <table class="how-table">
+    <thead><tr><th scope="col">What is wrong</th><th scope="col">Where it is fixed</th></tr></thead>
+    <tbody>
+      {fixes.map(([wrong, home]) => <tr><th scope="row">{wrong}</th><td set:html={home} /></tr>)}
+    </tbody>
+  </table>
+</Figure>
