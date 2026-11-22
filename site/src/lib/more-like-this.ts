@@ -1,14 +1,10 @@
+import { daysBetween } from "./dates";
 import { firstDay, hasStartDay } from "./events";
 import type { PublishedEvent } from "./types";
 import { venueSlug } from "./venues";
 
 /** How many an event page lists: a short list reads as chosen, where a long one reads as an aggregator's filler. */
 const SHOWN = 3;
-
-/** Days between two YYYY-MM-DD dates, either way round; as UTC midnights, so no DST change shortens a day. */
-function apart(a: string, b: string): number {
-  return Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`)) / 86_400_000;
-}
 
 /**
  * The event page's "More like this" (#301): at most three events still to come, never the event itself, so each page
@@ -23,7 +19,7 @@ export function moreLikeThis(e: PublishedEvent, events: readonly PublishedEvent[
   const anchor = firstDay(e) ?? today;
   const byTitle = (a: PublishedEvent, b: PublishedEvent) => a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
   const soonest = (a: PublishedEvent, b: PublishedEvent) => firstDay(a)!.localeCompare(firstDay(b)!) || byTitle(a, b);
-  const nearest = (a: PublishedEvent, b: PublishedEvent) => apart(firstDay(a)!, anchor) - apart(firstDay(b)!, anchor) || byTitle(a, b);
+  const nearest = (a: PublishedEvent, b: PublishedEvent) => daysBetween(firstDay(a)!, anchor) - daysBetween(firstDay(b)!, anchor) || byTitle(a, b);
   const venue = venueSlug(e.venue);
   const groups = [
     ahead.filter((o) => venueSlug(o.venue) === venue).sort(soonest),

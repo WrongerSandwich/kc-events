@@ -47,6 +47,11 @@ export function addDays(date: string, n: number): string {
   return fromUtc(utc(date) + n * DAY_MS);
 }
 
+/** Whole days between two dates, either way round: 2 for "2026-10-31" and "2026-11-02". */
+export function daysBetween(a: string, b: string): number {
+  return Math.abs(utc(a) - utc(b)) / DAY_MS;
+}
+
 /** 9 for "2026-10-09". */
 export function dayOfMonth(date: string): number {
   return parts(date)[2];

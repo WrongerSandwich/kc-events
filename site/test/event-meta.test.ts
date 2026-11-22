@@ -81,8 +81,8 @@ describe("eventPageTitle (#189, #301)", () => {
 
   it("drops the day first, then the venue, to stay within 60 characters", () => {
     const venue = "Kauffman Center for the Performing Arts";
-    const noDay = event({ title: "Handel's Messiah with the Symphony", venue }); // 34 + 43 = 77
-    expect(eventPageTitle(noDay, [noDay])).toBe("Handel's Messiah with the Symphony");
+    const venueDropped = event({ title: "Handel's Messiah with the Symphony", venue }); // 34 + 43 = 77
+    expect(eventPageTitle(venueDropped, [venueDropped])).toBe("Handel's Messiah with the Symphony");
     const withVenue = event({ title: "Handel's Messiah, Symphony Chorus", venue: "Helzberg Hall" }); // 33 + 16 + 12 = 61
     expect(eventPageTitle(withVenue, [withVenue])).toBe("Handel's Messiah, Symphony Chorus at Helzberg Hall");
     const long = event({ title: "An Evening with the Kansas City Symphony Chamber Players and Friends in the Lobby", venue });
@@ -94,6 +94,13 @@ describe("eventPageTitle (#189, #301)", () => {
     expect(eventPageTitle(e, [e])).toBe("Holiday Lights at Powell Gardens, Sat Dec 5");
     const lower = event({ title: "RECORDBAR anniversary party", start: "2026-10-09" });
     expect(eventPageTitle(lower, [lower])).toBe("RECORDBAR anniversary party, Fri Oct 9");
+  });
+
+  it("names the venue, not the room, and counts it named only as whole words", () => {
+    const roomed = event({ title: "Messiah at the Folly", venue: "Folly", room: "Main Hall", start: "2026-12-05" });
+    expect(eventPageTitle(roomed, [roomed])).toBe("Messiah at the Folly, Sat Dec 5");
+    const elsewhere = event({ title: "The Republic Tigers", venue: "The Rep", start: "2026-12-05" });
+    expect(eventPageTitle(elsewhere, [elsewhere])).toBe("The Republic Tigers at The Rep, Sat Dec 5");
   });
 
   it("tells apart two events that would share a title, the day first", () => {
@@ -114,9 +121,10 @@ describe("eventPageTitle (#189, #301)", () => {
 
   it("never gives two published events the same title", () => {
     const same = { title: "Open Studio", venue: "Charlotte Street", recurrence: "recurring" as const, start: undefined };
-    const all = [event({ ...same, id: "evt_a" }), event({ ...same, id: "evt_b" }), event({ ...same, id: "evt_c" })];
+    const numbered = event({ id: "evt_d", title: "Open Studio at Charlotte Street (2)", venue: "Charlotte Street", recurrence: "recurring", start: undefined });
+    const all = [event({ ...same, id: "evt_a" }), event({ ...same, id: "evt_b" }), event({ ...same, id: "evt_c" }), numbered];
     const titles = all.map((e) => eventPageTitle(e, all).toLowerCase());
-    expect(new Set(titles).size).toBe(3);
+    expect(new Set(titles).size).toBe(4);
   });
 });
 

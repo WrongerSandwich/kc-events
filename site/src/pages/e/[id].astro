@@ -36,7 +36,7 @@ const metaDescription = eventDescription(event, meta.buildToday, description);
 const details = detailsUrl(event);
 const report = { title: event.title, event: `${origin}/e/${event.id}`, primaryUrl: event.primaryUrl, ...(event.eventUrl && { eventUrl: event.eventUrl }) };
 // Three still ahead, by the venue, then the kind, then the picks, so each page's three are its own (#301).
-const more = moreLikeThis(event, events, meta.buildToday);
+const moreRows = moreLikeThis(event, events, meta.buildToday);
 const admission = admissionLine(event);
 const written = modelNote(event.whyLine, description);
 const venue = venueNamed(venues, event.venue);
@@ -90,11 +90,11 @@ const located = venue?.address === undefined ? undefined : { name: venue.name, a
     </section>
   )}
 
-  {more.length > 0 && (
+  {moreRows.length > 0 && (
     <section aria-labelledby="more" class={`kind-${slugify(event.kind)}`}>
       <h2 id="more" class="section-heading">More like this</h2>
       <ul class="more">
-        {more.map((e) => {
+        {moreRows.map((e) => {
           const tile = dateTile(e, meta.buildToday);
           // In its own kind's tint: what else is at the venue, or a pick, may be another kind.
           return (

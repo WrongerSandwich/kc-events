@@ -51,61 +51,84 @@ export function eventDescription(e: PublishedEvent, today: string, about?: strin
 /** The most an event page's title takes before Base's " · KC This Week" (#301), about what a search result shows. */
 const PAGE_TITLE_MAX = 60;
 
-/**
- * The title an event's page would have with no other event to tell it from: what it is, where, and for a one-off
- * when, "Floating Pumpkin Patch at Lake Lenexa, Sun Oct 25" (#301). A part that does not fit in 60 characters goes,
- * the day first, then the venue; the venue goes too when the title already names it.
- */
-function baseTitle(e: PublishedEvent): string {
-  const title = e.title.trim();
-  const venue = venueLine(e);
-  const at = title.toLowerCase().includes(venue.toLowerCase()) ? "" : ` at ${venue}`;
-  const day = firstDay(e);
-  const when = e.recurrence === "one-off" && day !== undefined ? `, ${formatDay(day)}` : "";
-  return [`${title}${at}${when}`, `${title}${at}`].find((t) => t.length <= PAGE_TITLE_MAX) ?? title;
+/** Whether a title names the venue: its name as whole words, whatever the case ("The Rep" is not in "The Republic"). */
+function namesVenue(title: string, venue: string): boolean {
+  const name = venue.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^\\p{L}\\p{N}])${name}(?:$|[^\\p{L}\\p{N}])`, "iu").test(title);
 }
 
-/** What tells two events of one title apart, in turn: the day, then the time, beyond the 60 characters (#189). */
-function told(e: PublishedEvent, title: string): string {
+/**
+ * An event page's title with no other event to tell it from (#301): what it is, at which venue (never the room, which
+ * a search result has no room for), and for a one-off on which day, "Floating Pumpkin Patch at Lake Lenexa, Sun Oct
+ * 25". A part that does not fit within the budget goes, the day first, then the venue; the venue goes too when the
+ * title already names it. `dated` says whether the day stayed in.
+ */
+function baseTitle(e: PublishedEvent): { title: string; dated: boolean } {
+  const title = e.title.trim();
+  const at = namesVenue(title, e.venue) ? "" : ` at ${e.venue.trim()}`;
   const day = firstDay(e);
-  if (day === undefined) return title;
-  if (!title.endsWith(formatDay(day))) return `${title}, ${formatDay(day)}`;
-  return isDateOnly(e.start!) ? title : `${title}, ${formatTime(e.start!)}`;
+  if (e.recurrence === "one-off" && day !== undefined && `${title}${at}, ${formatDay(day)}`.length <= PAGE_TITLE_MAX) {
+    return { title: `${title}${at}, ${formatDay(day)}`, dated: true };
+  }
+  return { title: `${title}${at}`.length <= PAGE_TITLE_MAX ? `${title}${at}` : title, dated: false };
+}
+
+/**
+ * What tells apart two events that would share a title, in the order they are added past the budget (#189): the day,
+ * when the title has dropped it or never had it, then the start's time, for two showings on one day.
+ */
+function tieBreakers(e: PublishedEvent, dated: boolean): string[] {
+  const day = firstDay(e);
+  if (day === undefined) return [];
+  const timed = isDateOnly(e.start!) ? [] : [formatTime(e.start!)];
+  return [...(dated ? [] : [formatDay(day)]), ...timed];
 }
 
 /** Every published event's page title by id; one per list, since each page's title depends on all the others. */
 const titlesOf = new WeakMap<readonly PublishedEvent[], Map<string, string>>();
 
-/** Titles grouped by their lowercase form, the way a reader would take two of them as one. */
-function sharing(titles: Map<string, string>): Map<string, string[]> {
+/** Event ids grouped by their title's lowercase form, the way a reader would take two titles as one. */
+function idsByTitle(titles: Map<string, string>): Map<string, string[]> {
   const by = new Map<string, string[]>();
   for (const [id, t] of titles) by.set(t.toLowerCase(), [...(by.get(t.toLowerCase()) ?? []), id]);
   return by;
 }
 
 function pageTitles(events: readonly PublishedEvent[]): Map<string, string> {
-  const byId = new Map(events.map((e) => [e.id, e]));
-  const titles = new Map(events.map((e) => [e.id, baseTitle(e)]));
-  // Twice: a day, and then for two showings that day a time, each added only to titles still shared.
+  const parts = new Map(events.map((e) => {
+    const base = baseTitle(e);
+    return [e.id, { base: base.title, extra: tieBreakers(e, base.dated), used: 0 }];
+  }));
+  const titleOf = (p: { base: string; extra: string[]; used: number }) => [p.base, ...p.extra.slice(0, p.used)].join(", ");
+  const titles = () => new Map([...parts].map(([id, p]) => [id, titleOf(p)]));
+  // Each pass adds the next tie-breaker to every title still shared, and only to those.
   for (let pass = 0; pass < 2; pass++) {
-    for (const ids of sharing(titles).values()) if (ids.length > 1) for (const id of ids) titles.set(id, told(byId.get(id)!, titles.get(id)!));
+    for (const ids of idsByTitle(titles()).values()) if (ids.length > 1) for (const id of ids) parts.get(id)!.used++;
   }
-  // Whatever is still shared (two weekly events of one name at one venue) is numbered, in id order.
-  for (const ids of sharing(titles).values()) {
-    if (ids.length > 1) [...ids].sort().forEach((id, i) => i > 0 && titles.set(id, `${titles.get(id)} (${i + 1})`));
+  // Whatever is still shared (two weekly events of one name at one venue) is numbered, in id order, past any number
+  // another title already has.
+  const out = titles();
+  const taken = new Set([...out.values()].map((t) => t.toLowerCase()));
+  for (const ids of idsByTitle(out).values()) {
+    for (const id of [...ids].sort().slice(1)) {
+      let n = 2;
+      while (taken.has(`${out.get(id)} (${n})`.toLowerCase())) n++;
+      out.set(id, `${out.get(id)} (${n})`);
+      taken.add(out.get(id)!.toLowerCase());
+    }
   }
-  return titles;
+  return out;
 }
 
 /**
- * The event page's title (#301): the event's, at its venue, on its day for a one-off, in at most 60 characters
+ * The event page's title (#301): the event's, at its venue, on its day for a one-off, within PAGE_TITLE_MAX
  * (baseTitle). Two published events never share one: a day and then a time tell apart two that would (#189), past
- * the 60 characters if need be. The h1 and the share card keep the bare title.
+ * the budget if need be, and a number whatever is still shared. The h1 and the share card keep the bare title.
  */
 export function eventPageTitle(e: PublishedEvent, events: readonly PublishedEvent[]): string {
   let titles = titlesOf.get(events);
   if (titles === undefined) titlesOf.set(events, (titles = pageTitles(events)));
-  return titles.get(e.id) ?? baseTitle(e);
+  return titles.get(e.id) ?? baseTitle(e).title;
 }
 
 /**
