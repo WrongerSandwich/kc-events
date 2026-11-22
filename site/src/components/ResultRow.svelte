@@ -61,7 +61,7 @@
        this width (measured on the 10-19 run: 78 px here, 26 from 1280 px; 66 from 1024 px on the 10-23 run, with its 24 px targets (57 without)); after, its own height. */
     content-visibility: auto; contain-intrinsic-size: auto 78px;
   }
-  .when-line { grid-area: when; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
+  .when-line { grid-area: when; min-width: 0; display: flex; align-items: baseline; gap: var(--space-2); }
   .when { min-width: 0; color: var(--fg-muted); font-size: var(--text-xs); }
   /* The title, then a pick tag that never gives way to it. */
   .title { grid-area: title; min-width: 0; display: flex; align-items: baseline; gap: var(--space-2); }
@@ -76,9 +76,9 @@
   .row :global(.on-title) { display: none; }
   @media (min-width: 1024px) {
     .row :global(.on-date) { display: none; }
-    .title :global(.on-title) { display: inline-flex; }
+    .title :global(.on-title) { display: inline-block; }
   }
-  /* A passed save: muted, with base.css's quiet outlined tag where a pick has its red one. */
+  /* A passed save: muted, with base.css's quiet outlined tag where a pick has its own. */
   .passed h3, .passed .when { color: var(--fg-muted); }
   .where, .verified { font-size: var(--text-xs); color: var(--fg-faint); }
   /* The chip is KindChip's element, so the row reaches it with :global. Below 1024 px it and the venue are 24 px tall,

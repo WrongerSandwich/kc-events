@@ -50,7 +50,7 @@ describe("DontMissCard's actions (#181)", () => {
   });
 });
 
-// The pick tag, the reason in the carmine pill, leads the card's why-line; a screen reader hears what the word is (#273).
+// The pick tag, the reason after its carmine diamond, leads the card's why-line; a screen reader hears what the word is (#273).
 describe("DontMissCard's pick tag (#273)", () => {
   it("leads the why-line with the reason in the tag, said as a pick to a screen reader", () => {
     const { container } = render(DontMissCard, { event: event({ dontMiss: true, pickReason: "tradition", whyLine: "Once a year." }), today: "2026-10-05" });
