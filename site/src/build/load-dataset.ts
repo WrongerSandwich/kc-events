@@ -169,13 +169,14 @@ export function recentVenues(records: readonly Event[], config: RunConfig, today
     .flatMap((e) => {
       const published = e.status === "active" || (e.status === "expired" && e.expiryReason === "past" && e.lastVerified !== undefined);
       if (e.venue === undefined || !published || outsidePlace(e.neighborhood, config)) return [];
-      if (vagueVenue(venueAndRoom(e.venue, config.venueAliases).venue)) return [];
+      const venue = venueAndRoom(e.venue, config.venueAliases).venue;
+      if (vagueVenue(venue)) return [];
       const last = e.end ?? e.start;
       const day = last === undefined ? (e.status === "active" ? today : undefined) : localDate(last);
-      return day !== undefined && day >= cutoff ? [{ e, day }] : [];
+      return day !== undefined && day >= cutoff ? [{ venue, e, day }] : [];
     })
     .sort((a, b) => b.day.localeCompare(a.day))
-    .map(({ e }) => ({ venue: venueAndRoom(e.venue!, config.venueAliases).venue, neighborhood: e.neighborhood, region: regionFor(e.neighborhood, config) }));
+    .map(({ venue, e }) => ({ venue, neighborhood: e.neighborhood, region: regionFor(e.neighborhood, config) }));
 }
 
 /**

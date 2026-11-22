@@ -24,7 +24,7 @@ const hood = venue.neighborhood === undefined ? undefined : neighborhoodLine(sam
 const title = venuePageTitle(venue);
 const description = venueDescription(venue, here, meta.buildToday);
 const facts = venueFacts(here, meta.buildToday, about.horizonWeeks);
-const jsonLd = venuePageJsonLd(venue, here, { origin, today: meta.buildToday });
+const jsonLd = venuePageJsonLd(venue, here, { origin, today: meta.buildToday, lastSuccessfulRun: meta.lastSuccessfulRun });
 const map = mapUrl(venue);
 ---
 <Base title={title} description={description} jsonLd={jsonLd} wide>

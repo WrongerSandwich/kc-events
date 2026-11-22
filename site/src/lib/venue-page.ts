@@ -20,7 +20,10 @@ function venueCity(v: PublishedVenue): string {
 /** "Knuckleheads events, Kansas City"; a name that already ends with its city does not say it twice. */
 export function venuePageTitle(v: PublishedVenue): string {
   const city = venueCity(v);
-  return v.name.trim().toLowerCase().endsWith(city.toLowerCase()) ? `${v.name} events` : `${v.name} events, ${city}`;
+  // As a whole word: "Parks Commission" does not end with the city Mission.
+  const name = v.name.trim().toLowerCase();
+  const endsWithCity = name === city.toLowerCase() || name.endsWith(` ${city.toLowerCase()}`);
+  return endsWithCity ? `${v.name} events` : `${v.name} events, ${city}`;
 }
 
 /** Where a venue is, in a few words: its neighborhood, or its region when the neighborhood is only its own name. */
@@ -92,9 +95,10 @@ export function venueFacts(events: readonly PublishedEvent[], today: string, hor
 /**
  * The page's JSON-LD: the Place (venueJsonLd); the trail Home › Venues › the venue, as an event page's breadcrumb is
  * shaped; and, when anything coming up has a start, an ItemList of those events' pages in the order the page lists
- * them, as the kind and region pages carry (landingJsonLd). A recurring event has no Event JSON-LD, so it is not listed.
+ * them, as the kind and region pages carry (landingJsonLd), last modified at the last run (#189). A recurring event has
+ * no Event JSON-LD, so it is not listed.
  */
-export function venuePageJsonLd(v: PublishedVenue, events: readonly PublishedEvent[], opts: { origin: string; today: string }): object[] {
+export function venuePageJsonLd(v: PublishedVenue, events: readonly PublishedEvent[], opts: { origin: string; today: string; lastSuccessfulRun: string }): object[] {
   const at = (path: string) => new URL(path, opts.origin).toString();
   const page = at(`/v/${v.slug}`);
   const trail = {
@@ -112,6 +116,7 @@ export function venuePageJsonLd(v: PublishedVenue, events: readonly PublishedEve
     "@type": "ItemList",
     name: `Events at ${v.name}`,
     url: page,
+    dateModified: opts.lastSuccessfulRun,
     numberOfItems: items.length,
     itemListElement: items.map((e, i) => ({ "@type": "ListItem", position: i + 1, url: at(`/e/${e.id}`) })),
   };

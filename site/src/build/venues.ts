@@ -97,7 +97,7 @@ export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; 
   const venues = [...slugs].map((slug): PublishedVenue => {
     const row = rows.get(slug);
     // A venue with nothing coming up is named and placed by its latest records, which `recent` lists first.
-    const events: { venue: string; neighborhood: string; region: string }[] = bySlug.get(slug) ?? recentBySlug.get(slug) ?? [];
+    const events: readonly RecentVenue[] = bySlug.get(slug) ?? recentBySlug.get(slug) ?? [];
     const neighborhood = mostCommon(events.map((e) => e.neighborhood));
     return {
       slug,

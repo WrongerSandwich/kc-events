@@ -7,6 +7,7 @@ import { event } from "./fixtures/event";
 const origin = "https://www.kcthisweek.com";
 /** A Monday: the week runs through Sunday the 11th, a three-week horizon through the 26th. */
 const today = "2026-10-05";
+const lastSuccessfulRun = "2026-10-05T06:30:00-05:00";
 
 const recordBar: PublishedVenue = { slug: "recordbar", name: "recordBar", neighborhood: "Crossroads", region: "Central KC" };
 const kauffman: PublishedVenue = {
@@ -37,6 +38,11 @@ describe("venuePageTitle", () => {
   it("does not repeat a city the name already ends with", () => {
     expect(venuePageTitle({ ...recordBar, name: "Union Station Kansas City" })).toBe("Union Station Kansas City events");
     expect(venuePageTitle({ ...lenexa, name: "City of Lenexa" })).toBe("City of Lenexa events");
+  });
+
+  it("matches the city only as a whole word", () => {
+    const mission = { ...lenexa, name: "Parks Commission", address: { ...lenexa.address!, locality: "Mission" } };
+    expect(venuePageTitle(mission)).toBe("Parks Commission events, Mission");
   });
 });
 
@@ -122,7 +128,7 @@ describe("venueFacts", () => {
 describe("venuePageJsonLd", () => {
   it("is the Place, the trail Home › Venues › the venue, and the upcoming events' pages", () => {
     const here = [event({ id: "evt_b", start: "2026-10-17" }), event({ id: "evt_a", start: "2026-10-10" }), event({ id: "evt_c", start: undefined, recurrence: "recurring", schedule: "Tuesdays" })];
-    const [place, trail, list, ...rest] = venuePageJsonLd(kauffman, here, { origin, today }) as Record<string, unknown>[];
+    const [place, trail, list, ...rest] = venuePageJsonLd(kauffman, here, { origin, today, lastSuccessfulRun }) as Record<string, unknown>[];
     expect(rest).toEqual([]);
     expect(place).toMatchObject({ "@type": "Place", name: kauffman.name, "@id": `${origin}/v/${kauffman.slug}` });
     expect(trail).toEqual({
@@ -139,6 +145,7 @@ describe("venuePageJsonLd", () => {
       "@type": "ItemList",
       name: `Events at ${kauffman.name}`,
       url: `${origin}/v/${kauffman.slug}`,
+      dateModified: lastSuccessfulRun,
       numberOfItems: 2,
       itemListElement: [
         { "@type": "ListItem", position: 1, url: `${origin}/e/evt_a` },
@@ -148,7 +155,7 @@ describe("venuePageJsonLd", () => {
   });
 
   it("has no ItemList for a venue with nothing coming up", () => {
-    const blocks = venuePageJsonLd(kauffman, [], { origin, today }) as Record<string, unknown>[];
+    const blocks = venuePageJsonLd(kauffman, [], { origin, today, lastSuccessfulRun }) as Record<string, unknown>[];
     expect(blocks.map((b) => b["@type"])).toEqual(["Place", "BreadcrumbList"]);
   });
 });
