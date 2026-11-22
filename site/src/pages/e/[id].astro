@@ -11,7 +11,7 @@ import { origin, shareImage } from "../../build/origin";
 import { events } from "../../generated/events";
 import { descriptions } from "../../generated/descriptions";
 import { venues } from "../../generated/venues";
-import { venueNamed, venuePath } from "../../lib/venues";
+import { addressLine, mapUrl, venueNamed, venuePath } from "../../lib/venues";
 import { meta } from "../../generated/meta";
 import { formatShort, localDate } from "../../lib/dates";
 import { eventDescription, eventJsonLd, eventPageTitle } from "../../lib/event-meta";
@@ -47,6 +47,9 @@ const eventLd = eventJsonLd(event, { origin, today: meta.buildToday, description
 const jsonLd = [...(eventLd === undefined ? [] : [eventLd]), breadcrumbJsonLd(event, origin)];
 // Google Calendar on Android opens no .ics, so its template link is the second way in Add to calendar (#188).
 const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, event), siteConfig.name, meta.buildToday) : undefined;
+// The venue's block (#295) needs something the line under the title does not already say: a street address, which
+// only a row of the venue table gives. Without one the block would repeat that line, so there is none.
+const located = venue?.address === undefined ? undefined : { name: venue.name, address: addressLine(venue.address), map: mapUrl(venue) };
 ---
 <Base title={eventPageTitle(event, events)} description={metaDescription} jsonLd={jsonLd}>
   <article class={`event kind-${slugify(event.kind)}`}>
@@ -75,6 +78,20 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
     <p class="verified">{verifiedLabel(event)} {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.{written && ` ${written}`}</p>
     <ReportForm context={report} summary="Wrong? Report it" />
   </article>
+
+  {/* Where it is, for a reader working out how to get there, and the way to everything else at the venue. One column
+      of words: a venue's illustration, when it has one (#149), sits to their left. */}
+  {located !== undefined && (
+    <section aria-labelledby="venue" class="venue">
+      <h2 id="venue" class="section-heading">The venue</h2>
+      <p class="venue-name">{located.name}</p>
+      <p class="venue-address">{located.address}</p>
+      <p class="venue-ways">
+        <a href={venuePath(event.venue)}>Everything at this venue<UiIcon name="chevron-right" /></a>
+        {located.map !== undefined && <a href={located.map}><UiIcon name="map-pin" />Map</a>}
+      </p>
+    </section>
+  )}
 
   {moreLikeThis.length > 0 && (
     <section aria-labelledby="more" class={`kind-${slugify(event.kind)}`}>
@@ -105,7 +122,7 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
 
 <style>
   .event { margin-top: var(--space-8); }
-  .head { margin-bottom: var(--space-4); }
+  .head { margin-bottom: var(--space-6); }
   .head.dated { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: var(--space-4); align-items: start; }
   /* The narrowest phones: the tile above the title, which beside it took eight lines at 320 px (audit 2026-10-21, A16). */
   @media (max-width: 26rem) {
@@ -126,8 +143,9 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   .why { margin: 0 0 var(--space-4); font-size: var(--text-lg); max-width: 38rem; }
   .about { margin: 0 0 var(--space-4); max-width: 38rem; }
   .primary { margin: 0 0 var(--space-2); }
-  /* The accent fill, as a pressed control has; a phone gives it the column's width. */
-  .go { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); font-size: var(--text-md); }
+  /* The accent fill, as a pressed control has, squared to the rules around it (#295): the page's one way to go, so
+     the one control that takes the page's shape. A phone gives it the column's width. */
+  .go { color: var(--accent-fg); background: var(--accent); border-color: var(--accent); border-radius: 0; font-size: var(--text-md); }
   .go:hover { color: var(--accent-fg); border-color: var(--accent); opacity: 0.88; }
   @media (max-width: 30rem) { .go { display: flex; width: 100%; } }
   /* Save, Share and Add to calendar as on a card (#233): no box until hovered, in the muted ink, the first one's icon
@@ -163,6 +181,10 @@ const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, eve
   .meta { font-size: var(--text-sm); color: var(--fg-muted); }
   .meta :global(.dont-miss) { margin-right: var(--space-2); }
   .all { margin: var(--space-2) 0 0; }
-  .all a { display: inline-flex; align-items: center; gap: 0.2em; min-height: var(--tap); color: var(--fg); font-weight: var(--weight-medium); text-decoration: none; }
-  .all a:hover { text-decoration: underline; }
+  .all a, .venue-ways a { display: inline-flex; align-items: center; gap: 0.2em; min-height: var(--tap); color: var(--fg); font-weight: var(--weight-medium); text-decoration: none; }
+  .all a:hover, .venue-ways a:hover { text-decoration: underline; }
+  /* The venue's block: its name as a row's title is set, its address quieter, then the ways on, each a 44 px target. */
+  .venue-name { margin: var(--space-3) 0 0; font-weight: var(--weight-medium); line-height: var(--leading-tight); }
+  .venue-address { margin: 2px 0 0; font-size: var(--text-sm); color: var(--fg-muted); }
+  .venue-ways { display: flex; flex-wrap: wrap; gap: 0 var(--space-6); margin: var(--space-1) 0 0; }
 </style>

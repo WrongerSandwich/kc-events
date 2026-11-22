@@ -652,6 +652,20 @@ test("an event page says what the event is when the job read a description, and 
   await expect(page.locator(".about")).toHaveCount(0);
 });
 
+// The venue's block gives what the line under the title does not, a street address, so only a venue with a row in the
+// venue table has one (#295).
+test("an event page gives the venue's address and the way to its page when the venue table has it, and no block when it does not", async ({ page }) => {
+  await on(page, BUILD_DAY, "/e/evt_e2e000000001");
+  const venue = page.getByRole("region", { name: "The venue" });
+  await expect(venue).toContainText("recordBar");
+  await expect(venue).toContainText("1520 Grand Blvd, Kansas City, MO 64108");
+  await expect(venue.getByRole("link", { name: "Everything at this venue" })).toHaveAttribute("href", "/v/recordbar");
+  await expect(venue.getByRole("link", { name: "Map" })).toHaveAttribute("href", /^https:\/\/www\.google\.com\/maps\/search\//);
+  await on(page, BUILD_DAY, "/e/evt_e2e000000002");
+  await expect(page.locator("article.event")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The venue" })).toHaveCount(0);
+});
+
 test("the price and age limit an own page gave show on the card and the event page, and in its offers (#133)", async ({ page }) => {
   await on(page, BUILD_DAY, "/");
   await expect(page.locator("#pick-evt_e2e000000001 .admission")).toHaveText("$20–$25 · 21+");
