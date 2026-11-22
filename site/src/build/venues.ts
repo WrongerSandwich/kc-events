@@ -1,7 +1,8 @@
 /**
  * Build-time: the venue table, data/venues.yaml (#137, ADR 0013), and the venue pages made from it and the published
  * events. A table row adds an address, a position, and the venue's site to a page every venue with a published event
- * has anyway; a row whose venue has nothing coming up still makes one. The row's neighborhood is the job's (#258): the
+ * has anyway; a row whose venue has nothing coming up still makes one, and so does a venue for a year after its last
+ * published event (VENUE_PAGE_DAYS, ADR 0016). The row's neighborhood is the job's (#258): the
  * run places the venue's events by it, and a page's neighborhood still comes from its events.
  */
 import { existsSync, readFileSync } from "node:fs";
@@ -12,6 +13,16 @@ import type { Geo, PublishedEvent, PublishedVenue, VenueAddress } from "../lib/t
 import { venueSlug } from "../lib/venues";
 
 export type VenueRow = { name: string; address?: VenueAddress; geo?: Geo; url?: string };
+
+/**
+ * Days a venue page stays up after the last day of its last published event (#300): a page that earned a place in
+ * search results keeps it through a quiet season, listing nothing, rather than turning into a 404 the week its last
+ * event passes. Published is active, or expired as past; see `recentVenues` in load-dataset.ts.
+ */
+export const VENUE_PAGE_DAYS = 365;
+
+/** A record that keeps its venue's page up: the venue as the site names it, and where the record placed it. */
+export type RecentVenue = { venue: string; neighborhood: string; region: string };
 
 function splitAddress(line: string): VenueAddress {
   const [, street, locality, region, postalCode] = ADDRESS.exec(line)!;
@@ -45,13 +56,14 @@ function mostCommon(values: readonly string[]): string | undefined {
 }
 
 /**
- * The venue pages: one per slug among the published events' venues and the table's rows, by name. Throws on a row
+ * The venue pages: one per slug among the published events' venues, the table's rows, and the `recent` records'
+ * venues (most recent first; a venue with nothing coming up is named and placed by them). Throws on a row
  * keyed on a known venue spelled another way (one keyed on an alias is refused as the table is parsed), on two rows
  * for one page, and on a venue name with no letter or digit to make a slug from. A row whose venue no record in the
  * dataset is at only warns: the job archives expired records eight weeks on, so a quiet venue's row would otherwise
  * refuse the weekly data commit's build, and the site would stop refreshing (audit 2026-10-21, E2).
  */
-export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; recordVenues: readonly string[]; aliases: VenueAliases }): PublishedVenue[] {
+export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; recordVenues: readonly string[]; aliases: VenueAliases; recent?: readonly RecentVenue[] }): PublishedVenue[] {
   // The display names exactly as the site shows them, so a row also keeps a venue's spelling: "the truman" is no name.
   const known = new Set([...opts.recordVenues.map((n) => venueAndRoom(n, opts.aliases).venue), ...Object.keys(opts.aliases)]);
   const knownBySlug = new Map([...known].map((name) => [venueSlug(name), name]));
@@ -75,10 +87,17 @@ export function buildVenues(opts: { rows: VenueRow[]; events: PublishedEvent[]; 
     bySlug.set(slug, [...(bySlug.get(slug) ?? []), e]);
   }
 
-  const slugs = new Set([...bySlug.keys(), ...rows.keys()]);
+  const recentBySlug = new Map<string, RecentVenue[]>();
+  for (const r of opts.recent ?? []) {
+    const slug = venueSlug(r.venue);
+    if (slug !== "") recentBySlug.set(slug, [...(recentBySlug.get(slug) ?? []), r]);
+  }
+
+  const slugs = new Set([...bySlug.keys(), ...rows.keys(), ...recentBySlug.keys()]);
   const venues = [...slugs].map((slug): PublishedVenue => {
     const row = rows.get(slug);
-    const events = bySlug.get(slug) ?? [];
+    // A venue with nothing coming up is named and placed by its latest records, which `recent` lists first.
+    const events: { venue: string; neighborhood: string; region: string }[] = bySlug.get(slug) ?? recentBySlug.get(slug) ?? [];
     const neighborhood = mostCommon(events.map((e) => e.neighborhood));
     return {
       slug,

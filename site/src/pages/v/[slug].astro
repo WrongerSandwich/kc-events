@@ -3,11 +3,14 @@ import Base from "../../layouts/Base.astro";
 import UiIcon from "../../components/UiIcon.svelte";
 import VenueEvents from "../../components/VenueEvents.svelte";
 import { origin } from "../../build/origin";
+import { about } from "../../generated/about";
 import { events } from "../../generated/events";
+import { meta } from "../../generated/meta";
 import { venues } from "../../generated/venues";
 import { hostOf, neighborhoodLine, samePlace } from "../../lib/events";
 import type { PublishedEvent, PublishedVenue } from "../../lib/types";
-import { addressLine, mapUrl, venueJsonLd, venueSlug } from "../../lib/venues";
+import { venueDescription, venueFacts, venuePageJsonLd, venuePageTitle } from "../../lib/venue-page";
+import { addressLine, mapUrl, venueSlug } from "../../lib/venues";
 import "../../styles/venues.css";
 
 export function getStaticPaths() {
@@ -17,12 +20,14 @@ const { venue, events: here } = Astro.props as { venue: PublishedVenue; events: 
 
 // Under the venue's name, a neighborhood of the same name says only its region (#186).
 const hood = venue.neighborhood === undefined ? undefined : neighborhoodLine(samePlace(venue.neighborhood, venue.name) ? venue.region! : venue.neighborhood, venue.region!);
-const where = venue.address !== undefined ? addressLine(venue.address) : venue.neighborhood;
-const description = `${here.length === 0 ? "Events at" : "Upcoming events at"} ${venue.name}${where === undefined ? "" : `, ${where}`}.`;
-const jsonLd = venueJsonLd(venue, new URL(`/v/${venue.slug}`, origin).toString());
+// The title says the page is a listing (#300); the h1 stays the venue's name.
+const title = venuePageTitle(venue);
+const description = venueDescription(venue, here, meta.buildToday);
+const facts = venueFacts(here, meta.buildToday, about.horizonWeeks);
+const jsonLd = venuePageJsonLd(venue, here, { origin, today: meta.buildToday });
 const map = mapUrl(venue);
 ---
-<Base title={venue.name} description={description} jsonLd={jsonLd} wide>
+<Base title={title} description={description} jsonLd={jsonLd} wide>
   <header class="venue-head">
     <h1>{venue.name}</h1>
     {venue.address !== undefined && <p>{addressLine(venue.address)}</p>}
@@ -34,6 +39,7 @@ const map = mapUrl(venue);
       </p>
     )}
   </header>
+  {facts.length > 0 && <p class="venue-facts">{facts.join(" · ")}</p>}
   <section aria-label={`Events at ${venue.name}`}>
     <VenueEvents events={here} />
   </section>

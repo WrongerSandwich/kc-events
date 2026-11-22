@@ -12,6 +12,8 @@
 .venue-head .venue-hood { color: var(--fg-muted); }
 .venue-links { display: flex; flex-wrap: wrap; gap: var(--space-4); margin: var(--space-3) 0 0; }
 .venue-links a { display: inline-flex; align-items: center; gap: var(--space-1); min-height: var(--tap); }
+/* What the venue hosts and how many are on, from the data (#300): one quiet line between the head and the list. */
+.venue-facts { margin: 0 0 var(--space-4); font-size: var(--text-sm); color: var(--fg-muted); }
 .venue-none { color: var(--fg-muted); }
 .venue-all { margin-top: var(--space-8); font-size: var(--text-sm); }
 

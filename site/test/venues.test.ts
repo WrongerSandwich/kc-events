@@ -1,6 +1,6 @@
 // @vitest-environment node
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { buildVenues, readVenueTable as readTable, type VenueRow } from "../src/build/venues";
 import { loadPublished } from "../src/build/load-dataset";
@@ -269,5 +269,95 @@ describe("loadPublished's venues", () => {
     const config = `${configYaml}venueAliases:\n  ${kauffman.name}: [Helzberg Hall]\n`;
     const paths = write(dataset([activeEvent()]), config);
     expect(() => loadPublished({ ...paths, venuesPath: table("- name: Helzberg Hall\n  address: 1601 Broadway Blvd, Kansas City, MO 64108\n") })).toThrow(/key the row on/);
+  });
+});
+
+describe("venue page lifetime", () => {
+  /** A record expired as `reason`, its one day `daysAgo` days before the fixture's today, 2026-10-05. */
+  function expired(id: string, venue: string, daysAgo: number, reason = "past", over: Record<string, unknown> = {}) {
+    const day = new Date(Date.UTC(2026, 9, 5 - daysAgo)).toISOString().slice(0, 10);
+    return activeEvent({ id, venue, start: day, status: "expired", expiryReason: reason, lastChanged: `${day}T06:30:00-05:00`, ...over });
+  }
+  /** The fixture paths with an archive file beside the dataset, as the job writes data/archive/<year>.json. */
+  function withArchive(live: unknown[], archived: unknown[], config = configYaml) {
+    const paths = write(dataset(live), config);
+    const dir = join(dirname(paths.datasetPath), "archive");
+    mkdirSync(dir);
+    writeFileSync(join(dir, "2026.json"), JSON.stringify({ schemaVersion: 1, events: archived }));
+    return paths;
+  }
+  const slugs = (paths: ReturnType<typeof write>) => loadPublished(paths).venues.map((v) => v.slug);
+
+  it("keeps the page of a venue whose last event passed 100 days ago, from the archive, listing nothing", () => {
+    const paths = withArchive([activeEvent()], [expired("evt_00000000000a", "Knuckleheads", 100, "past", { neighborhood: "Northland" })]);
+    const p = loadPublished(paths);
+    expect(p.venues.find((v) => v.slug === "knuckleheads")).toEqual({ slug: "knuckleheads", name: "Knuckleheads", neighborhood: "Northland", region: "Northland" });
+    expect(p.events.map((e) => e.venue)).toEqual(["recordBar"]);
+  });
+
+  it("keeps a venue whose last record is still in the live dataset, expired as past", () => {
+    expect(slugs(write(dataset([activeEvent(), expired("evt_00000000000a", "Knuckleheads", 20)])))).toContain("knuckleheads");
+  });
+
+  it("keeps a venue for 365 days after its last event and no longer", () => {
+    expect(slugs(withArchive([activeEvent()], [expired("evt_00000000000a", "Knuckleheads", 365)]))).toContain("knuckleheads");
+    expect(slugs(withArchive([activeEvent()], [expired("evt_00000000000a", "Knuckleheads", 366)]))).not.toContain("knuckleheads");
+    expect(slugs(withArchive([activeEvent()], [expired("evt_00000000000a", "Knuckleheads", 400)]))).not.toContain("knuckleheads");
+  });
+
+  it("goes by a run's last day, not its first", () => {
+    const run = expired("evt_00000000000a", "Knuckleheads", 500, "past", { recurrence: "limited-run", end: "2026-09-01" });
+    expect(slugs(withArchive([activeEvent()], [run]))).toContain("knuckleheads");
+  });
+
+  it("makes no page for a venue whose records expired for any other reason", () => {
+    for (const reason of ["duplicate", "promotion", "index-page", "outside-geography", "two-strike", "cancelled", "not-public", "stale"]) {
+      expect(slugs(withArchive([activeEvent()], [expired("evt_00000000000a", "Knuckleheads", 10, reason)])), reason).not.toContain("knuckleheads");
+    }
+  });
+
+  it("makes no page for a venue whose record passed without ever being verified, so was never published", () => {
+    const never = expired("evt_00000000000a", "Knuckleheads", 10, "past", { lastVerified: undefined, verificationFailures: 1 });
+    expect(slugs(withArchive([activeEvent()], [never]))).not.toContain("knuckleheads");
+  });
+
+  it("makes no page for a street address or generic words kept as a venue", () => {
+    const paths = withArchive([activeEvent()], [expired("evt_00000000000a", "1120 Central Avenue, Kansas City, KS 66102", 10), expired("evt_00000000000b", "Galleries", 10)]);
+    expect(slugs(paths)).toEqual(["recordbar"]);
+  });
+
+  it("makes no page for a venue in a place outside the geography", () => {
+    const config = `${configYaml}outsidePlaces: [Lawrence]\n`;
+    const paths = withArchive([activeEvent()], [expired("evt_00000000000a", "Liberty Hall", 10, "past", { neighborhood: "Lawrence" })], config);
+    expect(slugs(paths)).not.toContain("liberty-hall");
+  });
+
+  it("places a kept venue where most of its records within the year are, the most recent breaking a tie", () => {
+    const knuckleheads = (archived: unknown[]) => loadPublished(withArchive([activeEvent()], archived)).venues.find((v) => v.slug === "knuckleheads");
+    const olathe = expired("evt_00000000000a", "Knuckleheads", 200, "past", { neighborhood: "Olathe" });
+    const northland = expired("evt_00000000000c", "Knuckleheads", 30, "past", { neighborhood: "Northland" });
+    expect(knuckleheads([olathe, northland])).toMatchObject({ neighborhood: "Northland", region: "Northland" });
+    expect(knuckleheads([olathe, expired("evt_00000000000b", "Knuckleheads", 190, "past", { neighborhood: "Olathe" }), northland])).toMatchObject({ neighborhood: "Olathe", region: "Johnson County" });
+    expect(knuckleheads([olathe, northland, expired("evt_00000000000d", "Knuckleheads", 400, "past", { neighborhood: "Olathe" })])).toMatchObject({ neighborhood: "Northland" });
+  });
+
+  it("names a kept venue as its records do, under its alias's venue", () => {
+    const config = `${configYaml}venueAliases:\n  ${kauffman.name}: [Helzberg Hall]\n`;
+    const paths = withArchive([activeEvent()], [expired("evt_00000000000a", "Helzberg Hall", 30, "past", { neighborhood: "Downtown" })], config);
+    expect(loadPublished(paths).venues.map((v) => v.name)).toContain(kauffman.name);
+  });
+
+  it("fails the build on an archive file that does not parse, naming it", () => {
+    const paths = write(dataset([activeEvent()]));
+    const dir = join(dirname(paths.datasetPath), "archive");
+    mkdirSync(dir);
+    writeFileSync(join(dir, "2025.json"), JSON.stringify({ schemaVersion: 1, events: [{ id: "nope" }] }));
+    expect(() => loadPublished(paths)).toThrow(/archive\/2025\.json/);
+  });
+
+  it("lists a kept venue under nothing listed in the directory", () => {
+    const p = loadPublished(withArchive([activeEvent()], [expired("evt_00000000000a", "Knuckleheads", 100)]));
+    const groups = venueDirectory(p.venues, p.events, p.regions);
+    expect(groups.at(-1)).toMatchObject({ heading: NOTHING_LISTED, venues: [{ venue: { slug: "knuckleheads" }, events: 0 }] });
   });
 });
