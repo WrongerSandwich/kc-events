@@ -133,11 +133,8 @@ components:
     rounded: "{rounded.pill}"
     padding: "0.25rem 0.5rem"
   dont-miss-tag:
-    backgroundColor: "{colors.flag-carmine}"
-    textColor: "{colors.raised-surface}"
-    typography: "{typography.label}"
-    rounded: "{rounded.pill}"
-    padding: "0 0.5rem"
+    textColor: "{colors.ink}"
+    typography: "{typography.caps-label}"
   date-tile:
     backgroundColor: "{colors.kind-film-tint}"
     textColor: "{colors.kind-film}"
@@ -178,7 +175,7 @@ A grey interface lit by eleven kind hues and two colours from the city flag.
 - **Ink** (`ink`): text, link colour, and the filled state of a pressed toggle (a saved Save). Links and selection are ink, never a hue, because a hue would read as one more kind.
 
 ### Secondary
-- **Flag Carmine** (`flag-carmine`): the pick tag and nothing else. The carmine of the city's 2023 flag, its lightness set for white words on it.
+- **Flag Carmine** (`flag-carmine`): the diamond that leads a pick's tag, and the sign on the staleness banner. The carmine of the city's 2023 flag, its lightness set to clear 3:1 on the ground. Never a fill, a tint or the colour of words: at hue 27 it sits seven degrees from talks and readings' brick red, and a red pill beside that chip read as a second kind.
 - **Fountain Blue** (`fountain-blue-focus`): the focus ring, 2px with a 2px offset. The flag's NCS blue, used only to show where the keyboard is.
 
 ### Tertiary: The Kinds
@@ -199,7 +196,7 @@ All neutrals are true greys (chroma 0), on purpose: a tinted neutral would bring
 ### Named Rules
 **The Only-Kinds-Bring-Colour Rule.** Chrome, links, selection, saved state and hover are ink or grey. A new hue anywhere in the interface is forbidden unless it names a kind; it would be read as one.
 
-**The Solid-Means-State Rule.** A kind is always a tint with its shade on it. A state that is not a kind (a pick) is a solid fill, so it can never be mistaken for a kind, and it says its reason in words (Rare, Big name, Occasion, Tradition, Unusual, Major run), one fill for all six, so it reads in greyscale and to a screen reader, which hears "Pick:" before the word.
+**The A-Pick-Is-A-Point Rule.** A kind is always a tint with its shade on it, or its shade as words. A state that is not a kind (a pick) is neither: a small carmine diamond, then its reason in ink capitals (Rare, Big name, Occasion, Tradition, Unusual, Major run), one mark for all six. The red is a point to find down a list, never an area, so it is not mistaken for a kind and does not outweigh the title beside it; the word reads in greyscale and to a screen reader, which hears "Pick:" before it. (Until 2026-11-22 a pick was a solid carmine pill, the Solid-Means-State Rule: the loudest thing on every row it sat in.)
 
 **The Matched-Pair Rule.** A new kind gets the same lightness and chroma as the others and a hue in the widest gap on the wheel. Every shade must clear 4.5:1 on its own tint and on both grounds, in both schemes.
 
@@ -221,9 +218,9 @@ All neutrals are true greys (chroma 0), on purpose: a tinted neutral would bring
 - **Label** (500, 0.75rem, 1.6): chips, tags, counts.
 
 ### Named Rules
-**The Capitals-Are-The-Site's Rule.** The display face sets the site's own words (its name, a page's heading, a section's heading, a weekday, a month, a list's date) and a place's name, always in capitals: its file has no lower case. It never sets an event's title, which is quoted from its source and stays in Geist as written; nor a button, a chip, a tag, or a sentence. Figures in it are the face's weak spot, so the date tile's day and every time stay in Geist's tabular figures.
+**The Capitals-Are-The-Site's Rule.** The display face sets the site's own words (its name, a page's heading, a section's heading, a weekday, a month, a list's date) and a place's name, always in capitals: its file has no lower case. It never sets an event's title, which is quoted from its source and stays in Geist as written; nor a button, a chip, or a sentence. Of the tags it sets one, a pick's reason, which is the site's own word and one of six. Figures in it are the face's weak spot, so the date tile's day and every time stay in Geist's tabular figures.
 
-**The Two-Labels-In-The-Explorer Rule.** Inside the explorer two things are set in capitals and nothing else (an e2e check holds it, #297): the rail's group names and the list's group headings. Its rows are dense, so a row, a chip, a control and a count stay in Geist, as written.
+**The Three-Labels-In-The-Explorer Rule.** Inside the explorer three things are set in capitals and nothing else (an e2e check holds it, #297): the rail's group names, the list's group headings, and a pick's tag, one or two short words on the rows that have one. Its rows are dense, so a row's own words, a chip, a control and a count stay in Geist, as written.
 
 **The Figures-Only-Where-They-Line-Up Rule.** Tabular figures go on dates, times and counts, never on running text, where tnum widens the hyphen in "ad-free".
 
@@ -257,7 +254,7 @@ Quiet instruments: precise edges, ink words, colour only where a kind lives.
 - **Kind chip:** a pill (999px) in the kind's tint with its shade for the icon and words, label type. As a link to the kind's page it drops the pill, keeping icon and words, underlined on hover: only a filter is pill-shaped.
 - **Filter chip (explorer rail, front page kinds):** an outlined pill in muted ink. Pressed, it takes its kind's tint, shade and edge at weight 500; a filter that is not a kind takes the grey pressed tint under ink. A chip that would list nothing goes faint with a dashed edge and stays pressable. Each carries its count in faint ink. In forced colours a pressed chip takes the system's Highlight.
 - **Kind row (explorer bar, phones):** every kind's filter chip in one line that swipes sideways, fading at its end until swiped there, Filters at its end; kind is the explorer's lens, since the list is in date order already and the picks lead the front page (Picks only is a Show switch like the others). The sheet keeps the dates, regions and switches; wide windows keep the rail's Kind group.
-- **Pick tag** (`PickTag.svelte`): a solid Flag Carmine pill with the pick's reason in white: Rare, Big name, Occasion, Tradition, Unusual or Major run (ADR 0014, #273). One fill for all six, so the colour says pick and the word says why; a visually hidden "Pick:" precedes the word for a screen reader. It replaced a pill that said "Don't miss" on every pick, an imperative with the scarcity tone the system rejects, and said less. On a row it rides the date line or sits beside the title, the front page's one-line rows after this week among them (under the date on a phone, on the date line on the narrowest), since a row has no why line and the word is all of the why it can carry; on an event page it sits beside the kind chip; on a card it leads the why line, since every card is a pick and the word is what differs between them. The six reasons are explained once, on the About page. A passed save's tag sits in the tag's place, outlined in a hairline, muted.
+- **Pick tag** (`PickTag.svelte`): not a chip and not a pill. A Flag Carmine diamond (a square on its point, half the capitals' size), then the pick's reason in the caps label, in ink: Rare, Big name, Occasion, Tradition, Unusual or Major run (ADR 0014, #273). One mark for all six, so the diamond says pick and the word says why; the word is written in sentence case and set in capitals by the stylesheet, and a visually hidden "Pick:" precedes it for a screen reader. In forced colours the diamond takes the text colour. It replaced a solid carmine pill with the word in white (2026-11-22), which was louder than the titles and too near a kind's chip, and before that a pill that said "Don't miss" on every pick, an imperative with the scarcity tone the system rejects. On a row it rides the date line or sits beside the title, the front page's one-line rows after this week among them (under the date on a phone, on the date line on the narrowest), since a row has no why line and the word is all of the why it can carry; on an event page it sits beside the kind chip; on a card it leads the why line, since every card is a pick and the word is what differs between them. The six reasons are explained once, on the About page. A passed save's tag sits in the tag's place, a pill outlined in a hairline, muted, in Geist.
 
 ### Rules and ornaments (Deco)
 All in ink (`fg`) or the strong rule's grey, never a hue, and all decoration: none carries meaning a reader needs.
@@ -298,7 +295,7 @@ A row of square day tiles (raised surface, hairline edge): the weekday in the ca
 ### Do:
 - **Do** keep every neutral a true grey (chroma 0) and let only the kinds and the flag's two colours carry hue.
 - **Do** pair a kind's shade with its own tint, and check 4.5:1 for every new pairing in both the light and dark scheme.
-- **Do** say a state in words as well as colour: a pick's reason is written on its red pill; kind is never conveyed by colour alone.
+- **Do** say a state in words as well as colour: a pick's reason is written after its red diamond; kind is never conveyed by colour alone.
 - **Do** separate with space first, hairlines second: 4rem between sections, 1rem between cards.
 - **Do** give every action a 44px target and every filter chip at least 32px on phones.
 - **Do** use tabular figures for dates, times and counts.
@@ -310,7 +307,8 @@ A row of square day tiles (raised surface, hairline edge): the weekday in the ca
 - **Don't** build social-feed mechanics: infinite scroll, engagement bait, algorithmic ordering.
 - **Don't** dress it as a hand-written newsletter or editorial magazine: no serif "voice" type, no chatty personal copy, no curator persona.
 - **Don't** colour a link, a selection, a hover or the saved state with a hue; it would read as one more kind.
-- **Don't** set an event's title, a button, a chip, a tag or a sentence in the display face, or anything in it in lower case; and never set Geist at 700.
+- **Don't** set an event's title, a button, a chip, a sentence, or any tag but a pick's reason in the display face, or anything in it in lower case; and never set Geist at 700.
+- **Don't** fill or tint anything with the flag's carmine, or set words in it: a pick's diamond and the staleness sign are all of it.
 - **Don't** give an ornament a hue, or add a second stepped motif: the crown and the tile's shoulders are the two.
 - **Don't** put a shadow on a card, row, chip or button; the calendar menu is the only thing that floats.
 - **Don't** use a `border-left` or `border-right` over 1px as a coloured stripe; a card's kind lives in its date tile.

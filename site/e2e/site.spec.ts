@@ -604,28 +604,32 @@ for (const width of [390, 1440]) {
   });
 }
 
-test("an event page says the pick's reason in the explorer's words and case", async ({ page }) => {
+test("an event page says the pick's reason in the explorer's words, written in sentence case and set in capitals", async ({ page }) => {
   await on(page, BUILD_DAY, "/e/evt_e2e000000001");
   const tag = page.locator(".kind .dont-miss");
   await expect(tag).toBeVisible();
   await expect(tag).toHaveText("Pick: Rare");
-  await expect(tag).toHaveCSS("text-transform", "none");
+  await expect(tag).toHaveCSS("text-transform", "uppercase");
 });
 
 // The pick tag carries the reason on the front page's card (leading the why-line), the explorer's row and the event
-// page, one carmine fill for all six words; the About page explains the six (#273).
+// page, one carmine diamond before all six words; the About page explains the six (#273).
 test("the pick tag says the reason on the card, the row and the event page, and the About page names the six", async ({ page }) => {
   await on(page, BUILD_DAY, "/");
   const card = page.locator("#pick-evt_e2e000000001");
   const tag = card.locator(".why .dont-miss");
   await expect(tag).toHaveText("Pick: Rare");
   await expect(card.locator(".why")).toContainText("A rare touring occasion for a Kansas City stage.");
-  // One fill for every reason (Solid-Means-State): the card's Rare and the row's Major run are the same carmine.
-  const fill = await tag.evaluate((el) => getComputedStyle(el).backgroundColor);
+  // One mark for every reason (A-Pick-Is-A-Point): the card's Rare and the row's Major run lead with the same carmine
+  // diamond, and the word itself is ink, on no fill.
+  const mark = (el: Element) => getComputedStyle(el, "::before").backgroundColor;
+  const fill = await tag.evaluate(mark);
+  expect(fill).not.toBe(await tag.evaluate((el) => getComputedStyle(el).color));
+  await expect(tag).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await on(page, BUILD_DAY, "/explore?when=all");
   const row = page.locator("article.row.flagged").filter({ hasText: "A touring exhibition's one Kansas City stop." });
   await expect(row.locator(".dont-miss").filter({ visible: true })).toHaveText("Pick: Major run");
-  expect(await row.locator(".dont-miss").filter({ visible: true }).evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(fill);
+  expect(await row.locator(".dont-miss").filter({ visible: true }).evaluate(mark)).toBe(fill);
   await expect(row.locator(".why")).toHaveText("A touring exhibition's one Kansas City stop.");
   await on(page, BUILD_DAY, "/e/evt_e2e000000005");
   await expect(page.locator(".kind .dont-miss")).toHaveText("Pick: Tradition");
@@ -696,16 +700,17 @@ test("the front page card links the event's own page too", async ({ page }) => {
   await expect(row.locator('a[href="https://tickets.example.com/frizzi"]')).toHaveCount(0);
 });
 
-// Two labels in the explorer take the display capitals (#297): the rail's group names and the list's group headings.
-// Nothing else does: a row, a chip, a control or a count in capitals would be the shouting #45 took out.
-test("the explorer sets only its rail's group names and its list's group headings in capitals", async ({ page }) => {
+// Three things in the explorer take the display capitals: the rail's group names and the list's group headings (#297),
+// and a pick's tag, one or two short words a row (since 2026-11-22). Nothing else does: a row's own words, a chip, a
+// control or a count in capitals would be the shouting #45 took out.
+test("the explorer sets only its rail's group names, its list's group headings and a pick's tag in capitals", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore");
   await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
   await expect(page.getByRole("group", { name: "When" }).first()).toBeVisible();
   const capitals = await page.locator(".explorer, .explorer *").evaluateAll((els) =>
     els
       .filter((el) => getComputedStyle(el).textTransform === "uppercase")
-      .map((el) => ({ label: el.matches(".rail legend, h2.section-heading.group"), html: el.outerHTML.slice(0, 80) })),
+      .map((el) => ({ label: el.matches(".rail legend, h2.section-heading.group, .dont-miss, .dont-miss *"), html: el.outerHTML.slice(0, 80) })),
   );
   expect(capitals.filter((c) => !c.label)).toEqual([]);
   expect(capitals.some((c) => c.html.startsWith("<legend"))).toBe(true);

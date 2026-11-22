@@ -23,9 +23,10 @@
   --accent-fg: oklch(1 0 0);
   --focus: oklch(0.56 0.15 238);
   /* The city flag's two colours (its 2023 design: carmine over NCS blue, a white fountain between). Red marks
-     a pick, the one state that is not a kind, as a solid pill where a kind's chip is a tint, so it is never read as a
-     kind; blue is the focus ring. Their lightness is set for the words on them, not the flag's. */
-  --flag-red: oklch(0.55 0.2 27); --flag-red-fg: oklch(1 0 0);
+     a pick, the one state that is not a kind, as a small diamond before the reason's capitals: a point, never a fill
+     or a tint, so it is not read as a kind. Blue is the focus ring. Their lightness is set to clear 3:1 on the ground,
+     not the flag's. */
+  --flag-red: oklch(0.55 0.2 27);
   /* A pressed filter that is not a kind: a grey tint under ink, the same shape as a pressed kind's tint and shade. */
   --pressed-tint: oklch(0.94 0 0);
   /* The kinds */
@@ -73,7 +74,7 @@
     --bg: oklch(0.17 0 0); --bg-raised: oklch(0.205 0 0); --fg: oklch(0.94 0 0); --fg-muted: oklch(0.76 0 0);
     --fg-faint: oklch(0.67 0 0); --rule: oklch(0.28 0 0); --rule-strong: oklch(0.43 0 0); --control-border: oklch(0.53 0 0);
     --accent: oklch(0.94 0 0); --accent-fg: oklch(0.17 0 0); --focus: oklch(0.75 0.13 235);
-    --flag-red: oklch(0.68 0.19 27); --flag-red-fg: oklch(0.17 0 0);
+    --flag-red: oklch(0.68 0.19 27);
     --pressed-tint: oklch(0.30 0 0);
     --kind-talks-readings: oklch(0.82 0.11 20); --kind-talks-readings-tint: oklch(0.31 0.06 20);
     --kind-food-drink: oklch(0.82 0.11 56); --kind-food-drink-tint: oklch(0.31 0.06 56);
