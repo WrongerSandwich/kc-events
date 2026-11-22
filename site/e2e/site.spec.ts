@@ -694,14 +694,35 @@ test("the front page card links the event's own page too", async ({ page }) => {
   await expect(row.locator('a[href="https://tickets.example.com/frizzi"]')).toHaveCount(0);
 });
 
-test("the explorer sets nothing in uppercase", async ({ page }) => {
+// Two labels in the explorer take the display capitals (#297): the rail's group names and the list's group headings.
+// Nothing else does: a row, a chip, a control or a count in capitals would be the shouting #45 took out.
+test("the explorer sets only its rail's group names and its list's group headings in capitals", async ({ page }) => {
   await on(page, BUILD_DAY, "/explore");
   await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
   await expect(page.getByRole("group", { name: "When" }).first()).toBeVisible();
-  const shouting = await page.locator(".explorer, .explorer *").evaluateAll((els) =>
-    els.filter((el) => getComputedStyle(el).textTransform === "uppercase").map((el) => el.outerHTML.slice(0, 80)),
+  const capitals = await page.locator(".explorer, .explorer *").evaluateAll((els) =>
+    els
+      .filter((el) => getComputedStyle(el).textTransform === "uppercase")
+      .map((el) => ({ label: el.matches(".rail legend, h2.section-heading.group"), html: el.outerHTML.slice(0, 80) })),
   );
-  expect(shouting).toEqual([]);
+  expect(capitals.filter((c) => !c.label)).toEqual([]);
+  expect(capitals.some((c) => c.html.startsWith("<legend"))).toBe(true);
+  expect(capitals.some((c) => c.html.startsWith("<h2"))).toBe(true);
+});
+
+// The crown marks today's group, by the visitor's day, and a venue's group never: its key is no date (#297).
+test("the explorer marks today's heading, and no heading in the venue sort", async ({ page }) => {
+  await on(page, new Date("2026-10-06T17:00:00Z"), "/explore"); // noon Tuesday in Chicago, a day with an event
+  await expect(page.locator("article.row button.save").first()).toBeAttached(); // hydrated
+  const today = page.locator("h2.section-heading.group.today");
+  await expect(today).toHaveCount(1);
+  await expect(today).toHaveAttribute("data-group", "2026-10-06");
+  expect(await today.evaluate((el) => getComputedStyle(el, "::before").display)).toBe("inline-block");
+  const other = page.locator("h2.section-heading.group:not(.today)").first();
+  expect(await other.evaluate((el) => getComputedStyle(el, "::before").display)).toBe("none");
+  await page.locator(".sort select").selectOption("venue");
+  await expect(page.locator("h2.section-heading.group.venue").first()).toBeVisible();
+  await expect(today).toHaveCount(0);
 });
 
 // A section heading's crown is a pseudo-element in the words' first line on a phone (#293): as a flex row that wrapped,

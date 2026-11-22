@@ -18,7 +18,7 @@ describe("the site's fonts", () => {
   });
 
   it("sets the display face in capitals wherever a stylesheet asks for it", () => {
-    for (const file of ["../src/styles/base.css", "../src/components/Header.astro", "../src/components/DateTile.svelte", "../src/components/WeekStrip.svelte", "../src/components/DontMissList.svelte"]) {
+    for (const file of ["../src/styles/base.css", "../src/components/Header.astro", "../src/components/DateTile.svelte", "../src/components/WeekStrip.svelte", "../src/components/DontMissList.svelte", "../src/components/FilterRail.svelte"]) {
       const rules = [...read(file).matchAll(/\{[^{}]*font-family: var\(--font-display\)[^{}]*\}/g)].map((m) => m[0]);
       expect(rules.length, file).toBeGreaterThan(0);
       expect(rules.filter((rule) => !rule.includes("text-transform: uppercase")), file).toEqual([]);

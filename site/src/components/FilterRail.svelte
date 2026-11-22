@@ -108,8 +108,8 @@
 <style>
   .rail { display: flex; flex-direction: column; gap: var(--space-4); font-size: var(--text-sm); }
   fieldset { border: 0; padding: 0; margin: 0; }
-  /* Sentence case, as the front page sets its labels. */
-  legend { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--fg); margin-bottom: var(--space-1); }
+  /* A group's name is a label: the caps label, as a date tile's weekday is (#297). */
+  legend { font-family: var(--font-display); font-weight: 700; font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-muted); margin-bottom: var(--space-2); }
   .segments, .chips { display: flex; flex-wrap: wrap; gap: var(--space-1); }
   button { font: inherit; font-size: var(--text-xs); background: none; color: var(--fg-muted); border: 1px solid var(--control-border); border-radius: 999px; padding: var(--space-1) var(--space-2); cursor: pointer; }
   /* Phones: 32 px, over WCAG 2.5.8's 24 px with room to spare for a finger (audit 2026-10-21, A5). */

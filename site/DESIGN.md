@@ -213,17 +213,17 @@ All neutrals are true greys (chroma 0), on purpose: a tinted neutral would bring
 ### Hierarchy
 - **Display** (700, 1.25rem, tracked 0.16em, uppercase): the site's name in the header. 0.875rem and 0.08em on phones under 26rem, so the nav keeps its row.
 - **Headline** (display face, 700, 2rem, 1.15, tracked 0.07em, uppercase): a page's one h1, over a short thick and thin flourish. 1.5rem on the front page on phones; 1.75rem on the explorer and for a venue's name or a list's (1.25rem for those names on phones). An event page's h1 is not this: it is the event's title, in Geist at 600 and 1.75rem.
-- **Section** (display face, 700, 1.125rem, 1.2, tracked 0.12em, uppercase): horizon buckets, Always there, More <kind>, between the crown and a double hairline. 0.9375rem and 0.1em on phones. The explorer's sticky day or venue heading is not this: it stays Geist at 600 and 0.875rem.
-- **Caps label** (display face, 700, 0.6875rem, tracked 0.12em, uppercase): a date tile's weekday and month, the week strip's weekdays (0.625rem), the one-line list's dates.
+- **Section** (display face, 700, 1.125rem, 1.2, tracked 0.12em, uppercase): horizon buckets, Always there, More <kind>, between the crown and a double hairline. 0.9375rem and 0.1em on phones. A list's sticky day or venue heading is the same element at the caps label's size, on a 1.6 line so its hairline sits clear, with no crown or rule. The explorer's folded "On now" line is not a heading but a control with a count, and stays in Geist.
+- **Caps label** (display face, 700, 0.6875rem, tracked 0.12em, uppercase): a date tile's weekday and month, the week strip's weekdays (0.625rem), the one-line list's dates, a list's sticky day or venue heading (the explorer's, and a venue's, a kind's and a region's page), and the explorer rail's group names.
 - **Title** (600, 1.125rem, 1.25, -0.01em): an event's name on a card. On an explorer row it is 1rem at 500.
 - **Body** (400, 1rem, 1.5): the why line, descriptions, prose. Lines capped near 38rem on a card, 70ch on a row, 42rem on a page.
 - **Meta** (400, 0.875rem, 1.5, tabular figures): dates, times, venue lines, nav links.
-- **Label** (500, 0.75rem, 1.6): chips, tags, counts, the date tile's weekday and month.
+- **Label** (500, 0.75rem, 1.6): chips, tags, counts.
 
 ### Named Rules
 **The Capitals-Are-The-Site's Rule.** The display face sets the site's own words (its name, a page's heading, a section's heading, a weekday, a month, a list's date) and a place's name, always in capitals: its file has no lower case. It never sets an event's title, which is quoted from its source and stays in Geist as written; nor a button, a chip, a tag, or a sentence. Figures in it are the face's weak spot, so the date tile's day and every time stay in Geist's tabular figures.
 
-**The Explorer-Stays-Plain Rule.** Inside the explorer nothing is set in capitals (an e2e check holds it) until the explorer has had its own design pass: its rows are dense, and its day and venue headings repeat down the list.
+**The Two-Labels-In-The-Explorer Rule.** Inside the explorer two things are set in capitals and nothing else (an e2e check holds it, #297): the rail's group names and the list's group headings. Its rows are dense, so a row, a chip, a control and a count stay in Geist, as written.
 
 **The Figures-Only-Where-They-Line-Up Rule.** Tabular figures go on dates, times and counts, never on running text, where tnum widens the hyphen in "ad-free".
 
@@ -262,7 +262,7 @@ Quiet instruments: precise edges, ink words, colour only where a kind lives.
 ### Rules and ornaments (Deco)
 All in ink (`fg`) or the strong rule's grey, never a hue, and all decoration: none carries meaning a reader needs.
 - **Thick and thin rule:** 3px, a 3px gap, 1px, the page's width. It closes the header; turned over (thin, then thick) it opens the footer. A 4.5rem cut of it is the flourish under a page's heading.
-- **Crown:** a stepped ziggurat, three steps to a flat top (`--crown`, a clip path that fits any box). It leads a section's heading, 26 by 15px, and sits over today's tile in the week strip, 26 by 13px, and nowhere else: one stepped motif, used sparingly.
+- **Crown:** a stepped ziggurat, three steps to a flat top (`--crown`, a clip path that fits any box). It leads a section's heading, 26 by 15px, sits over today's tile in the week strip, 26 by 13px, and leads today's day heading in the explorer, 20 by 10px, and nowhere else: one stepped motif, used sparingly. In the explorer only, of the lists: it follows the visitor's day, where a venue's, a kind's and a region's page is built once a day.
 - **Double hairline:** two 1px lines 2px apart, running from a section's heading to the column's edge. On phones the heading is a block: the crown sits in the first line of the words, so a heading that wraps never leaves it alone, and the hairline goes under them, the column's width.
 - **Sunburst:** a half sun's eleven rays, short and long by turns, in the strong rule's grey, rising from the footer's rule with the fountain mark at its centre. Once a page, at its foot.
 - In forced colours the crown keeps a fill in the text colour; the rules are borders and survive on their own.

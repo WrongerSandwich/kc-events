@@ -367,7 +367,8 @@
           {@render rows(g)}
         </details>
       {:else}
-        <h2 class={`section-heading group${filters.sort === "venue" ? " venue" : ""}`} data-group={g.key}>{g.heading}</h2>
+        <!-- A day's key is its date, so today's heading is marked for the crown (base.css); a venue's key never is. -->
+        <h2 class={`section-heading group${filters.sort === "venue" ? " venue" : ""}${g.key === today ? " today" : ""}`} data-group={g.key}>{g.heading}</h2>
         {@render rows(g)}
       {/if}
     {/each}
@@ -480,9 +481,10 @@
   }
   .keep-going:hover { border-color: var(--fg-faint); }
   .see-all { color: var(--fg-muted); }
-  /* A collapsed group (On now with no when-filter): one line between hairlines, as light as a day heading, a full tap
-     target, with a chevron that turns when it opens. Open, its line sticks under the bar like a
-     day heading, so it can be closed from anywhere. */
+  /* A collapsed group (On now with no when-filter): one line between hairlines, a full tap target, with a chevron
+     that turns when it opens. It is a control with a count, not a heading, so it stays in the text face where the
+     day headings below it take the caps label (#297). Open, its line sticks under the bar like a day heading, so it
+     can be closed from anywhere. */
   .collapsed { margin-top: var(--space-2); }
   /* A hundred-odd venues, half of them with a single event: their headings sit closer than the days'. */
   .results :global(.section-heading.venue) { margin-top: var(--space-3); }
