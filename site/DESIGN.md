@@ -251,7 +251,7 @@ Quiet instruments: precise edges, ink words, colour only where a kind lives.
 - **Hover / Focus:** the edge darkens to faint ink over 150ms ease-out-quart; pressing nudges it down 1px; focus is the Fountain Blue ring.
 - **Pressed toggle:** a saved Save fills with ink, words in the ground colour.
 - **Quiet on a card:** on a pick's card the controls drop their box and sit in muted ink, gaining the card's kind tint on hover, so five cards are not ten buttons. The 44px target stays.
-- **The main control (event page):** "Details at …" or "Tickets at …", the page's one filled control, in ink with the ground's colour for its words, and the one square control (#295): it takes the shape of the rules around it, where every other control keeps its 6px corner. The column's width on phones.
+- **The main control (event page):** "Details at …" or "Tickets at …", the page's one filled control, in ink with the ground's colour for its words, and the one square control (#295): it takes the shape of the rules around it, where every other control keeps its 6px corner. The column's width on phones. Once the event has passed, the banner's "See what's on this week" is the same control, and takes its place.
 
 ### Chips
 - **Kind chip:** a pill (999px) in the kind's tint with its shade for the icon and words, label type. As a link to the kind's page it drops the pill, keeping icon and words, underlined on hover: only a filter is pill-shaped.
