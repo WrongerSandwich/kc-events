@@ -1,0 +1,54 @@
+---
+/** Section 3: what the model is shown, what it answers, and the checks code makes before an answer counts (ADR 0002). */
+import { howItWorks } from "../../../generated/how-it-works";
+import Figure from "../Figure.astro";
+import Ladder from "../Ladder.astro";
+
+const { constants, settings } = howItWorks;
+const twice = settings.extractionReads === 2;
+const example = `title: "The Winter Concert"
+startDate: 2026-12-12
+startTime: 19:30
+venue: "Example Hall"
+dateEvidence: "Sat, Dec 12 · 7:30 PM"
+venueEvidence: "Example Hall"
+eventLink: 12`;
+---
+<p>The model is never taken at its word. For every event it reports, it must quote the page for the date and for the venue, and code checks that both quotes are really there.</p>
+
+<Figure>
+  <div class="how-flow">
+    <div class="how-box how-tone-network"><b>The page as fetched</b>HTML from the venue's calendar, or JSON carrying HTML where a calendar loads its list by script.</div>
+    <div class="how-arrow" aria-hidden="true">→</div>
+    <div class="how-box how-tone-code">
+      <b>The page as the model sees it</b>
+      <ul>
+        <li>The visible text only.</li>
+        <li>Each link numbered, as <code>[12]</code>.</li>
+        <li>The page's schema.org event data added, one line for each event.</li>
+        <li>Cut at {constants.maxPageChars.toLocaleString("en-US")} characters, and the report says so.</li>
+      </ul>
+    </div>
+    <div class="how-arrow" aria-hidden="true">→</div>
+    <div class="how-box how-tone-extraction">
+      <b>A candidate in the model's reply</b>
+      <pre>{example}</pre>
+      An example. The two evidence fields are quotes from the page, and the link is the event's own page, by its number. A candidate also carries a kind, a neighborhood, a description and any notice the page gives.
+    </div>
+  </div>
+
+  <p class="how-down">Then code asks, in this order <span aria-hidden="true">↓</span></p>
+
+  <Ladder
+    rungs={[
+      { q: "Is it a promotion, or not open to the public?", note: "A happy hour, a trivia night, a watch party, a gala, a graduation, an event held only online. The rules tell the model to leave these out, and code catches by title what it lets through.", a: "<b>Skipped</b>, and counted in the report.", tone: "code" },
+      { q: "Is it outside the area the list covers?", note: "The model's own flag, an away game, or a place the config names as outside.", a: "<b>Dropped</b>, and counted.", tone: "code" },
+      { q: "Is a field past its length limit?", note: "A runaway title or quote.", a: "<b>Dropped</b>, and counted.", tone: "code" },
+      { q: "Is its date one that does not exist, or its end before its start?", a: "<b>Unverified:</b> stored, never shown.", tone: "warn" },
+      { q: "Is it missing a date, a venue, or either quote?", a: `<b>Unverified.</b> There is one way out: a dated event with no venue can take one quoted from its own page on the same site, in <a href="#run">step 8</a>.`, tone: "warn" },
+      { q: "Is either quote not on the page?", note: "Compared without regard to case, spacing, curly quotes, dashes or the link numbers.", a: "<b>Unverified</b>, and the source's line in the report shows the quote that failed.", tone: "warn" },
+    ]}
+    end={{ a: "<b>An active sighting.</b> Its date and its venue were both read from the fetched page, and the two quotes are stored beside them as evidence.", tone: "data" }}
+  />
+  <Fragment slot="caption">{twice ? "Each page is read twice because a model's quoting varies from one reading to the next: the second read often turns up listings the first one missed." : "A quote that fails is reported on its source's line and never taken on trust."}</Fragment>
+</Figure>

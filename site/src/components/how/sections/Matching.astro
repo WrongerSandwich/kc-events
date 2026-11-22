@@ -1,0 +1,54 @@
+---
+/** Section 4: the rules that decide whether a sighting is an event already stored (ADR 0007), and what its page may then do. */
+import { howItWorks } from "../../../generated/how-it-works";
+import { inWords } from "../../../lib/how-it-works";
+import Figure from "../Figure.astro";
+import Ladder from "../Ladder.astro";
+
+const { constants } = howItWorks;
+/** Each kind of page, and what a sighting read from it may do to the stored event it matches: refresh, cancel, clear strikes, hide. */
+const says: { from: string; note?: string; may: [boolean, boolean, boolean, boolean] }[] = [
+  { from: "The event's own primary page", may: [true, true, true, true] },
+  { from: "A page that speaks for it", note: "A source's page, or another page on the event's own site.", may: [true, true, true, false] },
+  { from: "Any other page", note: "A discovery find on someone else's site.", may: [false, false, false, false] },
+];
+---
+<p>An event is recorded once, however many pages list it and however its date moves. Each sighting goes down this ladder, and the first rule that matches a stored event wins.</p>
+
+<Figure>
+  <Ladder
+    yes="match"
+    no="no match"
+    rungs={[
+      { q: "The same primary page and the same title", note: "Among several, the one with the nearest date.", a: "The base rule: an event is its page and its title, so its date can move.", tone: "data" },
+      { q: "The same own page on the same calendar date", a: "Two lists that link one ticket page mean one event.", tone: "data" },
+      { q: `The same title and venue, starting within ${inWords(constants.fuzzyDateWindowDays)} days`, note: "The venue under any of its names: a room or a program counts as its building.", a: "The loose match: a venue's list and a promoter's list.", tone: "data" },
+      { q: "The same title, venue and closing date", a: "A limited run is named by when it closes. The stored start is kept.", tone: "data" },
+      { q: "Sports: the same matchup, venue and day", a: "“Chiefs vs Cardinals” and “Arizona at Kansas City” are one game.", tone: "data" },
+      { q: "Recurring: the same title at the same venue", a: "Whatever words its schedule is given in.", tone: "data" },
+      { q: "No venue on the sighting: a stored event with its title on its date", a: "If two fit and neither is preferred, nothing is created.", tone: "data" },
+      { q: "One dated month of a stored recurring event", a: "Confirms the recurring event and changes nothing in it.", tone: "data" },
+    ]}
+    end={{ a: "<b>A new event</b>, with an id of its own.", tone: "plain" }}
+  />
+</Figure>
+
+<h3>Whether that page has a say</h3>
+<p>A match says only that the sighting is about a known event. What it may do to that event depends on where it was read.</p>
+
+<Figure scroll="Which page may change a stored event">
+  <table class="how-table">
+    <thead>
+      <tr><th scope="col">The sighting was read from</th><th scope="col" class="how-c">Refresh the reading</th><th scope="col" class="how-c">Cancel it</th><th scope="col" class="how-c">Clear its strikes</th><th scope="col" class="how-c">Hide it when a reading can cite nothing</th></tr>
+    </thead>
+    <tbody>
+      {says.map((row) => (
+        <tr>
+          <th scope="row">{row.from}{row.note !== undefined && <small>{row.note}</small>}</th>
+          {row.may.map((yes) => <td class={`how-c ${yes ? "how-yes" : "how-no"}`}><span aria-hidden="true">{yes ? "✓" : "–"}</span><span class="visually-hidden">{yes ? "Yes" : "No"}</span></td>)}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  <Fragment slot="caption">A page with no say leaves the event exactly as it was. Re-verification then reads the event's own page, which decides. A cancellation claimed from elsewhere is only a line in the report.</Fragment>
+</Figure>

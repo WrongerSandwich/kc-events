@@ -93,6 +93,46 @@ test("the spend bar has a segment for each stage that spent anything, and says e
   await expect(page.locator("#run .how-bar-key li b")).toHaveText(["Curation: $0.22", "Reading list pages: $0.15", "Own pages: $0.05"]);
 });
 
+const rungs = (page: Page, section: string) => page.locator(`${section} .how-ladder > li:not(.how-end)`);
+
+test("from a page to a listing: the page three ways, an example marked as one, and six questions before a sighting", async ({ page }) => {
+  await open(page);
+  await expect(page.locator("#listing .how-flow .how-box")).toHaveCount(3);
+  await expect(page.locator("#listing .how-flow .how-box").nth(2)).toContainText("An example.");
+  await expect(rungs(page, "#listing")).toHaveCount(6);
+  await expect(page.locator("#listing .how-ladder .how-end")).toContainText("An active sighting.");
+  // The page cap is the code's, with its comma.
+  await expect(page.locator("#listing .how-flow")).toContainText("70,000 characters");
+});
+
+test("matching: eight rules tried in order, then which page has a say, each cell said in words", async ({ page }) => {
+  await open(page);
+  await expect(rungs(page, "#matching")).toHaveCount(8);
+  await expect(rungs(page, "#matching").first().locator(".how-y")).toContainText("match");
+  await expect(page.locator("#matching .how-ladder .how-end")).toContainText("A new event");
+  const rows = page.locator("#matching .how-table tbody tr");
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0).locator("td")).toHaveText([/Yes/, /Yes/, /Yes/, /Yes/]);
+  await expect(rows.nth(1).locator("td")).toHaveText([/Yes/, /Yes/, /Yes/, /No/]);
+  await expect(rows.nth(2).locator("td")).toHaveText([/No/, /No/, /No/, /No/]);
+});
+
+test("life of a listing: the drawing says in words what it shows, and carries no count from one day", async ({ page }) => {
+  await open(page);
+  const drawing = page.locator("#life svg[role=img]");
+  for (const word of ["candidate", "active", "unverified", "held for promotion", "expired", "archive"]) await expect(drawing).toHaveAttribute("aria-label", new RegExp(word, "i"));
+  // The explainer this page came from typed the dataset's counts into the boxes ("366 today").
+  expect(await page.locator("main").innerText()).not.toMatch(/\b\d+ today\b/);
+});
+
+test("strike or outage opens with its principle, then eight questions before a strike", async ({ page }) => {
+  await open(page);
+  await expect(page.locator("#strikes > p").first()).toContainText("An outage holds an event; only a reading strikes it.");
+  await expect(page.locator("#strikes > p").first().getByRole("link")).toHaveAttribute("href", /docs\/adr\/0008-/);
+  await expect(rungs(page, "#strikes")).toHaveCount(8);
+  await expect(page.locator("#strikes .how-ladder .how-end")).toContainText("Strike.");
+});
+
 test("the page carries no script or inline style of its own: its styles are a linked sheet", () => {
   const page = built("about/how-it-works.html");
   const plain = built("404.html");

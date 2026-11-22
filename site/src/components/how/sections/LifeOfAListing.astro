@@ -1,0 +1,87 @@
+---
+/**
+ * Section 5: a record's statuses and the ways between them. The drawing's accessible name says every arrow in words;
+ * it carries no count of how many records are in each status, which the site's build does not have.
+ */
+import { howItWorks } from "../../../generated/how-it-works";
+import { inWords } from "../../../lib/how-it-works";
+import Figure from "../Figure.astro";
+
+const { constants } = howItWorks;
+const outages = constants.outagesToUnverify;
+const stale = constants.runsToStale;
+const weeks = constants.archiveAfterWeeks;
+const inWordsOf = `A listing's statuses and the ways between them. A candidate, one reading of one page, becomes active when its date and its venue are both quoted from the page, and unverified otherwise. An unverified listing becomes active on a verified reading. An active one becomes unverified after ${inWords(outages)} outages in a row, or when its own page is read again with nothing to cite. Either expires when its last day passes; an active one also when its page says it is cancelled, on a second strike in a row, or as a duplicate; an unverified one also as stale, never verified and unsighted for ${inWords(stale)} weekly runs. A find held for promotion stays unverified until a person adds its site to the source list. An expired record moves to the archive ${inWords(weeks)} weeks after its last day and its last change.`;
+---
+<p>The site publishes active events and nothing else. Every other record stays in the dataset, so that the job remembers what it has already seen and what it decided.</p>
+
+<Figure scroll="A listing's statuses and the ways between them">
+  <svg class="how-svg" viewBox="0 0 960 480" style="min-width: 47.5rem" role="img" aria-label={inWordsOf}>
+    <defs>
+      <marker id="how-arrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="how-svg-arrow" d="M0,0 L10,5 L0,10 z" /></marker>
+    </defs>
+
+    <g class="how-svg-edge" marker-end="url(#how-arrowhead)">
+      <path d="M172,172 C240,150 270,95 328,78" />
+      <path d="M172,206 C240,225 270,268 328,286" />
+      <path d="M478,112 L478,248" />
+      <path d="M388,248 L388,112" />
+      <path d="M532,62 C610,62 640,120 698,138" />
+      <path d="M532,298 C610,298 640,232 698,214" />
+      <path d="M805,242 L805,378" />
+      <path d="M430,388 L430,332" />
+    </g>
+
+    <g class="how-tone-extraction">
+      <rect class="how-svg-node" x="8" y="150" width="164" height="76" rx="6" />
+      <text x="90" y="182" text-anchor="middle" class="how-svg-title">Candidate</text>
+      <text x="90" y="202" text-anchor="middle" class="how-svg-sub">one reading of one page</text>
+    </g>
+    <g class="how-tone-data">
+      <rect class="how-svg-node" x="330" y="30" width="200" height="80" rx="6" />
+      <text x="430" y="66" text-anchor="middle" class="how-svg-title">Active</text>
+      <text x="430" y="88" text-anchor="middle" class="how-svg-sub">shown on the site</text>
+    </g>
+    <g class="how-tone-warn">
+      <rect class="how-svg-node" x="330" y="250" width="200" height="80" rx="6" />
+      <text x="430" y="286" text-anchor="middle" class="how-svg-title">Unverified</text>
+      <text x="430" y="308" text-anchor="middle" class="how-svg-sub">stored, never shown</text>
+      <rect class="how-svg-node" x="330" y="390" width="200" height="66" rx="6" fill-opacity="0" stroke-dasharray="5 4" />
+      <text x="430" y="418" text-anchor="middle" class="how-svg-title">Held for promotion</text>
+      <text x="430" y="438" text-anchor="middle" class="how-svg-sub">unverified, and not read again</text>
+    </g>
+    <g class="how-tone-plain">
+      <rect class="how-svg-node" x="700" y="100" width="230" height="140" rx="6" />
+      <text x="815" y="130" text-anchor="middle" class="how-svg-title">Expired</text>
+      <text x="815" y="150" text-anchor="middle" class="how-svg-sub">kept in the dataset, with a reason</text>
+      <text x="815" y="176" text-anchor="middle" class="how-svg-mono">past · two-strike · cancelled</text>
+      <text x="815" y="194" text-anchor="middle" class="how-svg-mono">duplicate · index-page · stale</text>
+      <text x="815" y="212" text-anchor="middle" class="how-svg-mono">promotion · not-public</text>
+      <text x="815" y="230" text-anchor="middle" class="how-svg-mono">outside-geography</text>
+      <rect class="how-svg-node" x="700" y="380" width="230" height="66" rx="6" fill-opacity="0" stroke-dasharray="5 4" />
+      <text x="815" y="408" text-anchor="middle" class="how-svg-title">Archive</text>
+      <text x="815" y="428" text-anchor="middle" class="how-svg-sub">one file for each year</text>
+    </g>
+
+    <g class="how-svg-lab">
+      <text x="180" y="100">date and venue both</text>
+      <text x="180" y="116">quoted from the page</text>
+      <text x="196" y="276">anything less</text>
+      <text x="378" y="172" text-anchor="end">a verified</text>
+      <text x="378" y="188" text-anchor="end">reading</text>
+      <text x="488" y="164">{outages} outages in a row, or its</text>
+      <text x="488" y="180">own page read again with</text>
+      <text x="488" y="196">nothing to cite</text>
+      <text x="560" y="40">its last day passes · its page says</text>
+      <text x="560" y="56">cancelled · a second strike · a duplicate</text>
+      <text x="548" y="336">its last day passes · stale: never</text>
+      <text x="548" y="352">verified, unsighted for {stale} weekly runs</text>
+      <text x="815" y="296">{weeks} weeks after its</text>
+      <text x="815" y="312">last day and its</text>
+      <text x="815" y="328">last change</text>
+      <text x="420" y="358" text-anchor="end">a person adds its site</text>
+      <text x="420" y="374" text-anchor="end">to the source list</text>
+    </g>
+  </svg>
+  <Fragment slot="caption">An expired duplicate names the record it was folded into, so that a later sighting of the duplicate counts as a sighting of the survivor. Nothing reads the archive in order to run.</Fragment>
+</Figure>
