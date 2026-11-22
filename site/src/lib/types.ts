@@ -82,6 +82,28 @@ export type PublishedAbout = {
   neighborhoods: Record<string, string[]>;
 };
 
+/** One weekly run's figures, from its report, for the How it works page's strip and spend bar. */
+export type RunFigures = {
+  /** The report's run date, YYYY-MM-DD. */
+  runDate: string;
+  /** From the run's start to its finish, rounded to the minute and never less than one. */
+  minutes: number;
+  /** Sources the run tried to read: every one but those excluded from it. */
+  sourcesTried: number;
+  /** Sources that could not be fetched, or that refused the job. */
+  sourcesFailed: number;
+  found: number;
+  new: number;
+  updated: number;
+  modelCalls: number;
+  /** Calls that threw. */
+  modelCallsFailed: number;
+  spendUsd: number;
+  capUsd: number;
+  /** Each stage that made a call, most spend first; none when the report records no call's stage. */
+  stages: { stage: string; calls: number; usd: number }[];
+};
+
 /** An event that went this run: listed as text with its page, since it has no page of its own any more. */
 export type GoneEvent = {
   title: string;
