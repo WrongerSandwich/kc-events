@@ -44,7 +44,7 @@ const phases: { name: string; question?: string; steps: { title: string; roles: 
         roles: ["network", "extraction"],
         mon: monthly ? "first" : "on",
         thu: "off",
-        text: `${monthly ? "Monthly. " : ""}One web search for each of the ${inWords(settings.kinds)} kinds of event, ${inWords(settings.discoveryResultsPerQuery)} results each. A result on a listings site is read only for its links; any other is fetched and read as a source's page is. Discovery finds and never admits: an event found on a site nobody has looked at is held in step 5.`,
+        text: `${monthly ? "Monthly. " : ""}One web search for each of the ${inWords(settings.discoverySearches)} kinds of event the config names (the catch-all kind has none), ${inWords(settings.discoveryResultsPerQuery)} results each. A result on a listings site is read only for its links; any other is fetched plainly and read once, under the same rules as a source's page. Discovery finds and never admits: an event found on a site nobody has looked at is held in step 5.`,
       },
     ],
   },
@@ -57,14 +57,14 @@ const phases: { name: string; question?: string; steps: { title: string; roles: 
         roles: ["code"],
         mon: "on",
         thu: "off",
-        text: `Stored events in a place outside the covered area expire first. Then each sighting is matched against the stored events (<a href="#matching">Matching</a>). No match makes a new event. A match refreshes the stored event, cancels it or leaves it alone, depending on whether the sighting's page has a say over it.`,
+        text: `Each sighting is matched against the stored events (<a href="#matching">Matching</a>). No match makes a new event. A match refreshes the stored event, cancels it or leaves it alone, depending on whether the sighting's page has a say over it.`,
       },
       {
         title: "Clear out, fold, hold",
         roles: ["code"],
         mon: "on",
         thu: "on",
-        text: `What is past expires, and so does anything that cites an index page, a promotion, or an event that is not open to the public. Duplicates fold into the record seen first. Discovery's finds on sites no source covers are held until a person adds the site to the source list. All of this comes before re-verification, so that nothing is fetched to check a record that is already going.`,
+        text: `A stored event in a place outside the covered area expires (in the weekly run, before the merge, so that no sighting refreshes it first). What is past expires too, and so does anything that cites an index page, a promotion, or an event that is not open to the public. Duplicates fold into the record seen first. Discovery's finds on sites no source covers are held until a person adds the site to the source list. All of this comes before re-verification, so that nothing is fetched to check a record that is already going.`,
       },
     ],
   },
@@ -77,7 +77,7 @@ const phases: { name: string; question?: string; steps: { title: string; roles: 
         roles: ["network", "extraction", "code"],
         mon: "on",
         thu: "on",
-        text: `Every active event that no lane sighted in this run, and every one that was verified once and has been hidden since, has its primary page fetched and read once. The reading refreshes the event, strikes it, or counts an outage (<a href="#strikes">Strike or outage</a>). On Monday the registry lane has already seen nearly everything, so little is left. On Thursday this step is the whole run, for events in the next ${inWords(constants.reverifyDays)} days.`,
+        text: `Every active event that no lane sighted in this run, and every one that was verified once and has been hidden since, has its primary page fetched and read once. The reading refreshes the event, strikes it, or counts an outage (<a href="#strikes">Strike or outage</a>). On Monday the registry lane has already seen nearly everything, so little is left. On Thursday this is the one step that reads pages: no list is read and nothing is searched, and it checks the events of the next ${inWords(constants.reverifyDays)} days.`,
       },
       {
         title: "Aging the never-verified",
@@ -131,7 +131,7 @@ const phases: { name: string; question?: string; steps: { title: string; roles: 
         roles: ["network", "extraction"],
         mon: "on",
         thu: "off",
-        text: `Any pick that step 8's ceiling passed over has its own page read now, so that no pick is published from its list line alone.`,
+        text: `A pick that step 8's ceiling passed over has its own page read now, so that the ceiling never leaves a pick with its list line alone.`,
       },
     ],
   },
@@ -150,7 +150,7 @@ const phases: { name: string; question?: string; steps: { title: string; roles: 
         roles: ["code"],
         mon: "on",
         thu: "on",
-        text: `Outside <code>run()</code>. The new dataset must pass its schema or nothing is written. Each file goes to a temporary copy beside it, and all are renamed into place together, so that none is ever left half written.`,
+        text: `Outside <code>run()</code>. The new dataset must pass its schema or nothing is written. Each file is written in full to a temporary copy beside it, and only then are they renamed into place, one after another, so that none is ever left half written.`,
       },
     ],
   },
@@ -206,7 +206,7 @@ const stageRole = (stage: string): Role => (stage === "curation" ? "curation" : 
   <ol class="how-pipe">
     {numbered.map((phase) => (
       <>
-        <li class="how-phase"><b>{phase.name}{phase.question !== undefined && <span>{phase.question}</span>}</b><i aria-hidden="true">Mon</i><i aria-hidden="true">Thu</i></li>
+        <li class="how-phase"><b>{phase.name}{phase.question !== undefined && <span>: {phase.question}</span>}</b><i aria-hidden="true">Mon</i><i aria-hidden="true">Thu</i></li>
         {phase.steps.map((step) => (
           <li class="how-step">
             <span class="how-step-n">{step.n}</span>
@@ -221,7 +221,7 @@ const stageRole = (stage: string): Role => (stage === "curation" ? "curation" : 
       </>
     ))}
   </ol>
-  <Fragment slot="caption">Steps 1, 2, 6, 8 and 12 read {inWords(settings.concurrency)} pages at once and take the results up in page order, so that what a run writes never depends on which page answered first.</Fragment>
+  <Fragment slot="caption">A half-filled mark is the first run of the month only. Steps 2, 3, 6, 8 and 12 read {inWords(settings.concurrency)} pages at once and take the results up in page order, so that what a run writes never depends on which page answered first. Step 1 fetches its pages one at a time.</Fragment>
 </Figure>
 
 {shares.length > 0 && run !== undefined && (

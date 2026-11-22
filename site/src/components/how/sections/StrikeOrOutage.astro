@@ -1,22 +1,21 @@
 ---
 /** Section 6: what re-verification concludes from reading a page again (ADR 0008). */
 import { howItWorks } from "../../../generated/how-it-works";
-import { inWords } from "../../../lib/how-it-works";
+import { inWords, ordinal } from "../../../lib/how-it-works";
 import { siteConfig } from "../../../site.config";
 import Figure from "../Figure.astro";
 import Ladder from "../Ladder.astro";
 
 const { constants, settings } = howItWorks;
 const adr = `${siteConfig.repoUrl}/blob/main/docs/adr/0008-an-outage-holds-an-event-only-a-reading-strikes-it.md`;
-const ordinal = ["", "first", "second", "third", "fourth", "fifth"];
 ---
 <p>An outage holds an event; only a reading strikes it. That is <a href={adr}>the rule re-verification works by</a>: a page that could not be read says nothing about whether the show is still on. Most of this ladder exists to tell “the venue dropped it” from every other reason an event might be missing from a reading.</p>
 
 <Figure>
   <Ladder
     rungs={[
-      { q: "Is the page an excluded source's?", note: "The source was taken out of the run by hand.", a: "<b>Held</b>, not fetched, and named in the report.", tone: "warn" },
-      { q: "Did the page fail to load?", note: "The connection failed, the site refused or answered with an error, or the fetch policy refused it.", a: `<b>Outage.</b> The event is held as it was. The ${ordinal[constants.outagesToUnverify] ?? `${constants.outagesToUnverify}th`} in a row makes it unverified, until the page loads and lists it again.`, tone: "warn" },
+      { q: "Is the page an excluded source's?", note: "The source was taken out of the run by hand.", a: "<b>Counted as an outage</b>, not fetched, and named in the report.", tone: "warn" },
+      { q: "Did the page fail to load?", note: "The connection failed, the site refused or answered with an error, or the fetch policy refused it.", a: `<b>Outage.</b> The event is held as it was. The ${ordinal(constants.outagesToUnverify)} in a row makes it unverified, until the page loads and lists it again.`, tone: "warn" },
       { q: `Did it load and read as listing nothing, where ${inWords(constants.emptyReadingGuard)} or more active events cite it?`, a: "<b>Outage for all of them.</b> A page that came back empty, or one off reading by the model, is not news about each event.", tone: "warn" },
       { q: "Does the reading list the event?", a: "<b>Verified:</b> refreshed, its strikes and outages cleared.<br><b>Says cancelled:</b> expired.<br><b>Quote not on the page:</b> kept on its stored citation if the stored quotes are still there and the day and venue agree, and unverified otherwise.", tone: "data" },
       { q: "Was the page only partly read?", note: "A candidate was dropped at a length limit.", a: "<b>Nothing.</b> The event may be in what was lost.", tone: "code" },
@@ -24,7 +23,7 @@ const ordinal = ["", "first", "second", "third", "fourth", "fifth"];
       { q: `Does the event start after the horizon, less ${inWords(constants.horizonSlackDays)} days?`, note: `The model is asked only for events inside the ${inWords(settings.horizonWeeks)} weeks.`, a: "<b>Not struck.</b> The reading was never going to include it.", tone: "code" },
       { q: "Does it start after the latest start the page listed?", note: "A page of the next 20 shows, or one month's view.", a: "<b>Not struck.</b> The page's window stops short of it.", tone: "code" },
     ]}
-    end={{ a: `<b>Strike.</b> The page loaded, covered the event's date, and no longer lists it. One strike changes nothing a reader sees. The ${ordinal[constants.strikesToExpire] ?? `${constants.strikesToExpire}th`} in a row expires the event. Any listing in between clears the count.`, tone: "warn" }}
+    end={{ a: `<b>Strike.</b> The page loaded, covered the event's date, and no longer lists it. One strike changes nothing a reader sees. The ${ordinal(constants.strikesToExpire)} in a row expires the event. Any listing in between clears the count.`, tone: "warn" }}
   />
   <Fragment slot="caption">Thursday's pass applies the same ladder, so a cancellation or a moved date in the coming {inWords(constants.reverifyDays)} days shows before the weekend and not the Monday after.</Fragment>
 </Figure>

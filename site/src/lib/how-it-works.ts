@@ -35,6 +35,13 @@ export function inWords(n: number): string {
   return WORDS[n] ?? n.toLocaleString("en-US");
 }
 
+const ORDINALS = ["zeroth", "first", "second", "third", "fourth", "fifth", "sixth", "seventh", "eighth", "ninth", "tenth", "eleventh", "twelfth"];
+
+/** Which one in a row: "the second strike", "the third outage". */
+export function ordinal(n: number): string {
+  return ORDINALS[n] ?? `${n}th`;
+}
+
 /**
  * One run's count where a sentence speaks of every run ("reads about 60 calendars"): the nearest ten from twenty up,
  * since next week's count will differ by a few, and the count itself below that.

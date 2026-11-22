@@ -4,14 +4,15 @@
  * it carries no count of how many records are in each status, which the site's build does not have.
  */
 import { howItWorks } from "../../../generated/how-it-works";
-import { inWords } from "../../../lib/how-it-works";
+import { inWords, ordinal } from "../../../lib/how-it-works";
 import Figure from "../Figure.astro";
 
 const { constants } = howItWorks;
+const strike = ordinal(constants.strikesToExpire);
 const outages = constants.outagesToUnverify;
 const stale = constants.runsToStale;
 const weeks = constants.archiveAfterWeeks;
-const inWordsOf = `A listing's statuses and the ways between them. A candidate, one reading of one page, becomes active when its date and its venue are both quoted from the page, and unverified otherwise. An unverified listing becomes active on a verified reading. An active one becomes unverified after ${inWords(outages)} outages in a row, or when its own page is read again with nothing to cite. Either expires when its last day passes; an active one also when its page says it is cancelled, on a second strike in a row, or as a duplicate; an unverified one also as stale, never verified and unsighted for ${inWords(stale)} weekly runs. A find held for promotion stays unverified until a person adds its site to the source list. An expired record moves to the archive ${inWords(weeks)} weeks after its last day and its last change.`;
+const inWordsOf = `A listing's statuses and the ways between them. A candidate, one reading of one page, becomes active when its date and its venue are both quoted from the page, and unverified otherwise. An unverified listing becomes active on a verified reading. An active one becomes unverified after ${inWords(outages)} outages in a row, or when its own page is read again with nothing to cite. Either expires when its last day passes, when its own page says it is cancelled, on a ${strike} strike in a row, as a duplicate, or when a rule takes it off the list: it cites an index page, it is a promotion or not open to the public, or it is outside the area covered. An unverified one that no reading ever verified also expires as stale, once it has gone unsighted for ${inWords(stale)} weekly runs. A find held for promotion stays unverified until a person adds its site to the source list. An expired record moves to the archive ${inWords(weeks)} weeks after its last day and its last change.`;
 ---
 <p>The site publishes active events and nothing else. Every other record stays in the dataset, so that the job remembers what it has already seen and what it decided.</p>
 
@@ -72,9 +73,10 @@ const inWordsOf = `A listing's statuses and the ways between them. A candidate, 
       <text x="488" y="164">{outages} outages in a row, or its</text>
       <text x="488" y="180">own page read again with</text>
       <text x="488" y="196">nothing to cite</text>
-      <text x="560" y="40">its last day passes · its page says</text>
-      <text x="560" y="56">cancelled · a second strike · a duplicate</text>
-      <text x="548" y="336">its last day passes · stale: never</text>
+      <text x="548" y="24">its last day passes · its own page says</text>
+      <text x="548" y="40">cancelled · a {strike} strike · a duplicate ·</text>
+      <text x="548" y="56">ruled off the list</text>
+      <text x="548" y="336">the same ways, and as stale: never</text>
       <text x="548" y="352">verified, unsighted for {stale} weekly runs</text>
       <text x="815" y="296">{weeks} weeks after its</text>
       <text x="815" y="312">last day and its</text>
@@ -83,5 +85,5 @@ const inWordsOf = `A listing's statuses and the ways between them. A candidate, 
       <text x="420" y="374" text-anchor="end">to the source list</text>
     </g>
   </svg>
-  <Fragment slot="caption">An expired duplicate names the record it was folded into, so that a later sighting of the duplicate counts as a sighting of the survivor. Nothing reads the archive in order to run.</Fragment>
+  <Fragment slot="caption">A record is ruled off the list when it cites an index page, when it is a promotion or not open to the public, or when it is outside the area covered. An expired duplicate names the record it was folded into, so that a later sighting of the duplicate counts as a sighting of the survivor. Nothing reads the archive in order to run.</Fragment>
 </Figure>

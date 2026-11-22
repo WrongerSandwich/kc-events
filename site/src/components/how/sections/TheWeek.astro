@@ -1,5 +1,10 @@
 ---
-/** Section 1: what happens on which day. The times are the cron lines' (scripts/home-run-setup.sh), which a test holds. */
+/**
+ * Section 1: what happens on which day. The days and times are the cron lines' (scripts/home-run-setup.sh, held by a
+ * test): each box says its day in words, since the grid's columns are layout a screen reader does not hear, and the
+ * two runs are placed under their days from the cron lines. The audit and the reading of it follow Monday's run, which
+ * the build holds to a Monday (checkScheduleDays).
+ */
 import { howItWorks } from "../../../generated/how-it-works";
 import { cronWhen, inWords } from "../../../lib/how-it-works";
 import Figure from "../Figure.astro";
@@ -9,7 +14,14 @@ const weekly = cronWhen(schedule.weeklyCron);
 const midweek = cronWhen(schedule.midweekCron);
 const deploy = cronWhen(schedule.deployCron);
 const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+/** A day's place in the week, Monday first, from cronWhen's word for it. */
+const dayIndex = (word: string) => ["Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays", "Sundays"].indexOf(word);
+const weeklyDay = dayIndex(weekly.days);
+const midweekDay = dayIndex(midweek.days);
+/** The grid's first column is the lanes' names. */
+const column = (day: number) => `grid-column: ${day + 2}`;
 const gaps = (n: number) => Array.from({ length: n });
+const capital = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);
 const discovery = settings.discoveryCadence === "monthly" ? "the first weekly run of each calendar month" : "every weekly run";
 ---
 <p>Two scheduled runs do the research. A third job rebuilds the site every night, so that the dates on its pages stay right. After Monday's run a second model audits what the run changed, and a person reads what it found.</p>
@@ -20,10 +32,15 @@ const discovery = settings.discoveryCadence === "monthly" ? "the first weekly ru
     {days.map((day) => <div class="how-week-day">{day}</div>)}
 
     <div class="how-week-lane">Research</div>
-    <div class="how-week-item how-tone-plain"><time>{weekly.time}</time><b>Weekly run</b>Reads every source, checks what it read, and judges the picks.</div>
-    {gaps(2).map(() => <div class="how-week-gap" />)}
-    <div class="how-week-item how-tone-plain"><time>{midweek.time}</time><b>Midweek re-verification</b>Checks the events of the next {inWords(constants.reverifyDays)} days again, and nothing else.</div>
-    {gaps(3).map(() => <div class="how-week-gap" />)}
+    {days.map((_, day) =>
+      day === weeklyDay ? (
+        <div class="how-week-item how-tone-plain" style={column(day)}><time>{weekly.days}, {weekly.time}</time><b>Weekly run</b>Reads every source, checks what it read, and judges the picks.</div>
+      ) : day === midweekDay ? (
+        <div class="how-week-item how-tone-plain" style={column(day)}><time>{midweek.days}, {midweek.time}</time><b>Midweek re-verification</b>Reads no list and searches nothing: it reads again the pages of the next {inWords(constants.reverifyDays)} days' events, then judges and writes what changed.</div>
+      ) : (
+        <div class="how-week-gap" style={column(day)} />
+      ),
+    )}
 
     <div class="how-week-lane">Audit</div>
     <div class="how-week-item how-tone-plain"><b>Audit, after the run</b>A second model reviews what the run added or changed. It changes nothing.</div>
@@ -31,10 +48,10 @@ const discovery = settings.discoveryCadence === "monthly" ? "the first weekly ru
 
     <div class="how-week-lane">By hand</div>
     <div class="how-week-item how-tone-hand"><b>The audit's findings</b>read, with the run's report.</div>
-    <div class="how-week-item how-tone-hand" style="grid-column: span 6"><b>Any day</b>Corrections from readers looked into; edits to the rules, the source list and the venue table; a pick made or dropped by hand.</div>
+    <div class="how-week-item how-tone-hand" style="grid-column: span 6"><b>Any day</b>Corrections from readers looked into; edits to the rules, the source list and the venue table; a pick made or dropped by hand. Edits to the rules, the source list and the picks take effect at the next run.</div>
 
     <div class="how-week-lane">Site</div>
-    <div class="how-week-item how-tone-plain" style="grid-column: span 7"><time>{deploy.time}, {deploy.days}</time><b>Nightly rebuild</b>Every page is built again as of the new day, so that "today" is today. A run or an edit by hand also rebuilds the site, within minutes.</div>
+    <div class="how-week-item how-tone-plain" style="grid-column: span 7"><time>{capital(deploy.days)}, {deploy.time}</time><b>Nightly rebuild</b>Every page is built again as of the new day, so that "today" is today. A run also rebuilds the site within minutes, and so does an edit to the venue table.</div>
   </div>
   <Fragment slot="caption">All times are Central. Discovery, the search for events on sites the source list does not cover, runs with {discovery}.</Fragment>
 </Figure>

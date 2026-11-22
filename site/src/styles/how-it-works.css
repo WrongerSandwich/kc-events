@@ -62,8 +62,8 @@
 
 /* A figure: a framed diagram and its caption, wider than the prose on a wide screen */
 .how-figure { width: var(--how-wide); margin: var(--space-6) calc((100% - var(--how-wide)) / 2) var(--space-4); border: 1px solid var(--rule); background: var(--bg-raised); border-radius: var(--radius); padding: var(--space-4); }
-/* A link inside a diagram is in the box's own colour, so the underline is what says it is one. */
-.how-figure a { color: inherit; text-decoration: underline; }
+/* A link inside a diagram is ink and underlined, as every link on the site is: a role's colour is never a link's. */
+.how-figure a { color: var(--fg); text-decoration: underline; }
 .how-figure figcaption { color: var(--fg-muted); font-size: var(--text-sm); margin-top: var(--space-3); max-width: 80ch; }
 /* Positioned, so that a visually hidden label inside a wide diagram scrolls with it and never widens the page. */
 .how-scroll { overflow-x: auto; position: relative; }

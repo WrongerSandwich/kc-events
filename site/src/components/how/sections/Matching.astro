@@ -9,7 +9,7 @@ const { constants } = howItWorks;
 /** Each kind of page, and what a sighting read from it may do to the stored event it matches: refresh, cancel, clear strikes, hide. */
 const says: { from: string; note?: string; may: [boolean, boolean, boolean, boolean] }[] = [
   { from: "The event's own primary page", may: [true, true, true, true] },
-  { from: "A page that speaks for it", note: "A source's page, or another page on the event's own site.", may: [true, true, true, false] },
+  { from: "A page that speaks for it", note: "A source's page, or another page on the event's own site. It refreshes or cancels only when its reading is verified; one that is not only clears strikes.", may: [true, true, true, false] },
   { from: "Any other page", note: "A discovery find on someone else's site.", may: [false, false, false, false] },
 ];
 ---
@@ -24,7 +24,7 @@ const says: { from: string; note?: string; may: [boolean, boolean, boolean, bool
       { q: "The same own page on the same calendar date", a: "Two lists that link one ticket page mean one event.", tone: "data" },
       { q: `The same title and venue, starting within ${inWords(constants.fuzzyDateWindowDays)} days`, note: "The venue under any of its names: a room or a program counts as its building.", a: "The loose match: a venue's list and a promoter's list.", tone: "data" },
       { q: "The same title, venue and closing date", a: "A limited run is named by when it closes. The stored start is kept.", tone: "data" },
-      { q: "Sports: the same matchup, venue and day", a: "“Chiefs vs Cardinals” and “Arizona at Kansas City” are one game.", tone: "data" },
+      { q: "Sports: two games titled as matchups, at one venue at the same time", a: "The team names are not compared: “Chiefs vs Cardinals” and “Arizona at Kansas City” are one game. Two different times are a doubleheader.", tone: "data" },
       { q: "Recurring: the same title at the same venue", a: "Whatever words its schedule is given in.", tone: "data" },
       { q: "No venue on the sighting: a stored event with its title on its date", a: "If two fit and neither is preferred, nothing is created.", tone: "data" },
       { q: "One dated month of a stored recurring event", a: "Confirms the recurring event and changes nothing in it.", tone: "data" },

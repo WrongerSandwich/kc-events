@@ -1,6 +1,6 @@
 # How it works: the run explainer as a public page under About
 
-**Status:** draft, awaiting Evan's approval (2026-11-22).
+**Status:** approved by Evan, 2026-11-22.
 
 ## Intent
 

@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { barShares, cronWhen, duration, inWords, roughly, runDay, usd } from "../src/lib/how-it-works";
+import { barShares, cronWhen, duration, inWords, ordinal, roughly, runDay, usd } from "../src/lib/how-it-works";
 
 describe("the how-it-works page's formatting", () => {
   it("writes money to the cent, and says so when it is under one", () => {
@@ -25,6 +25,11 @@ describe("the how-it-works page's formatting", () => {
   it("rounds one run's count to the nearest ten where a sentence speaks of every run", () => {
     expect([4, 19].map(roughly)).toEqual(["four", "19"]);
     expect([52, 59, 64, 100].map(roughly)).toEqual(["about 50", "about 60", "about 60", "about 100"]);
+  });
+
+  it("writes which one in a row, for the counts the page states that way", () => {
+    expect([1, 2, 3, 4].map(ordinal)).toEqual(["first", "second", "third", "fourth"]);
+    expect(ordinal(13)).toBe("13th");
   });
 
   it("names a run by its month and day", () => {

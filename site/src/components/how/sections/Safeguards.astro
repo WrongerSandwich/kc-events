@@ -36,7 +36,7 @@ const cap = usd(settings.spendCapUsd);
     <li class="how-slab"><b>The write</b><ul>
       <li>The hand picks file or the venue table does not parse: the run stops before any write.</li>
       <li>The new dataset fails its schema: nothing is written, and the refused records are set aside to be read.</li>
-      <li>All the files are renamed into place together.</li>
+      <li>Every file is written in full before any is renamed into place, one after another.</li>
     </ul></li>
     <li class="how-slab"><b>Before publishing</b><ul>
       <li>The site must build from the new data, with {constants.minPublished} events or more.</li>

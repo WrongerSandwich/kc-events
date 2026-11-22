@@ -125,8 +125,8 @@ export type PublishedHowItWorks = {
     curationModel: string;
     discoveryCadence: string;
     discoveryResultsPerQuery: number;
-    /** How many kinds the config lists: discovery makes one search for each. */
-    kinds: number;
+    /** How many searches discovery makes: one for each kind the config lists but the catch-all, "other". */
+    discoverySearches: number;
   };
   constants: HowItWorksConstants;
   /** The cron lines of the weekly run, the midweek pass and the nightly rebuild, and the run's two waits, in minutes. */

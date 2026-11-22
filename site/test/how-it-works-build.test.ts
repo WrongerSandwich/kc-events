@@ -4,8 +4,20 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseRunReport } from "../../src/report";
-import { readWeeklyReport, runFigures } from "../src/build/how-it-works";
+import { checkScheduleDays, readWeeklyReport, runFigures, SCHEDULE } from "../src/build/how-it-works";
 import { tempDir } from "./fixtures/temp-dir";
+
+describe("checkScheduleDays", () => {
+  it("passes the schedule as it stands: the weekly run on Mondays, the midweek pass on Thursdays", () => {
+    expect(() => checkScheduleDays(SCHEDULE)).not.toThrow();
+  });
+
+  it("refuses a schedule whose days the page's prose no longer matches, naming the page", () => {
+    // The page says "Monday's run" and "on Thursday" in its sentences and its marks; a moved cron line must not leave them standing.
+    expect(() => checkScheduleDays({ ...SCHEDULE, weeklyCron: "17 6 * * 2" })).toThrow(/Mondays.*how-it-works/s);
+    expect(() => checkScheduleDays({ ...SCHEDULE, midweekCron: "17 6 * * 5" })).toThrow(/Thursdays.*how-it-works/s);
+  });
+});
 
 /** The end-to-end fixture's report with no mode, no source and no model call: the oldest shape a build may meet. */
 const bare = (): Record<string, any> => {

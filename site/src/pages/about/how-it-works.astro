@@ -20,7 +20,10 @@ import { siteConfig } from "../../site.config";
 
 const { run, settings, constants } = howItWorks;
 const repo = (path: string) => `${siteConfig.repoUrl}/blob/main/${path}`;
-const sources = run === undefined ? "about fifty" : roughly(run.sourcesTried);
+/** Sources the newest weekly run fetched: those it tried, less those that failed. */
+const sourcesRead = run === undefined ? 0 : run.sourcesTried - run.sourcesFailed;
+// With no report to count from (or one that lists no source), the lede gives the registry's size in round words.
+const sources = sourcesRead === 0 ? "about fifty" : roughly(sourcesRead);
 
 /** The sections, in order: the contents row and the page share the list. A section's body is its component. */
 const sections = [
@@ -45,10 +48,10 @@ const sections = [
       <section class="how-strip" aria-labelledby="how-strip">
         <p id="how-strip" class="how-label">The weekly run of {runDay(run.runDate)}</p>
         <dl>
-          <div><dt>Sources read</dt><dd>{run.sourcesTried}</dd></div>
+          <div><dt>Sources read</dt><dd>{sourcesRead}</dd></div>
           <div><dt>Sources that failed</dt><dd>{run.sourcesFailed}</dd></div>
-          <div><dt>Listings read from them</dt><dd>{run.found.toLocaleString("en-US")}</dd></div>
-          <div><dt>Events new that week</dt><dd>{run.new.toLocaleString("en-US")}</dd></div>
+          <div><dt>Events sighted on their pages</dt><dd>{run.found.toLocaleString("en-US")}</dd></div>
+          <div><dt>New records, shown or held back</dt><dd>{run.new.toLocaleString("en-US")}</dd></div>
           <div><dt>Model calls</dt><dd>{run.modelCalls.toLocaleString("en-US")}</dd></div>
           <div><dt>Spent on models, of a {usd(run.capUsd)} cap</dt><dd>{usd(run.spendUsd)}</dd></div>
           <div><dt>Start to finish</dt><dd>{duration(run.minutes)}</dd></div>

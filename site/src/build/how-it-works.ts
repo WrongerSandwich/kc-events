@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import type { RunConfig } from "../../../src/config.ts";
 import { parseRunReport, type RunReport } from "../../../src/report.ts";
 import { localDate } from "../lib/dates";
+import { cronWhen } from "../lib/how-it-works";
 import type { HowItWorksConstants, PublishedHowItWorks, RunFigures } from "../lib/types";
 
 /**
@@ -45,9 +46,23 @@ export const SCHEDULE = {
   deployWaitMinutes: 15,
 } as const;
 
+/**
+ * The page's times come from the cron lines, but its sentences and its diagrams' marks say "Monday" and "Thursday" in
+ * words (the lede, the week, the steps' two marks, Strike or outage). A cron line moved to another day would leave
+ * those standing, so the build refuses one until the page's words are changed with it.
+ */
+export function checkScheduleDays(schedule: { weeklyCron: string; midweekCron: string }): void {
+  for (const [cron, days, what] of [[schedule.weeklyCron, "Mondays", "weekly run"], [schedule.midweekCron, "Thursdays", "midweek pass"]] as const) {
+    if (cronWhen(cron).days !== days) {
+      throw new Error(`the ${what}'s cron line is "${cron}", but the How it works page says it runs on ${days}: change the days named in site/src/pages/about/how-it-works.astro and site/src/components/how/sections/, then this check`);
+    }
+  }
+}
+
 /** Everything the How it works page is given: the config's settings, the literals above, what is published, and the newest weekly run. */
 export function howItWorks(opts: { config: RunConfig; datasetPath: string; lastSuccessfulRun: string; activeEvents: number; picks: number }): PublishedHowItWorks {
   const { config } = opts;
+  checkScheduleDays(SCHEDULE);
   const report = readWeeklyReport(opts.datasetPath, opts.lastSuccessfulRun);
   return {
     settings: {
@@ -60,7 +75,8 @@ export function howItWorks(opts: { config: RunConfig; datasetPath: string; lastS
       curationModel: config.models.curation,
       discoveryCadence: config.discovery.cadence,
       discoveryResultsPerQuery: config.discovery.resultsPerQuery,
-      kinds: config.kinds.length,
+      // One search for each kind but the catch-all (discoveryQueries in the job's src/discovery.ts).
+      discoverySearches: config.kinds.filter((kind) => kind !== "other").length,
     },
     constants: CONSTANTS,
     schedule: SCHEDULE,

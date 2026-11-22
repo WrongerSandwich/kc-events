@@ -84,7 +84,9 @@ describe("writeGenerated", () => {
     generate();
     const without = exported(join(outDir, "how-it-works.ts"));
     expect(without).not.toHaveProperty("run");
-    expect(without.settings).toMatchObject({ horizonWeeks: 8, spendCapUsd: 5, extractionReads: 2, concurrency: 4, discoveryCadence: "weekly", discoveryResultsPerQuery: 5 });
+    // Discovery searches once for each kind but the catch-all, "other" (discoveryQueries in the job): ten of the default eleven.
+    expect(without.settings).toMatchObject({ horizonWeeks: 8, spendCapUsd: 5, extractionReads: 2, concurrency: 4, discoveryCadence: "weekly", discoveryResultsPerQuery: 5, discoverySearches: 10 });
+    expect(without.settings).not.toHaveProperty("kinds");
     expect(without.settings.extractionModel).toEqual(expect.any(String));
     expect(without.settings.curationModel).toEqual(expect.any(String));
     expect(without.counts).toEqual({ activeEvents: 2, picks: 1 });

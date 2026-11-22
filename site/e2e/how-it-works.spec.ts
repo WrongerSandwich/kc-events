@@ -39,8 +39,11 @@ test("the strip gives the newest weekly run's figures, and says which run", asyn
   const strip = page.locator(".how-strip");
   await expect(strip).toContainText("The weekly run of October 5");
   const figure = (term: string) => strip.locator("div", { has: page.getByText(term, { exact: true }) }).locator("dd");
-  await expect(figure("Sources read")).toHaveText("4");
+  // Four were tried and one failed: three were read (the fixture's fifth is excluded from the run).
+  await expect(figure("Sources read")).toHaveText("3");
   await expect(figure("Sources that failed")).toHaveText("1");
+  // The report counts stored events a page sighted, and every record made, shown or not: the labels say so.
+  await expect(strip.locator("dt")).toContainText(["Events sighted on their pages", "New records, shown or held back"]);
   await expect(figure("Model calls")).toHaveText("6");
   await expect(figure("Spent on models, of a $5.00 cap")).toHaveText("$0.42");
   await expect(figure("Start to finish")).toHaveText("30 min");
@@ -73,8 +76,15 @@ test("the week gives the three scheduled times, from the schedule the scripts ho
   await open(page);
   const week = page.locator("#week");
   await expect(week.locator(".how-scroll")).toHaveAttribute("aria-label", /week/i);
-  await expect(week.locator(".how-week-item time")).toHaveText(["6:17 am", "6:17 am", "12:05 am, every day"]);
+  // Each says its day in words: the grid's columns are layout, which a screen reader does not hear.
+  await expect(week.locator(".how-week-item time")).toHaveText(["Mondays, 6:17 am", "Thursdays, 6:17 am", "Every day, 12:05 am"]);
   await expect(week.locator(".how-week-day")).toHaveText(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
+  // The weekly run sits under Monday and the midweek pass under Thursday, placed from the cron lines.
+  const column = (words: string) => week.locator(".how-week-item", { hasText: words }).evaluate((el) => getComputedStyle(el).gridColumnStart);
+  expect(await column("Weekly run")).toBe("2");
+  expect(await column("Midweek re-verification")).toBe("5");
+  // The midweek pass is not only a re-reading: it also judges and writes what changed.
+  await expect(week.locator(".how-week-item", { hasText: "Midweek re-verification" })).toContainText("Reads no list");
   // The audit is placed after the run, with no clock time of its own (it is scheduled outside the repository).
   await expect(week.locator(".how-week-item", { hasText: "Audit, after the run" })).not.toContainText(/\d:\d\d/);
 });
@@ -95,6 +105,40 @@ test("a run is fourteen steps in six phases, each saying who does it and on whic
   // The midweek pass reads no list: its first step is the clearing out before re-verification.
   await expect(steps.nth(0).locator(".how-mark").nth(1)).toHaveText("Does not run on Thursday");
   await expect(steps.nth(5).locator(".how-mark").nth(1)).toHaveText("Runs on Thursday");
+  // A phase's name and its question are two things to a screen reader too.
+  await expect(page.locator("#run .how-phase > b").first()).toHaveText("Find: What do the pages list right now?");
+});
+
+test("what the facts pass corrected stays corrected", async ({ page }) => {
+  await open(page);
+  const step = (n: number) => page.locator("#run .how-step").nth(n - 1);
+  // The listing pages are fetched one at a time; it is the reads that run side by side, discovery's among them.
+  await expect(page.locator("#run figcaption", { hasText: "pages at once" })).toContainText("Steps 2, 3, 6, 8 and 12");
+  // Discovery makes no search for the catch-all kind.
+  await expect(step(3)).toContainText("each of the ten kinds");
+  await expect(step(3)).toContainText("fetched plainly and read once");
+  // A place outside the area expires on Thursday too, so it is told in a step that runs then.
+  await expect(step(4)).not.toContainText("outside the covered area");
+  await expect(step(5)).toContainText("outside the covered area");
+  await expect(step(12)).not.toContainText("no pick is published from its list line alone");
+  await expect(step(14)).toContainText("one after another");
+  await expect(page.locator("#safeguards .how-slab", { hasText: "The write" })).toContainText("one after another");
+  // An excluded source's events run up outages like any other page that was not read.
+  await expect(page.locator("#strikes .how-ladder > li").first().locator(".how-a")).toContainText("Counted as an outage");
+  // An unverified record can be cancelled, struck or folded as an active one can.
+  await expect(page.locator("#life svg[role=img]")).toHaveAttribute("aria-label", /Either expires when its last day passes, when its own page says it is cancelled, on a second strike in a row, as a duplicate/);
+  await expect(page.locator("#matching .how-table tbody tr").nth(1)).toContainText("when its reading is verified");
+  await expect(page.locator("#matching .how-ladder > li").nth(4)).toContainText("The team names are not compared");
+  await expect(page.locator("#week")).toContainText("take effect at the next run");
+});
+
+test("a link inside a tinted box is ink, as every link on the site is: a role's colour is never a link's", async ({ page }) => {
+  await open(page);
+  const link = page.locator("#listing .how-a a").first();
+  const [ink, linkColour, boxColour] = await link.evaluate((a) => [getComputedStyle(document.body).color, getComputedStyle(a).color, getComputedStyle(a.closest(".how-a")!).color]);
+  expect(linkColour).toBe(ink);
+  expect(boxColour).not.toBe(ink);
+  await expect(link).toHaveCSS("text-decoration-line", "underline");
 });
 
 test("the spend bar has a segment for each stage that spent anything, and says each one's dollars", async ({ page }) => {
