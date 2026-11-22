@@ -2,11 +2,12 @@
  * Build-time only: the one place the site reads the research job's files and types. Parses with the
  * job's own schemas, keeps active non-past events, and projects them to what the browser sees.
  */
-import { readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { PRODUCT, USER_AGENT } from "../../../src/adapters/identity.ts";
 import { ELSEWHERE_IN_THE_METRO, parseConfig, type RunConfig } from "../../../src/config.ts";
-import { DATASET_SCHEMA_VERSION, parseDataset, WEEKDAYS, type Event, type PickReason as JobPickReason, type Weekday } from "../../../src/dataset.ts";
+import { DATASET_SCHEMA_VERSION, parseArchive, parseDataset, WEEKDAYS, type Event, type PickReason as JobPickReason, type Weekday } from "../../../src/dataset.ts";
 import { genericVenueName, streetAddress, venueAndRoom } from "../../../src/identity.ts";
 import { outsidePlace, regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
@@ -17,7 +18,7 @@ import { publishedChanges, readRunChanges } from "./changes.ts";
 import { howItWorks } from "./how-it-works.ts";
 import { href } from "./href.ts";
 import { isProductionBuild, knownOrigin } from "./origin.ts";
-import { buildVenues, readVenueTable } from "./venues.ts";
+import { buildVenues, readVenueTable, VENUE_PAGE_DAYS, type RecentVenue } from "./venues.ts";
 
 /** True when A and B are the same union (each assignable to the other), never otherwise. */
 type SameUnion<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
@@ -136,8 +137,53 @@ export function project(e: Event, config: RunConfig): PublishedEvent {
   return out;
 }
 
-/** `venuesPath`: the venue table (#137); with none, or no file there, every venue page has its events alone. */
-export function loadPublished(opts: { datasetPath: string; configPath: string; venuesPath?: string; today?: string }): Published {
+/**
+ * The records in the job's archive files, `data/archive/<year>.json` (#82), beside the dataset: none when the directory
+ * is not there. Parsed with the job's own schema; a file that does not parse fails the build, naming it.
+ */
+export function readArchive(dir: string, config: RunConfig): Event[] {
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir)
+    .filter((f) => f.endsWith(".json"))
+    .sort()
+    .flatMap((f) => {
+      try {
+        return parseArchive(JSON.parse(readFileSync(join(dir, f), "utf8")), config).events;
+      } catch (error) {
+        throw new Error(`site: the archive file ${basename(dir)}/${f} does not parse`, { cause: error });
+      }
+    });
+}
+
+/**
+ * The records that keep a venue page up (#300, VENUE_PAGE_DAYS): active, or expired as past having once been verified
+ * (an unverified record passes as past too, never having been published), whose last day (the end, else the start) is
+ * within the last 365 days or later, outside no place the config puts outside the geography (ADR 0015), most recent
+ * first. An active record with no date, a recurring one, keeps its venue as of today. A record expired for another
+ * reason (a duplicate, a promotion, an index page) was never a listing the venue's page should keep; nor is a venue
+ * that names no one place, a street address or generic words (vagueVenue), which no one searches for by that name.
+ */
+export function recentVenues(records: readonly Event[], config: RunConfig, today: string): RecentVenue[] {
+  const cutoff = addDays(today, -VENUE_PAGE_DAYS);
+  return records
+    .flatMap((e) => {
+      const published = e.status === "active" || (e.status === "expired" && e.expiryReason === "past" && e.lastVerified !== undefined);
+      if (e.venue === undefined || !published || outsidePlace(e.neighborhood, config)) return [];
+      const venue = venueAndRoom(e.venue, config.venueAliases).venue;
+      if (vagueVenue(venue)) return [];
+      const last = e.end ?? e.start;
+      const day = last === undefined ? (e.status === "active" ? today : undefined) : localDate(last);
+      return day !== undefined && day >= cutoff ? [{ venue, e, day }] : [];
+    })
+    .sort((a, b) => b.day.localeCompare(a.day))
+    .map(({ venue, e }) => ({ venue, neighborhood: e.neighborhood, region: regionFor(e.neighborhood, config) }));
+}
+
+/**
+ * `venuesPath`: the venue table (#137); with none, or no file there, every venue page has its events alone.
+ * `archiveDir`: the job's archive, by default `archive/` beside the dataset, which keeps a quiet venue's page up.
+ */
+export function loadPublished(opts: { datasetPath: string; configPath: string; venuesPath?: string; archiveDir?: string; today?: string }): Published {
   const config = parseConfig(parseYaml(readFileSync(opts.configPath, "utf8")));
   checkSchemaVersion(DATASET_SCHEMA_VERSION);
   const dataset = parseDataset(JSON.parse(readFileSync(opts.datasetPath, "utf8")), config);
@@ -204,11 +250,13 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; v
     venueAliases: config.venueAliases,
   });
 
+  const records = [...dataset.events, ...readArchive(opts.archiveDir ?? join(dirname(opts.datasetPath), "archive"), config)];
   const venues = buildVenues({
     rows: readVenueTable(opts.venuesPath, config),
     events,
-    recordVenues: dataset.events.flatMap((e) => (e.venue === undefined ? [] : [e.venue])),
+    recordVenues: records.flatMap((e) => (e.venue === undefined ? [] : [e.venue])),
     aliases: config.venueAliases,
+    recent: recentVenues(records, config, today),
   });
 
   return {

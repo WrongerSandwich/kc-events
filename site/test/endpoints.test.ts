@@ -3,7 +3,9 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
+import { venues } from "../src/generated/venues";
 import { isDated } from "../src/lib/events";
+import { venueSlug } from "../src/lib/venues";
 import { faviconSvg } from "../src/lib/mark";
 import { slugify } from "../src/lib/slugs";
 
@@ -146,6 +148,18 @@ describe("built output", () => {
       for (const page of ["index.html", "explore.html", "about.html"]) expect(read(page), page).toMatch(/<footer[\s\S]*href="\/venues"/);
       const venuePage = readdirSync(new URL("v/", dist)).find((f) => f.endsWith(".html"))!;
       expect(read(`v/${venuePage}`)).toContain('<a href="/about#for-venues">Is this your venue? How to correct a listing</a>');
+    });
+
+    it("titles a venue page as a listing and prerenders its facts, its trail and its events' list (#300)", () => {
+      const ld = (html: string) => [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]!)["@type"]);
+      const busy = venues.find((v) => events.some((e) => isDated(e) && venueSlug(e.venue) === v.slug));
+      expect(busy, "the generated dataset has a venue with a dated event").toBeDefined();
+      const html = read(`v/${busy!.slug}.html`);
+      expect(html).toMatch(/<title>[^<]* events(, [^<]+)? · KC This Week<\/title>/);
+      expect(html).toMatch(/<p class="venue-facts"[^>]*>[^<]*\d+ events? (this week|through)/);
+      expect(ld(html)).toEqual(["Place", "BreadcrumbList", "ItemList"]);
+      const quiet = venues.find((v) => !events.some((e) => venueSlug(e.venue) === v.slug));
+      if (quiet !== undefined) expect(ld(read(`v/${quiet.slug}.html`))).toEqual(["Place", "BreadcrumbList"]);
     });
 
     it("declares both colour schemes, a theme colour for each, and the locale on every page (#188)", () => {

@@ -981,8 +981,13 @@ test("a venue page gives the venue's address, map, and site, then its events by 
   await expect(page.getByRole("link", { name: "therecordbar.com" })).toHaveAttribute("href", "https://www.therecordbar.com/");
   await expect(page.getByRole("heading", { level: 2 })).toHaveText(["Tue Oct 6"]);
   await expect(page.getByRole("heading", { level: 3 })).toHaveText(["Fabio Frizzi plays Fulci"]);
-  const place = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent())!);
+  // A listing's title and a line of facts from the data (#300).
+  await expect(page).toHaveTitle("recordBar events, Kansas City · KC This Week");
+  await expect(page.locator(".venue-facts")).toHaveText("Music · 1 event this week, 1 through Nov 30");
+  const [place, trail, list] = await Promise.all((await page.locator('script[type="application/ld+json"]').all()).map(async (s) => JSON.parse((await s.textContent())!)));
   expect(place).toMatchObject({ "@type": "Place", name: "recordBar", address: { streetAddress: "1520 Grand Blvd", postalCode: "64108" }, geo: { latitude: 39.0929 } });
+  expect(trail).toMatchObject({ "@type": "BreadcrumbList", itemListElement: [{ name: "Home" }, { name: "Venues" }, { name: "recordBar" }] });
+  expect(list).toMatchObject({ "@type": "ItemList", itemListElement: [{ position: 1, url: expect.stringMatching(/\/e\/evt_e2e000000001$/) }] });
 });
 
 test("a venue with a row and nothing coming up still has its page (#137)", async ({ page }) => {
