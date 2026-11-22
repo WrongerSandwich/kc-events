@@ -17,7 +17,7 @@ export default defineConfig({
   // The site renders no Markdown, so Shiki has nothing to highlight; left on, it warns on every build that its
   // inline styles do not fit the CSP.
   markdown: { syntaxHighlight: false },
-  // Fonts stay files, however small: the 1 KB wordmark would otherwise be inlined as base64 into the shared stylesheet
+  // Fonts stay files, however small: the display face (under 4 KB) would otherwise be inlined as base64 into the shared stylesheet
   // and its own preload, paid again in every page's markup instead of fetched once and cached (#195).
   vite: { build: { assetsInlineLimit: (file) => (file.endsWith(".woff2") ? false : undefined) } },
   // A meta CSP: Astro hashes every script and style it emits (the island bootstrap, explore's inline script, the

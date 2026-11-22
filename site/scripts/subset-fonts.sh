@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
 # Regenerates the site's committed font files in src/fonts/ from the fontsource packages (#195; audit 2026-10-21, A10).
-# Run from site/ after a fontsource bump or a change to the site's name; needs Python 3 with fonttools and brotli
+# Run from site/ after a fontsource bump or a change to what the display face sets; needs Python 3 with fonttools and brotli
 # (`pip install fonttools brotli`). The build itself never runs it.
 #
 # - Geist: each subset's wght axis limited to 400 to 600, the weights the site sets (tokens.css). Geist's licence
 #   (SIL OFL 1.1) names no Reserved Font Name, so the instanced files keep their name.
-# - Josefin Sans: the wordmark's capitals only (Header.astro sets the name uppercase). Its OFL reserves the name
-#   "Josefin Sans", and a subset is a Modified Version, so the subset is renamed "KC Wordmark" (tokens.css asks for that).
+# - Josefin Sans: the display face (#293), which sets the site's name, its own headings and its small labels, always
+#   in capitals (text-transform), so the cut holds capitals, figures and punctuation and no lower case. Its OFL
+#   reserves the name "Josefin Sans", and a subset is a Modified Version, so the subset is renamed "KC Display"
+#   (tokens.css asks for that).
 #
 # The licences ship beside the files, in src/fonts/LICENSE-*.txt.
 set -euo pipefail
 
-# The site's name as Header.astro draws it: siteConfig.name in capitals (a test holds the two in step).
-WORDMARK="KC THIS WEEK"
+# What the display face sets: capitals (the site's name among them; a test holds it in), figures for a heading's or a
+# label's date, and the punctuation those carry. A letter outside it (an accent in a venue's name) falls to Geist.
+DISPLAY="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 &',.:;!?()/+-–—’‘“”·"
 
 geist=node_modules/@fontsource-variable/geist
 josefin=node_modules/@fontsource/josefin-sans
@@ -24,16 +27,16 @@ for subset in latin latin-ext cyrillic cyrillic-ext vietnamese; do
     -o "$out/geist-$subset-wght-400-600.woff2"
 done
 
-python3 -I -m fontTools.subset "$josefin/files/josefin-sans-latin-700-normal.woff2" --text="$WORDMARK" \
-  --flavor=woff2 --layout-features=kern --name-IDs="*" --no-hinting --desubroutinize --output-file="$out/wordmark-700.woff2"
+python3 -I -m fontTools.subset "$josefin/files/josefin-sans-latin-700-normal.woff2" --text="$DISPLAY" \
+  --flavor=woff2 --layout-features=kern --name-IDs="*" --no-hinting --desubroutinize --output-file="$out/display-700.woff2"
 
-python3 -I - "$out/wordmark-700.woff2" <<'PY'
+python3 -I - "$out/display-700.woff2" <<'PY'
 import sys
 from fontTools.ttLib import TTFont
 
 path = sys.argv[1]
 font = TTFont(path, recalcTimestamp=False)
-names = {1: "KC Wordmark", 2: "Bold", 3: "KC Wordmark Bold 2.001", 4: "KC Wordmark Bold", 6: "KCWordmark-Bold", 16: "KC Wordmark", 17: "Bold"}
+names = {1: "KC Display", 2: "Bold", 3: "KC Display Bold 2.001", 4: "KC Display Bold", 6: "KCDisplay-Bold", 16: "KC Display", 17: "Bold"}
 name = font["name"]
 for record in list(name.names):
     if record.nameID in names:

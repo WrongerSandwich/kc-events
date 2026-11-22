@@ -9,10 +9,10 @@ import Footer from "../components/Footer.astro";
 import StalenessBanner from "../components/StalenessBanner.astro";
 import IconSprite from "../components/IconSprite.astro";
 import Analytics from "@vercel/analytics/astro";
-// The one face every page sets its text in, latin subset, and the wordmark's: preloaded so they are not found only once
-// the CSS is parsed, and the name does not paint in the fallback first (#195).
+// The one face every page sets its text in, latin subset, and the display face: preloaded so they are not found only once
+// the CSS is parsed, and the name and the headings do not paint in the fallback first (#195, #293).
 import geistLatin from "../fonts/geist-latin-wght-400-600.woff2?url";
-import wordmark from "../fonts/wordmark-700.woff2?url";
+import display from "../fonts/display-700.woff2?url";
 
 /** noindex: a page no search engine should list (the 404), which then names no canonical URL either. */
 /** jsonLd: one object, or several, each in a script of its own (an event page's Event and its BreadcrumbList). */
@@ -36,7 +36,7 @@ const url = canonical ?? new URL(publicPath, origin).toString();
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f0f0f" />
     <title>{fullTitle}</title>
     <link rel="preload" href={geistLatin} as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href={wordmark} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={display} as="font" type="font/woff2" crossorigin />
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={url} />}
     <!-- Safari draws no SVG icon and takes the ICO; the others take the SVG, listed after it. -->

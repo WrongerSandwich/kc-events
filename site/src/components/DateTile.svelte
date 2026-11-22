@@ -13,17 +13,24 @@
 </div>
 
 <style>
+  /* Stepped at the shoulders like a setback tower (tokens.css's --shoulders), with a double line at its foot as a
+     base course; its two words in the display capitals, the day in the text face's figures (#293). */
   .tile {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    padding-block: var(--space-2); border-radius: var(--radius);
+    padding: calc(var(--space-2) + 8px) 0 var(--space-2); clip-path: var(--shoulders);
     background: var(--hue-tint); color: var(--hue);
     font-variant-numeric: tabular-nums; line-height: 1.1;
   }
-  .top, .month { font-size: var(--text-xs); font-weight: var(--weight-medium); }
+  .top, .month { font-family: var(--font-display); font-weight: 700; font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; }
+  /* The face sits high in its line box; the word above the day comes down to sit evenly between the shoulders and it. */
+  .top { transform: translateY(0.1em); }
   .day { font-size: var(--text-2xl); font-weight: var(--weight-strong); letter-spacing: var(--tracking-heading); }
-  /* Today: a thin ring in the kind's strong shade, so the day stands out without a new colour. */
-  .today { box-shadow: inset 0 0 0 1.5px var(--hue); }
-  .large { width: 5rem; padding-block: var(--space-3); }
+  .tile::after { content: ""; width: calc(100% - 20px); height: 4px; margin-top: 5px; border-top: 1px solid currentColor; border-bottom: 1px solid currentColor; }
+  /* Today: a thin ring in the kind's strong shade, so the day stands out without a new colour. The ring follows the
+     steps: the tile fills with the shade and a second stepped shape, set in by the ring's width, lays the tint over it. */
+  .today { position: relative; isolation: isolate; background: var(--hue); }
+  .today::before { content: ""; position: absolute; inset: 1.5px; z-index: -1; background: var(--hue-tint); clip-path: var(--shoulders); }
+  .large { width: 5rem; padding-block: calc(var(--space-3) + 8px) var(--space-3); }
   .large .top, .large .month { font-size: var(--text-sm); }
   .large .day { font-size: var(--text-3xl); }
 </style>

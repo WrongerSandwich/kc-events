@@ -50,14 +50,15 @@
 }
 
 /*
- * The wordmark's face: Josefin Sans Bold cut to the capitals of "KC THIS WEEK" (about 1 KB, against 12 for its latin
- * subset), preloaded by Base.astro so the name does not paint in the fallback first. Josefin's licence reserves its
- * name for the unmodified font, so the subset goes by another.
+ * The display face: Josefin Sans Bold cut to capitals, figures and punctuation (under 4 KB, against 12 for its latin
+ * subset; everything it sets is in capitals, so it carries no lower case), preloaded by Base.astro so the name and the
+ * headings do not paint in the fallback first. Josefin's licence reserves its name for the unmodified font, so the
+ * subset goes by another.
  */
 @font-face {
-  font-family: "KC Wordmark";
+  font-family: "KC Display";
   font-style: normal;
   font-display: swap;
   font-weight: 700;
-  src: url("../fonts/wordmark-700.woff2") format("woff2");
+  src: url("../fonts/display-700.woff2") format("woff2");
 }

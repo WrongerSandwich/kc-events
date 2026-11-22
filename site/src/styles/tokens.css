@@ -40,13 +40,21 @@
   --kind-music: oklch(0.47 0.14 308); --kind-music-tint: oklch(0.945 0.045 308);
   --kind-theater-dance: oklch(0.47 0.14 345); --kind-theater-dance-tint: oklch(0.945 0.045 345);
   --kind-other: oklch(0.48 0 0); --kind-other-tint: oklch(0.94 0 0);
-  /* Type: one sans, with tabular figures where numbers line up. The display face is for the site's name alone: a
-     1920s geometric, for a skyline that is mostly Art Deco; it never sets a label, a button, or a heading. */
+  /* Type: one sans for everything read, with tabular figures where numbers line up, and a display face, a 1920s
+     geometric for a skyline that is mostly Art Deco (#293). The display face sets the site's own words (its name, a
+     page's heading, a section's) and its small labels (a weekday, a month), and a place's name, always in tracked
+     capitals at weight 700; it never sets an event's title, which is quoted from its source, nor a button or a sentence. */
   --font: "Geist Variable", system-ui, sans-serif;
-  --font-display: "KC Wordmark", var(--font); /* Josefin Sans Bold, cut to the wordmark (fonts.css) */
-  --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.125rem; --text-xl: 1.375rem; --text-2xl: 1.75rem; --text-3xl: 2.25rem;
+  --font-display: "KC Display", var(--font); /* Josefin Sans Bold, cut to capitals, figures and punctuation (fonts.css) */
+  --text-2xs: 0.6875rem; --text-xs: 0.75rem; --text-sm: 0.875rem; --text-md: 1rem; --text-lg: 1.125rem; --text-xl: 1.375rem; --text-2xl: 1.75rem; --text-3xl: 2.25rem;
   --weight-regular: 400; --weight-medium: 500; --weight-strong: 600;
   --tracking-display: -0.03em; --tracking-heading: -0.02em;
+  /* The display capitals' tracking: a heading's, and a small label's. */
+  --tracking-caps: 0.07em; --tracking-label: 0.12em;
+  /* The two stepped shapes, as clip paths: the crown that leads a section's heading and sits over today in the week
+     strip, any size; and a date tile's shoulders, two 5 px steps at each top corner. */
+  --crown: polygon(0 100%, 0 66.6%, 19% 66.6%, 19% 33.3%, 38% 33.3%, 38% 0, 62% 0, 62% 33.3%, 81% 33.3%, 81% 66.6%, 100% 66.6%, 100% 100%);
+  --shoulders: polygon(0 10px, 5px 10px, 5px 5px, 10px 5px, 10px 0, calc(100% - 10px) 0, calc(100% - 10px) 5px, calc(100% - 5px) 5px, calc(100% - 5px) 10px, 100% 10px, 100% 100%, 0 100%);
   --leading-tight: 1.25; --leading: 1.5;
   /* Space and shape */
   --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem; --space-6: 1.5rem; --space-8: 2rem; --space-12: 3rem; --space-16: 4rem;

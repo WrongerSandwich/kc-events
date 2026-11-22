@@ -72,10 +72,10 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
   /* Phones: the heading steps down a size and sits closer, so the first section starts on the first screen; the
      section headings step down with it (base.css), so it stays one above them (#184). */
   @media (max-width: 30rem) {
-    h1 { font-size: var(--text-2xl); margin-top: var(--space-6); }
+    h1 { font-size: 1.5rem; margin-top: var(--space-6); }
     .lede { font-size: var(--text-sm); }
   }
-  .lede { color: var(--fg-muted); margin-top: var(--space-2); max-width: 36rem; }
+  .lede { color: var(--fg-muted); margin-top: var(--space-4); max-width: 36rem; }
   .note { color: var(--fg-muted); margin-top: var(--space-1); }
   .always { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
   /* Two lines a row: the name, then when and where. Schedules run long ("Saturdays & Sundays, April–November; …"),
