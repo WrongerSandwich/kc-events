@@ -367,7 +367,8 @@
           {@render rows(g)}
         </details>
       {:else}
-        <h2 class={`section-heading group${filters.sort === "venue" ? " venue" : ""}`} data-group={g.key}>{g.heading}</h2>
+        <!-- A day's key is its date, so today's heading is marked for the crown (base.css); a venue's key never is. -->
+        <h2 class={`section-heading group${filters.sort === "venue" ? " venue" : ""}${g.key === today ? " today" : ""}`} data-group={g.key}>{g.heading}</h2>
         {@render rows(g)}
       {/if}
     {/each}
