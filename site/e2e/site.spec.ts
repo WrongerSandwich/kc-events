@@ -9,9 +9,11 @@ async function on(page: Page, when: Date, path: string) {
 
 test("the front page buckets the fixture's don't-miss events", async ({ page }) => {
   await on(page, BUILD_DAY, "/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("What's on in Kansas City");
-  // The lede says who makes the picks and where a date comes from (the venue's list, as the event page's verified line says).
-  await expect(page.locator(".lede")).toContainText("chosen and explained by a model under written rules. Every date is read from the venue's or organizer's own page");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Worth doing in Kansas City");
+  // The lede says where a date comes from (the venue's list, as the event page's verified line says) and names no one
+  // as making the picks, a model or a person: the About page says who, behind the lede's link.
+  await expect(page.locator(".lede")).toHaveText("The picks worth going out of your way for, each with its reason. Every date is read from the venue's or organizer's own page; here's how.");
+  await expect(page.locator(".lede").getByRole("link", { name: "here's how" })).toHaveAttribute("href", "/about");
   const sections = page.getByRole("region");
   await expect(sections.nth(0)).toHaveAccessibleName("This week, Oct 5–11");
   // The exhibition is on now, so it sorts as today, ahead of Tuesday's show.
