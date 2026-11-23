@@ -34,15 +34,17 @@ describe("loadPublished", () => {
     expect(p.events[1]).not.toHaveProperty("eventUrl");
   });
 
-  it("keeps descriptions out of the events and hands them over by id, for published events only", () => {
+  it("keeps descriptions out of the events and hands them over by id, for the pages that show them: published and ended events", () => {
     const p = loadPublished(write(dataset([
       activeEvent({ description: "A three-piece playing their first record." }),
       activeEvent({ id: "evt_000000000002" }),
-      activeEvent({ id: "evt_000000000003", start: "2026-10-04", description: "Already over." }),
+      activeEvent({ id: "evt_000000000003", start: "2026-10-04", description: "Ended yesterday." }),
+      activeEvent({ id: "evt_000000000004", start: "2026-08-01", status: "expired", expiryReason: "past", description: "Redirected." }),
+      activeEvent({ id: "evt_000000000005", status: "expired", expiryReason: "promotion", description: "Never a listing." }),
     ])));
     expect(p.events.map((e) => e.id)).toEqual(["evt_000000000001", "evt_000000000002"]);
     expect(p.events[0]).not.toHaveProperty("description");
-    expect(p.descriptions).toEqual({ evt_000000000001: "A three-piece playing their first record." });
+    expect(p.descriptions).toEqual({ evt_000000000001: "A three-piece playing their first record.", evt_000000000003: "Ended yesterday." });
   });
 
   it("maps a neighborhood that names a region to that region, and anything else unlisted to the catch-all", () => {

@@ -8,12 +8,13 @@ import { parse as parseYaml } from "yaml";
 import { PRODUCT, USER_AGENT } from "../../../src/adapters/identity.ts";
 import { ELSEWHERE_IN_THE_METRO, parseConfig, type RunConfig } from "../../../src/config.ts";
 import { DATASET_SCHEMA_VERSION, parseArchive, parseDataset, WEEKDAYS, type Event, type PickReason as JobPickReason, type Weekday } from "../../../src/dataset.ts";
-import { genericVenueName, streetAddress, venueAndRoom } from "../../../src/identity.ts";
+import { genericVenueName, streetAddress, throughDuplicates, venueAndRoom } from "../../../src/identity.ts";
 import { outsidePlace, regionOf } from "../../../src/taxonomy.ts";
 import { toLocalDate } from "../../../src/time.ts";
-import { addDays, isDateOnly, isValidDate, localDate } from "../lib/dates";
-import { isPast } from "../lib/events";
-import type { PickReason, Published, PublishedDescriptions, PublishedEvent } from "../lib/types";
+import { addDays, daysBetween, isDateOnly, isValidDate, localDate } from "../lib/dates";
+import { isPast, lastDay } from "../lib/events";
+import type { PickReason, Published, PublishedDescriptions, PublishedEvent, PublishedRedirects } from "../lib/types";
+import { venuePath, venueSlug } from "../lib/venues";
 import { publishedChanges, readRunChanges } from "./changes.ts";
 import { howItWorks } from "./how-it-works.ts";
 import { href } from "./href.ts";
@@ -52,15 +53,22 @@ function endsBeforeStart(start: string, end: string): boolean {
 }
 
 /**
- * Throws on an active event the pages cannot render, which the job's schema lets through: a one-off with no start
- * (the tile and the front page read it), an end before the start (an invalid calendar file, a future event dropped as
- * past), a kind with no colour, icon or filter, or an id the sitemap and view transitions cannot carry.
+ * Why the pages cannot render an event the job's schema lets through, or undefined when they can: a one-off with no
+ * start (the tile and the front page read it), an end before the start (an invalid calendar file, a future event
+ * dropped as past), a kind with no colour, icon or filter, or an id the sitemap and view transitions cannot carry.
  */
+function unrenderable(e: Event, config: RunConfig): string | undefined {
+  if (!EVENT_ID.test(e.id)) return `event id ${JSON.stringify(e.id)} is not evt_ and twelve hex digits`;
+  if (e.recurrence === "one-off" && e.start === undefined) return `event ${e.id} is a one-off with no start`;
+  if (e.start !== undefined && e.end !== undefined && endsBeforeStart(e.start, e.end)) return `event ${e.id} has its end, ${e.end}, before its start, ${e.start}`;
+  if (!config.kinds.includes(e.kind)) return `event ${e.id} has kind "${e.kind}", which research.config.yaml does not list`;
+  return undefined;
+}
+
+/** Throws on an active event the pages cannot render (see unrenderable): the build refuses rather than publish it. */
 function assertRenderable(e: Event, config: RunConfig): void {
-  if (!EVENT_ID.test(e.id)) throw new Error(`event id ${JSON.stringify(e.id)} is not evt_ and twelve hex digits`);
-  if (e.recurrence === "one-off" && e.start === undefined) throw new Error(`event ${e.id} is a one-off with no start`);
-  if (e.start !== undefined && e.end !== undefined && endsBeforeStart(e.start, e.end)) throw new Error(`event ${e.id} has its end, ${e.end}, before its start, ${e.start}`);
-  if (!config.kinds.includes(e.kind)) throw new Error(`event ${e.id} has kind "${e.kind}", which research.config.yaml does not list`);
+  const problem = unrenderable(e, config);
+  if (problem !== undefined) throw new Error(problem);
 }
 
 /** Throws when the job's dataset schema version is not the one this site was written against. */
@@ -179,6 +187,57 @@ export function recentVenues(records: readonly Event[], config: RunConfig, today
     .map(({ venue, e }) => ({ venue, neighborhood: e.neighborhood, region: regionFor(e.neighborhood, config) }));
 }
 
+/** Days after its last day that a past event's URL keeps an ended page (#303, ADR 0017); a redirect to its venue follows. */
+export const ENDED_PAGE_DAYS = 28;
+/** Days after its last day that a past event's URL redirects to its venue's page (#303, ADR 0017); a 404 follows. */
+export const REDIRECT_DAYS = 365;
+
+/** A record that was once published and has passed, projected as a published event is, with its days since. */
+type PastEvent = { e: Event; out: PublishedEvent; daysAgo: number };
+
+/**
+ * The records whose URL outlives them (#303, ADR 0017): published once (active, or expired as past having been
+ * verified, as `recentVenues` reckons it), not outside the geography, renderable, and whose last day is 1 to
+ * REDIRECT_DAYS days before today. The first of two records with one id, the dataset's ahead of the archive's, stands.
+ */
+function pastEvents(records: readonly Event[], config: RunConfig, today: string): PastEvent[] {
+  const seen = new Set<string>();
+  return records.flatMap((e) => {
+    if (seen.has(e.id)) return [];
+    seen.add(e.id);
+    const once = e.status === "active" || (e.status === "expired" && e.expiryReason === "past" && e.lastVerified !== undefined);
+    // An old record the pages cannot render (a kind since dropped from the config) keeps its 404 rather than fail the build.
+    if (!once || e.venue === undefined || outsidePlace(e.neighborhood, config) || unrenderable(e, config) !== undefined) return [];
+    const out = project(e, config);
+    const last = lastDay(out);
+    if (last === undefined || last >= today) return [];
+    const daysAgo = daysBetween(last, today);
+    return daysAgo <= REDIRECT_DAYS ? [{ e, out, daysAgo }] : [];
+  });
+}
+
+/**
+ * Where each redirected URL goes (#303, ADR 0017). A past event ENDED_PAGE_DAYS to REDIRECT_DAYS past goes to its
+ * venue's page when this build has one (`venueSlugs`). A record expired as a duplicate goes where the record it was
+ * folded into stands, through any chain of folds (throughDuplicates, as the job follows one): that record's page when it
+ * has one (`pages`: published or ended), else wherever it redirects. Anything else has none, so its URL 404s.
+ */
+function pastRedirects(records: readonly Event[], past: readonly PastEvent[], pages: ReadonlySet<string>, venueSlugs: ReadonlySet<string>): PublishedRedirects {
+  const redirects: PublishedRedirects = {};
+  for (const { out, daysAgo } of past) {
+    if (daysAgo > ENDED_PAGE_DAYS && venueSlugs.has(venueSlug(out.venue))) redirects[out.id] = venuePath(out.venue);
+  }
+  const toVenues = { ...redirects };
+  for (const e of records) {
+    if (e.expiryReason !== "duplicate" || e.duplicateOf === undefined || pages.has(e.id) || e.id in toVenues) continue;
+    const survivor = throughDuplicates(e, records);
+    if (survivor === undefined) continue;
+    const to = pages.has(survivor.id) ? `/e/${survivor.id}` : toVenues[survivor.id];
+    if (to !== undefined) redirects[e.id] = to;
+  }
+  return redirects;
+}
+
 /**
  * `venuesPath`: the venue table (#137); with none, or no file there, every venue page has its events alone.
  * `archiveDir`: the job's archive, by default `archive/` beside the dataset, which keeps a quiet venue's page up.
@@ -251,6 +310,9 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; v
   });
 
   const records = [...dataset.events, ...readArchive(opts.archiveDir ?? join(dirname(opts.datasetPath), "archive"), config)];
+  const past = pastEvents(records, config, today);
+  const ended = past.filter((p) => p.daysAgo <= ENDED_PAGE_DAYS);
+  for (const { e } of ended) if (e.description !== undefined) descriptions[e.id] = e.description;
   const venues = buildVenues({
     rows: readVenueTable(opts.venuesPath, config),
     events,
@@ -261,6 +323,8 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; v
 
   return {
     events,
+    ended: ended.map(({ out }) => out),
+    redirects: pastRedirects(records, past, new Set([...events, ...ended.map(({ out }) => out)].map((e) => e.id)), new Set(venues.map((v) => v.slug))),
     descriptions,
     changes,
     venues,

@@ -4,10 +4,12 @@
 // runs it on a run's new data, after building the site, before committing (#191). A check whose event the week lacks
 // is skipped, not failed: a week with no picks or no such event is not a broken build, and the code is held by the
 // unit tests and the end-to-end suite on fixtures. Which Always there picks found nothing goes in the run report.
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { alwaysTherePicks } from "../src/always-there";
+import { ended } from "../src/generated/ended";
 import { events } from "../src/generated/events";
+import { redirects } from "../src/generated/redirects";
 import { meta } from "../src/generated/meta";
 import { pickAlwaysThere } from "../src/lib/always-there";
 import { venueLine } from "../src/lib/events";
@@ -30,6 +32,23 @@ const alwaysThere = pickAlwaysThere(events, alwaysTherePicks);
 describe("the build of the committed dataset", () => {
   it("is in dist/, built from the generated modules", () => {
     expect(matchesGenerated, "dist/ is missing or was built from another dataset: run `SITE_TODAY=last-run pnpm build` before `pnpm test:data`").toBe(true);
+  });
+
+  // #303: a past event's own URL is all it keeps. Every listing, feed and payload the build writes names none of them.
+  const outliving = [...ended.map((e) => e.id), ...Object.keys(redirects)];
+  it.skipIf(!matchesGenerated || outliving.length === 0)("keeps ended and redirected events out of every page, feed and file but their own", () => {
+    const listings = ["sitemap.xml", "events.json", "llms.txt", "calendar.ics", "explore.html", "index.html", "venues.html", "changes.html"];
+    for (const dir of ["calendar", "k", "r", "v"]) for (const f of readdirSync(new URL(`${dir}/`, dist))) listings.push(`${dir}/${f}`);
+    for (const file of listings) {
+      const text = read(file);
+      const named = outliving.filter((id) => text.includes(id));
+      expect(named, file).toEqual([]);
+    }
+    for (const e of ended) {
+      expect(read(`e/${e.id}.html`)).toContain("This event has ended.");
+      expect(has(`e/${e.id}.ics`)).toBe(false);
+    }
+    for (const [id, to] of Object.entries(redirects)) expect(read(`e/${id}.html`)).toContain(`<meta http-equiv="refresh" content="0;url=${to}">`);
   });
 
   it.skipIf(!matchesGenerated || !oneOff)("emits a page and a calendar file per dated event, and none for anything else", () => {

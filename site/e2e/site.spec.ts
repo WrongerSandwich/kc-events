@@ -930,15 +930,53 @@ test("an event page exists, downloads a calendar, and knows when it has passed",
   expect(ics).toContain("SUMMARY:Fabio Frizzi plays Fulci");
   await expect(page.getByRole("status")).toHaveCount(0);
   await on(page, new Date("2026-10-12T17:00:00Z"), "/e/evt_e2e000000001");
-  await expect(page.getByRole("status")).toContainText("This has already happened");
+  await expect(page.getByRole("status")).toContainText("This event has ended");
   // Gone: the week instead of tickets, and nothing to put in a calendar.
   await expect(page.getByRole("link", { name: "See what's on this week" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Tickets at tickets.example.com" })).toBeHidden();
   await expect(page.locator("summary", { hasText: "Add to calendar" })).toBeHidden();
 });
 
-test("a past event has no page, and the 404 renders", async ({ page }) => {
-  const res = await page.goto("/e/evt_e2e000000010");
+test("a past event's page says it has ended in its HTML, is noindex, and sends the reader to the venue (#303)", async ({ page, request }) => {
+  // The raw HTML, before any script: the Midland show passed two days before the build's today.
+  const html = await (await request.get("/e/evt_e2e000000010")).text();
+  expect(html).toContain("This event has ended.");
+  expect(html).toContain('<meta name="robots" content="noindex">');
+  expect(html).not.toContain('rel="canonical"');
+  expect(html).not.toContain("astro-island");
+  expect(html).toContain('"startDate":"2026-10-03T20:00:00-05:00"');
+  await page.goto("/e/evt_e2e000000010");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Already happened");
+  await expect(page.getByRole("link", { name: "More at Midland Theatre" })).toHaveAttribute("href", "/v/midland-theatre");
+  await expect(page.locator(".primary")).toHaveCount(0);
+  await expect(page.locator("summary", { hasText: "Add to calendar" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Save/ })).toHaveCount(0);
+});
+
+test("an event past its ended page redirects to its venue, and a duplicate to the event it was folded into (#303)", async ({ page, request }) => {
+  const html = await (await request.get("/e/evt_e2e000000013")).text();
+  expect(html).toContain('<meta http-equiv="refresh" content="0;url=/v/recordbar">');
+  expect(html).toContain('<meta name="robots" content="noindex">');
+  await page.goto("/e/evt_e2e000000013");
+  await expect(page).toHaveURL(/\/v\/recordbar$/);
+  await page.goto("/e/evt_e2e000000014");
+  await expect(page).toHaveURL(/\/e\/evt_e2e000000001$/);
+});
+
+test("ended and redirected events are on no page, feed or file but their own (#303)", async ({ request }) => {
+  const ids = ["evt_e2e000000010", "evt_e2e000000013", "evt_e2e000000014"];
+  const paths = ["/sitemap.xml", "/events.json", "/llms.txt", "/calendar.ics", "/calendar/music.ics", "/calendar/picks.ics", "/explore", "/", "/k/music", "/r/central-kc", "/v/recordbar", "/v/midland-theatre", "/venues"];
+  for (const path of paths) {
+    const res = await request.get(path);
+    expect(res.status(), path).toBe(200);
+    const text = await res.text();
+    expect(ids.filter((id) => text.includes(id)), path).toEqual([]);
+  }
+  expect((await request.get("/e/evt_e2e000000010.ics")).status()).toBe(404);
+});
+
+test("an id with no page renders the 404", async ({ page }) => {
+  const res = await page.goto("/e/evt_e2e000000099");
   expect(res?.status()).toBe(404);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Nothing here");
 });
