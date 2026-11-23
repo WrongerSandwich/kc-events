@@ -1,10 +1,12 @@
 // @vitest-environment node
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { about } from "../src/generated/about";
 import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
 import { venues } from "../src/generated/venues";
 import { isDated } from "../src/lib/events";
+import { kindLanding, landingRange, regionLanding } from "../src/lib/landing";
 import { moreLikeThis } from "../src/lib/more-like-this";
 import { venueSlug } from "../src/lib/venues";
 import { faviconSvg } from "../src/lib/mark";
@@ -106,6 +108,28 @@ describe("built output", () => {
       expect(html).toContain("<title>Kansas City events this week · KC This Week</title>");
       expect(html).toContain('<meta property="og:title" content="Kansas City events this week · KC This Week">');
       expect(html).toContain('"@type":"WebSite","name":"KC This Week"');
+    });
+
+    it("titles the explorer for what it does, and prerenders a hub's this-week line and its venues and picks (#302)", () => {
+      expect(read("explore.html")).toContain("<title>Find events in Kansas City · KC This Week</title>");
+      const range = landingRange(meta.buildToday, about.horizonWeeks);
+      const pages = [
+        ...meta.kinds.map((k) => ({ file: `k/${slugify(k)}.html`, page: kindLanding(k, events, meta.buildToday, range), hoods: [] as readonly string[] })),
+        ...meta.regions.map((r) => {
+          const page = regionLanding(r, events, meta.buildToday, range, about.neighborhoods[r] ?? []);
+          return { file: `r/${slugify(r)}.html`, page, hoods: page.neighborhoods };
+        }),
+      ];
+      expect(pages.map((p) => p.file)).toContain("k/comedy.html");
+      for (const { file, page, hoods } of pages) {
+        const html = read(file);
+        expect(page.description, file).toMatch(/ (this week|today)[,;] \d+ through |listed/);
+        expect(page.description.length, file).toBeLessThan(160);
+        expect(html, file).toContain(`<meta name="description" content="${page.description}">`);
+        // The description, then the venues and picks, then a region's neighborhoods: three lines, in that order.
+        const lines = [`<p>${page.description}</p>`, ...(page.venuesAndPicks === undefined ? [] : [`<p class="venue-hood">${page.venuesAndPicks}</p>`]), ...(hoods.length > 0 ? ['<p class="venue-hood">'] : [])];
+        expect(html, file).toContain(lines.join(""));
+      }
     });
 
     it("names the dataset's license on the about page and in llms.txt (#167)", () => {

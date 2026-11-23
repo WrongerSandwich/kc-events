@@ -1,9 +1,11 @@
-import { addDays, formatRange } from "./dates";
+import { addDays, formatRange, formatShort } from "./dates";
 import { hasStartDay } from "./events";
+import { dateRange } from "./filter";
 import { groupResults, resultEvents, type ResultGroup } from "./group";
-import { DEFAULT_FILTERS, EVERY_DATE, toQuery, type Filters } from "./query";
+import { DEFAULT_FILTERS, DEFAULT_WHEN, EVERY_DATE, toQuery, type Filters } from "./query";
 import { slugify } from "./slugs";
 import type { PublishedEvent } from "./types";
+import { venueSlug } from "./venues";
 
 /**
  * The kind and region landing pages (#138): one crawlable page per slice the explorer offers only behind a query
@@ -13,12 +15,21 @@ export type Landing = {
   path: string;
   /** The h1, and the page's title. */
   heading: string;
+  /** The line under the h1 and the meta description: this week's count, then the range's (#302). */
   description: string;
+  /** The second line, "At 3 venues; 2 picks.", or undefined when the page lists nothing (#302). */
+  venuesAndPicks: string | undefined;
   /** The explorer with the same filter, to narrow further. */
   explorePath: string;
   groups: ResultGroup[];
   /** Events listed, each once, though a multi-day one-off sits under each of its days. */
   count: number;
+  /** Of those, the ones the explorer's default week (today through Sunday) lists. */
+  weekCount: number;
+  /** Distinct venues among the events listed, by venue slug. */
+  venueCount: number;
+  /** Picks among the events listed. */
+  pickCount: number;
 };
 
 /** Today through the job's horizon, both inclusive: what a weekly run reads ahead. */
@@ -59,23 +70,52 @@ function landingGroups(events: PublishedEvent[], f: Partial<Filters>, today: str
   return groups.map((g) => (g.key === "on-now" ? g : { ...g, events: [...g.events].sort((a, b) => Number(b.dontMiss) - Number(a.dontMiss)) }));
 }
 
+/** "3 venues", "1 pick". */
+function plural(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
 /** "31 music events", "1 event", or, for none, "No music events". */
 function countLine(count: number, noun: string): string {
-  if (count === 0) return `No ${noun}s`;
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
+  return count === 0 ? `No ${noun}s` : plural(count, noun);
+}
+
+/**
+ * "5 comedy events this week, 31 through Jan 17, in Kansas City." This week is the explorer's default, today through
+ * Sunday, so the number is what the explorer opens on; on a Sunday that is only today, and says so (#302).
+ */
+function hubDescription(count: number, weekCount: number, noun: string, where: string, range: { from: string; to: string }, week: { from: string; to: string }): string {
+  if (count === 0) return `No ${noun}s listed ${where}, ${formatRange(range.from, range.to)}.`;
+  const when = week.from === week.to ? "today" : "this week";
+  const rest = `${count} through ${formatShort(range.to)}, ${where}.`;
+  return weekCount === 0 ? `No ${noun}s ${when}; ${rest}` : `${countLine(weekCount, noun)} ${when}, ${rest}`;
+}
+
+/** "At 3 venues; 2 picks.", either part left out at zero, and no line at all when both are (#302). */
+function venuesAndPicksLine(venueCount: number, pickCount: number): string | undefined {
+  const parts = [venueCount > 0 ? `At ${plural(venueCount, "venue")}` : undefined, pickCount > 0 ? plural(pickCount, "pick") : undefined].filter((p) => p !== undefined);
+  return parts.length === 0 ? undefined : `${parts.join("; ")}.`;
 }
 
 function landing(path: string, heading: string, noun: string, where: string, f: Partial<Filters>, events: PublishedEvent[], today: string, range: { from: string; to: string }): Landing {
   const groups = landingGroups(events, f, today, range);
-  const count = resultEvents(groups).length;
-  const listed = count === 0 ? " listed" : "";
+  const listed = resultEvents(groups);
+  const count = listed.length;
+  const week = dateRange(DEFAULT_WHEN, today)!;
+  const weekCount = resultEvents(groupResults(events, { ...DEFAULT_FILTERS, ...f, when: week }, today, new Set())).length;
+  const venueCount = new Set(listed.map((e) => venueSlug(e.venue))).size;
+  const pickCount = listed.filter((e) => e.dontMiss).length;
   return {
     path,
     heading,
-    description: `${countLine(count, noun)}${listed} ${where}, ${formatRange(range.from, range.to)}.`,
+    description: hubDescription(count, weekCount, noun, where, range, week),
+    venuesAndPicks: venuesAndPicksLine(venueCount, pickCount),
     explorePath: `/explore?${toQuery({ ...DEFAULT_FILTERS, when: EVERY_DATE, ...f })}`,
     groups,
     count,
+    weekCount,
+    venueCount,
+    pickCount,
   };
 }
 

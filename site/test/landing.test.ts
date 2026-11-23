@@ -34,7 +34,7 @@ describe("kindLanding", () => {
 
   it("titles and describes the page from the kind and the count", () => {
     expect(page.heading).toBe("Music in Kansas City");
-    expect(page.description).toBe("3 music events in Kansas City, Oct 13–Nov 3.");
+    expect(page.description).toBe("3 music events this week, 3 through Nov 3, in Kansas City.");
     expect(page.path).toBe("/k/music");
     expect(page.explorePath).toBe("/explore?when=all&kind=music");
   });
@@ -42,7 +42,7 @@ describe("kindLanding", () => {
   it("names a two-word kind in words and its slug as the explorer's", () => {
     const p = kindLanding("theater/dance", all, today, range);
     expect(p.heading).toBe("Theater and dance in Kansas City");
-    expect(p.description).toBe("1 theater and dance event in Kansas City, Oct 13–Nov 3.");
+    expect(p.description).toBe("1 theater and dance event this week, 1 through Nov 3, in Kansas City.");
     expect(p.path).toBe("/k/theater-dance");
     expect(p.explorePath).toBe("/explore?when=all&kind=theater-dance");
   });
@@ -59,12 +59,58 @@ describe("kindLanding", () => {
   });
 });
 
+describe("a hub's lines: this week, then its venues and picks (#302)", () => {
+  // This week is the explorer's default: today, a Tuesday, through Sunday the 18th.
+  const later = event({ id: "evt_later", title: "Later", start: "2026-10-22T20:00:00-05:00", venue: "Liberty Hall" });
+
+  it("counts this week's events against the range's, and the venues by slug and the picks across them", () => {
+    const sameRoom = { ...tuePick, venue: "The RecordBar" };
+    const jazzPick = { ...jazz, venue: "Knuckleheads", dontMiss: true };
+    const p = kindLanding("music", [tue, sameRoom, jazzPick, later], today, range);
+    expect(p.description).toBe("3 music events this week, 4 through Nov 3, in Kansas City.");
+    expect([p.weekCount, p.count, p.venueCount, p.pickCount]).toEqual([3, 4, 3, 2]);
+    expect(p.venuesAndPicks).toBe("At 3 venues; 2 picks.");
+  });
+
+  it("says none this week when the events come later", () => {
+    const p = kindLanding("music", [later], today, range);
+    expect(p.description).toBe("No music events this week; 1 through Nov 3, in Kansas City.");
+    expect(p.venuesAndPicks).toBe("At 1 venue.");
+  });
+
+  it("keeps the no-events sentence and leaves out the second line when nothing is listed", () => {
+    const p = kindLanding("music", [], today, range);
+    expect(p.description).toBe("No music events listed in Kansas City, Oct 13–Nov 3.");
+    expect([p.weekCount, p.venueCount, p.pickCount]).toEqual([0, 0, 0]);
+    expect(p.venuesAndPicks).toBeUndefined();
+  });
+
+  it("uses the singular for one venue and one pick", () => {
+    expect(kindLanding("music", [tuePick], today, range).venuesAndPicks).toBe("At 1 venue; 1 pick.");
+  });
+
+  it("says today on a Sunday, when this week is only today", () => {
+    const sunday = "2026-10-18";
+    const show = event({ id: "evt_sun", start: "2026-10-18T19:00:00-05:00" });
+    expect(kindLanding("music", [show, later], sunday, landingRange(sunday, 3)).description).toBe("1 music event today, 2 through Nov 8, in Kansas City.");
+    expect(kindLanding("music", [later], sunday, landingRange(sunday, 3)).description).toBe("No music events today; 1 through Nov 8, in Kansas City.");
+  });
+
+  it("gives a region page the same lines with its own place", () => {
+    const p = regionLanding("Johnson County", [{ ...jazz, venue: "Yardley Hall" }, play, { ...later, region: "Johnson County" }], today, range, []);
+    expect(p.description).toBe("2 events this week, 3 through Nov 3, in Johnson County.");
+    expect(p.venuesAndPicks).toBe("At 3 venues.");
+    const elsewhere = regionLanding("Elsewhere in the metro", [{ ...later, region: "Elsewhere in the metro" }], today, range, []);
+    expect(elsewhere.description).toBe("No events this week; 1 through Nov 3, elsewhere in the metro.");
+  });
+});
+
 describe("regionLanding", () => {
   it("lists the region's events and names its neighborhoods", () => {
     const p = regionLanding("Johnson County", all, today, range, ["Overland Park", "Olathe", "Lenexa"]);
     expect(p.groups.map((g) => g.events.map((e) => e.id))).toEqual([["evt_play"], ["evt_jazz"]]);
     expect(p.heading).toBe("Things to do in Johnson County");
-    expect(p.description).toBe("2 events in Johnson County, Oct 13–Nov 3.");
+    expect(p.description).toBe("2 events this week, 2 through Nov 3, in Johnson County.");
     expect(p.path).toBe("/r/johnson-county");
     expect(p.explorePath).toBe("/explore?when=all&region=johnson-county");
     expect(p.neighborhoods).toEqual(["Overland Park", "Olathe", "Lenexa"]);

@@ -23,7 +23,7 @@ if (keys.some((k) => params.has(k))) {
 Astro.csp?.insertStyleHash(cspHash(noJsStyle));
 Astro.csp?.insertScriptHash(cspHash(sliceScript));
 ---
-<Base title="Explore" description={description} wide>
+<Base title="Find events in Kansas City" description={description} wide>
   <h1>Explore</h1>
   <!-- The explorer filters in the browser, so without JavaScript every link shows the default week; say so, point to
        pages that go further without it, and hide the controls that could not work. -->
