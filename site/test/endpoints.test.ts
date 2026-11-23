@@ -5,6 +5,7 @@ import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
 import { venues } from "../src/generated/venues";
 import { isDated } from "../src/lib/events";
+import { moreLikeThis } from "../src/lib/more-like-this";
 import { venueSlug } from "../src/lib/venues";
 import { faviconSvg } from "../src/lib/mark";
 import { slugify } from "../src/lib/slugs";
@@ -178,16 +179,12 @@ describe("built output", () => {
       expect(read(`e/${dated.id}.html`)).toMatch(/<a href="https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE&amp;[^"]+" rel="nofollow"[^>]*>Google Calendar<\/a>/);
     });
 
-    it("ends an event page on three rows of its kind still ahead, picks first, and a way to the kind's page", () => {
-      const ahead = (e: (typeof events)[number]) => isDated(e) && e.start !== undefined && e.start.slice(0, 10) >= meta.buildToday;
-      const page = events.find((e) => events.filter((o) => o.id !== e.id && o.kind === e.kind && ahead(o)).length > 3)!;
+    it("ends an event page on its three rows of more like this, each in its own kind's tint, and a way to the kind's page (#301)", () => {
+      const page = events.find((e) => moreLikeThis(e, events, meta.buildToday).length === 3)!;
       const html = read(`e/${page.id}.html`);
-      const rows = [...html.matchAll(/<li[^>]*><a href="\/e\/(evt_[0-9a-f]+)"/g)].map((m) => m[1]!);
-      expect(rows).toHaveLength(3);
-      const shown = rows.map((id) => events.find((e) => e.id === id)!);
-      for (const e of shown) expect(e.kind).toBe(page.kind);
-      // A pick never sits under a non-pick.
-      expect(shown.map((e) => e.dontMiss)).toEqual([...shown.map((e) => e.dontMiss)].sort((a, b) => Number(b) - Number(a)));
+      expect(html).toMatch(/>More like this<\/h2>/);
+      const rows = [...html.matchAll(/<li class="kind-([a-z-]+)[^"]*"[^>]*><a href="\/e\/(evt_[0-9a-f]+)"/g)].map((m) => [m[1], m[2]]);
+      expect(rows).toEqual(moreLikeThis(page, events, meta.buildToday).map((e) => [slugify(e.kind), e.id]));
       expect(html).toContain(`href="/k/${slugify(page.kind)}"`);
     });
 
