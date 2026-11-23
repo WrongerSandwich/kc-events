@@ -70,15 +70,14 @@ function landingGroups(events: PublishedEvent[], f: Partial<Filters>, today: str
   return groups.map((g) => (g.key === "on-now" ? g : { ...g, events: [...g.events].sort((a, b) => Number(b.dontMiss) - Number(a.dontMiss)) }));
 }
 
-/** "31 music events", "1 event", or, for none, "No music events". */
-function countLine(count: number, noun: string): string {
-  if (count === 0) return `No ${noun}s`;
-  return `${count} ${noun}${count === 1 ? "" : "s"}`;
-}
-
 /** "3 venues", "1 pick". */
 function plural(count: number, noun: string): string {
   return `${count} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/** "31 music events", "1 event", or, for none, "No music events". */
+function countLine(count: number, noun: string): string {
+  return count === 0 ? `No ${noun}s` : plural(count, noun);
 }
 
 /**
@@ -95,9 +94,7 @@ function hubDescription(count: number, weekCount: number, noun: string, where: s
 /** "At 3 venues; 2 picks.", either part left out at zero, and no line at all when both are (#302). */
 function venuesAndPicksLine(venueCount: number, pickCount: number): string | undefined {
   const parts = [venueCount > 0 ? `At ${plural(venueCount, "venue")}` : undefined, pickCount > 0 ? plural(pickCount, "pick") : undefined].filter((p) => p !== undefined);
-  if (parts.length === 0) return undefined;
-  const line = parts.join("; ");
-  return `${line.charAt(0).toUpperCase()}${line.slice(1)}.`;
+  return parts.length === 0 ? undefined : `${parts.join("; ")}.`;
 }
 
 function landing(path: string, heading: string, noun: string, where: string, f: Partial<Filters>, events: PublishedEvent[], today: string, range: { from: string; to: string }): Landing {
