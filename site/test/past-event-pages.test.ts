@@ -50,6 +50,20 @@ describe("past event pages", () => {
     expect(p.redirects).toEqual({ evt_00000000000a: "/v/recordbar", evt_00000000000b: "/v/knuckleheads" });
   });
 
+  it("goes by an overnight event's first night, as isPast does, so its page is never a 404 in between", () => {
+    // 22:00 on 2026-09-06 to 01:00 the next day: its last day is the 6th, 29 days back, where the end's date would be 28.
+    const late = expired("evt_00000000000a", "recordBar", 29, "past", { start: "2026-09-06T22:00:00-05:00", end: "2026-09-07T01:00:00-05:00" });
+    const p = loadPublished(write(dataset([activeEvent(), late])));
+    expect(p.ended).toEqual([]);
+    expect(p.redirects).toEqual({ evt_00000000000a: "/v/recordbar" });
+  });
+
+  it("takes the dataset's record over the archive's when both hold one id", () => {
+    const p = loadPublished(withArchive([activeEvent(), expired("evt_00000000000a", "recordBar", 3)], [expired("evt_00000000000a", "Knuckleheads", 100, "past", { neighborhood: "Northland" })]));
+    expect(p.ended.map((e) => [e.id, e.venue])).toEqual([["evt_00000000000a", "recordBar"]]);
+    expect(p.redirects).toEqual({});
+  });
+
   it("redirects an event to its venue as the site names it, under the venue's alias", () => {
     const config = `neighborhoods:\n  Central KC: [Crossroads, Downtown]\nvenueAliases:\n  Kauffman Center for the Performing Arts: [Helzberg Hall]\n`;
     const p = loadPublished(write(dataset([activeEvent(), expired("evt_00000000000a", "Helzberg Hall", 60, "past", { neighborhood: "Downtown" })]), config));
@@ -61,9 +75,14 @@ describe("past event pages", () => {
   });
 
   describe("a duplicate", () => {
-    /** A record folded into `into`, as the job expires one (duplicateOf), with its own long-gone day and no venue. */
+    /** A record folded into `into`, as the job expires one (duplicateOf), once verified, with its own long-gone day. */
     const dup = (id: string, into: string | undefined, over: Record<string, unknown> = {}) =>
-      expired(id, "recordBar", 400, "duplicate", { venue: undefined, lastVerified: undefined, ...(into !== undefined && { duplicateOf: into }), ...over });
+      expired(id, "recordBar", 400, "duplicate", { ...(into !== undefined && { duplicateOf: into }), ...over });
+
+    it("gets nothing when it was never verified, so its URL was never published", () => {
+      const never = dup("evt_00000000000a", "evt_000000000001", { venue: undefined, lastVerified: undefined, verificationFailures: 1 });
+      expect(redirects(write(dataset([activeEvent(), never])))).toEqual({});
+    });
 
     it("redirects to the event page of the live record it was folded into, through a chain of folds, from the archive too", () => {
       const p = loadPublished(withArchive([activeEvent(), dup("evt_00000000000a", "evt_000000000001"), dup("evt_00000000000b", "evt_00000000000a")], [dup("evt_00000000000c", "evt_000000000001")]));

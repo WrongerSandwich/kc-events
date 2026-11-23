@@ -1,8 +1,9 @@
 /**
- * Writes meta.ts, events.ts, ended.ts, redirects.ts, dont-miss.ts, descriptions.ts, changes.ts, venues.ts, about.ts, and
- * how-it-works.ts for the pages and islands to import (ten modules so each page and island ships only what it renders; descriptions, the
- * ended events and the redirects go to the event page alone, the changes to the changes page, the venues and what the site says about the job to the
- * Astro pages, and a run's figures to the How it works page), and events.json in the public directory: the published events with their descriptions, never the job's raw
+ * Writes meta.ts, events.ts, ended.ts, redirects.ts, dont-miss.ts, descriptions.ts, changes.ts, venues.ts, about.ts,
+ * and how-it-works.ts for the pages and islands to import (ten modules so each page and island ships only what it
+ * renders; descriptions, the ended events and the redirects go to the event page alone, the changes to the changes
+ * page, the venues and what the site says about the job to the Astro pages, and a run's figures to the How it works
+ * page), and events.json in the public directory: the published events with their descriptions, never the job's raw
  * file, whose evidence, leads, counters, and held-back records stay in git. Paths and the clock are parameters so a
  * test can write somewhere else.
  */

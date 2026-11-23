@@ -948,6 +948,7 @@ test("a past event's page says it has ended in its HTML, is noindex, and sends t
   await page.goto("/e/evt_e2e000000010");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Already happened");
   await expect(page.getByRole("link", { name: "More at Midland Theatre" })).toHaveAttribute("href", "/v/midland-theatre");
+  await expect(page.locator(".passed").getByRole("link", { name: "More music" })).toHaveAttribute("href", "/k/music");
   await expect(page.locator(".primary")).toHaveCount(0);
   await expect(page.locator("summary", { hasText: "Add to calendar" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Save/ })).toHaveCount(0);

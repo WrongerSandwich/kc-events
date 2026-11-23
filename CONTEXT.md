@@ -241,7 +241,7 @@ A past event whose URL still serves its event page, marked ended (#303, ADR 0017
 _Avoid_: past page, archived page
 
 **Redirected event**:
-A past event whose URL redirects (#303, ADR 0017): one once published whose last day is 29 to 365 days before the build's day and whose venue has a page in the build, from the dataset or the archive. Its `/e/<id>` is a static page that refreshes at once to the venue's page, names it canonical and is `noindex`; with no venue page there is none, and the URL 404s. A record expired as a duplicate goes, through its chain of `duplicateOf`, where the record it was folded into does: that record's page, live or ended, else wherever it redirects.
+A past event whose URL redirects (#303, ADR 0017): one once published whose last day is 29 to 365 days before the build's day and whose venue has a page in the build, from the dataset or the archive. Its `/e/<id>` is a static page that refreshes at once to the venue's page, names it canonical and is `noindex`; with no venue page there is none, and the URL 404s. A record expired as a duplicate, once verified, goes, through its chain of `duplicateOf`, where the record it was folded into does: that record's page, live or ended, else wherever it redirects.
 _Avoid_: forwarded event, moved page
 
 **Venue page**:

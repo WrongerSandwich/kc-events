@@ -164,8 +164,16 @@ export function readArchive(dir: string, config: RunConfig): Event[] {
 }
 
 /**
- * The records that keep a venue page up (#300, VENUE_PAGE_DAYS): active, or expired as past having once been verified
- * (an unverified record passes as past too, never having been published), whose last day (the end, else the start) is
+ * A record the site published at some point: active, or expired as past having once been verified (the job expires an
+ * unverified record as past too, which was never on the site). What keeps a venue page up (ADR 0016) and a past event's
+ * URL alive (ADR 0017).
+ */
+function oncePublished(e: Event): boolean {
+  return e.status === "active" || (e.status === "expired" && e.expiryReason === "past" && e.lastVerified !== undefined);
+}
+
+/**
+ * The records that keep a venue page up (#300, VENUE_PAGE_DAYS): published once (oncePublished), whose last day (the end, else the start) is
  * within the last 365 days or later, outside no place the config puts outside the geography (ADR 0015), most recent
  * first. An active record with no date, a recurring one, keeps its venue as of today. A record expired for another
  * reason (a duplicate, a promotion, an index page) was never a listing the venue's page should keep; nor is a venue
@@ -175,8 +183,7 @@ export function recentVenues(records: readonly Event[], config: RunConfig, today
   const cutoff = addDays(today, -VENUE_PAGE_DAYS);
   return records
     .flatMap((e) => {
-      const published = e.status === "active" || (e.status === "expired" && e.expiryReason === "past" && e.lastVerified !== undefined);
-      if (e.venue === undefined || !published || outsidePlace(e.neighborhood, config)) return [];
+      if (e.venue === undefined || !oncePublished(e) || outsidePlace(e.neighborhood, config)) return [];
       const venue = venueAndRoom(e.venue, config.venueAliases).venue;
       if (vagueVenue(venue)) return [];
       const last = e.end ?? e.start;
@@ -196,18 +203,18 @@ export const REDIRECT_DAYS = 365;
 type PastEvent = { e: Event; out: PublishedEvent; daysAgo: number };
 
 /**
- * The records whose URL outlives them (#303, ADR 0017): published once (active, or expired as past having been
- * verified, as `recentVenues` reckons it), not outside the geography, renderable, and whose last day is 1 to
- * REDIRECT_DAYS days before today. The first of two records with one id, the dataset's ahead of the archive's, stands.
+ * The records whose URL outlives them (#303, ADR 0017): published once (oncePublished), not outside the geography,
+ * renderable, and whose last day is 1 to REDIRECT_DAYS days before today. The last day is the site's (lastDay, as
+ * isPast reckons it), so an overnight event counts from its first night and its page is never a 404 between the two.
+ * The first of two records with one id, the dataset's ahead of the archive's, stands.
  */
 function pastEvents(records: readonly Event[], config: RunConfig, today: string): PastEvent[] {
   const seen = new Set<string>();
   return records.flatMap((e) => {
     if (seen.has(e.id)) return [];
     seen.add(e.id);
-    const once = e.status === "active" || (e.status === "expired" && e.expiryReason === "past" && e.lastVerified !== undefined);
     // An old record the pages cannot render (a kind since dropped from the config) keeps its 404 rather than fail the build.
-    if (!once || e.venue === undefined || outsidePlace(e.neighborhood, config) || unrenderable(e, config) !== undefined) return [];
+    if (!oncePublished(e) || e.venue === undefined || outsidePlace(e.neighborhood, config) || unrenderable(e, config) !== undefined) return [];
     const out = project(e, config);
     const last = lastDay(out);
     if (last === undefined || last >= today) return [];
@@ -218,9 +225,10 @@ function pastEvents(records: readonly Event[], config: RunConfig, today: string)
 
 /**
  * Where each redirected URL goes (#303, ADR 0017). A past event ENDED_PAGE_DAYS to REDIRECT_DAYS past goes to its
- * venue's page when this build has one (`venueSlugs`). A record expired as a duplicate goes where the record it was
- * folded into stands, through any chain of folds (throughDuplicates, as the job follows one): that record's page when it
- * has one (`pages`: published or ended), else wherever it redirects. Anything else has none, so its URL 404s.
+ * venue's page when this build has one (`venueSlugs`). A record expired as a duplicate, once verified (a URL never
+ * published has nothing to keep), goes where the record it was folded into stands, through any chain of folds
+ * (throughDuplicates, as the job follows one): that record's page when it has one (`pages`: published or ended), else
+ * wherever it redirects. Anything else has none, so its URL 404s.
  */
 function pastRedirects(records: readonly Event[], past: readonly PastEvent[], pages: ReadonlySet<string>, venueSlugs: ReadonlySet<string>): PublishedRedirects {
   const redirects: PublishedRedirects = {};
@@ -229,7 +237,7 @@ function pastRedirects(records: readonly Event[], past: readonly PastEvent[], pa
   }
   const toVenues = { ...redirects };
   for (const e of records) {
-    if (e.expiryReason !== "duplicate" || e.duplicateOf === undefined || pages.has(e.id) || e.id in toVenues) continue;
+    if (e.expiryReason !== "duplicate" || e.duplicateOf === undefined || e.lastVerified === undefined || pages.has(e.id) || e.id in toVenues) continue;
     const survivor = throughDuplicates(e, records);
     if (survivor === undefined) continue;
     const to = pages.has(survivor.id) ? `/e/${survivor.id}` : toVenues[survivor.id];
@@ -311,8 +319,10 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; v
 
   const records = [...dataset.events, ...readArchive(opts.archiveDir ?? join(dirname(opts.datasetPath), "archive"), config)];
   const past = pastEvents(records, config, today);
-  const ended = past.filter((p) => p.daysAgo <= ENDED_PAGE_DAYS);
-  for (const { e } of ended) if (e.description !== undefined) descriptions[e.id] = e.description;
+  const endedPast = past.filter((p) => p.daysAgo <= ENDED_PAGE_DAYS);
+  for (const { e } of endedPast) if (e.description !== undefined) descriptions[e.id] = e.description;
+  const ended = endedPast.map(({ out }) => out);
+  const pages = new Set([...events, ...ended].map((e) => e.id));
   const venues = buildVenues({
     rows: readVenueTable(opts.venuesPath, config),
     events,
@@ -323,8 +333,8 @@ export function loadPublished(opts: { datasetPath: string; configPath: string; v
 
   return {
     events,
-    ended: ended.map(({ out }) => out),
-    redirects: pastRedirects(records, past, new Set([...events, ...ended.map(({ out }) => out)].map((e) => e.id)), new Set(venues.map((v) => v.slug))),
+    ended,
+    redirects: pastRedirects(records, past, pages, new Set(venues.map((v) => v.slug))),
     descriptions,
     changes,
     venues,

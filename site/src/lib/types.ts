@@ -194,9 +194,9 @@ export type PublishedVenue = {
 };
 
 /**
- * What loadPublished returns; the generator writes `events` to src/generated/events.ts, `descriptions` to
- * descriptions.ts, `about` to about.ts, `changes` to changes.ts, `venues` to venues.ts, `howItWorks` to how-it-works.ts,
- * and the rest to meta.ts.
+ * What loadPublished returns; the generator writes `events` to src/generated/events.ts, `ended` to ended.ts,
+ * `redirects` to redirects.ts, `descriptions` to descriptions.ts, `about` to about.ts, `changes` to changes.ts, `venues`
+ * to venues.ts, `howItWorks` to how-it-works.ts, and the rest to meta.ts. `ended` is the past events whose page stays
+ * up, marked ended, for a while (#303), listed nowhere but their own page.
  */
-/** `ended`: past events whose page stays up, marked ended, for a while (#303); listed nowhere but their own page. */
 export type Published = PublishedMeta & { events: PublishedEvent[]; ended: PublishedEvent[]; redirects: PublishedRedirects; descriptions: PublishedDescriptions; about: PublishedAbout; changes: PublishedChanges; venues: PublishedVenue[]; howItWorks: PublishedHowItWorks };
