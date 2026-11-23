@@ -41,6 +41,17 @@ vercel_state() {
   done
 }
 
+# sitemap_copy FILE writes the live site's sitemap.xml (SITE_URL, default https://www.kcthisweek.com) to FILE, or leaves
+# FILE empty when it cannot be fetched, which src/indexnow-cli.ts reads as a failed fetch (#311). It never fails: IndexNow
+# is told after the deploy, where nothing may fail the run.
+sitemap_copy() {
+  local file=$1
+  if ! { curl -fsS -m 30 --retry 2 -o "$file.part" "${SITE_URL:-https://www.kcthisweek.com}/sitemap.xml" && mv "$file.part" "$file"; } 2>/dev/null; then
+    rm -f "$file.part"
+    : >"$file" || true
+  fi
+}
+
 # deploy_failures LOG [DAYS] prints the lines of scripts/daily-deploy.sh's log (one per night, each
 # opening on its minute, YYYY-MM-DDTHH:MM) from the last DAYS (7) days that are not a 2xx answer from
 # the deploy hook: the nights the site was not rebuilt, which that script tells no one about.

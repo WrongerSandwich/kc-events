@@ -24,6 +24,11 @@
 # integration does the notifying, and a success is silent. Every comment also lists the nights in the
 # past week that scripts/daily-deploy.sh could not start a rebuild, which it tells no one about itself.
 #
+# Once the deploy is confirmed, the run tells IndexNow (Bing, Yandex, Seznam, Naver) which URLs the live sitemap gained,
+# lost, or re-dated between a copy fetched before the push and one fetched after the deploy (#311, src/indexnow.ts),
+# under the key whose file the site serves from its root (site/public/<key>.txt). What came of it is a line on the
+# success comment; a fetch or a request that fails is that line, never a failed run.
+#
 #   scripts/weekly-run.sh [--no-discovery]
 #   scripts/weekly-run.sh --reverify-only [--days N]
 #
@@ -275,6 +280,9 @@ if ! git merge-base --is-ancestor origin/main HEAD; then
   echo "HEAD does not sit on origin/main after the rebase; not pushing" >&2
   false
 fi
+# The live sitemap before this run deploys, which IndexNow's step diffs against the one after (#311).
+SITEMAP_BEFORE="$LOG_DIR/sitemap-before.xml"
+sitemap_copy "$SITEMAP_BEFORE"
 git push --quiet origin HEAD:main
 PUSHED=$(git rev-parse --short HEAD)
 
@@ -298,6 +306,16 @@ esac
 # The run is delivered and deployed; nothing after this can make it a failure.
 trap - ERR TERM HUP INT
 
+# IndexNow (#311): search engines are told which URLs the deploy added, removed, or re-dated in the live sitemap, so an
+# event page is crawled before it is over. Whatever goes wrong is a line on the health comment, never a failure.
+sitemap_copy "$LOG_DIR/sitemap-after.xml"
+if indexnow=$(pnpm exec tsx src/indexnow-cli.ts --before "$SITEMAP_BEFORE" --after "$LOG_DIR/sitemap-after.xml" 2>&1 9>&-); then
+  indexnow=$(tail -n1 <<<"$indexnow")
+else
+  indexnow="IndexNow: not sent ($(tail -n1 <<<"$indexnow"))"
+fi
+echo "$indexnow"
+
 # shellcheck disable=SC2016 # the ${} are JavaScript's
 summary=$(node -e '
   const r = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
@@ -312,6 +330,6 @@ warning_note=
 if [[ -n "$site_warnings" ]]; then warning_note=$(printf '\n\n%s' "$(sed 's/^/- /' <<<"$site_warnings")"); fi
 label=$run_date
 if [[ -n "$MIDWEEK" ]]; then label="$run_date midweek re-verification"; fi
-report "$(redact "$(printf '%s: ok, %s (%s, deployed)%s%s' "$label" "$summary" "$PUSHED" "$warning_note" "$(deploy_note)")")"
+report "$(redact "$(printf '%s: ok, %s (%s, deployed)\n\n%s%s%s' "$label" "$summary" "$PUSHED" "$indexnow" "$warning_note" "$(deploy_note)")")"
 # Silent: the success ping only marks the check up for another week; a midweek pass's would hide a missed one.
 if [[ -z "$MIDWEEK" ]]; then ping_check "" "$label: ok"; fi

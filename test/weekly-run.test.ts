@@ -30,6 +30,11 @@ if [[ "$1" == research ]]; then
   printf '{"mode":"%s","counts":{"found":0,"new":0,"updated":0,"reverified":3,"expired":{"cancelled":1}},"spend":{"totalUsd":0.08,"capUsd":5,"capHit":false},"reverification":{"pagesRead":41}}\\n' "$mode" > "data/runs/$day.json"
   printf '# report\\n' > "data/runs/$day.md"
 fi
+# IndexNow's step (#311): names the two sitemap copies it was given, or fails as a missing key file would.
+if [[ "$1 $2 $3" == "exec tsx src/indexnow-cli.ts" ]]; then
+  if [[ -n "\${FAKE_INDEXNOW_FAIL:-}" ]]; then echo "no IndexNow key file in site/public" >&2; exit 1; fi
+  echo "IndexNow: sitemaps $(cat "$5") then $(cat "$7")"
+fi
 `;
 
 const FAKE_GH = `#!/usr/bin/env bash
@@ -42,7 +47,13 @@ case "$1 $2" in
 esac
 `;
 
+// A fetch of the live sitemap writes its -o file a numbered copy, so the order of the two copies shows; anything else is a ping.
 const FAKE_CURL = `#!/usr/bin/env bash
+if [[ "\${@: -1}" == */sitemap.xml ]]; then
+  n=$(( $(cat "$FAKE_SITEMAPS" 2>/dev/null || echo 0) + 1 )); echo "$n" > "$FAKE_SITEMAPS"
+  while (($#)); do [[ "$1" == -o ]] && printf 'copy-%s' "$n" > "$2"; shift; done
+  exit 0
+fi
 printf '%s\\n' "\${@: -1}" >> "$FAKE_PINGS"
 `;
 
@@ -79,11 +90,21 @@ async function clone() {
   const comments = join(dir, "comments");
   const pings = join(dir, "pings");
 
-  const run = (...args: string[]) => {
+  const runWith = (env: Record<string, string>, ...args: string[]) => {
     try {
       const output = execFileSync("bash", [join(work, "scripts", "weekly-run.sh"), ...args], {
         cwd: work,
-        env: { ...process.env, ...GIT_ENV, PATH: `${bin}:${process.env.PATH}`, XDG_STATE_HOME: join(dir, "state"), FAKE_CALLS: calls, FAKE_COMMENTS: comments, FAKE_PINGS: pings },
+        env: {
+          ...process.env,
+          ...GIT_ENV,
+          PATH: `${bin}:${process.env.PATH}`,
+          XDG_STATE_HOME: join(dir, "state"),
+          FAKE_CALLS: calls,
+          FAKE_COMMENTS: comments,
+          FAKE_PINGS: pings,
+          FAKE_SITEMAPS: join(dir, "sitemaps"),
+          ...env,
+        },
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
@@ -93,6 +114,7 @@ async function clone() {
       return { code: e.status, output: `${e.stdout}${e.stderr}` };
     }
   };
+  const run = (...args: string[]) => runWith({}, ...args);
   /** A commit with this message on origin's main, as an earlier run today would have left. */
   const landed = async (message: string) => {
     await writeFile(join(work, "data", "runs", `${TODAY}.md`), `# ${message}\n`);
@@ -103,6 +125,7 @@ async function clone() {
   const read = async (path: string) => (existsSync(path) ? await readFile(path, "utf8") : "");
   return {
     run,
+    runWith,
     landed,
     researchCalls: async () => (await read(calls)).split("\n").filter((line) => line.startsWith("research")),
     comments: () => read(comments),
@@ -121,6 +144,27 @@ describe("the weekly run script", () => {
     expect(await c.researchCalls()).toEqual(["research --no-discovery"]);
     expect(c.subjects()[0]).toBe(`Weekly research run ${TODAY}`);
     expect(await c.comments()).toContain(`${TODAY}: ok, 0 found, 0 new, 0 updated, 3 re-verified, 1 expired`);
+    expect(await c.pings()).toEqual(["https://hc.test/ping/abc/start", "https://hc.test/ping/abc"]);
+  });
+
+  it("tells IndexNow what changed between the live sitemap before the push and after the deploy, on the success comment (#311)", async () => {
+    const weekly = await clone();
+    expect(weekly.run().code).toBe(0);
+    expect(await weekly.comments()).toContain("\n\nIndexNow: sitemaps copy-1 then copy-2");
+
+    const midweek = await clone();
+    expect(midweek.run("--reverify-only").code).toBe(0);
+    expect(await midweek.comments()).toContain("\n\nIndexNow: sitemaps copy-1 then copy-2");
+  });
+
+  it("leaves the run a success when IndexNow's step fails, with the cause on the comment's line (#311)", async () => {
+    const c = await clone();
+
+    const { code, output } = c.runWith({ FAKE_INDEXNOW_FAIL: "1" });
+
+    expect(code, output).toBe(0);
+    expect(await c.comments()).toContain(`${TODAY}: ok,`);
+    expect(await c.comments()).toContain("IndexNow: not sent (no IndexNow key file in site/public)");
     expect(await c.pings()).toEqual(["https://hc.test/ping/abc/start", "https://hc.test/ping/abc"]);
   });
 
