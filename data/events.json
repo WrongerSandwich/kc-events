@@ -4600,10 +4600,6 @@
       "eventUrl": "https://www.kemperart.org/program/gallery-conversation-november",
       "price": "Free",
       "ages": "All ages",
-      "ownPageRead": {
-        "page": "https://www.kemperart.org/program/gallery-conversation-november",
-        "on": "2026-11-16"
-      },
       "kind": "talks/readings",
       "recurrence": "one-off",
       "dontMiss": false,
@@ -4670,10 +4666,6 @@
       "eventUrl": "https://www.kemperart.org/program/totally-tots-december-2026",
       "price": "Free",
       "ages": "Ages 3–5",
-      "ownPageRead": {
-        "page": "https://www.kemperart.org/program/totally-tots-december-2026",
-        "on": "2026-11-23"
-      },
       "kind": "art/exhibitions",
       "recurrence": "one-off",
       "dontMiss": false,
@@ -4712,10 +4704,6 @@
       "eventUrl": "https://www.kemperart.org/program/art-wellness-november",
       "price": "Suggested $5 donation",
       "ages": "18+",
-      "ownPageRead": {
-        "page": "https://www.kemperart.org/program/art-wellness-november",
-        "on": "2026-11-16"
-      },
       "kind": "art/exhibitions",
       "recurrence": "one-off",
       "dontMiss": false,
@@ -26013,10 +26001,6 @@
       "eventUrl": "https://www.kemperart.org/program/director-as-curator-gallery-spotlight",
       "price": "Free",
       "ages": "All ages",
-      "ownPageRead": {
-        "page": "https://www.kemperart.org/program/director-as-curator-gallery-spotlight",
-        "on": "2026-11-16"
-      },
       "kind": "art/exhibitions",
       "recurrence": "one-off",
       "dontMiss": false,
@@ -54060,10 +54044,6 @@
       "primaryUrl": "https://www.kemperart.org/",
       "eventUrl": "https://www.kemperart.org/program/be-still-sound-bath-laura-frank-and-teddy-pietrzak",
       "ages": "All Ages",
-      "ownPageRead": {
-        "page": "https://www.kemperart.org/program/be-still-sound-bath-laura-frank-and-teddy-pietrzak",
-        "on": "2026-11-16"
-      },
       "kind": "outdoors/community",
       "recurrence": "one-off",
       "dontMiss": false,
@@ -57554,10 +57534,6 @@
       "primaryUrl": "https://www.kemperart.org/",
       "eventUrl": "https://www.kemperart.org/program/teen-sketchook-expo",
       "ages": "13-18",
-      "ownPageRead": {
-        "page": "https://www.kemperart.org/program/teen-sketchook-expo",
-        "on": "2026-11-16"
-      },
       "kind": "art/exhibitions",
       "recurrence": "one-off",
       "dontMiss": false,
@@ -57591,10 +57567,6 @@
       "primaryUrl": "https://www.kemperart.org/",
       "eventUrl": "https://www.kemperart.org/program/luminary-walk",
       "ages": "All ages",
-      "ownPageRead": {
-        "page": "https://www.kemperart.org/program/luminary-walk",
-        "on": "2026-11-16"
-      },
       "kind": "outdoors/community",
       "recurrence": "one-off",
       "dontMiss": false,

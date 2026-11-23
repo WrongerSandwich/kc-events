@@ -299,7 +299,9 @@ sources:
     kind: art/exhibitions
     neighborhood: Plaza & Museum District
     checkHints: Museum at 4420 Warwick Blvd. The homepage carries the exhibition dates; the event calendar renders by script.
+    fetch: browser
     status: active
+    notes: A Next.js site whose server-rendered HTML gives every exhibition's dates a day early at both ends ("October 8th, 2026—April 10th, 2027" for Barbara Takenaga, whose own data and the artist's listing say Oct 9 to Apr 11), and whose own pages keep their descriptions in a script the plain page text strips. Rendered in a browser on Kansas City time, both are right; under UTC the dates are a day early again (#312, checked 2026-11-23). Programs carry exact times and render right either way.
 
   - name: Linda Hall Library
     urls: [https://www.lindahall.org/experience/events/]
