@@ -18,12 +18,12 @@ const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "e
 const staleAfter = WORDS[siteConfig.staleAfterDays] ?? String(siteConfig.staleAfterDays);
 const allEvents = feeds.allEvents.events.length;
 ---
-<Base title="About" description="How this list is made, and how to report a wrong listing.">
+<Base title="About" description="How this list is made, and how to report a wrong listing." dataset>
   <article class="prose">
     <h1>About</h1>
 
     <h2>What this is</h2>
-    <p>{siteConfig.tagline} It is for anyone in or near the city who wants to know what is on without wading through sponsored posts or a feed. It is free, and it has no ads and no accounts. It counts page views with Vercel Web Analytics, which sets no cookies, keeps nothing that identifies you, and loads from this site rather than anyone else's servers; nothing else is measured. Events you save stay in your own browser.</p>
+    <p>{siteConfig.tagline} It is for anyone in or near the city who wants to know what is on without wading through sponsored posts or a feed. It is free, and it has no ads and no accounts. No listing is paid for, and none ever will be. It counts page views with Vercel Web Analytics, which sets no cookies, keeps nothing that identifies you, and loads from this site rather than anyone else's servers; nothing else is measured. Events you save stay in your own browser.</p>
 
     <h2>How it is made</h2>
     <p>Once a week a research job reads venue and organizer pages directly. A language model reads each page and writes the listing: its title, date, venue, and a short description; code then checks that the date and venue it quoted are on the page. A date and a venue are published only when they were read from the venue's or organizer's own page, never from a listings site or a search result; when the job cannot cite one, the event is held back rather than guessed at. The rules it reads pages by are <a href={extractionRules}>written down in the repository</a>.</p>
@@ -54,7 +54,7 @@ const allEvents = feeds.allEvents.events.length;
     <ReportForm summary="Report a wrong listing" />
 
     <h2>The code</h2>
-    <p>The research job and this site are open source, in <a href={siteConfig.repoUrl}>one repository on GitHub</a>.</p>
+    <p>Made by one person in Kansas City. The research job and this site are open source, in <a href={siteConfig.repoUrl}>one repository on GitHub</a>.</p>
 
     <h2>Support</h2>
     <p>The site is free and has no ads. Each weekly run costs a few dollars in model and search fees; if the list is useful to you, a coffee helps cover them.</p>

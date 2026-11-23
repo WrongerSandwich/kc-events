@@ -82,6 +82,22 @@ describe("built output", () => {
       expect(html).toContain("explore?when=all&q={search_term_string}");
     });
 
+    it("names the site's publisher on the front page, and links the dataset from it and the about page alone (#304)", () => {
+      const html = read("index.html");
+      expect(html).toContain('"@type":"Organization","@id":');
+      expect(html).toMatch(/"publisher":\{"@id":"[^"]+\/#org"\}/);
+      const dataset = '<link rel="alternate" type="application/json" href="/events.json">';
+      for (const page of ["index.html", "about.html"]) expect(read(page), page).toContain(dataset);
+      expect(read(`e/${events[0]!.id}.html`)).not.toContain('rel="alternate"');
+      expect(read("explore.html")).not.toContain('rel="alternate"');
+    });
+
+    it("says on the about page that no listing is paid for, and who makes it (#304)", () => {
+      const html = read("about.html");
+      expect(html).toContain("No listing is paid for, and none ever will be.");
+      expect(html).toContain("Made by one person in Kansas City.");
+    });
+
     it("dates the front page's site and picks list by the last run (#189)", () => {
       const html = read("index.html");
       expect(html.split(`"dateModified":"${meta.lastSuccessfulRun}"`).length - 1).toBe(2);

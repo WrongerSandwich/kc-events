@@ -328,10 +328,36 @@ describe("frontPageJsonLd", () => {
     });
   });
 
+  it("names the site's publisher as an Organization, every URL on the given origin (#304)", () => {
+    const other = "https://preview.example.com";
+    const ld = frontPageJsonLd([event({ id: "evt_a" })], other, "2026-10-19T06:40:12-05:00") as { "@graph": Record<string, unknown>[] };
+    const org = ld["@graph"].find((n) => n["@type"] === "Organization")!;
+    expect(org).toEqual({
+      "@type": "Organization",
+      "@id": `${other}/#org`,
+      name: "KC This Week",
+      url: `${other}/`,
+      logo: `${other}/apple-touch-icon.png`,
+      sameAs: [siteConfig.repoUrl],
+    });
+    const site = ld["@graph"].find((n) => n["@type"] === "WebSite")!;
+    expect(site).toMatchObject({ name: "KC This Week", alternateName: "kcthisweek.com", publisher: { "@id": org["@id"] } });
+    // Every URL in the graph is the site's own, built from the origin it was given; only sameAs names another site.
+    const urls: string[] = [];
+    const walk = (v: unknown, key = ""): void => {
+      if (typeof v === "string" && /^https?:/.test(v) && key !== "sameAs" && key !== "@context") urls.push(v);
+      else if (Array.isArray(v)) v.forEach((x) => walk(x, key));
+      else if (typeof v === "object" && v !== null) for (const [k, x] of Object.entries(v)) walk(x, k);
+    };
+    walk(ld["@graph"]);
+    expect(urls.length).toBeGreaterThanOrEqual(7);
+    for (const url of urls) expect(url.startsWith(`${other}/`), url).toBe(true);
+  });
+
   it("lists the picks' pages in order, leaving out a pick whose page has no Event JSON-LD", () => {
     const startless = event({ id: "evt_run", recurrence: "limited-run", start: undefined, end: "2026-10-31" });
     const ld = frontPageJsonLd([event({ id: "evt_a" }), startless, event({ id: "evt_b" })], origin, "2026-10-19T06:40:12-05:00") as { "@graph": object[] };
-    expect(ld["@graph"][1]).toMatchObject({
+    expect(ld["@graph"].find((n) => (n as { "@type": string })["@type"] === "ItemList")).toMatchObject({
       "@type": "ItemList",
       name: "Picks",
       dateModified: "2026-10-19T06:40:12-05:00",
