@@ -5,7 +5,7 @@ import { about } from "../src/generated/about";
 import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
 import { venues } from "../src/generated/venues";
-import { isDated } from "../src/lib/events";
+import { hasStartDay, isDated } from "../src/lib/events";
 import { kindLanding, landingRange, regionLanding } from "../src/lib/landing";
 import { moreLikeThis } from "../src/lib/more-like-this";
 import { venueSlug } from "../src/lib/venues";
@@ -177,14 +177,17 @@ describe("built output", () => {
 
     it("titles a venue page as a listing and prerenders its facts, its trail and its events' list (#300)", () => {
       const ld = (html: string) => [...html.matchAll(/<script type="application\/ld\+json">(.*?)<\/script>/gs)].map((m) => JSON.parse(m[1]!)["@type"]);
-      const busy = venues.find((v) => events.some((e) => isDated(e) && venueSlug(e.venue) === v.slug));
-      expect(busy, "the generated dataset has a venue with a dated event").toBeDefined();
+      // A start-less run (read after it began) is dated but has no Event JSON-LD, so it is left out of the ItemList.
+      const busy = venues.find((v) => events.some((e) => hasStartDay(e) && venueSlug(e.venue) === v.slug));
+      expect(busy, "the generated dataset has a venue with an event that has a start day").toBeDefined();
       const html = read(`v/${busy!.slug}.html`);
       expect(html).toMatch(/<title>[^<]* events(, [^<]+)? · KC This Week<\/title>/);
       expect(html).toMatch(/<p class="venue-facts"[^>]*>[^<]*\d+ events? (this week|through)/);
       expect(ld(html)).toEqual(["Place", "BreadcrumbList", "ItemList"]);
       const quiet = venues.find((v) => !events.some((e) => venueSlug(e.venue) === v.slug));
       if (quiet !== undefined) expect(ld(read(`v/${quiet.slug}.html`))).toEqual(["Place", "BreadcrumbList"]);
+      const startless = venues.find((v) => events.some((e) => isDated(e) && venueSlug(e.venue) === v.slug) && !events.some((e) => hasStartDay(e) && venueSlug(e.venue) === v.slug));
+      if (startless !== undefined) expect(ld(read(`v/${startless.slug}.html`))).toEqual(["Place", "BreadcrumbList"]);
     });
 
     it("declares both colour schemes, a theme colour for each, and the locale on every page (#188)", () => {
