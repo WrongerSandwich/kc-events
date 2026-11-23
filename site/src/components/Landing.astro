@@ -21,6 +21,8 @@ const regions = others(meta.regions, regionPath, (r) => r);
   <header class="venue-head">
     <h1>{page.heading}</h1>
     <p>{page.description}</p>
+    {/* The venues and picks (#302), muted as the region's neighborhoods are, with the class the venue page already styles. */}
+    {page.venuesAndPicks !== undefined && <p class="venue-hood">{page.venuesAndPicks}</p>}
     {subline !== undefined && <p class="venue-hood">{subline}</p>}
     {/* The icon gives this page the venue page's components, so Astro writes the same inline stylesheet for both:
         a stylesheet of its own would add its hash to the explorer's CSP, over that page's budget. */}
