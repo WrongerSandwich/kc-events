@@ -5204,7 +5204,7 @@
       "lastChanged": "2026-11-23T06:17:07-06:00",
       "lastJudged": "2026-11-23T06:17:07-06:00",
       "judgedWith": "8713cc922674",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -5214,7 +5214,8 @@
       "evidence": {
         "date": "The current work will remain on view through the end of December 2026.",
         "venue": "installed at 125 Southwest Boulevard."
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_b45d79870463",
