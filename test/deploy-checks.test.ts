@@ -71,6 +71,37 @@ describe("vercel_state", () => {
   });
 });
 
+describe("sitemap_copy", () => {
+  /** A curl that writes BODY to its -o file and records its URL, or, when BODY is undefined, writes half a page and fails as curl -f does. */
+  async function withCurl(body: string | undefined) {
+    const dir = await mkdtemp(join(tmpdir(), "kc-sitemap-copy-"));
+    made.push(dir);
+    await mkdir(join(dir, "bin"));
+    await writeFile(
+      join(dir, "bin", "curl"),
+      `#!/usr/bin/env bash
+out=; while (($#)); do case $1 in -o) out=$2; shift ;; http*) echo "$1" > "${dir}/url" ;; esac; shift; done
+${body === undefined ? `printf '<urlset><url>' > "$out"; exit 28` : `printf '%s' '${body}' > "$out"`}
+`,
+    );
+    await chmod(join(dir, "bin", "curl"), 0o755);
+    const file = join(dir, "sitemap.xml");
+    await writeFile(file, "last run's copy");
+    execFileSync("bash", ["-c", `set -euo pipefail; source "${SCRIPT}"; sitemap_copy "${file}"`], {
+      env: { ...process.env, PATH: `${join(dir, "bin")}:${process.env.PATH}` },
+    });
+    return { content: await readFile(file, "utf8"), url: (await readFile(join(dir, "url"), "utf8")).trim() };
+  }
+
+  it("writes the live sitemap to the file", async () => {
+    expect(await withCurl("<urlset></urlset>")).toEqual({ content: "<urlset></urlset>", url: "https://www.kcthisweek.com/sitemap.xml" });
+  });
+
+  it("leaves the file empty, not half written or last run's, when the fetch fails, and does not fail itself", async () => {
+    expect((await withCurl(undefined)).content).toBe("");
+  });
+});
+
 describe("deploy_failures", () => {
   it("prints the deploy log's lines from the last week that are not a 2xx answer, and nothing without a log", async () => {
     const gh = await fakeGh([""]);

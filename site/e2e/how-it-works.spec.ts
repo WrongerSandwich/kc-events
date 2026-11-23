@@ -202,14 +202,15 @@ test("picks: who is judged, the three verdicts, the six reasons in the site's wo
   await expect(page.locator("main .dont-miss")).toHaveCount(1);
 });
 
-test("safeguards: six gates with the line where a run is published, and five kinds of guard", async ({ page }) => {
+test("safeguards: seven gates with the line where a run is published, and five kinds of guard", async ({ page }) => {
   await open(page);
   const gates = page.locator("#safeguards .how-gates > li");
-  await expect(gates).toHaveCount(6);
+  await expect(gates).toHaveCount(7);
   await expect(page.locator("#safeguards .how-gate-line")).toHaveCount(1);
   await expect(page.locator("#safeguards .how-gate-line")).toContainText("published");
   await expect(gates.nth(0)).toContainText("90-minute");
   await expect(gates.nth(4)).toContainText("15 minutes");
+  await expect(gates.nth(5)).toContainText("IndexNow");
   await expect(page.locator("#safeguards .how-slab")).toHaveCount(5);
 });
 
