@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { buildVenues, readVenueTable as readTable, type VenueRow } from "../src/build/venues";
 import { loadPublished } from "../src/build/load-dataset";
 import { addressLine, mapUrl, NOTHING_LISTED, venueDirectory, venueJsonLd, venuePath, venueSlug } from "../src/lib/venues";
-import { activeEvent, configYaml, dataset, write } from "./fixtures/dataset";
+import { activeEvent, configYaml, dataset, expired, withArchive, write } from "./fixtures/dataset";
 import { event } from "./fixtures/event";
 import { tempDir } from "./fixtures/temp-dir";
 
@@ -273,19 +273,6 @@ describe("loadPublished's venues", () => {
 });
 
 describe("venue page lifetime", () => {
-  /** A record expired as `reason`, its one day `daysAgo` days before the fixture's today, 2026-10-05. */
-  function expired(id: string, venue: string, daysAgo: number, reason = "past", over: Record<string, unknown> = {}) {
-    const day = new Date(Date.UTC(2026, 9, 5 - daysAgo)).toISOString().slice(0, 10);
-    return activeEvent({ id, venue, start: day, status: "expired", expiryReason: reason, lastChanged: `${day}T06:30:00-05:00`, ...over });
-  }
-  /** The fixture paths with an archive file beside the dataset, as the job writes data/archive/<year>.json. */
-  function withArchive(live: unknown[], archived: unknown[], config = configYaml) {
-    const paths = write(dataset(live), config);
-    const dir = join(dirname(paths.datasetPath), "archive");
-    mkdirSync(dir);
-    writeFileSync(join(dir, "2026.json"), JSON.stringify({ schemaVersion: 1, events: archived }));
-    return paths;
-  }
   const slugs = (paths: ReturnType<typeof write>) => loadPublished(paths).venues.map((v) => v.slug);
 
   it("keeps the page of a venue whose last event passed 100 days ago, from the archive, listing nothing", () => {

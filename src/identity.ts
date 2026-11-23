@@ -161,9 +161,10 @@ function matchedEvent<T>(match: Match<T>): T | undefined {
 
 /**
  * The record a matched record stands for: itself, or through any chain of duplicate pointers the
- * record kept. None when the chain leaves `known` or loops: it points at no record.
+ * record kept. None when the chain leaves `known` or loops: it points at no record. The site follows a duplicate's
+ * URL to its survivor's the same way (#303).
  */
-function throughDuplicates<T extends EventIdentity>(matched: T, known: readonly T[]): T | undefined {
+export function throughDuplicates<T extends EventIdentity>(matched: T, known: readonly T[]): T | undefined {
   const seen = new Set<T>();
   let kept: T | undefined = matched;
   while (kept !== undefined && kept.duplicateOf !== undefined && !seen.has(kept)) {

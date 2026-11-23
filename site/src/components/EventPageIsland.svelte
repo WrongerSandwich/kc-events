@@ -24,7 +24,7 @@
     block.hidden = !passed;
     const status = block.querySelector("[role=status]")!;
     if (!passed) { status.textContent = ""; return; }
-    const write = setTimeout(() => { status.textContent = "This has already happened. The page stays up until the next weekly run."; }, ANNOUNCE_MS);
+    const write = setTimeout(() => { status.textContent = "This event has ended."; }, ANNOUNCE_MS);
     return () => clearTimeout(write);
   });
 </script>

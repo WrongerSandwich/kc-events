@@ -9,6 +9,8 @@ import { slugify } from "../../lib/slugs";
 import EventPageIsland from "../../components/EventPageIsland.svelte";
 import { origin, shareImage } from "../../build/origin";
 import { events } from "../../generated/events";
+import { ended } from "../../generated/ended";
+import { redirects } from "../../generated/redirects";
 import { descriptions } from "../../generated/descriptions";
 import { venues } from "../../generated/venues";
 import { addressLine, mapUrl, venueNamed, venuePath } from "../../lib/venues";
@@ -24,10 +26,20 @@ import { googleCalendarUrl, locatedForCalendar } from "../../lib/ics";
 import { siteConfig } from "../../site.config";
 import type { PublishedEvent } from "../../lib/types";
 
+// Every published event's page; a past event's, marked ended, for four weeks after its last day; then a year of
+// redirect to its venue, as a duplicate's URL goes where the record it was folded into does (#303, ADR 0017).
 export function getStaticPaths() {
-  return events.map((event) => ({ params: { id: event.id }, props: { event } }));
+  return [
+    ...events.map((event) => ({ params: { id: event.id }, props: { event, isEnded: false } })),
+    ...ended.map((event) => ({ params: { id: event.id }, props: { event, isEnded: true } })),
+    ...Object.entries(redirects).map(([id, to]) => ({ params: { id }, props: { to } })),
+  ];
 }
-const { event } = Astro.props as { event: PublishedEvent };
+type Props = { event: PublishedEvent; isEnded: boolean } | { to: string };
+const props = Astro.props as Props;
+// A static build writes a redirect as a page that refreshes to its target at once, names it canonical, and is noindex.
+if ("to" in props) return Astro.redirect(props.to, 301);
+const { event, isEnded } = props;
 
 const line = longDateLine(event, meta.buildToday);
 const description = descriptions[event.id];
@@ -40,18 +52,32 @@ const moreRows = moreLikeThis(event, events, meta.buildToday);
 const admission = admissionLine(event);
 const written = modelNote(event.whyLine, description);
 const venue = venueNamed(venues, event.venue);
+// An ended page sends the reader on: to the venue's page when it has one (a street address has none), then the kind's.
+const kindLink = { href: kindPath(event.kind), label: `More ${kindName(event.kind).toLowerCase()}` };
 const eventLd = eventJsonLd(event, { origin, today: meta.buildToday, description, image: shareImage.url, ...(venue !== undefined && { venue }) });
 const jsonLd = [...(eventLd === undefined ? [] : [eventLd]), breadcrumbJsonLd(event, origin)];
 // Google Calendar on Android opens no .ics, so its template link is the second way in Add to calendar (#188).
-const google = isDated(event) ? googleCalendarUrl(locatedForCalendar(venues, event), siteConfig.name, meta.buildToday) : undefined;
+const google = isDated(event) && !isEnded ? googleCalendarUrl(locatedForCalendar(venues, event), siteConfig.name, meta.buildToday) : undefined;
 // The venue's block (#295) needs something the line under the title does not already say: a street address, which
 // only a row of the venue table gives. Without one the block would repeat that line, so there is none.
 const located = venue?.address === undefined ? undefined : { name: venue.name, address: addressLine(venue.address), map: mapUrl(venue) };
 ---
-<Base title={eventPageTitle(event, events)} description={metaDescription} jsonLd={jsonLd}>
+{/* An ended page is noindex (a searcher landing on a finished event is a poor result), its links still followed. */}
+<Base title={eventPageTitle(event, events)} description={metaDescription} jsonLd={jsonLd} noindex={isEnded}>
   <article class={`event kind-${slugify(event.kind)}`}>
-    {/* Shown and filled by the island once the visitor's day is past the event's last; see EventPageIsland. */}
-    <div class="passed" hidden><p role="status"></p><a class="control go" href="/explore">See what's on this week</a></div>
+    {isEnded ? (
+      // Said in the page itself: an ended page has no island, and a crawler reads it before any script runs.
+      <div class="passed">
+        <p>This event has ended.</p>
+        <p class="onward">
+          {venue !== undefined && <a class="control go" href={venuePath(event.venue)}>More at {venue.name}</a>}
+          <a class:list={[{ "control go": venue === undefined }]} href={kindLink.href}>{kindLink.label}</a>
+        </p>
+      </div>
+    ) : (
+      // Shown and filled by the island once the visitor's day is past the event's last; see EventPageIsland.
+      <div class="passed" hidden><p role="status"></p><a class="control go" href="/explore">See what's on this week</a></div>
+    )}
     <header class:list={["head", { dated: isDated(event) }]}>
       {/* The same tile as the front page's card, by the same view-transition name, so one glides into the other. */}
       {isDated(event) && <DateTile tile={dateTile(event, meta.buildToday)} id={event.id} large />}
@@ -61,19 +87,24 @@ const located = venue?.address === undefined ? undefined : { name: venue.name, a
         <p class="date">{line}</p>
         <!-- A neighborhood of the venue's name, or the catch-all, gives way to the region, which neighborhoodLine then
              names once (#186). -->
-        <p class="where"><a href={venuePath(event.venue)}>{venueLine(event)}</a> · {neighborhoodLine(neighborhoodShown(event) ?? event.region, event.region)}</p>
+        <p class="where">{venue !== undefined ? <a href={venuePath(event.venue)}>{venueLine(event)}</a> : venueLine(event)}{" · "}{neighborhoodLine(neighborhoodShown(event) ?? event.region, event.region)}</p>
         {admission && <p class="admission">{admission}</p>}
       </div>
     </header>
     {event.whyLine && <p class="why">{event.whyLine}</p>}
     {description && <p class="about">{description}</p>}
     {/* The one filled control: going, or buying, is what a visitor from a shared link came for. The rest sit quiet under it. */}
-    <p class="primary"><a class="control go" href={details}><UiIcon name={detailsLabel(event).startsWith("Tickets") ? "ticket" : "link"} />{detailsLabel(event)}</a></p>
-    <div class="actions">
-      <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} shareText={`${line} · ${venueLine(event)}`} ics={isDated(event) ? `/e/${event.id}.ics` : undefined} google={google} />
-    </div>
-    <p class="verified">{verifiedLabel(event)} {formatShort(localDate(event.lastVerified))} from {event.eventUrl ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.{written && ` ${written}`}</p>
-    <ReportForm context={report} summary="Wrong? Report it" />
+    {/* An ended page has nothing to buy, save, share, report or put in a calendar, and so no island (#303). */}
+    {!isEnded && (
+      <>
+        <p class="primary"><a class="control go" href={details}><UiIcon name={detailsLabel(event).startsWith("Tickets") ? "ticket" : "link"} />{detailsLabel(event)}</a></p>
+        <div class="actions">
+          <EventPageIsland client:load id={event.id} title={event.title} lastDay={lastDay(event)} shareText={`${line} · ${venueLine(event)}`} ics={isDated(event) ? `/e/${event.id}.ics` : undefined} google={google} />
+        </div>
+      </>
+    )}
+    <p class="verified">{verifiedLabel(event)} {formatShort(localDate(event.lastVerified))} from {event.eventUrl || isEnded ? <a href={event.primaryUrl}>the list at {hostOf(event.primaryUrl)}</a> : "the page linked above"}.{written && ` ${written}`}</p>
+    {!isEnded && <ReportForm context={report} summary="Wrong? Report it" />}
   </article>
 
   {/* Where it is, for a reader working out how to get there, and the way to everything else at the venue. One column
@@ -168,6 +199,9 @@ const located = venue?.address === undefined ? undefined : { name: venue.name, a
   }
   .passed[hidden] { display: none; }
   .passed p { margin: 0; }
+  /* The venue's control, then the kind's page as a plain link beside it; underlined, as a link among words is. */
+  .onward { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-4); }
+  .onward a:not(.control) { color: var(--fg); font-weight: var(--weight-medium); text-decoration: underline; }
   .verified { font-size: var(--text-xs); color: var(--fg-faint); }
   /* Rows as the site's own lists draw them, not an aggregator's link list: tile, title, then when and where, no underline. */
   .more { list-style: none; padding: 0; margin: var(--space-3) 0 0; }

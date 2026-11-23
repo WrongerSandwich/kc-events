@@ -56,8 +56,14 @@ export type PublishedMeta = {
   timeZone: string;
 };
 
-/** What the page says each event is, by event id, for the events that have one; only the event page reads it. */
+/** What the page says each event is, by event id, for the events that have one, ended ones too; only the event page reads it. */
 export type PublishedDescriptions = Record<string, string>;
+
+/**
+ * A past event's URL that redirects (#303, ADR 0017), by event id: the path it sends to, its venue's page or the
+ * event page of the record a duplicate was folded into. Each is a static page of its own, never a listing.
+ */
+export type PublishedRedirects = Record<string, string>;
 
 /** The public /events.json: the published events, each with its description when it has one. */
 export type PublishedDataset = {
@@ -188,8 +194,9 @@ export type PublishedVenue = {
 };
 
 /**
- * What loadPublished returns; the generator writes `events` to src/generated/events.ts, `descriptions` to
- * descriptions.ts, `about` to about.ts, `changes` to changes.ts, `venues` to venues.ts, `howItWorks` to how-it-works.ts,
- * and the rest to meta.ts.
+ * What loadPublished returns; the generator writes `events` to src/generated/events.ts, `ended` to ended.ts,
+ * `redirects` to redirects.ts, `descriptions` to descriptions.ts, `about` to about.ts, `changes` to changes.ts, `venues`
+ * to venues.ts, `howItWorks` to how-it-works.ts, and the rest to meta.ts. `ended` is the past events whose page stays
+ * up, marked ended, for a while (#303), listed nowhere but their own page.
  */
-export type Published = PublishedMeta & { events: PublishedEvent[]; descriptions: PublishedDescriptions; about: PublishedAbout; changes: PublishedChanges; venues: PublishedVenue[]; howItWorks: PublishedHowItWorks };
+export type Published = PublishedMeta & { events: PublishedEvent[]; ended: PublishedEvent[]; redirects: PublishedRedirects; descriptions: PublishedDescriptions; about: PublishedAbout; changes: PublishedChanges; venues: PublishedVenue[]; howItWorks: PublishedHowItWorks };

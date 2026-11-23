@@ -15,7 +15,7 @@ The `/events.json` the site publishes alongside its HTML: the active, not yet pa
 _Avoid_: database, feed, API
 
 **Archive**:
-`data/archive/<year>.json`: the expired records a run moved out of `data/events.json` once both their last day and their last change were more than eight weeks back (#82), as they were when it did, filed by the later of the two. Nothing reads it to run: folding and matching see the live file alone (the site's build reads it, for the venue page lifetime alone), so a page that lists an archived event again starts a new record. Kept so the record is not lost, and so the live file each run loads holds only what may still matter.
+`data/archive/<year>.json`: the expired records a run moved out of `data/events.json` once both their last day and their last change were more than eight weeks back (#82), as they were when it did, filed by the later of the two. Nothing reads it to run: folding and matching see the live file alone (the site's build reads it, for the venue page lifetime and a redirected event's URL alone), so a page that lists an archived event again starts a new record. Kept so the record is not lost, and so the live file each run loads holds only what may still matter.
 _Avoid_: history, backup
 
 **Primary page**:
@@ -233,8 +233,16 @@ A handful of events named in an explorer link (`/explore?ids=evt_a,evt_b`), show
 _Avoid_: list, collection, playlist
 
 **Event page**:
-The page for one active event, at `/e/<id>`: its date, venue, why-line when flagged, description when there is one, primary link, calendar file, last-verified stamp, and corrections link. The calendar file (`/e/<id>.ics`, and the Google Calendar link beside it) puts a limited run in as one day to go, the first it is open (and plays) from the build's day, with its span in the notes; a feed and the explorer's export keep a run's whole span.
+The page for one active event, at `/e/<id>` (and, marked ended, for an ended event): its date, venue, why-line when flagged, description when there is one, primary link, calendar file, last-verified stamp, and corrections link. The calendar file (`/e/<id>.ics`, and the Google Calendar link beside it) puts a limited run in as one day to go, the first it is open (and plays) from the build's day, with its span in the notes; a feed and the explorer's export keep a run's whole span.
 _Avoid_: detail page, listing page
+
+**Ended event**:
+A past event whose URL still serves its event page, marked ended (#303, ADR 0017): one once published (active, or expired as past having once been verified), not outside the geography, whose last day is 1 to 28 days before the build's day. The page says "This event has ended" in its HTML, is `noindex`, keeps its Event JSON-LD with its real dates, and has no ticket link, calendar file, Save, Share or report form: in their place, "More at <venue>" (the kind's page when the venue has none) and the venue's and kind's events still to come. It is listed nowhere else: not in the explorer, a hub, a feed, `/events.json`, `llms.txt` or the sitemap. Cancelled, duplicate and every other expiry reason get none.
+_Avoid_: past page, archived page
+
+**Redirected event**:
+A past event whose URL redirects (#303, ADR 0017): one once published whose last day is 29 to 365 days before the build's day and whose venue has a page in the build, from the dataset or the archive. Its `/e/<id>` is a static page that refreshes at once to the venue's page, names it canonical and is `noindex`; with no venue page there is none, and the URL 404s. A record expired as a duplicate, once verified, goes, through its chain of `duplicateOf`, where the record it was folded into does: that record's page, live or ended, else wherever it redirects.
+_Avoid_: forwarded event, moved page
 
 **Venue page**:
 The page for one venue, at `/v/<slug>` (#137): its address, a map link and its own site when the venue table has them, a line of facts from the data (the kinds it hosts, how many events this week and through the horizon, #300), then its events in the explorer's rows grouped by day, each with the room it is in. Its title is "<Venue> events, <city>", the city from its table row's address, else Kansas City. Every venue a published event is at has one, and so does every venue table row, with "Nothing listed right now" when nothing is coming up. So does a venue for 365 days after the last day of its last published event (active, or expired as past having once been verified), read from the dataset and the archive, unless it is outside the geography or names no one place (ADR 0016): the **venue page lifetime**, which keeps a page that earned a place in search results through a quiet season rather than turning it into a 404. The slug comes from the venue's display name, so two spellings of one name are one page, and a renamed venue's old page stays up, quiet, for its year, with no redirect. Every venue page is listed at `/venues`, the **venue directory**, by region with its count of events, those with nothing coming up last; each venue page links it.

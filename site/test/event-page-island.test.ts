@@ -32,7 +32,7 @@ describe("EventPageIsland", () => {
     // Shown first, then written, so a screen reader hears it.
     expect(screen.getByRole("status")).toHaveTextContent("");
     vi.advanceTimersByTime(200);
-    expect(screen.getByRole("status")).toHaveTextContent("This has already happened");
+    expect(screen.getByRole("status")).toHaveTextContent("This event has ended");
     vi.useRealTimers();
   });
 
@@ -44,7 +44,7 @@ describe("EventPageIsland", () => {
     document.dispatchEvent(new Event("visibilitychange"));
     await tick();
     vi.advanceTimersByTime(200);
-    expect(screen.getByRole("status")).toHaveTextContent("This has already happened");
+    expect(screen.getByRole("status")).toHaveTextContent("This event has ended");
     vi.useRealTimers();
   });
 

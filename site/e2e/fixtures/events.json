@@ -303,6 +303,57 @@
       },
       "lastChanged": "2026-10-05T06:10:00-05:00",
       "expiryReason": "two-strike"
+    },
+    {
+      "id": "evt_e2e000000013",
+      "title": "A show at recordBar in August",
+      "start": "2026-08-06T19:00:00-05:00",
+      "venue": "recordBar",
+      "neighborhood": "Crossroads",
+      "primaryUrl": "https://example.com/recordbar/august",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-07-27T16:05:31-05:00",
+      "lastVerified": "2026-08-03T21:47:36-05:00",
+      "status": "expired",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "recordBar"
+      },
+      "evidence": {
+        "date": "Thu Aug 6 7:00 pm",
+        "venue": "recordBar"
+      },
+      "lastChanged": "2026-08-10T06:30:00-05:00",
+      "expiryReason": "past"
+    },
+    {
+      "id": "evt_e2e000000014",
+      "title": "Fabio Frizzi plays Fulci (second listing)",
+      "start": "2026-10-06T19:00:00-05:00",
+      "venue": "recordBar",
+      "neighborhood": "Crossroads",
+      "primaryUrl": "https://example.com/recordbar/frizzi-2",
+      "kind": "music",
+      "recurrence": "one-off",
+      "dontMiss": false,
+      "firstSeen": "2026-10-03T16:05:31-05:00",
+      "lastVerified": "2026-10-03T21:47:36-05:00",
+      "status": "expired",
+      "verificationFailures": 0,
+      "lead": {
+        "lane": "registry",
+        "source": "recordBar"
+      },
+      "evidence": {
+        "date": "Tue Oct 6 7:00 pm",
+        "venue": "recordBar"
+      },
+      "lastChanged": "2026-10-05T06:30:00-05:00",
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_e2e000000001"
     }
   ],
   "sourceState": {},
