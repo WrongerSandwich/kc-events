@@ -65,13 +65,13 @@ export async function indexNowNotice(opts: {
   key: string;
   post: (body: IndexNowBody) => Promise<number>;
 }): Promise<string> {
-  const copies = { "before the push": opts.before, "after the deploy": opts.after };
-  for (const [when, xml] of Object.entries(copies)) {
-    if (xml === undefined) return `IndexNow: not sent (the live sitemap could not be fetched ${when})`;
-    // An error page served with a 2xx, say: diffing it would send every URL the site has.
-    if (sitemapEntries(xml).size === 0) return `IndexNow: not sent (the live sitemap fetched ${when} lists no URL)`;
-  }
-  const urls = changedUrls(opts.before!, opts.after!);
+  const { before, after } = opts;
+  if (before === undefined) return "IndexNow: not sent (the live sitemap could not be fetched before the push)";
+  if (after === undefined) return "IndexNow: not sent (the live sitemap could not be fetched after the deploy)";
+  // An error page served with a 2xx, say: diffing it would send every URL the site has.
+  if (sitemapEntries(before).size === 0) return "IndexNow: not sent (the live sitemap fetched before the push lists no URL)";
+  if (sitemapEntries(after).size === 0) return "IndexNow: not sent (the live sitemap fetched after the deploy lists no URL)";
+  const urls = changedUrls(before, after);
   if (urls.length === 0) return "IndexNow: nothing changed";
 
   const { host } = new URL(opts.origin);

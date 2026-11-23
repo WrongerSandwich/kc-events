@@ -254,6 +254,11 @@ fi
 message="$COMMIT_PREFIX $run_date"
 git commit --quiet -m "$message"
 
+# The live sitemap before this run deploys, which IndexNow's step diffs against the one after (#311). Copied before the
+# fetch and rebase below, not between them and the push, so its wait cannot widen the window for a push to be refused.
+SITEMAP_BEFORE="$LOG_DIR/sitemap-before.xml"
+sitemap_copy "$SITEMAP_BEFORE"
+
 # Someone may have pushed while the run was going. The run touches only its own files (the dataset,
 # its report's two, and any archive file it added to), so they go on top of whatever main has now; if
 # a rebase cannot do that (a manual run's events.json landed in between), main's data/ is taken and
@@ -280,9 +285,6 @@ if ! git merge-base --is-ancestor origin/main HEAD; then
   echo "HEAD does not sit on origin/main after the rebase; not pushing" >&2
   false
 fi
-# The live sitemap before this run deploys, which IndexNow's step diffs against the one after (#311).
-SITEMAP_BEFORE="$LOG_DIR/sitemap-before.xml"
-sitemap_copy "$SITEMAP_BEFORE"
 git push --quiet origin HEAD:main
 PUSHED=$(git rev-parse --short HEAD)
 
@@ -309,10 +311,11 @@ trap - ERR TERM HUP INT
 # IndexNow (#311): search engines are told which URLs the deploy added, removed, or re-dated in the live sitemap, so an
 # event page is crawled before it is over. Whatever goes wrong is a line on the health comment, never a failure.
 sitemap_copy "$LOG_DIR/sitemap-after.xml"
-if indexnow=$(pnpm exec tsx src/indexnow-cli.ts --before "$SITEMAP_BEFORE" --after "$LOG_DIR/sitemap-after.xml" 2>&1 9>&-); then
+if indexnow=$(pnpm exec tsx src/indexnow-cli.ts --before "$SITEMAP_BEFORE" --after "$LOG_DIR/sitemap-after.xml" 2>"$LOG_DIR/indexnow.err" 9>&-); then
   indexnow=$(tail -n1 <<<"$indexnow")
 else
-  indexnow="IndexNow: not sent ($(tail -n1 <<<"$indexnow"))"
+  why=$(tail -n1 "$LOG_DIR/indexnow.err" 2>/dev/null) || why=
+  indexnow="IndexNow: not sent (${why:-the step exited without saying why})"
 fi
 echo "$indexnow"
 

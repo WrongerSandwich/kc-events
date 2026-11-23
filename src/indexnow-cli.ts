@@ -41,7 +41,8 @@ async function main() {
           })
         ).status;
   const line = await indexNowNotice({ before: await copy(values.before), after: await copy(values.after), origin: ORIGIN, key, post });
-  console.log(values["dry-run"] ? line.replace(/ sent \(.*\)$/, " in the request(s) above, not sent (a dry run)") : line);
+  // A dry run's post answers 200 without sending, so only a "sent" line needs saying otherwise.
+  console.log(values["dry-run"] ? line.replace(/^(IndexNow: \d+ URL\(s\)) sent \(.*\)$/, "$1 in the request(s) above, not sent (a dry run)") : line);
 }
 
 main().catch((e: unknown) => {
