@@ -40932,7 +40932,7 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-23T06:17:07-06:00",
       "judgedWith": "8713cc922674",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -40946,7 +40946,8 @@
           "page": "https://kansascityzoo.org/event/volunteen-open-house",
           "quote": "Visit the Zoo Learning Center between 1pm-3pm for an open house on Sunday, December 20, 2026 or Saturday, January 9, 2027."
         }
-      }
+      },
+      "expiryReason": "not-public"
     },
     {
       "id": "evt_380359848420",
@@ -58640,7 +58641,7 @@
       "lastChanged": "2026-11-16T06:17:06-06:00",
       "lastJudged": "2026-11-23T06:17:07-06:00",
       "judgedWith": "8713cc922674",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -58650,7 +58651,8 @@
       "evidence": {
         "date": "January 9",
         "venue": "Kansas City Zoo & Aquarium"
-      }
+      },
+      "expiryReason": "not-public"
     },
     {
       "id": "evt_fff3ff7b8fde",
@@ -60572,7 +60574,7 @@
       "lastChanged": "2026-11-23T06:17:07-06:00",
       "lastJudged": "2026-11-23T06:17:07-06:00",
       "judgedWith": "8713cc922674",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -60590,7 +60592,8 @@
           "page": "https://kansascityzoo.org/event/fotz-bring-a-friend-free",
           "quote": "Free With Membership"
         }
-      }
+      },
+      "expiryReason": "promotion"
     },
     {
       "id": "evt_caa27d2795ee",
