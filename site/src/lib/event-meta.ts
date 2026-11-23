@@ -265,26 +265,38 @@ export function eventJsonLd(
 }
 
 /**
- * The front page's JSON-LD: the site, with a search action into the explorer's text filter, and the picks as an
- * ItemList of their event pages, in the order the page shows them. Only picks whose page carries Event JSON-LD are
+ * The front page's JSON-LD: the site, with a search action into the explorer's text filter, the Organization that
+ * publishes it (#304: what search and answer engines know the site by, its `sameAs` the repository), and the picks as
+ * an ItemList of their event pages, in the order the page shows them. Only picks whose page carries Event JSON-LD are
  * listed: Google reads such a list as a summary of event pages, and a run with no start has none. Both nodes carry the
  * last run as their `dateModified` (#189), the day the list last changed.
  */
 export function frontPageJsonLd(picks: PublishedEvent[], origin: string, lastSuccessfulRun: string): object {
   const at = (path: string) => new URL(path, origin).toString();
+  const org = at("/#org");
   return {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "WebSite",
         name: siteConfig.name,
+        alternateName: "kcthisweek.com",
         url: at("/"),
+        publisher: { "@id": org },
         dateModified: lastSuccessfulRun,
         potentialAction: {
           "@type": "SearchAction",
           target: { "@type": "EntryPoint", urlTemplate: `${at("/explore")}?when=all&q={search_term_string}` },
           "query-input": "required name=search_term_string",
         },
+      },
+      {
+        "@type": "Organization",
+        "@id": org,
+        name: siteConfig.name,
+        url: at("/"),
+        logo: at("/apple-touch-icon.png"),
+        sameAs: [siteConfig.repoUrl],
       },
       {
         "@type": "ItemList",

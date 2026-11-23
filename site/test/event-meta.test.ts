@@ -328,10 +328,27 @@ describe("frontPageJsonLd", () => {
     });
   });
 
+  it("names the site's publisher as an Organization, every URL on the given origin (#304)", () => {
+    const other = "https://preview.example.com";
+    const ld = frontPageJsonLd([], other, "2026-10-19T06:40:12-05:00") as { "@graph": Record<string, unknown>[] };
+    const org = ld["@graph"].find((n) => n["@type"] === "Organization")!;
+    expect(org).toEqual({
+      "@type": "Organization",
+      "@id": `${other}/#org`,
+      name: "KC This Week",
+      url: `${other}/`,
+      logo: `${other}/apple-touch-icon.png`,
+      sameAs: [siteConfig.repoUrl],
+    });
+    const site = ld["@graph"].find((n) => n["@type"] === "WebSite")!;
+    expect(site).toMatchObject({ name: "KC This Week", alternateName: "kcthisweek.com", publisher: { "@id": org["@id"] } });
+    for (const key of ["@id", "url", "logo"]) expect(org[key]).toMatch(new RegExp(`^${other}/`));
+  });
+
   it("lists the picks' pages in order, leaving out a pick whose page has no Event JSON-LD", () => {
     const startless = event({ id: "evt_run", recurrence: "limited-run", start: undefined, end: "2026-10-31" });
     const ld = frontPageJsonLd([event({ id: "evt_a" }), startless, event({ id: "evt_b" })], origin, "2026-10-19T06:40:12-05:00") as { "@graph": object[] };
-    expect(ld["@graph"][1]).toMatchObject({
+    expect(ld["@graph"].find((n) => (n as { "@type": string })["@type"] === "ItemList")).toMatchObject({
       "@type": "ItemList",
       name: "Picks",
       dateModified: "2026-10-19T06:40:12-05:00",
