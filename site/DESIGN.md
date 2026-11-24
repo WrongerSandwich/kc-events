@@ -202,6 +202,8 @@ All neutrals are true greys (chroma 0), on purpose: a tinted neutral would bring
 
 **The Diagram-Roles Exception.** One page breaks the Only-Kinds-Bring-Colour Rule: How it works (`/about/how-it-works`), whose diagrams colour a step by who does it (the network, the extraction model, the curation model, plain code, a person), with two more tones for the dataset and a warning. The rule exists because a hue beside events is read as a kind; that page lists no event and shows no kind, and the colour is how a reader finds the steps that call a model. Its terms: the tones are defined in `src/styles/how-it-works.css` and never in `tokens.css`; they are used inside that page's figures and its key and nowhere else, never on a link, a heading or a rule; each is a kind's own pair (the kinds' hues, lightness and chroma, so the Matched-Pair contrast holds); none is the flag carmine, which stays the pick's; and every role and outcome is also said in words, so the page reads in greyscale, in forced colours and to a screen reader.
 
+**Diagrams on How it works.** The same page's diagrams wear the Deco dress in rules and capitals only (#310). The thick and thin rule heads every figure; the double hairline divides a diagram where it falls into groups (the run's phases; the Expired box's reasons from its name); a table's column heads sit on an ink hairline. A diagram's labels are in the Caps label: the role tags, and so the key's terms; a phase's name and its Mon and Thu; a figure's row labels; the week's days and lanes; a ladder's yes and no; a gate's failure; a slab's name; a table's column heads; and the drawing's titles, at 13px. What a step, a box or a cell says stays in Geist, and so does a label carrying a date (the run's strip above the figures), since figures are the face's weak spot. The rules are ink and the role tones stay inside boxes, tags and swatches. No diagram carries a stepped shape: the crown stays where Rules and ornaments places it, and the stepped motifs stay two.
+
 ## 3. Typography
 
 **Body Font:** Geist Variable (with system-ui, sans-serif), cut to weights 400 to 600
@@ -220,7 +222,7 @@ All neutrals are true greys (chroma 0), on purpose: a tinted neutral would bring
 - **Label** (500, 0.75rem, 1.6): chips, a passed save's tag, counts.
 
 ### Named Rules
-**The Capitals-Are-The-Site's Rule.** The display face sets the site's own words (its name, a page's heading, a section's heading, a weekday, a month, a list's date) and a place's name, always in capitals: its file has no lower case. It never sets an event's title, which is quoted from its source and stays in Geist as written; nor a button, a chip, or a sentence. Of the tags it sets one, a pick's reason, which is the site's own word and one of six. Figures in it are the face's weak spot, so the date tile's day and every time stay in Geist's tabular figures.
+**The Capitals-Are-The-Site's Rule.** The display face sets the site's own words (its name, a page's heading, a section's heading, a weekday, a month, a list's date) and a place's name, always in capitals: its file has no lower case. It never sets an event's title, which is quoted from its source and stays in Geist as written; nor a button, a chip, or a sentence. Of the tags it sets one, a pick's reason, which is the site's own word and one of six; and on How it works the role tags, the site's own words for who does a step (Diagrams on How it works). Figures in it are the face's weak spot, so the date tile's day and every time stay in Geist's tabular figures.
 
 **The Three-Labels-In-The-Explorer Rule.** Inside the explorer three things are set in capitals and nothing else (an e2e check holds it, #297): the rail's group names, the list's group headings, and a pick's tag, one or two short words on the rows that have one. Its rows are dense, so a row's own words, a chip, a control and a count stay in Geist, as written.
 
@@ -260,9 +262,9 @@ Quiet instruments: precise edges, ink words, colour only where a kind lives.
 
 ### Rules and ornaments (Deco)
 All in ink (`fg`) or the strong rule's grey, never a hue, and all decoration: none carries meaning a reader needs.
-- **Thick and thin rule:** 3px, a 3px gap, 1px, the page's width. It closes the header; turned over (thin, then thick) it opens the footer. A 4.5rem cut of it is the flourish under a page's heading.
+- **Thick and thin rule:** 3px, a 3px gap, 1px, the page's width. It closes the header; turned over (thin, then thick) it opens the footer. A 4.5rem cut of it is the flourish under a page's heading, and it heads each figure on How it works.
 - **Crown:** a stepped ziggurat, three steps to a flat top (`--crown`, a clip path that fits any box). It leads a section's heading, 26 by 15px, sits over today's tile in the week strip, 26 by 13px, and leads today's day heading in the explorer, 20 by 10px, and nowhere else: one stepped motif, used sparingly. In the explorer only, of the lists: it follows the visitor's day, where a venue's, a kind's and a region's page is built once a day.
-- **Double hairline:** two 1px lines 2px apart, running from a section's heading to the column's edge. On phones the heading is a block: the crown sits in the first line of the words, so a heading that wraps never leaves it alone, and the hairline goes under them, the column's width.
+- **Double hairline:** two 1px lines 2px apart, running from a section's heading to the column's edge, and between a How it works diagram's groups. On phones the heading is a block: the crown sits in the first line of the words, so a heading that wraps never leaves it alone, and the hairline goes under them, the column's width.
 - **Sunburst:** a half sun's eleven rays, short and long by turns, in the strong rule's grey, rising from the footer's rule with the fountain mark at its centre. Once a page, at its foot.
 - In forced colours the crown keeps a fill in the text colour; the rules are borders and survive on their own.
 
@@ -310,7 +312,7 @@ A row of square day tiles (raised surface, hairline edge): the weekday in the ca
 - **Don't** dress it as a hand-written newsletter or editorial magazine: no serif "voice" type, no chatty personal copy, no curator persona.
 - **Don't** colour a link, a selection, a hover or the saved state with a hue; it would read as one more kind.
 - **Don't** use a diagram's role colour outside the How it works page's figures and key, or borrow the exception for another page.
-- **Don't** set an event's title, a button, a chip, a sentence, or any tag but a pick's reason in the display face, or anything in it in lower case; and never set Geist at 700.
+- **Don't** set an event's title, a button, a chip, a sentence, or any tag but a pick's reason (and How it works' role tags) in the display face, or anything in it in lower case; and never set Geist at 700.
 - **Don't** fill or tint anything with the flag's carmine, or set words in it: a pick's diamond and the staleness sign are all of it.
 - **Don't** give an ornament a hue, or add a second stepped motif: the crown and the tile's shoulders are the two.
 - **Don't** put a shadow on a card, row, chip or button; the calendar menu is the only thing that floats.

@@ -115,8 +115,10 @@ export const BUDGETS: { page: string; budget: number; build: "real" | "fixture" 
   // own (src/styles/how-it-works.css, 3.2 KB), with no island and no script. Its content does not grow with the week:
   // a run changes the strip's figures and the spend bar's segments, never their number. 29.6 KB measured (16 KB over
   // the 404's shell; the facts pass's corrections were 380 bytes of it), so this trips on a runtime or a second copy
-  // of the sheet, and on a section added without a look.
-  { page: "about/how-it-works.html", budget: 30_000, build: "fixture" },
+  // of the sheet, and on a section added without a look. And 300 for the diagrams' Deco dress (#310): the thick and thin
+  // rule heading each figure, the double hairline between the run's phases, the labels in the display capitals, the
+  // phases as a list of lists, and a swatch on each line of the spend key (measured 260 against a 29,815 build).
+  { page: "about/how-it-works.html", budget: 30_300, build: "fixture" },
 ];
 
 function main(): void {
