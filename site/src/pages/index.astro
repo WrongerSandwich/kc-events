@@ -34,6 +34,10 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
 
   <DontMissList client:load />
 
+  {/* The widest door, everything in the explorer, straight after the picks: a reader whose taste is not theirs finds it
+      before the regulars and the calendar (the front page critique of 2026-11-24). */}
+  <p class="explore"><a href="/explore?when=all&recurring=1">Browse all {count} events</a></p>
+
   {alwaysThere.length > 0 && <section aria-labelledby="always">
     <h2 id="always" class="section-heading">Always there</h2>
     <p class="note">On a regular schedule, for whenever you want to go.</p>
@@ -54,8 +58,6 @@ const jsonLd = frontPageJsonLd(HORIZONS.flatMap((h) => buckets[h]), origin, meta
     <Subscribe origin={origin} />
   </section>
 
-  {/* The widest door, everything in the explorer, before the narrower ones. */}
-  <p class="explore"><a href="/explore?when=all&recurring=1">Browse all {count} events</a></p>
   {/* Every kind and region page, linked from here (#188), folded so nineteen links are not a wall at the page's end;
       the venues are in the footer. Open, each list is a column of rows a thumb can hit. */}
   <details class="lists">

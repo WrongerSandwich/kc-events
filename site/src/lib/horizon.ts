@@ -25,19 +25,6 @@ export function anchorDate(e: PublishedEvent, today: string): string | undefined
   return nextRunDay(e, from) ?? from;
 }
 
-/**
- * The date on a front page row after this week, the day the row is sorted by (anchorDate). A run with days can wait
- * there while open, for its next weekday after Sunday or for its closing day, so it is never "From" an opening that
- * has passed; one still to open is "From" the first day it plays.
- */
-export function rowWhen(e: PublishedEvent, today: string): string {
-  if (!isMultiDay(e)) return formatDay(firstDay(e)!);
-  if (e.recurrence !== "limited-run") return `${formatDay(firstDay(e)!)}–${formatShort(lastDay(e)!)}`;
-  const day = anchorDate(e, today)!;
-  if (!isUnderway(e, today)) return `From ${formatDay(day)}`;
-  return day === lastDay(e) ? `Closes ${formatDay(day)}` : formatDay(day);
-}
-
 /** Total over every non-past dated event: each lands in exactly one bucket. */
 export function horizon(e: PublishedEvent, today: string): Horizon | undefined {
   const anchor = anchorDate(e, today);

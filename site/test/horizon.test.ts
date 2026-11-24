@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { anchorDate, bucketDontMiss, closingLine, horizon, horizonBounds, horizonHeading, HORIZONS } from "../src/lib/horizon";
+import { isOnNowPick, onNowPicks, rowWhen } from "../src/lib/front-rows";
 import { events } from "../src/generated/events";
 import { meta } from "../src/generated/meta";
 import { isDated, isPast } from "../src/lib/events";
@@ -184,5 +185,28 @@ describe("horizon", () => {
     expect(closingLine(event({ start: "2026-10-09", end: "2026-10-11" }), today)).toBe("Through Sun Oct 11");
     expect(closingLine(event({ start: "2026-10-09", end: "2026-10-11" }), "2026-10-10")).toBe("Through Sun Oct 11");
     expect(closingLine(event({ start: "2026-10-09T20:30:00-05:00", end: "2026-10-10" }), "2026-10-10")).toBe("8:30 pm · through Sat Oct 10");
+  });
+});
+
+describe("On now and the rows' spans (the front page critique of 2026-11-24)", () => {
+  const run = (start: string, end: string) => event({ recurrence: "limited-run", start, end, dontMiss: true });
+
+  it("takes a run open today and past the coming Sunday, never one that opens or closes by then, nor a one-off", () => {
+    // Monday Oct 5; the week's Sunday is Oct 11.
+    expect(isOnNowPick(run("2026-09-01", "2026-10-12"), "2026-10-05")).toBe(true);
+    expect(isOnNowPick(run("2026-09-01", "2026-10-11"), "2026-10-05")).toBe(false); // closes Sunday: this week's news
+    expect(isOnNowPick(run("2026-10-08", "2026-12-01"), "2026-10-05")).toBe(false); // opens Thursday
+    expect(isOnNowPick(event({ start: "2026-10-01", end: "2026-10-20", dontMiss: true }), "2026-10-05")).toBe(false);
+  });
+
+  it("lists them soonest to close first", () => {
+    const a = { ...run("2026-09-01", "2026-12-01"), id: "a", title: "A" };
+    const b = { ...run("2026-09-01", "2026-11-01"), id: "b", title: "B" };
+    expect(onNowPicks([a, b, run("2026-10-08", "2026-12-01")], "2026-10-05").map((e) => e.id)).toEqual(["b", "a"]);
+  });
+
+  it("gives a one-off's span its last day alone within a month", () => {
+    expect(rowWhen(event({ start: "2026-12-04", end: "2026-12-06" }), "2026-11-24")).toBe("Fri Dec 4–6");
+    expect(rowWhen(event({ start: "2026-12-30", end: "2027-01-02" }), "2026-11-24")).toBe("Wed Dec 30–Jan 2");
   });
 });

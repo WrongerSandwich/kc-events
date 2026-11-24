@@ -63,6 +63,6 @@ describe("budgets", () => {
     expect(front + (FIRST_PICK_CEILING - FIXTURE_PICKS) * PICK_BYTES + (MAX_PICKS - FIRST_PICK_CEILING) * MORE_PICK_BYTES).toBe(FRONT_PAGE_BYTES);
     // Held as a number too, so a change to the pick constants cannot hand the code more room unseen: what the code may
     // weigh moves only with a measured change to the code, here and in FRONT_PAGE_BYTES together.
-    expect(front).toBe(49_300);
+    expect(front).toBe(50_100);
   });
 });

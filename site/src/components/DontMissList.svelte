@@ -2,9 +2,10 @@
   import { flushSync, onMount, tick } from "svelte";
   // dont-miss, not events: the front page ships only the flagged events (the full list would be about 26 KB more).
   import { dontMiss } from "../generated/dont-miss";
-  import { addDays, formatTime } from "../lib/dates";
-  import { firstDay, isMultiDay, nextRunDay, venueLine } from "../lib/events";
-  import { anchorDate, bucketDontMiss, horizonBounds, horizonHeading, HORIZONS, rowWhen } from "../lib/horizon";
+  import { addDays, formatShort, formatTime } from "../lib/dates";
+  import { firstDay, isMultiDay, lastDay, nextRunDay, venueLine } from "../lib/events";
+  import { isOnNowPick, onNowPicks, rowWhen } from "../lib/front-rows";
+  import { anchorDate, bucketDontMiss, horizonBounds, horizonHeading, HORIZONS } from "../lib/horizon";
   import { kindName, kindWords } from "../lib/landing";
   import { hashId, kindLabel, slugify } from "../lib/slugs";
   import { dateTile } from "../lib/tile";
@@ -55,15 +56,18 @@
   });
   let buckets = $derived(bucketDontMiss(dontMiss, today));
   let total = $derived(HORIZONS.reduce((n, h) => n + buckets[h].length, 0));
+  // This week's runs on all week and past Sunday leave its cards for On now's rows, after it (isOnNowPick): the cards,
+  // the kind chips and the week strip are what opens, closes or happens by Sunday.
+  let onNow = $derived(onNowPicks(buckets["through-sunday"], today));
+  let week = $derived(buckets["through-sunday"].filter((e) => !isOnNowPick(e, today)));
 
   // This week's kind filter, one kind at a time, and what its live region last announced. Per visit: not in the URL,
   // not stored. Only this week has one: the sections after it are one-line rows (#184), but for the weekend's cards (soon).
   let chosen = $state<string | undefined>();
   let announced = $state<string | undefined>();
 
-  /** This week's picks, or just one kind of them. */
+  /** This week's picks (On now's aside), or just one kind of them. */
   function picksOf(kind: string | undefined): PublishedEvent[] {
-    const week = buckets["through-sunday"];
     return kind === undefined ? week : week.filter((e) => e.kind === kind);
   }
 
@@ -142,7 +146,7 @@
   let doneToday = $derived.by(() => {
     if (now === undefined || now.slice(11, 13) < LATE_HOUR) return false;
     const ahead = upcomingOf(undefined);
-    return buckets["through-sunday"].some(hasStarted) && ahead.length > 0 && ahead.every(afterToday);
+    return week.some(hasStarted) && ahead.length > 0 && ahead.every(afterToday);
   });
 
   /** Three days or more left in the week: enough for the week strip to say something. */
@@ -160,16 +164,31 @@
   });
 </script>
 
+{#snippet row(event: PublishedEvent, when: string[])}
+  <!-- Date, title, venue; the pick tag under the date, at every width, so the titles start in one column and keep
+       their line (the front page critique of 2026-11-24). -->
+  <!-- A day's number keeps to its month ("Dec 27"), so a wrapped date never strands it. -->
+  <li class={`kind-${slugify(event.kind)}`}>
+    <span class="lead">
+      <span class="when">{#each when as line, i (line)}{i > 0 ? " " : ""}<span>{line.replace(/ (\d)/g, " $1")}</span>{/each}</span>
+      <PickTag reason={event.pickReason} />
+    </span>
+    <a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {kindName(event.kind).toLowerCase()}</span></a>
+    <span class="where">{venueLine(event)}</span>
+  </li>
+{/snippet}
+
 {#if total === 0}
   <p class="empty">Nothing picked right now. <a href="/explore?when=all">Browse everything</a> instead.</p>
 {:else}
   {#each HORIZONS as h (h)}
     {@const heading = horizonHeading(h, today, doneToday)}
     {@const headingId = `heading-${h}`}
+    {@const picks = h === "through-sunday" ? week : buckets[h]}
     <section aria-labelledby={headingId}>
       <h2 id={headingId} class="section-heading">{heading}</h2>
-      {#if buckets[h].length === 0}
-        <p class="empty">{emptyLines[h]}</p>
+      {#if picks.length === 0}
+        <p class="empty">{h === "through-sunday" && onNow.length > 0 ? "Nothing else picked between now and Sunday." : emptyLines[h]}</p>
       {:else if h !== "through-sunday"}
         <!-- After this week, one line a pick (#184): the cards are for what is close enough to plan tonight, which at
              the weekend reaches into the days after it (soon). Each row keeps its pick tag, the one part of the why
@@ -180,13 +199,7 @@
         {@const rows = buckets[h].filter((e) => !soon.has(e.id))}
         {#if rows.length > 0}
         <ul class="later">
-          {#each rows as event (event.id)}
-            <li class={`kind-${slugify(event.kind)}`}>
-              <span class="when">{rowWhen(event, today)}</span>
-              <span class="what"><a href={`/e/${event.id}`}><span class="icon"><KindIcon kind={event.kind} /></span>{event.title}<span class="visually-hidden">, {kindName(event.kind).toLowerCase()}</span></a><PickTag reason={event.pickReason} /></span>
-              <span class="where">{venueLine(event)}</span>
-            </li>
-          {/each}
+          {#each rows as event (event.id)}{@render row(event, [rowWhen(event, today)])}{/each}
         </ul>
         {/if}
       {:else}
@@ -253,6 +266,15 @@
         <p class="more"><a href={explorerHref(kind)}>This week's picks in the explorer</a></p>
       {/if}
     </section>
+    {#if h === "through-sunday" && onNow.length > 0}
+      <!-- Runs on all week and past Sunday, after the week they would crowd: a row each, its weekdays over its close. -->
+      <section aria-labelledby="heading-on-now">
+        <h2 id="heading-on-now" class="section-heading">On now</h2>
+        <ul class="later">
+          {#each onNow as event (event.id)}{@render row(event, [...(event.daysLine ? [event.daysLine] : []), `Closes ${formatShort(lastDay(event)!)}`])}{/each}
+        </ul>
+      </section>
+    {/if}
   {/each}
 {/if}
 
@@ -265,36 +287,41 @@
   .pick + .later { margin-top: var(--space-6); border-top: 1px solid var(--rule); }
   /* The one-line rows, after this week and in the started fold (the class is the Later list's, which had them first):
      date in a fixed column so titles align; the venue drops under on a phone. */
-  .later { list-style: none; padding: 0; margin: var(--space-2) 0 0; }
-  /* The venue column takes only what it needs up to 18rem, then wraps, so a long hall name never squeezes the title;
-     ranged left, so a wrapped one reads as one block rather than three ragged lines (#184). */
+  /* One grid for the list, each row a subgrid of it, so the titles and the venues each start in one column down the
+     list rather than wherever a row's own widths put them. The venue column takes only what the longest needs up to
+     18rem, then wraps, ranged left, so a long hall name never squeezes the title (#184). */
+  .later {
+    list-style: none; padding: 0; margin: var(--space-2) 0 0;
+    display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) minmax(0, max-content); column-gap: var(--space-4);
+  }
   .later li {
-    display: grid; grid-template-columns: 6.5rem minmax(0, 1fr) minmax(0, max-content); gap: 0 var(--space-4); align-items: baseline;
+    grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: baseline;
     padding-block: var(--space-2); border-bottom: 1px solid var(--rule);
   }
   .later li:last-child { border-bottom: 0; }
-  /* A row's date, a label: in the display capitals, as a tile's weekday and month are (#293). */
+  /* A row's date, a label: in the display capitals, as a tile's weekday and month are (#293). On now's two lines, a
+     run's weekdays over its close, each its own line. */
+  .later .when, .later .lead { grid-row: 1; }
   .later .when { font-family: var(--font-display); font-weight: 700; font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; color: var(--fg-muted); }
+  .later .when > span { display: block; }
   /* Icon, then title, with a hanging indent: a wrapped title lines up under itself, not under the icon. */
-  .later a { display: flex; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
-  .later .where { font-size: var(--text-sm); color: var(--fg-muted); max-width: 18rem; text-wrap: pretty; }
-  /* A row after this week: the title, then its pick tag (base.css's, in PickTag's markup, so global here), which never
-     gives way to a title that wraps. The started fold's rows have no tag: nothing there is left to choose between. */
-  .later .what { display: flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
-  .later :global(.dont-miss) { flex: none; }
+  .later a { grid-row: 1; display: flex; align-items: baseline; color: var(--fg); font-weight: var(--weight-medium); }
+  .later .where { grid-row: 1; font-size: var(--text-sm); color: var(--fg-muted); max-width: 18rem; text-wrap: pretty; }
+  /* The pick tag (base.css's, in PickTag's markup, so global here) straight under the date, in the room a wrapped
+     title or venue leaves; the started fold's rows have none, since nothing there is left to choose between. */
+  .later .lead { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
   @media (max-width: 34rem) {
-    /* The date column holds the widest pick tag under the date ("Major run" and its diamond, 94 px). */
-    .later li { grid-template-columns: 6rem minmax(0, 1fr); }
-    .later .where { grid-column: 2; max-width: none; }
-    /* The tag drops under the date, beside the venue: the room a two-line row leaves empty, so the title keeps its line. */
-    .later .what { display: contents; }
-    .later :global(.dont-miss) { grid-column: 1; grid-row: 2; justify-self: start; }
+    /* The date column holds the widest pick tag ("Major run" and its diamond, 94 px); the venue drops under the title. */
+    .later { grid-template-columns: 6rem minmax(0, 1fr); }
+    .later .where { grid-column: 2; grid-row: 2; max-width: none; }
+    /* The date and tag span both lines, so a tall date never pushes the venue off its title. */
+    .later .lead { grid-row: 1 / span 2; }
   }
   /* The narrowest phones: date over title, so the title gets the whole line; the tag rides the date line. */
   @media (max-width: 24rem) {
-    .later li { grid-template-columns: max-content minmax(0, 1fr); }
-    .later a, .later .where { grid-column: 1 / -1; }
-    .later :global(.dont-miss) { grid-column: 2; grid-row: 1; }
+    .later .lead { grid-column: 1 / -1; grid-row: 1; flex-flow: row wrap; align-items: baseline; gap: 0 var(--space-3); }
+    .later a { grid-column: 1 / -1; grid-row: 2; }
+    .later .where { grid-column: 1 / -1; grid-row: 3; }
   }
   .more { margin-top: var(--space-3); }
   /* Under a run of cards, the link stands off them as far as one card stands off the next. */
@@ -328,6 +355,18 @@
   .kinds :global(.chip[aria-pressed="true"]) { background: var(--hue); color: var(--bg-raised); }
   /* Phones: 32 px, over WCAG 2.5.8's 24 px with room to spare for a finger (audit 2026-10-21, A5). */
   @media (max-width: 800px) { .kinds :global(.chip) { min-height: 2rem; } }
+  /* Phones: one row that swipes sideways, as the explorer's kinds do, rather than three wrapped rows between the
+     heading and the first card (the front page critique of 2026-11-24). It fades at its end until swiped there. */
+  @media (max-width: 30rem) {
+    .kinds { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: calc(var(--space-3) - 4px) -4px calc(var(--space-2) - 4px); padding: 4px; }
+    .kinds li { flex: none; }
+    @supports (animation-timeline: scroll()) {
+      .kinds { mask-image: linear-gradient(to right, black calc(100% - var(--chips-fade)), transparent); animation: chips-end linear both; }
+      .kinds.kinds { animation-timeline: scroll(self inline); } /* apart, or the minifier folds it into the shorthand */
+    }
+  }
+  @property --chips-fade { syntax: "<length>"; inherits: false; initial-value: 0px; }
+  @keyframes chips-end { from, 95% { --chips-fade: 1.5rem; } to { --chips-fade: 0px; } }
   /* Forced colours (Windows High Contrast) drop the tint, the chip's only edge, and the pressed fill (audit A4): an
      edge in the button colour, and pressed in the system's selection colours, the icon with its words. */
   @media (forced-colors: active) {

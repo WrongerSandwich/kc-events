@@ -72,9 +72,13 @@
   .primary { color: var(--fg-muted); text-decoration: none; }
   .primary:hover { color: var(--fg); text-decoration: underline; }
   .verified { color: var(--fg-faint); }
+  /* The kind's link and the source's, each at least 24 px tall (WCAG 2.5.8): at the line's own height they were 19
+     and 21 (the front page critique of 2026-11-24). */
+  .tags > :global(a) { min-height: 1.5rem; align-items: center; }
   /* Save over Add to calendar, in a column beside the words, both the column's width. The column keeps Save's room
-     and stacks from its foot, so Add to calendar stays put when Save mounts above it. */
-  .actions { display: flex; flex-direction: column; justify-content: flex-end; gap: var(--space-2); min-height: calc(2 * var(--tap) + var(--space-2)); }
+     and stacks from its foot, so Add to calendar stays put when Save mounts above it. No gap: boxless, the two 44 px
+     targets already part their words, and a gap more set them apart as two things (the critique of 2026-11-24). */
+  .actions { display: flex; flex-direction: column; justify-content: flex-end; min-height: calc(2 * var(--tap)); }
   /* On a card the controls are quiet: no box until hovered, in the muted ink, so the title and the why line carry the
      card and five cards are not ten buttons. The tap target stays 44 px; a saved Save still fills with the accent. */
   .actions :global(.control:not([aria-pressed="true"])) { background: none; border-color: transparent; color: var(--fg-muted); }
