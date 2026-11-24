@@ -147,9 +147,9 @@ fail() {
   trap - ERR TERM HUP INT
   local why=$1
   echo "$RUN_NAME failed: $why"
-  # tee is still writing the log; give it a moment so the tail holds the error.
-  sleep 1
-  sync
+  # tee is still writing the log; give it a moment so the tail holds the error. (The tail reads the page cache, so
+  # no sync: on a busy machine one waits on every filesystem's disk for nothing.) The tests set the pause to 0.
+  sleep "${FAIL_LOG_SETTLE_SECONDS:-1}"
   local committed="Nothing was committed unless the push itself failed; the next run starts from origin/main either way."
   if [[ -n "$PUSHED" ]]; then
     committed="The run's data was committed and pushed as $PUSHED, so the site still shows the last deploy that built until it is fixed and deployed."

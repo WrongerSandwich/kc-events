@@ -103,6 +103,9 @@ async function clone() {
           FAKE_COMMENTS: comments,
           FAKE_PINGS: pings,
           FAKE_SITEMAPS: join(dir, "sitemaps"),
+          // No pause before a failure's log tail is read: no test reads the tail, and the second it costs each refusal
+          // was most of a test's 5 s budget on a loaded CI runner.
+          FAIL_LOG_SETTLE_SECONDS: "0",
           ...env,
         },
         encoding: "utf8",
@@ -134,7 +137,9 @@ async function clone() {
   };
 }
 
-describe("the weekly run script", () => {
+// Each test runs the real script, with bash, git and a bare origin, so a loaded CI runner under coverage takes several times
+// as long as a laptop does; 5 s left a refusal on the edge.
+describe("the weekly run script", { timeout: 20_000 }, () => {
   it("runs pnpm research as given and commits as the weekly run", async () => {
     const c = await clone();
 
