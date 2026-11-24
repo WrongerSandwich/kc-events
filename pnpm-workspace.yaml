@@ -5,3 +5,9 @@ includeWorkspaceRoot: true
 # A version is installable only once it is seven days old (the value is minutes), so a freshly
 # published malicious release is usually pulled before a bump can reach it.
 minimumReleaseAge: 10080
+# Rolldown's wasm binding (optional, never installed here) asks for emnapi 2.0 betas, and pnpm then
+# hands @astrojs/astro2tsx that runtime beside its 1.x core, a mismatched pair that crashes
+# `astro check` ("this.bridge.setLastError is not a function", #280). Every consumer accepts 1.x.
+overrides:
+  '@emnapi/core': ^1.11.3
+  '@emnapi/runtime': ^1.11.3
