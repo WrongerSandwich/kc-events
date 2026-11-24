@@ -79,7 +79,9 @@ export function buildOwnPageRequest(
     ...thisRunLines(config, today),
     `- Event: ${event.title}`,
     ...(event.venue !== undefined ? [`- Venue: ${event.venue}`] : []),
-    `- The calendar's date: ${calendarDate(event.start)}`,
+    ...(event.start !== undefined
+      ? [`- The calendar's date: ${calendarDate(event.start)}`]
+      : [`- The calendar gives no date for this event, only its last day: it is already on. Leave date, time and timeEvidence null.`]),
     ...(event.end !== undefined ? [`- The calendar's last day: ${calendarDate(event.end)}`] : []),
     ...(kind === "venue" ? [`- The calendar names no venue for this event: give its venue (venue, venueEvidence) as this page names it.`] : []),
     ...(kind === "ticket" ? [`- This page: the run's ticket page, linked from its own page, read for the weekdays it plays (days); leave the other fields null.`] : []),
@@ -108,7 +110,7 @@ export interface Quoted<T = string> {
  * look at and from which nothing is taken; a reply that could not be read; or what it gives on the
  * list's date (or giving no date), each field only when it holds, with a line for each one left out
  * that is worth one. A time comes only on the list's date, with a quote on the page that gives that
- * time; a price or an age limit only with a quote on the page that states it (ADR 0002). One that
+ * time, so an event its list gave no start (a run already on, #323) takes none, and its page's date is not read; a price or an age limit only with a quote on the page that states it (ADR 0002). One that
  * fails that, a time that does not exist, or a value past its cap, is left out. A description, written
  * as the list's is, carries no quote. A venue is read only when asked for (wantsVenue, #267), and taken only with a
  * quote on the page that names it; one asked for and not taken is a line.
@@ -123,7 +125,8 @@ export function readOwnPageReply(value: unknown, event: Event, reading: PageRead
   if (!parsed.success) return { kind: "unreadable" };
   const venueReply = wantsVenue ? (parsed.data as z.infer<typeof ownPageVenueReplySchema>) : undefined;
   const reply = parsed.data;
-  const day = reply.date?.trim();
+  // A run already on with no start (#323) has no list date to disagree with or to set a time on: its page's date and time are not taken.
+  const day = event.start === undefined ? undefined : reply.date?.trim();
   if (day && day !== calendarDate(event.start)) return { kind: "disagrees", date: day };
   const quotable = quotableText(reading);
   const unmarked = unmarkedIn(reading);

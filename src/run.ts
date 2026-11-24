@@ -479,11 +479,16 @@ function assertSomethingReverified({ pagesTried, pagesFetched }: { pagesTried: n
   }
 }
 
-/** Whether an event's span covers a day from `from` through `to`: it starts in that range, or started before it and has not ended (#151, #253). */
+/**
+ * Whether an event's span covers a day from `from` through `to`: it starts in that range, or started before it and has
+ * not ended (#151, #253), or it has no start and has not ended, a run already on whose page gives only its last day
+ * ("On view through Feb 28", #323). An event with neither start nor end (one that recurs) covers none.
+ */
 function coversDays(e: Event, from: string, to: string): boolean {
   const date = calendarDate(e.start);
-  if (date === undefined || date > to) return false;
   const end = calendarDate(e.end);
+  if (date === undefined) return end !== undefined && end >= from;
+  if (date > to) return false;
   return date >= from || (end !== undefined && end >= from);
 }
 
@@ -1369,14 +1374,16 @@ function withoutDaysQuote({ days: _days, ...evidence }: Event["evidence"]): Even
 
 /**
  * Whether a re-reading keeps what an event's own page gave it (#133): the reading gives the same date
- * and the same own page that was read. The price, age limit and a run's days (#143) stand with their quotes, the own page's
+ * and the same own page that was read, or, for a run already on with no start (#323), still no start, the same last day
+ * and the same own page. The price, age limit and a run's days (#143) stand with their quotes, the own page's
  * description stands over a shorter one, and the page is not read again; a new date or another own
  * page drops them, and a pick's page is read again.
  */
 function keepsOwnPageRead(known: Event, sighting: Event): boolean {
   const read = known.ownPageRead;
-  if (read === undefined || sighting.start === undefined || sighting.eventUrl === undefined) return false;
-  return calendarDate(sighting.start) === calendarDate(known.start) && samePage(sighting.eventUrl, read.page);
+  if (read === undefined || sighting.eventUrl === undefined || !samePage(sighting.eventUrl, read.page)) return false;
+  if (sighting.start === undefined) return known.start === undefined && sighting.end !== undefined && calendarDate(sighting.end) === calendarDate(known.end);
+  return calendarDate(sighting.start) === calendarDate(known.start);
 }
 
 /** Whether a record keeps the days it carries (#143): the reading still makes it a limited run. Enough on its own for a stored start kept with its quotes (keepsStart); a kept own-page read also asks where they came from (keepsOwnPageDays). */
@@ -1877,7 +1884,7 @@ function foldAgain(
 /**
  * Two events by how soon they are on, the sooner first: by start, an event running since before today
  * as on today, so a long run does not go ahead of tonight's shows; a date-only start sorts as that day's
- * first moment.
+ * first moment. An event with no start, a run already on (#323), sorts as on today too.
  */
 function compareNearness(a: Event, b: Event, today: string): number {
   const [x, y] = [a, b].map((e) => (e.start === undefined || e.start < today ? today : e.start));
@@ -1951,7 +1958,7 @@ function robotsGate(): RobotsGate {
 /**
  * The second reading for picks (#133). After curation, every active pick with an own page whose span
  * covers a day from today through the horizon (it starts in that range, or started before today and
- * has not ended, #151) has that page read (readOwnPage), the way its source's pages are
+ * has not ended, #151, or has no start and has not ended, #323) has that page read (readOwnPage), the way its source's pages are
  * fetched, unless the own-page pass covered it this run (#254: kept a read for it or tried it), or a run
  * read it before on the date and own page the list still gives (refresh keeps that read), which the
  * report counts as kept. So with the pass on it reads only a pick the pass's ceiling left.
