@@ -648,7 +648,8 @@ interface SourceExtraction {
  * read was, and its yield is the larger listing and the later latest start of the two.
  *
  * The last page of a listing (`listedAt`) whose own latest start falls inside the horizon gets a
- * problem line saying the next page may be needed (#229); it changes nothing and holds nothing.
+ * problem line saying the next page may be needed (#229); it changes nothing and holds nothing. Empty pages of a
+ * listing past its end (#327) get one line too, and hold nothing either.
  */
 async function extractFromPages(pages: SourcePage[], model: ModelPort, context: ExtractionContext) {
   const sightings: Sighting[] = [];
@@ -657,6 +658,7 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
   const tally = noTally();
   let pagesNotExtracted = 0;
   const lastDay = horizonEnd(context.today, context.config.horizonWeeks);
+  const listingPages = new Map<Source, Map<string, ListingPage>>();
   // The reads go out several pages at once (#252) and are taken up below one page at a time in registry order, so what the
   // merge and the report see does not depend on which page came back first.
   const settledReads = await inOrder(pages, context.config.concurrency, ({ source, page }, turn) =>
@@ -704,13 +706,23 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
         attempts.yields.set(key, sofar ? joinedYield(sofar, pageYield) : pageYield);
       }
     }
-    if (!reads.some(readInFull)) markUnread();
+    const inFull = reads.some(readInFull);
+    if (!inFull) markUnread();
     // A page of a listing read as listing nothing (a wobble, or a page that rendered empty), or cut at the cap, leaves
     // unknown whether its events are still listed; the other pages cannot say, so the listing's events are held (#226).
-    const cutOrEmpty = reads.some((r) => r.truncated) ? "was cut at the cap" : pageYield?.listed === 0 ? "read as listing nothing" : undefined;
-    if (source.listedAt && cutOrEmpty) {
-      attempts.unread.add(pageKey(source.listedAt));
-      outcome.problems.push(`${page.finalUrl} ${cutOrEmpty}, so the events listed at ${source.listedAt} are held, not struck`);
+    // Unless it is past the end of the listing (#327), which only all of the listing's pages can tell: an empty page read
+    // in full and not cut waits for that below, holding nothing yet.
+    const cut = reads.some((r) => r.truncated);
+    const cutOrEmpty = cut ? "was cut at the cap" : pageYield?.listed === 0 ? "read as listing nothing" : undefined;
+    if (source.listedAt) {
+      const listing = listingPages.get(source) ?? new Map<string, ListingPage>();
+      listingPages.set(source, listing);
+      const emptyInFull = !cut && inFull && pageYield?.listed === 0;
+      listing.set(page.url, { listed: pageYield?.listed ?? 0, emptyInFull, finalUrl: page.finalUrl });
+      if (cutOrEmpty && !emptyInFull) {
+        attempts.unread.add(pageKey(source.listedAt));
+        outcome.problems.push(`${page.finalUrl} ${cutOrEmpty}, so the events listed at ${source.listedAt} are held, not struck`);
+      }
     }
     // A listing's last page still listing inside the horizon may have more past it, on a page the registry does not list (#229).
     const reach = pageYield?.latestStart;
@@ -726,7 +738,49 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     if (first?.sightings && second?.sightings) outcome.secondReadAdded = (outcome.secondReadAdded ?? 0) + addedBy(second.sightings, first.sightings);
   }
 
+  // With every page of a listing read, an empty page read in full holds the listing unless it is past the end (#327).
+  for (const [source, listing] of listingPages) {
+    const outcome = bySource.get(source.name)!;
+    const end = endOfListing(source.urls, listing);
+    for (const [index, url] of source.urls.entries()) {
+      const read = listing.get(url);
+      if (!read?.emptyInFull || (end && index > end.last)) continue;
+      attempts.unread.add(pageKey(source.listedAt!));
+      outcome.problems.push(`${read.finalUrl} read as listing nothing, so the events listed at ${source.listedAt} are held, not struck`);
+    }
+    if (end) {
+      const first = end.last + 2;
+      const past = first === source.urls.length ? `page ${first} lists` : `pages ${first}–${source.urls.length} list`;
+      outcome.problems.push(`${past} nothing after page ${end.last + 1}, the end of the listing`);
+    }
+  }
+
   return { sightings, tally, pagesNotExtracted, bySource, attempts };
+}
+
+/** What one page of a listing (`listedAt`) amounted to, for telling whether it is past the listing's end (#327). */
+interface ListingPage {
+  listed: number;
+  /** Loaded, read in full, not cut at the cap, and listing nothing. */
+  emptyInFull: boolean;
+  finalUrl: string;
+}
+
+/**
+ * Where a listing ends (#327), as the index in `urls` of its last page that lists something, when the pages after it
+ * are past the end: each of them, and every page after it, loaded, was read in full, was not cut and listed nothing,
+ * and some earlier page listed something. A calendar running down (the Johnson County Library's search, paged from
+ * today forward) leaves its last URLs empty until it publishes more; they say nothing of the events it lists, so they
+ * hold none of them. Undefined when no page is past the end: the last page lists, did not come back, was cut or not
+ * read in full, or no page lists anything. A page that wobbles empty right after the last that lists is the risk
+ * accepted: its events take one strike, and two are needed to expire them.
+ */
+function endOfListing(urls: string[], listing: Map<string, ListingPage>): { last: number } | undefined {
+  let start = urls.length;
+  while (start > 0 && listing.get(urls[start - 1]!)?.emptyInFull) start--;
+  if (start === urls.length) return undefined;
+  const last = urls.slice(0, start).findLastIndex((url) => (listing.get(url)?.listed ?? 0) > 0);
+  return last < 0 ? undefined : { last };
 }
 
 const failedBecause = (error: unknown) => (error instanceof SpendCapReached ? "spend cap reached" : modelFailed(error));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyDataset, type Dataset } from "../src/dataset.js";
-import { parseRegistry } from "../src/registry.js";
+import { parseRegistry, type Source } from "../src/registry.js";
 import type { CannedPage, ScriptedReply } from "./fakes/ports.js";
 import { testConfig } from "./fakes/config.js";
 import { runWith } from "./fakes/run.js";
@@ -95,6 +95,96 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
     expect(report.sources[0]!.detail).toContain(`${feedPage(1)} read as listing nothing, so the events listed at ${CALENDAR} are held, not struck`);
   });
 
+  describe("pages past the end of the listing (#327)", () => {
+    // A listing of four pages, like the Johnson County Library's search, whose last pages empty as the calendar runs down.
+    const fourPages = { ...council, urls: [1, 2, 3, 4].map(feedPage) };
+    const allFour = Object.fromEntries(fourPages.urls.map((u) => [u, page]));
+    const long: CannedPage = { status: 200, body: `<html><body>${"<div>A long description of the calendar, nothing on this night</div>\n".repeat(1_500)}</body></html>` };
+    const runFour = (now: Date, dataset: Dataset, completions: ScriptedReply[], pages: Record<string, CannedPage> = allFour, sources: Source[] = [fourPages]) =>
+      runWith(now, dataset, { sources, pages, completions });
+    const detail = (report: { sources: { detail?: string }[] }) => report.sources[0]!.detail ?? "";
+    const held = (n: number) => `${feedPage(n)} read as listing nothing, so the events listed at ${CALENDAR} are held, not struck`;
+    const weekOne = async () => (await runFour(WEEK_1, emptyDataset(), [reply(pottery), reply(quartet), reply(choir), reply(winter)])).dataset;
+
+    it("do not hold it when every page after the last that lists reads in full as listing nothing, so an event no page lists is struck", async () => {
+      const { dataset, report } = await runFour(WEEK_2, await weekOne(), [reply(quartet), reply(), reply(), reply()]);
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ verificationFailures: 1 });
+      expect(titled(dataset, "String Quartet")[0]).toMatchObject({ verificationFailures: 0 });
+      expect(detail(report)).toContain("pages 2–4 list nothing after page 1, the end of the listing");
+      expect(detail(report)).not.toContain("held, not struck");
+    });
+
+    it("name one page past the end as one", async () => {
+      const { dataset, report } = await runFour(WEEK_2, await weekOne(), [reply(quartet), reply(choir), reply(winter), reply()]);
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ verificationFailures: 1 });
+      expect(detail(report)).toContain("page 4 lists nothing after page 3, the end of the listing");
+      expect(detail(report)).not.toContain("held, not struck");
+    });
+
+    it("hold it when an empty page comes before a page that lists", async () => {
+      const { dataset, report } = await runFour(WEEK_2, await weekOne(), [reply(quartet), reply(), reply(winter), reply()]);
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+      expect(detail(report)).toContain(held(2));
+      expect(detail(report)).toContain("page 4 lists nothing after page 3, the end of the listing");
+    });
+
+    it("hold it when every page lists nothing", async () => {
+      const { dataset, report } = await runFour(WEEK_2, await weekOne(), [reply(), reply(), reply(), reply()]);
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+      for (const n of [1, 2, 3, 4]) expect(detail(report)).toContain(held(n));
+      expect(detail(report)).not.toContain("the end of the listing");
+    });
+
+    it("hold it when a trailing page could not be loaded", async () => {
+      const { dataset, report } = await runFour(
+        WEEK_2,
+        await weekOne(),
+        [reply(quartet), reply(), reply(), reply()],
+        { ...allFour, [feedPage(4)]: new Error("ECONNRESET"), [knuckleheads.urls[0]!]: page },
+        [fourPages, knuckleheads],
+      );
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+      expect(detail(report)).toContain(held(2));
+      expect(detail(report)).toContain(held(3));
+      expect(detail(report)).not.toContain("the end of the listing");
+    });
+
+    it("hold it when a trailing page was cut at the cap", async () => {
+      const { dataset, report } = await runFour(WEEK_2, await weekOne(), [reply(quartet), reply(), reply(), reply()], { ...allFour, [feedPage(4)]: long });
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+      expect(detail(report)).toContain(held(2));
+      expect(detail(report)).toContain(`${feedPage(4)} was cut at the cap, so the events listed at ${CALENDAR} are held, not struck`);
+      expect(detail(report)).not.toContain("the end of the listing");
+    });
+
+    it("hold it when a trailing page was not read in full", async () => {
+      // Page 4's only candidate runs past a length cap, so its reading lists nothing and is not in full.
+      const runaway = at({ title: "Runaway", startDate: "2026-11-01", dateEvidence: "Sun, Nov 1", description: "x".repeat(301) });
+      const { dataset, report } = await runFour(WEEK_2, await weekOne(), [reply(quartet), reply(), reply(), reply(runaway)]);
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+      expect(detail(report)).toContain(held(2));
+      expect(detail(report)).not.toContain("the end of the listing");
+    });
+
+    it("leave the next-page line quiet when the last page is past the end, and it still fires on a last page listing inside the horizon (#229)", async () => {
+      const past = await runFour(WEEK_2, emptyDataset(), [reply(winter), reply(choir, quartet), reply(), reply()]);
+      expect(detail(past.report)).not.toContain("add the next page");
+      expect(detail(past.report)).toContain("pages 3–4 list nothing after page 2, the end of the listing");
+
+      const listing = await runFour(WEEK_2, emptyDataset(), [reply(winter), reply(), reply(), reply(choir, quartet)]);
+      expect(detail(listing.report)).toContain(
+        `${feedPage(4)} lists through 2026-11-14, inside the horizon (2026-12-04); events past it may be on a page not read, so add the next page`,
+      );
+    });
+  });
+
   describe("a page whose every event starts after the horizon (#264)", () => {
     /** A reply listing these candidates inside the horizon, and reporting what the page lists after it. */
     const pastHorizon = (latestStart: string | null, ...candidates: unknown[]) => ({ ...reply(...candidates), value: { events: candidates, afterHorizon: { listed: true, latestStart } } });
@@ -110,12 +200,13 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
     });
 
     it("but a reply that says nothing of after the horizon still holds the listing", async () => {
-      const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(pottery, quartet), reply()])).dataset;
+      const week1 = (await runAt(WEEK_1, emptyDataset(), [reply(pottery), reply(quartet)])).dataset;
 
-      const { dataset, report } = await runAt(WEEK_2, week1, [reply(quartet), { ...reply(), value: { events: [] } }]);
+      // Page 1, before a page that lists, so not past the end of the listing (#327).
+      const { dataset, report } = await runAt(WEEK_2, week1, [{ ...reply(), value: { events: [] } }, reply(quartet)]);
 
       expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
-      expect(report.sources[0]!.detail).toContain(`${feedPage(2)} read as listing nothing, so the events listed at ${CALENDAR} are held, not struck`);
+      expect(report.sources[0]!.detail).toContain(`${feedPage(1)} read as listing nothing, so the events listed at ${CALENDAR} are held, not struck`);
     });
 
     it("nor does a last page listing inside the horizon and after it ask for the next page (#229)", async () => {
