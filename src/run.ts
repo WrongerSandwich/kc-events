@@ -744,12 +744,12 @@ async function extractFromPages(pages: SourcePage[], model: ModelPort, context: 
     const end = endOfListing(source.urls, listing);
     for (const [index, url] of source.urls.entries()) {
       const read = listing.get(url);
-      if (!read?.emptyInFull || (end && index > end.last)) continue;
+      if (!read?.emptyInFull || (end && index >= end.start)) continue;
       attempts.unread.add(pageKey(source.listedAt!));
       outcome.problems.push(`${read.finalUrl} read as listing nothing, so the events listed at ${source.listedAt} are held, not struck`);
     }
     if (end) {
-      const first = end.last + 2;
+      const first = end.start + 1;
       const past = first === source.urls.length ? `page ${first} lists` : `pages ${first}–${source.urls.length} list`;
       outcome.problems.push(`${past} nothing after page ${end.last + 1}, the end of the listing`);
     }
@@ -767,20 +767,21 @@ interface ListingPage {
 }
 
 /**
- * Where a listing ends (#327), as the index in `urls` of its last page that lists something, when the pages after it
- * are past the end: each of them, and every page after it, loaded, was read in full, was not cut and listed nothing,
- * and some earlier page listed something. A calendar running down (the Johnson County Library's search, paged from
+ * Where a listing ends (#327), when its last pages are past the end: `start`, the index in `urls` of the first of the
+ * run of pages at the end each of which loaded, was read in full, was not cut and listed nothing, and `last`, that of
+ * the last page before the run that listed something. A page between the two (one that did not come back, was cut or
+ * was not read in full) is not past the end, nor is an empty page before it. A calendar running down (the Johnson County Library's search, paged from
  * today forward) leaves its last URLs empty until it publishes more; they say nothing of the events it lists, so they
  * hold none of them. Undefined when no page is past the end: the last page lists, did not come back, was cut or not
  * read in full, or no page lists anything. A page that wobbles empty right after the last that lists is the risk
  * accepted: its events take one strike, and two are needed to expire them.
  */
-function endOfListing(urls: string[], listing: Map<string, ListingPage>): { last: number } | undefined {
+function endOfListing(urls: string[], listing: Map<string, ListingPage>): { last: number; start: number } | undefined {
   let start = urls.length;
   while (start > 0 && listing.get(urls[start - 1]!)?.emptyInFull) start--;
   if (start === urls.length) return undefined;
   const last = urls.slice(0, start).findLastIndex((url) => (listing.get(url)?.listed ?? 0) > 0);
-  return last < 0 ? undefined : { last };
+  return last < 0 ? undefined : { last, start };
 }
 
 const failedBecause = (error: unknown) => (error instanceof SpendCapReached ? "spend cap reached" : modelFailed(error));

@@ -173,6 +173,30 @@ describe("a source listed at one URL and read through its feed's pages (#226)", 
       expect(detail(report)).not.toContain("the end of the listing");
     });
 
+    it("hold it on an empty page before a trailing page that could not be loaded, and count only the pages after that one past the end", async () => {
+      const { dataset, report } = await runFour(
+        WEEK_2,
+        await weekOne(),
+        [reply(quartet), reply(), reply(), reply()],
+        { ...allFour, [feedPage(3)]: new Error("ECONNRESET"), [knuckleheads.urls[0]!]: page },
+        [fourPages, knuckleheads],
+      );
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+      expect(detail(report)).toContain(held(2));
+      expect(detail(report)).not.toContain(held(4));
+      expect(detail(report)).toContain("page 4 lists nothing after page 1, the end of the listing");
+    });
+
+    it("hold it when the model's read of a trailing page failed", async () => {
+      const { dataset, report } = await runFour(WEEK_2, await weekOne(), [reply(quartet), reply(), reply(), new TypeError("terminated")]);
+
+      expect(titled(dataset, "Pottery Night")[0]).toMatchObject({ status: "active", verificationFailures: 0 });
+      expect(detail(report)).toContain(held(2));
+      expect(detail(report)).toContain(held(3));
+      expect(detail(report)).not.toContain("the end of the listing");
+    });
+
     it("leave the next-page line quiet when the last page is past the end, and it still fires on a last page listing inside the horizon (#229)", async () => {
       const past = await runFour(WEEK_2, emptyDataset(), [reply(winter), reply(choir, quartet), reply(), reply()]);
       expect(detail(past.report)).not.toContain("add the next page");
