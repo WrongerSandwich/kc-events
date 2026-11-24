@@ -33,10 +33,9 @@ concurrency: 4
 # The most own pages a run reads before curation (#254): every upcoming event's own page is read once,
 # nearest start first, for its time, price, age limit, days and description; what this leaves is read at
 # the next run, and the report says how many were left.
-# Raised from 150 for the runs after 2026-11-09, which read 136 and left 202: a read costs under a tenth of a cent,
-# and an event left unread is judged by curation from its list line alone. Back to 150 once a weekly report's
-# "left for next run" reads 0 (#265).
-ownPageReadsPerRun: 400
+# It was 400 from the 2026-11-09 run, which read 136 and left 202, until the backlog cleared: the 11-16 and 11-23
+# reports both read "0 left for next run" (11-23 read 97 and kept 194 from earlier reads), so it is back to 150 (#265).
+ownPageReadsPerRun: 150
 
 models:
   extraction: openai/gpt-6-luna

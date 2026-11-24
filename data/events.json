@@ -60755,7 +60755,7 @@
       "lastChanged": "2026-11-23T06:17:07-06:00",
       "lastJudged": "2026-11-23T06:17:07-06:00",
       "judgedWith": "8713cc922674",
-      "status": "active",
+      "status": "expired",
       "verificationFailures": 0,
       "consecutiveOutages": 0,
       "lead": {
@@ -60765,7 +60765,9 @@
       "evidence": {
         "date": "Dec 04, 2026\nKCAI Event\nLuminary Walk on the Arterie KC\nAlong the Arterie KC | Kansas City Art Institute | Kemper Museum of Contemporary Art | Nelson-Atkins Museum of Art @ 6 p.m.",
         "venue": "Along the Arterie KC | Kansas City Art Institute | Kemper Museum of Contemporary Art | Nelson-Atkins Museum of Art"
-      }
+      },
+      "expiryReason": "duplicate",
+      "duplicateOf": "evt_97558c82fef9"
     },
     {
       "id": "evt_68f8346f9458",
