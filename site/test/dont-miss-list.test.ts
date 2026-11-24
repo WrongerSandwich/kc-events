@@ -50,6 +50,9 @@ describe("DontMissList", () => {
     expect(within(sections[0]!).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Closing run", "Tuesday show", "Wednesday show"]);
     expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("All 3 2 Music1 Art/exhibitions");
     expect(within(sections[0]!).queryByText("Long show")).toBeNull();
+    // The strip draws a band for the run that closes Sunday alone, not one for each run on all week.
+    const strip = within(sections[0]!).getByRole("navigation", { name: "This week by day" });
+    expect(strip.querySelectorAll(".day:first-child .lane")).toHaveLength(1);
     // On now: rows, no cards; a run's weekdays over its close, then its pick tag.
     expect(within(sections[1]!).queryAllByRole("article")).toEqual([]);
     const rows = within(sections[1]!).getAllByRole("listitem");

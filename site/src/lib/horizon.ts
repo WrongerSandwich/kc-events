@@ -1,5 +1,5 @@
 import { addDays, comingSunday, formatDay, formatRange, formatShort, formatTime, isDateOnly, weekday } from "./dates";
-import { firstDay, isDated, isMultiDay, isOpen, isPast, isUnderway, lastDay, nextRunDay } from "./events";
+import { firstDay, isDated, isOpen, isPast, isUnderway, lastDay, nextRunDay } from "./events";
 import type { PublishedEvent } from "./types";
 
 export type Horizon = "through-sunday" | "next-two-weeks" | "further-out";
