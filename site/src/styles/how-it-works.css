@@ -44,7 +44,8 @@
 .how-back a { text-decoration: underline; }
 .how-note { color: var(--fg-muted); font-size: var(--text-sm); }
 .how-foot { margin-top: var(--space-16); padding-top: var(--space-4); border-top: 1px solid var(--rule); color: var(--fg-muted); font-size: var(--text-sm); }
-/* A small label over a row of a diagram: the text face in tracked capitals, since the display face is for headings. */
+/* A small label over a row: the text face in tracked capitals, as the strip's, whose date the display face's figures
+   would set poorly. Inside a figure it is a diagram's label, in the display capitals (below). */
 .how-label { font-size: var(--text-xs); font-weight: var(--weight-strong); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-muted); margin: 0 0 var(--space-2); }
 
 /* The last weekly run's figures */
@@ -60,8 +61,10 @@
 .how-contents a { display: block; text-decoration: none; border: 1px solid var(--control-border); background: var(--bg-raised); border-radius: 999px; padding: 0.3rem 0.75rem; font-size: var(--text-sm); }
 .how-contents a:hover { border-color: var(--fg); }
 
-/* A figure: a framed diagram and its caption, wider than the prose on a wide screen */
-.how-figure { width: var(--how-wide); margin: var(--space-6) calc((100% - var(--how-wide)) / 2) var(--space-4); border: 1px solid var(--rule); background: var(--bg-raised); border-radius: var(--radius); padding: var(--space-4); }
+/* A figure: a framed diagram and its caption, wider than the prose on a wide screen, headed by the thick and thin rule
+   (3px, a 3px gap, 1px) in ink, as the header is closed by it. Square under the rule, rounded at its foot. */
+.how-figure { position: relative; width: var(--how-wide); margin: var(--space-6) calc((100% - var(--how-wide)) / 2) var(--space-4); border: 1px solid var(--rule); border-top: 3px solid var(--fg); background: var(--bg-raised); border-radius: 0 0 var(--radius) var(--radius); padding: calc(var(--space-4) + 4px) var(--space-4) var(--space-4); }
+.how-figure::before { content: ""; position: absolute; inset: 3px 0 auto; border-top: 1px solid var(--fg); }
 /* A link inside a diagram is ink and underlined, as every link on the site is: a role's colour is never a link's. */
 .how-figure a { color: var(--fg); text-decoration: underline; }
 .how-figure figcaption { color: var(--fg-muted); font-size: var(--text-sm); margin-top: var(--space-3); max-width: 80ch; }
@@ -69,8 +72,9 @@
 .how-scroll { overflow-x: auto; position: relative; }
 .how-figure > * + .how-label { margin-top: var(--space-4); }
 
-/* A role's tag, and the key that explains the five */
-.how-role { display: inline-flex; align-items: center; gap: 0.4em; font-size: var(--text-xs); font-weight: var(--weight-strong); line-height: 1; padding: 0.3rem 0.55rem; border-radius: 999px; color: var(--how-fg); background: var(--how-bg); border: 1px solid var(--how-edge); white-space: nowrap; }
+/* A role's tag, and the key that explains the five. The tag is in the display capitals (below), whose face sits high in
+   its line box, so its words come down a touch to the middle. */
+.how-role { display: inline-flex; align-items: center; gap: 0.4em; line-height: 1; padding: 0.35rem 0.55rem 0.25rem; border-radius: 999px; color: var(--how-fg); background: var(--how-bg); border: 1px solid var(--how-edge); white-space: nowrap; }
 .how-role::before { content: ""; border: 0.25rem solid currentColor; border-radius: 50%; }
 .how-key { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); gap: var(--space-3) var(--space-6); }
 .how-key > div { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); font-size: var(--text-sm); color: var(--fg-muted); }
@@ -83,8 +87,8 @@
 
 /* The week: a lane for each thing that happens, a column for each day */
 .how-week { display: grid; grid-template-columns: 6.5rem repeat(7, minmax(5.75rem, 1fr)); gap: 0.4rem; min-width: 50rem; }
-.how-week-day { font-size: var(--text-xs); font-weight: var(--weight-strong); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-muted); padding: 0 0.15rem var(--space-1); }
-.how-week-lane { font-size: var(--text-sm); font-weight: var(--weight-strong); color: var(--fg-muted); align-self: center; line-height: 1.25; }
+.how-week-day { color: var(--fg-muted); padding: 0 0.15rem var(--space-1); }
+.how-week-lane { color: var(--fg-muted); align-self: center; line-height: 1.25; }
 .how-week-gap { min-height: 2.9rem; border-radius: var(--radius); background: var(--pressed-tint); opacity: 0.5; }
 .how-week-item { padding: 0.45rem 0.55rem; font-size: var(--text-sm); line-height: 1.3; }
 .how-week-item b, .how-week-item time { display: block; }
@@ -101,7 +105,7 @@
 .how-gate-do b { font-weight: var(--weight-strong); }
 .how-gate-do span { display: block; color: var(--fg-muted); font-size: var(--text-sm); }
 .how-gate-if { font-size: var(--text-sm); padding: 0.4rem 0.6rem; align-self: start; }
-.how-gate-if b { display: block; font-size: var(--text-xs); letter-spacing: 0.06em; text-transform: uppercase; }
+.how-gate-if b { display: block; }
 /* The gate after which the data is public: a rule across the chain, and the words say so. */
 .how-gate-line { border-top: 3px double var(--fg); padding-top: var(--space-4); margin-top: var(--space-1); }
 .how-gate-line::before { border-color: var(--fg); }
@@ -119,14 +123,18 @@
 .how-ports li { font-size: var(--text-xs); border: 1px dashed var(--control-border); border-radius: 999px; padding: 0.2rem 0.55rem; background: var(--bg-raised); }
 .how-ports b { font-weight: var(--weight-strong); }
 
-/* The run's steps, in phases, with a mark for each of the two days a step runs on */
-.how-pipe { list-style: none; margin: 0; padding: 0; }
-.how-pipe > li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) 2.4rem 2.4rem; gap: 0 var(--space-3); }
-.how-phase { margin-top: var(--space-4); align-items: end; }
-.how-phase:first-child { margin-top: 0; }
-.how-phase > b { grid-column: 1 / 3; justify-self: start; font-size: var(--text-xs); font-weight: var(--weight-strong); letter-spacing: 0.08em; text-transform: uppercase; padding: 0.3rem 0.6rem; border-radius: 3px; background: var(--fg); color: var(--bg); }
-.how-phase > b span { font-weight: var(--weight-regular); letter-spacing: 0; text-transform: none; margin-left: 0.5em; }
-.how-phase > i { font-style: normal; font-size: var(--text-xs); font-weight: var(--weight-strong); letter-spacing: 0.06em; text-transform: uppercase; color: var(--fg-muted); text-align: center; }
+/* The run's steps: a list of phases, each holding its list of steps, with a mark for each of the two days a step runs
+   on. A phase's steps share its columns, so the marks sit under its Mon and Thu. */
+.how-pipe, .how-pipe ol { list-style: none; margin: 0; padding: 0; }
+.how-pipe { --how-pipe-cols: 2rem minmax(0, 1fr) 2.4rem 2.4rem; }
+.how-phase, .how-step { display: grid; grid-template-columns: var(--how-pipe-cols); gap: 0 var(--space-3); }
+.how-phase > ol { grid-column: 1 / -1; }
+.how-phase-head { grid-column: 1 / 3; align-self: end; }
+.how-phase-head span { font-size: var(--text-sm); color: var(--fg-muted); }
+.how-phase > i { font-style: normal; color: var(--fg-muted); text-align: center; align-self: end; white-space: nowrap; }
+/* Phases divide at the double hairline, as a page's sections do. */
+.how-phase + .how-phase { margin-top: var(--space-4); }
+.how-phase + .how-phase::before { content: ""; grid-column: 1 / -1; height: 4px; border-block: 1px solid var(--fg); margin-bottom: var(--space-4); }
 .how-step { padding-top: var(--space-3); position: relative; }
 .how-step::before { content: ""; position: absolute; left: calc(0.875rem - 0.75px); top: 0; bottom: 0; width: 1.5px; background: var(--rule-strong); }
 .how-step-n { width: 1.75rem; height: 1.75rem; border-radius: 50%; border: 1.5px solid var(--rule-strong); background: var(--bg-raised); display: grid; place-items: center; font-size: var(--text-xs); font-weight: var(--weight-strong); font-variant-numeric: tabular-nums; position: relative; }
@@ -142,7 +150,7 @@
 .how-ladder li { display: grid; grid-template-columns: minmax(0, 1.1fr) 3.6rem minmax(0, 1fr); align-items: center; position: relative; padding-bottom: 1.4rem; }
 .how-q { border: 1.5px solid var(--rule-strong); border-radius: var(--radius); padding: 0.5rem 0.75rem; background: var(--bg); }
 .how-q small { display: block; color: var(--fg-muted); font-size: var(--text-sm); }
-.how-y, .how-n { font-size: var(--text-xs); font-weight: var(--weight-strong); letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-muted); }
+.how-y, .how-n { color: var(--fg-muted); }
 .how-y { text-align: center; }
 .how-n { position: absolute; left: 1.1rem; bottom: 0.15rem; }
 .how-a { padding: 0.5rem 0.75rem; font-size: var(--text-sm); }
@@ -165,14 +173,14 @@
 .how-card .how-num { display: block; font-size: var(--text-xl); font-weight: var(--weight-strong); letter-spacing: var(--tracking-heading); font-variant-numeric: tabular-nums; }
 .how-slabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
 .how-slab { border: 1px solid var(--rule); border-top: 4px solid var(--how-fg, var(--rule-strong)); border-radius: var(--radius); padding: 0.6rem 0.75rem; background: var(--bg); font-size: var(--text-sm); }
-.how-slab b { display: block; font-size: var(--text-md); font-weight: var(--weight-strong); margin-bottom: var(--space-2); }
+.how-slab b { display: block; margin-bottom: var(--space-2); }
 .how-slab ul { margin: 0; padding-left: 1.1rem; color: var(--fg-muted); }
 .how-slab li + li { margin-top: 0.3rem; }
 
 /* Tables */
 .how-table { border-collapse: collapse; width: 100%; min-width: 37.5rem; font-size: var(--text-sm); }
 .how-table th, .how-table td { text-align: left; padding: 0.5rem 0.6rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
-.how-table thead th { font-size: var(--text-xs); font-weight: var(--weight-strong); letter-spacing: 0.05em; text-transform: uppercase; color: var(--fg-muted); }
+.how-table thead th { color: var(--fg-muted); }
 .how-table tbody th { font-weight: var(--weight-strong); }
 .how-table tbody th small { display: block; font-weight: var(--weight-regular); color: var(--fg-muted); }
 .how-table .how-c { text-align: center; }
@@ -182,28 +190,41 @@
 
 /* The spend bar: a segment for each stage that spent anything, as wide as its share */
 .how-bar { display: flex; gap: 2px; height: 2.1rem; }
-.how-bar > span { background: var(--how-bg); border: 1px solid var(--how-edge); border-radius: 3px; }
+/* Each line of the key leads with a swatch of its segment, a decoration: the bar's label says every figure. */
+.how-bar > span, .how-bar-key li::before { background: var(--how-bg); border: 1px solid var(--how-edge); border-radius: 3px; }
 .how-bar-key { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--space-2) var(--space-4); margin: var(--space-3) 0 0; padding: 0; list-style: none; font-size: var(--text-sm); }
+.how-bar-key li { display: grid; grid-template-columns: 0.9rem minmax(0, 1fr); gap: 0 var(--space-2); }
+.how-bar-key li::before { content: ""; grid-row: span 2; height: 0.9rem; margin-top: 0.2rem; }
 .how-bar-key b { display: block; font-weight: var(--weight-strong); font-variant-numeric: tabular-nums; }
 .how-bar-key span { color: var(--fg-muted); }
 
 /* Drawn diagrams */
 .how-svg { display: block; width: 100%; height: auto; }
 .how-svg text { font-family: var(--font); fill: var(--fg); font-size: 12px; }
-.how-svg .how-svg-title { font-size: 15px; font-weight: var(--weight-strong); }
 .how-svg .how-svg-sub { fill: var(--fg-muted); }
 .how-svg .how-svg-mono { font-family: var(--how-mono); }
 .how-svg .how-svg-lab { paint-order: stroke; stroke: var(--bg-raised); stroke-width: 5px; stroke-linejoin: round; }
 .how-svg .how-svg-edge { fill: none; stroke: var(--control-border); stroke-width: 1.6; }
 .how-svg .how-svg-node { fill: var(--how-bg, none); stroke: var(--how-edge, var(--control-border)); stroke-width: 1.4; }
 .how-svg .how-svg-arrow { fill: var(--control-border); }
+.how-svg .how-svg-rule { fill: none; stroke: var(--fg); stroke-width: 1; }
 
-/* Forced colours drop every tint; the boxes keep their borders and the tags their dots, which are borders too. */
+/* A diagram's labels in the display capitals (DESIGN.md, Diagrams on How it works): the role tags and so the key's
+   terms, the phases and their days, a figure's row labels, the week's days and lanes, a ladder's yes and no, a gate's
+   failure, a slab's, a verdict's and a reason's name, a table's column heads, the drawing's titles. Rules and capitals
+   only: no stepped shape. A ladder's hidden arrow falls back to Geist, which must not be drawn bolder than its cut. */
+.how-role, .how-phase-head b, .how-phase > i, .how-figure .how-label, .how-week-day, .how-week-lane, .how-y, .how-n, .how-gate-if b, .how-slab b, .how-verdict > b, .how-reason > b, .how-table thead th, .how-svg .how-svg-title { font-family: var(--font-display); font-weight: 700; font-size: var(--text-2xs); letter-spacing: var(--tracking-label); text-transform: uppercase; font-synthesis: none; }
+/* A lane's or a box's name a size up, a phase's two, the drawing's titles at their own size: DESIGN.md gives each. */
+.how-week-lane, .how-slab b, .how-verdict > b, .how-reason > b { font-size: var(--text-xs); }
+.how-phase-head b { font-size: var(--text-sm); }
+.how-svg .how-svg-title { font-size: 13px; letter-spacing: 0.08em; }
+
+/* Forced colours drop every tint; the boxes keep their borders and the tags their dots, which are borders too, and the
+   rules are borders already. The drawing keeps its own strokes, its hairline among them, as it keeps its edges. */
 @media (forced-colors: active) {
   .how-mark-on, .how-mark-half { forced-color-adjust: none; background: CanvasText; border-color: CanvasText; }
   .how-mark-half { background: linear-gradient(90deg, CanvasText 50%, Canvas 50%); }
-  .how-phase > b { border: 1px solid CanvasText; }
-  .how-bar > span { border-color: CanvasText; }
+  .how-bar > span, .how-bar-key li::before { border-color: CanvasText; }
 }
 
 @media (max-width: 48rem) {
@@ -215,8 +236,10 @@
   .how-y { text-align: left; padding-left: 1.1rem; }
   .how-n { left: auto; right: 0.9rem; }
   .how-slabs, .how-cards-3 { grid-template-columns: 1fr; }
-  .how-pipe > li { grid-template-columns: 1.6rem minmax(0, 1fr) 1.5rem 1.5rem; gap: 0 var(--space-2); }
+  .how-pipe { --how-pipe-cols: 1.6rem minmax(0, 1fr) 1.5rem 1.5rem; }
+  .how-phase, .how-step { gap: 0 var(--space-2); }
+  .how-phase > i { font-size: 0.625rem; letter-spacing: 0; }
   .how-step-n { width: 1.5rem; height: 1.5rem; }
   .how-step::before { left: calc(0.75rem - 0.75px); }
-  .how-figure { padding: var(--space-3); }
+  .how-figure { padding: calc(var(--space-3) + 4px) var(--space-3) var(--space-3); }
 }

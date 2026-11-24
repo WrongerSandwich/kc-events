@@ -93,7 +93,11 @@ test("a run is fourteen steps in six phases, each saying who does it and on whic
   await open(page);
   const steps = page.locator("#run .how-step");
   await expect(steps).toHaveCount(14);
-  await expect(page.locator("#run .how-phase")).toHaveCount(6);
+  // A list of six phases, each holding its own list of steps, so a screen reader hears six items and then each one's steps.
+  const phases = page.locator("#run ol.how-pipe > li.how-phase");
+  await expect(phases).toHaveCount(6);
+  await expect(page.locator("#run ol.how-pipe > li.how-phase > ol > li.how-step")).toHaveCount(14);
+  expect(await phases.evaluateAll((items) => items.map((li) => li.querySelectorAll(":scope > ol > li").length))).toEqual([3, 2, 2, 2, 3, 2]);
   await expect(page.locator("#run .how-step-n")).toHaveText(Array.from({ length: 14 }, (_, i) => String(i + 1)));
   for (const step of await steps.all()) {
     expect(await step.locator(".how-role").count()).toBeGreaterThan(0);
@@ -106,7 +110,38 @@ test("a run is fourteen steps in six phases, each saying who does it and on whic
   await expect(steps.nth(0).locator(".how-mark").nth(1)).toHaveText("Does not run on Thursday");
   await expect(steps.nth(5).locator(".how-mark").nth(1)).toHaveText("Runs on Thursday");
   // A phase's name and its question are two things to a screen reader too.
-  await expect(page.locator("#run .how-phase > b").first()).toHaveText("Find: What do the pages list right now?");
+  await expect(page.locator("#run .how-phase-head").first()).toHaveText("Find: What do the pages list right now?");
+});
+
+test("the sub-headings are nouns, and a figure named for one takes its words", async ({ page }) => {
+  await open(page);
+  await expect(page.locator("#run h3")).toHaveText(["The steps, in the order the code runs them", "Spend by stage"]);
+  await expect(page.locator("#matching h3")).toHaveText(["Pages that speak for an event"]);
+  await expect(page.locator("#corrections h3")).toHaveText(["Fixes by kind of error"]);
+  await expect(page.locator("#corrections .how-scroll")).toHaveAttribute("aria-label", "Fixes by kind of error");
+});
+
+test("whatever the page sets in the display face is in capitals, and in the face's cut", async ({ page }) => {
+  await open(page);
+  const cut = /^DISPLAY="(.*)"$/m.exec(readFileSync(fileURLToPath(new URL("../scripts/subset-fonts.sh", import.meta.url)), "utf8"))![1]!;
+  const set = await page.locator("main .how").evaluate((root) => {
+    const found: { text: string; transform: string }[] = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      const el = node.parentElement!;
+      const style = getComputedStyle(el);
+      if (!style.fontFamily.startsWith('"KC Display"') || node.textContent!.trim() === "") continue;
+      found.push({ text: node.textContent!, transform: style.textTransform });
+    }
+    return found;
+  });
+  // The diagrams' labels: the phases and their days, the role tags, the table heads, the reasons, the drawing's titles.
+  for (const words of ["Find", "Mon", "Network", "Refresh the reading", "Major run", "Candidate"]) expect(set.map((s) => s.text.trim())).toContain(words);
+  expect(set.filter((s) => s.transform !== "uppercase")).toEqual([]);
+  // A ladder's arrows, hidden from a screen reader, are the one fallback to the text face (unsynthesized, at its 600).
+  const arrows = "→↓";
+  expect([...new Set(set.map((s) => s.text.toUpperCase()).join(""))].filter((c) => !cut.includes(c) && !arrows.includes(c) && c.trim() !== "")).toEqual([]);
+  expect(await page.locator("#strikes .how-y").first().evaluate((el) => getComputedStyle(el).fontSynthesisWeight)).toBe("none");
 });
 
 test("what the facts pass corrected stays corrected", async ({ page }) => {
@@ -148,6 +183,11 @@ test("the spend bar has a segment for each stage that spent anything, and says e
   await expect(bar).toHaveAttribute("role", "img");
   await expect(bar).toHaveAttribute("aria-label", "Spend by stage in the weekly run of October 5: Curation $0.22, Reading list pages $0.15, Own pages $0.05.");
   await expect(page.locator("#run .how-bar-key li b")).toHaveText(["Curation: $0.22", "Reading list pages: $0.15", "Own pages: $0.05"]);
+  // Each line of the key carries a swatch in its segment's tone: decoration, since the bar's label says the figures.
+  const segments = await bar.locator("> span").evaluateAll((spans) => spans.map((s) => getComputedStyle(s).backgroundColor));
+  const swatches = await page.locator("#run .how-bar-key li").evaluateAll((items) => items.map((li) => getComputedStyle(li, "::before").backgroundColor));
+  expect(new Set(segments).size).toBe(2); // curation's tone, and the extraction model's for the other two
+  expect(swatches).toEqual(segments);
 });
 
 const rungs = (page: Page, section: string) => page.locator(`${section} .how-ladder > li:not(.how-end)`);
@@ -214,7 +254,7 @@ test("safeguards: seven gates with the line where a run is published, and five k
   await expect(page.locator("#safeguards .how-slab")).toHaveCount(5);
 });
 
-test("corrections: what a run leaves, who reads it, where a fix lands, and where each kind of wrong is fixed", async ({ page }) => {
+test("corrections: what a run leaves, who reads it, where a fix lands, and the fixes by kind of error", async ({ page }) => {
   await open(page);
   const fixes = page.locator("#corrections");
   await expect(fixes.locator(".how-table thead th")).toHaveCount(2);

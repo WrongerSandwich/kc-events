@@ -205,20 +205,22 @@ const stageRole = (stage: string): Role => (stage === "curation" ? "curation" : 
 <Figure>
   <ol class="how-pipe">
     {numbered.map((phase) => (
-      <>
-        <li class="how-phase"><b>{phase.name}{phase.question !== undefined && <span>: {phase.question}</span>}</b><i aria-hidden="true">Mon</i><i aria-hidden="true">Thu</i></li>
-        {phase.steps.map((step) => (
-          <li class="how-step">
-            <span class="how-step-n">{step.n}</span>
-            <div class="how-step-body">
-              <h4>{step.title}{step.roles.map((role) => <RoleTag role={role} />)}</h4>
-              <p set:html={step.text} />
-            </div>
-            <span class={markClass[step.mon]}><span class="visually-hidden">{dayWords(step.mon, "Monday")}</span></span>
-            <span class={markClass[step.thu]}><span class="visually-hidden">{dayWords(step.thu, "Thursday")}</span></span>
-          </li>
-        ))}
-      </>
+      <li class="how-phase">
+        <p class="how-phase-head"><b>{phase.name}</b>{phase.question !== undefined && <span>: {phase.question}</span>}</p><i aria-hidden="true">Mon</i><i aria-hidden="true">Thu</i>
+        <ol start={phase.steps[0]!.n}>
+          {phase.steps.map((step) => (
+            <li class="how-step">
+              <span class="how-step-n">{step.n}</span>
+              <div class="how-step-body">
+                <h4>{step.title}{step.roles.map((role) => <RoleTag role={role} />)}</h4>
+                <p set:html={step.text} />
+              </div>
+              <span class={markClass[step.mon]}><span class="visually-hidden">{dayWords(step.mon, "Monday")}</span></span>
+              <span class={markClass[step.thu]}><span class="visually-hidden">{dayWords(step.thu, "Thursday")}</span></span>
+            </li>
+          ))}
+        </ol>
+      </li>
     ))}
   </ol>
   <Fragment slot="caption">A half-filled mark is the first run of the month only. Steps 2, 3, 6, 8 and 12 read {inWords(settings.concurrency)} pages at once and take the results up in page order, so that what a run writes never depends on which page answered first. Step 1 fetches its pages one at a time.</Fragment>
@@ -226,13 +228,13 @@ const stageRole = (stage: string): Role => (stage === "curation" ? "curation" : 
 
 {shares.length > 0 && run !== undefined && (
   <>
-    <h3>Where the money goes</h3>
+    <h3>Spend by stage</h3>
     <Figure>
       <div class="how-bar" role="img" aria-label={`Spend by stage in the weekly run of ${runDay(run.runDate)}: ${shares.map((s) => `${stageName(s.stage)} ${usd(s.usd)}`).join(", ")}.`}>
         {shares.map((s) => <span class={`how-tone-${stageRole(s.stage)}`} style={`flex: 0 1 ${s.share}%`} />)}
       </div>
       <ul class="how-bar-key">
-        {shares.map((s) => <li><b>{stageName(s.stage)}: {usd(s.usd)}</b><span>{s.calls.toLocaleString("en-US")} {s.calls === 1 ? "call" : "calls"} to the {stageRole(s.stage)} model</span></li>)}
+        {shares.map((s) => <li class={`how-tone-${stageRole(s.stage)}`}><b>{stageName(s.stage)}: {usd(s.usd)}</b><span>{s.calls.toLocaleString("en-US")} {s.calls === 1 ? "call" : "calls"} to the {stageRole(s.stage)} model</span></li>)}
       </ul>
       <Fragment slot="caption">{usd(run.spendUsd)} of the {usd(run.capUsd)} cap, in the weekly run of {runDay(run.runDate)}. The cap stops model calls in the middle of a run; a monthly limit on the model provider's key, set by hand, backstops a bug in the cap.</Fragment>
     </Figure>
