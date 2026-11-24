@@ -130,16 +130,18 @@ test("whatever the page sets in the display face is in capitals, and in the face
     for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
       const el = node.parentElement!;
       const style = getComputedStyle(el);
-      // An arrow hidden from a screen reader falls back to the text face, as it does everywhere.
-      if (!style.fontFamily.startsWith('"KC Display"') || el.closest("[aria-hidden=true]") !== null || node.textContent!.trim() === "") continue;
+      if (!style.fontFamily.startsWith('"KC Display"') || node.textContent!.trim() === "") continue;
       found.push({ text: node.textContent!, transform: style.textTransform });
     }
     return found;
   });
-  // The diagrams' labels: the phases, the role tags, the table heads, the drawing's titles.
-  for (const words of ["Find", "Network", "Refresh the reading", "Candidate"]) expect(set.map((s) => s.text.trim())).toContain(words);
+  // The diagrams' labels: the phases and their days, the role tags, the table heads, the reasons, the drawing's titles.
+  for (const words of ["Find", "Mon", "Network", "Refresh the reading", "Major run", "Candidate"]) expect(set.map((s) => s.text.trim())).toContain(words);
   expect(set.filter((s) => s.transform !== "uppercase")).toEqual([]);
-  expect([...new Set(set.map((s) => s.text.toUpperCase()).join(""))].filter((c) => !cut.includes(c) && c.trim() !== "")).toEqual([]);
+  // A ladder's arrows, hidden from a screen reader, are the one fallback to the text face (unsynthesized, at its 600).
+  const arrows = "→↓";
+  expect([...new Set(set.map((s) => s.text.toUpperCase()).join(""))].filter((c) => !cut.includes(c) && !arrows.includes(c) && c.trim() !== "")).toEqual([]);
+  expect(await page.locator("#strikes .how-y").first().evaluate((el) => getComputedStyle(el).fontSynthesisWeight)).toBe("none");
 });
 
 test("what the facts pass corrected stays corrected", async ({ page }) => {
@@ -252,7 +254,7 @@ test("safeguards: seven gates with the line where a run is published, and five k
   await expect(page.locator("#safeguards .how-slab")).toHaveCount(5);
 });
 
-test("corrections: what a run leaves, who reads it, where a fix lands, and where each kind of wrong is fixed", async ({ page }) => {
+test("corrections: what a run leaves, who reads it, where a fix lands, and the fixes by kind of error", async ({ page }) => {
   await open(page);
   const fixes = page.locator("#corrections");
   await expect(fixes.locator(".how-table thead th")).toHaveCount(2);
