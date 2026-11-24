@@ -46,6 +46,8 @@ jobs:
           SITE_TODAY: last-run
       - run: pnpm --filter kc-events-site build:e2e
       - run: pnpm --filter kc-events-site size
+      # Before the tests: the job's real-Chromium test (#322) needs a browser as well as e2e, and fails in CI without one.
+      - run: pnpm --filter kc-events-site exec playwright install chromium
       # The tests, with coverage: reported for reading, with no threshold to fail on.
       - run: pnpm -r test:coverage
       # The committed-data checks (#191) gate the weekly run's commit in scripts/weekly-run.sh, not a pull request:
@@ -60,7 +62,6 @@ jobs:
             coverage
             site/coverage
           if-no-files-found: ignore
-      - run: pnpm --filter kc-events-site exec playwright install chromium
       - run: pnpm --filter kc-events-site test:e2e
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
