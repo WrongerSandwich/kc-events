@@ -406,7 +406,7 @@ describe("one month of a recurring event (#77)", () => {
       { kind: "matched", event: recurring, rule: "month" },
       { kind: "matched", event: recurring, rule: "month" },
     ]);
-    const [a, b] = [{ ...elsewhere, id: "evt_a" }, { ...elsewhere, id: "evt_b", title: "The Main Gallery Tours" }];
+    const [a, b] = [{ ...elsewhere, id: "evt_a" }, { ...elsewhere, id: "evt_b", title: "The Main Gallery Tours", venue: "Liberty Memorial" }];
     const away = { ...month, venue: "Somewhere Else" };
     expect([findMatch(away, [b, a], {}), findMatch(away, [a, b], {})]).toEqual([a, a]);
   });

@@ -13,7 +13,7 @@ const says: { from: string; note?: string; may: [boolean, boolean, boolean, bool
   { from: "Any other page", note: "A discovery find on someone else's site.", may: [false, false, false, false] },
 ];
 ---
-<p>An event is recorded once, however many pages list it and however its date moves. Each sighting goes down this ladder, and the first rule that matches a stored event wins. Where a rule matches several, the one with the nearest date is the match.</p>
+<p>An event is recorded once, however many pages list it and however its date moves. Each sighting goes down this ladder, and the first rule that matches a stored event wins. Where any rule but the no-venue one matches several, the nearest date wins, then the sighting's venue.</p>
 
 <Figure>
   <Ladder

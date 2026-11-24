@@ -1,7 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 import { cleanWhyLine } from "../src/curation.js";
-import { findMatch, normalizeName, sameEvent, sameName, sameVenue, type EventIdentity, type VenueAliases } from "../src/identity.js";
+import { findMatch, matchSighting, normalizeName, oneMonthOf, sameEvent, sameName, sameRecurringEvent, sameVenue, type EventIdentity, type Match, type VenueAliases } from "../src/identity.js";
 import { fromLocal, shiftDate, toLocalDate } from "../src/time.js";
 
 /**
@@ -80,6 +80,87 @@ describe("identity", () => {
         expect(findMatch(sighting, shuffled, ALIASES)).toBe(findMatch(sighting, known, ALIASES));
       }),
       { numRuns: 500 },
+    );
+  });
+
+  it("matchSighting does not depend on the order of a run's dataset: ends, kinds, recurring records and duplicate pointers (#321)", () => {
+    // The pool above reaches only page and title, own page, fuzzy and venue-less; this one every rule and pointer.
+    const team = fc.constantFrom("Chiefs", "KC", "Kansas City Chiefs", "Royals", "Midland");
+    const matchup = fc.tuple(team, fc.constantFrom(" vs ", " vs. ", " @ ", " at "), team).map((parts) => parts.join(""));
+    const gameName = fc.oneof(name, matchup);
+    const record: fc.Arbitrary<EventIdentity> = fc
+      .record(
+        {
+          primaryUrl: fc.constantFrom("https://a.test/calendar", "https://a.test/calendar/", "https://b.test/events", "https://c.test/"),
+          title: gameName,
+          venue: fc.option(gameName, { nil: undefined }),
+          start: fc.option(day, { nil: undefined }),
+          end: fc.option(fc.constantFrom("2026-12-01", "2026-12-02", "2027-01-10T17:00:00-06:00"), { nil: undefined }),
+          eventUrl: fc.option(fc.constantFrom("https://a.test/e/1", "https://a.test/e/2/", "https://b.test/e/1"), { nil: undefined }),
+          recurrence: fc.constantFrom("one-off" as const, "limited-run" as const, "recurring" as const),
+          kind: fc.constantFrom("sports", "Sports", "music"),
+          status: fc.constantFrom("active" as const, "unverified" as const),
+        },
+        { requiredKeys: ["primaryUrl", "title", "recurrence", "kind", "status"] },
+      )
+      .map(({ start, end, ...k }) => (k.recurrence === "recurring" ? k : { ...k, ...(start !== undefined ? { start } : {}), ...(end !== undefined ? { end } : {}) }));
+    /** As the run's fold leaves the live records: no dated pair one event, no recurring pair one under the recurring rule, no dated record a month of a recurring one. */
+    const folded = (live: EventIdentity[]) => {
+      const dated = live.filter((e) => e.recurrence !== "recurring");
+      const pair = (a: EventIdentity, b: EventIdentity) =>
+        a.recurrence === "recurring"
+          ? sameRecurringEvent(a, b, ALIASES) || (b.recurrence !== "recurring" && oneMonthOf(b, a))
+          : b.recurrence !== "recurring" && sameEvent(a, b, dated, ALIASES);
+      return live.every((a, i) => live.every((b, j) => i === j || !pair(a, b)));
+    };
+    const ids = ["evt_a", "evt_b", "evt_c", "evt_d", "evt_e", "evt_f", "evt_g", "evt_h"];
+    const dataset = fc
+      .uniqueArray(fc.tuple(fc.constantFrom(...ids), record), { minLength: 1, maxLength: 6, selector: ([id]) => id })
+      .map((rows) => rows.map(([id, k]) => ({ ...k, id })))
+      .filter(folded)
+      .chain((live) =>
+        // Expired records beside them: duplicates pointing at a kept record, at another duplicate, at themselves or at no record, and past records with no pointer.
+        fc.array(fc.tuple(record, fc.option(fc.constantFrom(...live.map((k) => k.id), "evt_x0", "evt_x1", "evt_gone"), { nil: undefined })), { maxLength: 3 }).map((rows) => [
+          ...live,
+          ...rows.map(([k, duplicateOf], i) => ({ ...k, id: `evt_x${i}`, status: "expired" as const, ...(duplicateOf !== undefined ? { duplicateOf } : {}) })),
+        ]),
+      );
+    /** Mostly a known record read again a little differently, now and then under another title (as a game's matchup is), a recurring one as one dated month of it. */
+    const sightingOf = (known: EventIdentity[]) =>
+      fc.oneof(
+        { arbitrary: record.map(({ id: _id, status: _status, ...k }) => k), weight: 1 },
+        // A game's listing under another matchup, at its venue on its date, from another page.
+        {
+          weight: 1,
+          arbitrary: fc
+            .record({ k: fc.constantFrom(...known), title: matchup, page: identity.map((i) => i.primaryUrl) })
+            .map(({ k, title, page }): EventIdentity => ({ primaryUrl: page, title, recurrence: "one-off", kind: "sports", ...(k.venue !== undefined ? { venue: k.venue } : {}), ...(k.start !== undefined ? { start: k.start } : {}) })),
+        },
+        {
+          weight: 4,
+          arbitrary: fc
+            .record({ k: fc.constantFrom(...known), upper: fc.boolean(), shift: fc.integer({ min: -2, max: 2 }), page: fc.option(identity.map((i) => i.primaryUrl), { nil: undefined }), dropVenue: fc.boolean(), month: fc.boolean(), retitle: fc.oneof({ arbitrary: fc.constant(undefined), weight: 3 }, { arbitrary: gameName, weight: 1 }) })
+            .map(({ k: { id: _id, status: _status, duplicateOf: _duplicateOf, ...k }, upper, shift, page, dropVenue, month, retitle }): EventIdentity => {
+              const asMonth = month && k.recurrence === "recurring";
+              const { venue, start, ...rest } = k;
+              return {
+                ...rest,
+                primaryUrl: page ?? k.primaryUrl,
+                title: `${retitle ?? (upper ? k.title.toUpperCase() : `${k.title}!`)}${asMonth ? " (Oct. 2026)" : ""}`,
+                ...(venue !== undefined && !dropVenue ? { venue } : {}),
+                ...(start !== undefined ? { start: shiftDate(start, shift) } : asMonth ? { start: "2026-10-05" } : {}),
+                ...(asMonth ? { recurrence: "limited-run" as const } : {}),
+              };
+            }),
+        },
+      );
+    const scenario = dataset.chain((known) => fc.tuple(sightingOf(known), fc.constant(known), fc.shuffledSubarray(known, { minLength: known.length })));
+    const outcome = (match: Match<EventIdentity>) => (match.kind === "matched" ? `${match.rule} ${match.event.id}` : match.kind);
+    fc.assert(
+      fc.property(scenario, ([sighting, known, shuffled]) => {
+        expect(outcome(matchSighting(sighting, shuffled, ALIASES))).toBe(outcome(matchSighting(sighting, known, ALIASES)));
+      }),
+      { numRuns: 2000 },
     );
   });
 });

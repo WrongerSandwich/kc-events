@@ -93,10 +93,11 @@ const NONE = { kind: "none" } as const;
  * matchup, venue and date (#227), then for a recurring sighting the recurring event with its title
  * at its venue (#119), then for a sighting with no venue the known event with its title on its date
  * (which names one or none, see candidateForVenueless), then a recurring event the sighting is one
- * month of. The first rule that takes any record decides. A record folded as a duplicate stands for
- * the record it was folded into, as far as that chain goes within `known`: the match is that record,
- * and its date is the one compared. Among several records one rule takes, the match is the one
- * compareMatches puts first (#177, #321), so it does not depend on the order of `known`.
+ * month of. A record folded as a duplicate stands for the record it was folded into, as far as that
+ * chain goes within `known`: the match is that record, and its date is the one compared. The first
+ * rule that takes a record standing for one decides; one whose records' pointers all lead nowhere
+ * falls through. Among several records one rule takes, the match is the one compareMatches puts
+ * first (#177, #321), so it does not depend on the order of `known`.
  */
 export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases): Match<T> {
   /** Of every record a rule takes, each as the record it stands for, the one compareMatches puts first. */
@@ -127,8 +128,8 @@ export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, 
 /**
  * Which of two records one rule takes the sighting is (#177, #321), negative for `a`: the one whose
  * date is nearer, then the one at the sighting's venue, then the earlier start (an undated record
- * after the dated), then the lesser id, page, and title. None of it depends on the order of the
- * known events, so neither does the match.
+ * after the dated), then the lesser id (an absent one first), page, and title. None of it depends on
+ * the order of the known events, so neither does the match.
  */
 function compareMatches(sighting: EventIdentity, a: EventIdentity, b: EventIdentity, aliases: VenueAliases): number {
   const atVenue = (k: EventIdentity) => (sighting.venue !== undefined && k.venue !== undefined && sameVenue(sighting.venue, k.venue, aliases) ? 0 : 1);
@@ -136,7 +137,7 @@ function compareMatches(sighting: EventIdentity, a: EventIdentity, b: EventIdent
     daysApart(sighting, a) - daysApart(sighting, b) ||
     atVenue(a) - atVenue(b) ||
     compareStarts(a.start, b.start) ||
-    (a.id !== undefined && b.id !== undefined ? compare(a.id, b.id) : 0) ||
+    compare(a.id ?? "", b.id ?? "") ||
     compare(a.primaryUrl, b.primaryUrl) ||
     compare(a.title, b.title)
   );
