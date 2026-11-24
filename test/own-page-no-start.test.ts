@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { emptyDataset, type Dataset } from "../src/dataset.js";
-import { judging, candidateAt, source, WEEK_1, WEEK_2 } from "./fakes/fixtures.js";
+import { emptyDataset, type Dataset, type Event } from "../src/dataset.js";
+import { coversDays } from "../src/run.js";
+import { judging, candidateAt, source, storedEvent, WEEK_1, WEEK_2 } from "./fakes/fixtures.js";
 import { testConfig } from "./fakes/config.js";
 import type { CompletionRequest } from "../src/ports.js";
 import type { ScriptedReply } from "./fakes/ports.js";
@@ -165,6 +166,8 @@ describe("an event already on with no start has its own page read (#323)", () =>
     expect(report.ownPages).toEqual([line({ source: "Picks", read: 1, priced: 1, described: 1 })]);
   });
 
+  // At the seam this cannot fail on coversDays: expirePast expires the record before the pass sees it. The span test's
+  // own case is the unit test of coversDays below.
   it("an event with no start whose end is before today is left out", async () => {
     const { calls, report } = await runAt(WEEK_1, {
       completions: [listed(exhibition({ endDate: "2026-10-01", dateEvidence: "On view through October 1" }))],
@@ -181,6 +184,26 @@ describe("an event already on with no start has its own page read (#323)", () =>
 
     expect(calls).not.toContain(`fetch:${OWN_URL}`);
     expect(report.ownPages).toEqual([]);
+  });
+});
+
+describe("coversDays: the span test (#151, #253, #323)", () => {
+  const FROM = "2026-10-02";
+  const TO = "2026-11-27";
+  const at = (fields: Partial<Event>) => storedEvent("Span", { start: undefined, end: undefined, ...fields });
+
+  it.each([
+    ["no start, an end after the first day", { end: "2026-10-23" }, true],
+    ["no start, an end on the first day", { end: FROM }, true],
+    ["no start, an end past the last day", { end: "2027-02-28" }, true],
+    ["no start, an end before the first day", { end: "2026-10-01" }, false],
+    ["neither start nor end", {}, false],
+    ["a start in the range", { start: "2026-10-17T20:00:00-05:00" }, true],
+    ["a start after the last day", { start: "2026-11-28" }, false],
+    ["a start before the first day and no end", { start: "2026-09-01" }, false],
+    ["a start before the first day and an end in the range", { start: "2026-09-01", end: "2026-10-23" }, true],
+  ] as const)("%s", (_name, fields, covers) => {
+    expect(coversDays(at(fields), FROM, TO)).toBe(covers);
   });
 });
 

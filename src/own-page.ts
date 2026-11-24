@@ -60,7 +60,8 @@ const ownPageVenueResponseFormat = strictResponseFormat("event_page_details", ow
 
 /**
  * One call over one event's own page: the event page rules, this run's dates, and the event the
- * page is for, by title, venue and the date its list gave. A "ticket" call is over the ticket page
+ * page is for, by title, venue and the date its list gave, or, for a run already on with no start (#323), that the list
+ * gives only its last day, asking for no date and no time. A "ticket" call is over the ticket page
  * a run's own page links (#143), read for its days alone. A "venue" call is the own page's for an event its list gave a
  * cited date and no venue (#267), which asks for the venue too.
  */

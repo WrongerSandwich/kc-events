@@ -97,7 +97,7 @@ const phases: { name: string; question?: string; steps: { title: string; roles: 
         roles: ["network", "extraction"],
         mon: "on",
         thu: "off",
-        text: `Each upcoming event's own page (its details or tickets link) is fetched and read once under the <a href="${file("prompts/event-page-rules.md")}">event page rules</a>: its time, price and age limit, a fuller description, the weekdays a run plays, and the venue when the list gave none. An exhibition or run already on, which its list gives only a last day ("On view through"), is read too, for everything but a time. Nearest start first, an event already on as today, at most ${inWords(settings.ownPageReadsPerRun)} in a run. A page is read again only when the event's date or its own page changes.`,
+        text: `Each upcoming event's own page (its details or tickets link) is fetched and read once under the <a href="${file("prompts/event-page-rules.md")}">event page rules</a>: its time, price and age limit, a fuller description, the weekdays a run plays, and the venue when the list gave none. A run already on, whose list gives only its last day, is read too, for all but a time. Nearest start first, a run already on as today, at most ${inWords(settings.ownPageReadsPerRun)} in a run. A page is read again only when the date its list gives or its own page changes.`,
       },
       {
         title: "A second fold, then places",

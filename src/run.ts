@@ -484,7 +484,7 @@ function assertSomethingReverified({ pagesTried, pagesFetched }: { pagesTried: n
  * not ended (#151, #253), or it has no start and has not ended, a run already on whose page gives only its last day
  * ("On view through Feb 28", #323). An event with neither start nor end (one that recurs) covers none.
  */
-function coversDays(e: Event, from: string, to: string): boolean {
+export function coversDays(e: Event, from: string, to: string): boolean {
   const date = calendarDate(e.start);
   const end = calendarDate(e.end);
   if (date === undefined) return end !== undefined && end >= from;
