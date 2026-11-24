@@ -65,4 +65,16 @@ describe("expiry", () => {
       expect(expire(event, "cancelled")).toEqual({ ...event, status: "expired", expiryReason: "cancelled" });
     });
   });
+
+  describe("runs unsighted", () => {
+    it("an expired record carries no count of runs unsighted, whatever expired it (#326)", () => {
+      const { lastVerified: _, ...read } = event;
+      const unsighted: Event = { ...read, status: "unverified", runsUnsighted: 2 };
+      for (const reason of ["past", "promotion", "duplicate", "cancelled"] as const) {
+        const expired = expire(unsighted, reason);
+        expect(expired).toMatchObject({ status: "expired", expiryReason: reason });
+        expect(expired).not.toHaveProperty("runsUnsighted");
+      }
+    });
+  });
 });

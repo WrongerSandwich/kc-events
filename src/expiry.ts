@@ -33,8 +33,14 @@ export const OUTAGES_TO_UNVERIFY = 3;
  */
 export const HORIZON_SLACK_DAYS = 2;
 
+/**
+ * Expires an event with the reason, keeping everything else but its count of runs unsighted: an expired record stops
+ * counting (#82), and every expiry goes through here, so it holds whatever expired it and in a midweek pass too, which
+ * never ages records (#326).
+ */
 export function expire(event: Event, reason: ExpiryReason): Event {
-  return { ...event, status: "expired", expiryReason: reason };
+  const { runsUnsighted: _uncounted, ...rest } = event;
+  return { ...rest, status: "expired", expiryReason: reason };
 }
 
 /** Whether an event's last date (its end, else its start) is before today's local date. An undated event cannot be past. */
@@ -82,7 +88,8 @@ export function expireSkipped(event: Event): Event {
  * says it is still listed, and the fourth run in a row without one expires it as stale. A sighting,
  * citable or not, starts the count again, and so does a verified reading. A run whose lanes could not
  * have sighted it, discovery being off for a discovery-led record, counts for nothing. An expired
- * event stops counting; a held one expired as stale is no longer held, since there is nothing to release.
+ * event stops counting (expire drops the count, so an expired record comes here without one,
+ * #326); a held one expired as stale is no longer held, since there is nothing to release.
  */
 export function ageUnsighted(event: Event, { sighted, laneRan }: { sighted: boolean; laneRan: boolean }): Event {
   const { runsUnsighted, ...uncounted } = event;

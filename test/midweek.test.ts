@@ -165,6 +165,22 @@ describe("a midweek re-verification pass", () => {
     expect(markdown).toContain("1 page re-read.");
   });
 
+  it("expires a record no reading verified without its count of runs unsighted, as past or as a promotion, and its dataset parses (#326)", async () => {
+    const before = await weekly();
+    const { lastVerified: _, ...read } = titled(before, "Far Show");
+    const unsighted = (id: string, fields: Partial<Event>): Event => ({ ...read, id, status: "unverified", runsUnsighted: 2, ...fields });
+    const gone = unsighted("evt_0000000000a1", { title: "Gone Show", start: "2026-10-01T20:00:00-05:00" });
+    const promotion = unsighted("evt_0000000000a2", { title: "Trivia Night" });
+    const stored: Dataset = { ...before, events: [...before.events, gone, promotion] };
+
+    // runWith holds the run's dataset to parseDataset, which refuses an expired record counting runs unsighted.
+    const { dataset } = await midweek(stored, [reply(near, late)]);
+
+    expect(dataset.events.find((e) => e.id === gone.id)).toMatchObject({ status: "expired", expiryReason: "past" });
+    expect(dataset.events.find((e) => e.id === promotion.id)).toMatchObject({ status: "expired", expiryReason: "promotion" });
+    for (const id of [gone.id, promotion.id]) expect(dataset.events.find((e) => e.id === id)).not.toHaveProperty("runsUnsighted");
+  });
+
   it("leaves a weekly run reported as one", async () => {
     const { report } = await runWith(WEEK_1, emptyDataset(), { sources: [knuckleheads], pages: { [CALENDAR_URL]: PAGE }, completions: [reply(near)] });
 
