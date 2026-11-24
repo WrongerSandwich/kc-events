@@ -9,6 +9,8 @@ const { launch } = vi.hoisted(() => ({ launch: vi.fn() }));
 vi.mock("playwright", () => ({ chromium: { launch } }));
 
 const CALENDAR = "https://venue.test/calendar";
+/** The config's time zone, which every page is rendered in. */
+const TIMEZONE = "America/Chicago";
 /** A hostname the fake DNS puts on the home network. */
 const LAN_HOST = "printer.lan.test";
 
@@ -196,7 +198,7 @@ afterEach(() => {
 
 describe("browser fetcher", () => {
   it("never launches the browser for a page whose plain walk robots.txt disallows", async () => {
-    const fetcher = createBrowserFetcher(plainFetcher({ disallowed: [CALENDAR] }));
+    const fetcher = createBrowserFetcher(plainFetcher({ disallowed: [CALENDAR] }), { timezone: TIMEZONE });
 
     expect(await fetcher.fetch(CALENDAR)).toMatchObject({ robotsAllowed: false, finalUrl: CALENDAR });
     expect(launch).not.toHaveBeenCalled();
@@ -204,7 +206,7 @@ describe("browser fetcher", () => {
 
   it("launches Chromium sandboxed and lean, and reads each page in a context of its own, closed after", async () => {
     const browser = browserRunning();
-    const fetcher = createBrowserFetcher(plainFetcher());
+    const fetcher = createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE });
 
     expect(await fetcher.fetch(CALENDAR)).toMatchObject({ status: 200, robotsAllowed: true, body: expect.stringContaining("Big Show") });
     await fetcher.fetch("https://venue.test/films");
@@ -218,9 +220,21 @@ describe("browser fetcher", () => {
     }
   });
 
+  it("renders every page in the config's time zone, whatever the machine's (#322)", async () => {
+    const browser = browserRunning();
+    const fetcher = createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE });
+
+    await fetcher.fetch(CALENDAR);
+    await fetcher.fetch(CALENDAR, { waitFor: ".event" });
+    await fetcher.fetch("https://venue.test/events/big-show");
+
+    expect(browser.contexts).toHaveLength(3);
+    for (const context of browser.contexts) expect(context.options).toMatchObject({ timezoneId: TIMEZONE });
+  });
+
   it("reads two pages fetched at once through one launch, each in its own context, closed after (#252)", async () => {
     const browser = browserRunning();
-    const fetcher = createBrowserFetcher(plainFetcher());
+    const fetcher = createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE });
 
     const [calendar, films, again] = await Promise.all([fetcher.fetch(CALENDAR), fetcher.fetch("https://cinema.test/films"), fetcher.fetch(CALENDAR)]);
 
@@ -233,7 +247,7 @@ describe("browser fetcher", () => {
   });
 
   it("closes without launching when no page needed the browser", async () => {
-    const fetcher = createBrowserFetcher(plainFetcher());
+    const fetcher = createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE });
 
     await expect(fetcher.close()).resolves.toBeUndefined();
     expect(launch).not.toHaveBeenCalled();
@@ -241,7 +255,7 @@ describe("browser fetcher", () => {
 
   it("closes the browser it launched", async () => {
     const browser = browserRunning();
-    const fetcher = createBrowserFetcher(plainFetcher());
+    const fetcher = createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE });
 
     await fetcher.fetch(CALENDAR);
     await fetcher.close();
@@ -251,7 +265,7 @@ describe("browser fetcher", () => {
 
   it("loads a page once a run for each selector it is waited on by, and once with none", async () => {
     const browser = browserRunning();
-    const fetcher = createBrowserFetcher(plainFetcher());
+    const fetcher = createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE });
 
     await fetcher.fetch(CALENDAR);
     await fetcher.fetch(CALENDAR);
@@ -265,7 +279,7 @@ describe("browser fetcher", () => {
   it("reads a page whose listings render more than 15 s after it loads, within its own 30 s deadline", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     browserRunning(async (page) => void (page.renderedAfterMs = 25_000));
-    const fetcher = createBrowserFetcher(plainFetcher());
+    const fetcher = createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE });
 
     expect(await fetcher.fetch(CALENDAR, { waitFor: ".event" })).toMatchObject({ status: 200, body: expect.stringContaining("Big Show") });
   });
@@ -273,7 +287,7 @@ describe("browser fetcher", () => {
   it("fails a page whose listings never render, after 30 s, naming the timeout", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     browserRunning();
-    const fetcher = createBrowserFetcher(plainFetcher());
+    const fetcher = createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE });
     const started = Date.now();
 
     await expect(fetcher.fetch(CALENDAR, { waitFor: ".event" })).rejects.toThrow("Timeout 30000ms exceeded");
@@ -283,7 +297,7 @@ describe("browser fetcher", () => {
   it("fails a page with no selector whose network never goes quiet, after 30 s, naming the timeout", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     browserRunning();
-    const fetcher = createBrowserFetcher(plainFetcher());
+    const fetcher = createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE });
     const started = Date.now();
 
     await expect(fetcher.fetch(CALENDAR)).rejects.toThrow("waitForLoadState: Timeout 30000ms exceeded");
@@ -297,7 +311,7 @@ describe("browser fetcher", () => {
     // The plain walk of the same URL has just booked the origin, which asks for 10 s between requests.
     plain.policy.setCrawlDelay(new URL(CALENDAR).origin, 10);
     await plain.policy.pace(new URL(CALENDAR));
-    const fetcher = createBrowserFetcher(plain);
+    const fetcher = createBrowserFetcher(plain, { timezone: TIMEZONE });
     const started = Date.now();
 
     expect(await fetcher.fetch(CALENDAR, { waitFor: ".event" })).toMatchObject({ status: 200 });
@@ -311,7 +325,7 @@ describe("browser fetcher", () => {
       popup = await page.popup();
     });
 
-    await createBrowserFetcher(plainFetcher()).fetch(CALENDAR);
+    await createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE }).fetch(CALENDAR);
 
     expect(popup!.closed).toBe(true);
     expect(browser.contexts[0]!.outcomes.get("https://ads.test/")).toBe("abort");
@@ -327,7 +341,7 @@ describe("browser fetcher", () => {
       await page.request("https://api.venue.test/events.json");
     });
 
-    expect(await createBrowserFetcher(plainFetcher()).fetch(CALENDAR)).toMatchObject({ status: 200 });
+    expect(await createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE }).fetch(CALENDAR)).toMatchObject({ status: 200 });
 
     expect(Object.fromEntries(browser.contexts[0]!.outcomes)).toEqual({
       [CALENDAR]: "continue",
@@ -344,7 +358,7 @@ describe("browser fetcher", () => {
       await page.request("https://ads.test/opened", { navigation: true, frame: "unborn" });
     });
 
-    expect(await createBrowserFetcher(plainFetcher()).fetch(CALENDAR)).toMatchObject({ status: 200 });
+    expect(await createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE }).fetch(CALENDAR)).toMatchObject({ status: 200 });
     expect(browser.contexts[0]!.outcomes.get("https://ads.test/opened")).toBe("abort");
   });
 
@@ -353,7 +367,7 @@ describe("browser fetcher", () => {
       page.redirect(CALENDAR, "http://192.168.1.1/admin", { navigation: true });
     });
 
-    await expect(createBrowserFetcher(plainFetcher()).fetch(CALENDAR)).rejects.toThrow(/192\.168\.1\.1/);
+    await expect(createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE }).fetch(CALENDAR)).rejects.toThrow(/192\.168\.1\.1/);
   });
 
   it("warns, and still reads the page, when something the page loads redirects to a private address", async () => {
@@ -362,7 +376,7 @@ describe("browser fetcher", () => {
     });
     const warn = vi.fn();
 
-    expect(await createBrowserFetcher(plainFetcher(), { warn }).fetch(CALENDAR)).toMatchObject({ status: 200, robotsAllowed: true });
+    expect(await createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE, warn }).fetch(CALENDAR)).toMatchObject({ status: 200, robotsAllowed: true });
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/^WARNING: .* redirected to http:\/\/192\.168\.1\.1\/admin/));
   });
 
@@ -371,7 +385,7 @@ describe("browser fetcher", () => {
       page.redirect(CALENDAR, "https://venue.test/private", { navigation: true });
     });
 
-    expect(await createBrowserFetcher(plainFetcher({ disallowed: ["https://venue.test/private"] })).fetch(CALENDAR)).toMatchObject({
+    expect(await createBrowserFetcher(plainFetcher({ disallowed: ["https://venue.test/private"] }), { timezone: TIMEZONE }).fetch(CALENDAR)).toMatchObject({
       robotsAllowed: false,
       finalUrl: "https://venue.test/private",
     });
@@ -382,7 +396,7 @@ describe("browser fetcher", () => {
       page.current = "https://venue.test/members";
     });
 
-    expect(await createBrowserFetcher(plainFetcher({ disallowed: ["https://venue.test/members"] })).fetch(CALENDAR)).toMatchObject({
+    expect(await createBrowserFetcher(plainFetcher({ disallowed: ["https://venue.test/members"] }), { timezone: TIMEZONE }).fetch(CALENDAR)).toMatchObject({
       robotsAllowed: false,
       finalUrl: "https://venue.test/members",
     });
@@ -398,7 +412,7 @@ describe("browser fetcher", () => {
       },
     );
 
-    expect(await createBrowserFetcher(plainFetcher()).fetch(CALENDAR)).toMatchObject({ status: 200, robotsAllowed: true });
+    expect(await createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE }).fetch(CALENDAR)).toMatchObject({ status: 200, robotsAllowed: true });
   });
 
   it("runs without the sandbox, warning loudly, on a host that cannot give it one", async () => {
@@ -406,7 +420,7 @@ describe("browser fetcher", () => {
     launch.mockRejectedValueOnce(new Error("No usable sandbox!\nmore detail")).mockResolvedValueOnce(browser);
     const warn = vi.fn();
 
-    expect(await createBrowserFetcher(plainFetcher(), { warn }).fetch(CALENDAR)).toMatchObject({ status: 200 });
+    expect(await createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE, warn }).fetch(CALENDAR)).toMatchObject({ status: 200 });
 
     expect(launch).toHaveBeenLastCalledWith(expect.objectContaining({ chromiumSandbox: false }));
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/^WARNING: Chromium's sandbox did not start \(No usable sandbox!\)/));
@@ -416,7 +430,7 @@ describe("browser fetcher", () => {
     launch.mockImplementation(async () => {
       throw new Error("Executable doesn't exist at /home/x/.cache/ms-playwright\nRun playwright install");
     });
-    const fetcher = createBrowserFetcher(plainFetcher(), { warn: () => undefined });
+    const fetcher = createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE, warn: () => undefined });
     await expect(fetcher.fetch(CALENDAR)).rejects.toThrow("the browser did not launch: Executable doesn't exist at /home/x/.cache/ms-playwright");
     await expect(fetcher.fetch("https://venue.test/films")).rejects.toThrow("the browser did not launch");
     expect(launch).toHaveBeenCalledOnce(); // not without the sandbox, which was not what failed; and once for the run
@@ -425,7 +439,7 @@ describe("browser fetcher", () => {
   it("fails, saying the browser did not launch, when it launches neither in its sandbox nor out of it", async () => {
     launch.mockRejectedValueOnce(new Error("No usable sandbox!")).mockRejectedValueOnce(new Error("Missing libnss3.so"));
 
-    await expect(createBrowserFetcher(plainFetcher(), { warn: () => undefined }).fetch(CALENDAR)).rejects.toThrow(
+    await expect(createBrowserFetcher(plainFetcher(), { timezone: TIMEZONE, warn: () => undefined }).fetch(CALENDAR)).rejects.toThrow(
       "the browser did not launch: Missing libnss3.so",
     );
   });

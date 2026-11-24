@@ -25,6 +25,11 @@ export interface BrowserFetcher extends FetchPort {
 }
 
 export interface BrowserFetcherOptions {
+  /**
+   * The IANA time zone every page runs in (the config's `timezone`), so a date the page's script
+   * formats reads as a Kansas City reader's browser shows it, whatever the machine's time zone (#322).
+   */
+  timezone: string;
   /** An installed browser ("chrome") over Playwright's own Chromium. */
   channel?: string;
   /** Where a warning goes that the run's log should carry (the browser runs without its sandbox). */
@@ -43,8 +48,11 @@ export interface BrowserFetcherOptions {
  * (what the page itself loads, its scripts and data, is not a page the job asked for). The plain
  * fetcher's policy holds too: no request the page makes goes to a host on the machine's own network,
  * the load waits its origin's crawl delay, and a rendered page over the byte budget is refused. It
- * identifies itself with the job's user agent, not a stock browser's; one attempt within a deadline
- * of its own, started once the crawl delay has passed, cached by URL and selector.
+ * identifies itself with the job's user agent, not a stock browser's, and runs every page in the
+ * config's time zone, not the machine's: a calendar that formats its dates in script (the Kemper
+ * Museum's) dates them a day early on a machine set to UTC, as the GitHub fallback runner is (#322).
+ * One attempt within a deadline of its own, started once the crawl delay has passed, cached by URL
+ * and selector.
  *
  * The page runs a stranger's script, so it is given little: Chromium's sandbox wherever the host can
  * provide one (a loud warning where it cannot), and a context of its own per fetch, with no
@@ -65,7 +73,7 @@ export interface BrowserFetcherOptions {
  *
  * Build one per run, and close it when the run is done.
  */
-export function createBrowserFetcher(plain: PlainFetcher, { channel, warn = console.warn }: BrowserFetcherOptions = {}): BrowserFetcher {
+export function createBrowserFetcher(plain: PlainFetcher, { timezone, channel, warn = console.warn }: BrowserFetcherOptions): BrowserFetcher {
   const pages = new Map<string, Promise<FetchResult>>();
   let browser: Promise<Browser> | undefined;
 
@@ -76,7 +84,12 @@ export function createBrowserFetcher(plain: PlainFetcher, { channel, warn = cons
     const walked = await plain.fetch(url);
     if (!walked.robotsAllowed) return blocked(walked.finalUrl);
     browser ??= launch(channel, warn);
-    const context = await (await browser).newContext({ userAgent: USER_AGENT, acceptDownloads: false, serviceWorkers: "block" });
+    const context = await (await browser).newContext({
+      userAgent: USER_AGENT,
+      timezoneId: timezone,
+      acceptDownloads: false,
+      serviceWorkers: "block",
+    });
     // Set once the origin's pause is over, so waiting to be polite does not count against the page.
     let deadline = 0;
     const remaining = () => Math.max(1, deadline - Date.now());

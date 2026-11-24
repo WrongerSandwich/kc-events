@@ -82,10 +82,13 @@ export interface Adapters {
   close(): Promise<void>;
 }
 
-/** The real adapters. BROWSER_CHANNEL=chrome has the browser fetcher use an installed Chrome instead of Playwright's Chromium. */
+/**
+ * The real adapters. The browser fetcher renders pages in the config's time zone (#322);
+ * BROWSER_CHANNEL=chrome has it use an installed Chrome instead of Playwright's Chromium.
+ */
 export function realAdapters(config: RunConfig, env: Env): Adapters {
   const fetcher = createFetcher();
-  const browserFetcher = createBrowserFetcher(fetcher, { channel: env.BROWSER_CHANNEL || undefined });
+  const browserFetcher = createBrowserFetcher(fetcher, { timezone: config.timezone, channel: env.BROWSER_CHANNEL || undefined });
   return {
     ports: {
       model: createOpenRouterModel({ apiKey: env.OPENROUTER_API_KEY }),
