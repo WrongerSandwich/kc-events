@@ -88,22 +88,25 @@ const NONE = { kind: "none" } as const;
 
 /**
  * The known event a sighting is, if any, and by which rule: the match on primary page and title
- * first (among several such records, the one whose date is nearest, see compareOnPage), then the
- * match on own page and calendar date (#66), then the fuzzy match on title, venue, and nearby
- * date, then the match on title, venue, and end date (#68), then the game match on kind, matchup,
- * venue and date (#227), then for a recurring sighting the recurring event with its title at its
- * venue (#119), then for a sighting with no venue the known event with its title on its date, then
- * a recurring event the sighting is one month of. A record
- * folded as a duplicate stands for the record it was folded into, as far as that chain goes within
- * `known`: the match is that record, and its date is the one compared. The later pair rules take
- * the first match in `known` order.
+ * first, then the match on own page and calendar date (#66), then the fuzzy match on title, venue,
+ * and nearby date, then the match on title, venue, and end date (#68), then the game match on kind,
+ * matchup, venue and date (#227), then for a recurring sighting the recurring event with its title
+ * at its venue (#119), then for a sighting with no venue the known event with its title on its date
+ * (which names one or none, see candidateForVenueless), then a recurring event the sighting is one
+ * month of. The first rule that takes any record decides. A record folded as a duplicate stands for
+ * the record it was folded into, as far as that chain goes within `known`: the match is that record,
+ * and its date is the one compared. Among several records one rule takes, the match is the one
+ * compareMatches puts first (#177, #321), so it does not depend on the order of `known`.
  */
 export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, known: readonly T[], aliases: VenueAliases): Match<T> {
-  const standsFor = (k: T) => throughDuplicates(k, known);
-  const onPage = known.filter((k) => samePageAndTitle(sighting, k)).flatMap((k) => standsFor(k) ?? []);
-  const direct = onPage.reduce<T | undefined>((nearest, k) => (nearest === undefined || compareOnPage(sighting, k, nearest, aliases) < 0 ? k : nearest), undefined);
-  if (direct) return { kind: "matched", event: direct, rule: "page-and-title" };
+  /** Of every record a rule takes, each as the record it stands for, the one compareMatches puts first. */
+  const pick = (fits: (k: T) => boolean) =>
+    known
+      .filter(fits)
+      .flatMap((k) => throughDuplicates(k, known) ?? [])
+      .reduce<T | undefined>((first, k) => (first === undefined || compareMatches(sighting, k, first, aliases) < 0 ? k : first), undefined);
   const pairRules: [MatchRule, (a: EventIdentity, b: EventIdentity) => boolean][] = [
+    ["page-and-title", samePageAndTitle],
     ["own-page", sameOwnPageOnDate],
     ["fuzzy", (a, b) => sameEventFuzzily(a, b, aliases)],
     ["same-end", (a, b) => sameEndDate(a, b, aliases)],
@@ -111,25 +114,23 @@ export function matchSighting<T extends EventIdentity>(sighting: EventIdentity, 
     ["recurring", (a, b) => sameRecurringEvent(a, b, aliases)],
   ];
   for (const [rule, same] of pairRules) {
-    for (const k of known) {
-      const event = same(sighting, k) ? standsFor(k) : undefined;
-      if (event) return { kind: "matched", event, rule };
-    }
+    const event = pick((k) => same(sighting, k));
+    if (event) return { kind: "matched", event, rule };
   }
   const venueless = candidateForVenueless(sighting, known);
   if (venueless.kind === "matched") return venueless;
-  const month = known.find((k) => k.recurrence === "recurring" && k.status !== "expired" && oneMonthOf(sighting, k));
+  const month = pick((k) => k.recurrence === "recurring" && k.status !== "expired" && oneMonthOf(sighting, k));
   if (month) return { kind: "matched", event: month, rule: "month" };
   return venueless;
 }
 
 /**
- * Which of two records on the sighting's page with its title the sighting is (#177), negative for
- * `a`: the one whose date is nearer, then the one at the sighting's venue, then the earlier start
- * (an undated record after the dated), then the lesser id, page, and title. None of it depends on
- * the order of the known events, so neither does the match.
+ * Which of two records one rule takes the sighting is (#177, #321), negative for `a`: the one whose
+ * date is nearer, then the one at the sighting's venue, then the earlier start (an undated record
+ * after the dated), then the lesser id, page, and title. None of it depends on the order of the
+ * known events, so neither does the match.
  */
-function compareOnPage(sighting: EventIdentity, a: EventIdentity, b: EventIdentity, aliases: VenueAliases): number {
+function compareMatches(sighting: EventIdentity, a: EventIdentity, b: EventIdentity, aliases: VenueAliases): number {
   const atVenue = (k: EventIdentity) => (sighting.venue !== undefined && k.venue !== undefined && sameVenue(sighting.venue, k.venue, aliases) ? 0 : 1);
   return (
     daysApart(sighting, a) - daysApart(sighting, b) ||

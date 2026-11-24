@@ -288,6 +288,39 @@ describe("one title listed twice on one page (#77)", () => {
   });
 });
 
+describe("two records one rule matches past page and title (#321)", () => {
+  const aliases = { "Kauffman Center": ["Helzberg Hall", "Muriel Kauffman Theatre"], "The Midland": ["Midland Theatre"] };
+
+  it("picks the nearer date at the sighting's venue in either order: the property test's counterexample (seed 899096449)", () => {
+    const sighting = { primaryUrl: "https://b.test/events", title: "show Kauffman Kauffman Midland!", venue: "show  Midland  big  ", start: "2026-10-04" };
+    const a = { primaryUrl: "https://c.test/", title: "the:show", venue: "Midland (Oct.)", start: "2026-10-07", eventUrl: "https://b.test/e/1" };
+    const b = { primaryUrl: "https://c.test/", title: "show - night", eventUrl: "https://a.test/e/2" };
+    const c = { primaryUrl: "https://a.test/calendar/", title: "show Kauffman Kauffman Midland", venue: "show  Midland  big  ", start: "2026-10-03", eventUrl: "https://a.test/e/2" };
+    const fuzzyC = { kind: "matched", event: c, rule: "fuzzy" };
+    expect([matchSighting(sighting, [a, b, c], aliases), matchSighting(sighting, [c, b, a], aliases)]).toEqual([fuzzyC, fuzzyC]);
+  });
+
+  describe("two runs closing on one date, under the same-end rule", () => {
+    const page = "https://museum.test/exhibitions";
+    const sighting = { primaryUrl: "https://other.test/", title: "Prints", venue: "Museum", start: "2026-11-01", end: "2027-01-10" };
+    const run = { primaryUrl: page, venue: "Museum", end: "2027-01-10", status: "active" as const };
+    // Each title is the sighting's with more after it, and neither is the other's: two exhibitions, not one.
+    const nearer = { ...run, id: "evt_b", title: "Prints and Drawings", start: "2026-10-20" };
+    const farther = { ...run, id: "evt_a", title: "Prints of Japan", venue: "Museum Gallery", start: "2026-09-01" };
+
+    it("picks the nearer start in either order, and reports the rule that fired", () => {
+      const match = { kind: "matched", event: nearer, rule: "same-end" };
+      expect([matchSighting(sighting, [farther, nearer], aliases), matchSighting(sighting, [nearer, farther], aliases)]).toEqual([match, match]);
+    });
+
+    it("compares the date of the record a duplicate stands for, not the duplicate's own", () => {
+      const kept = { ...run, id: "evt_c", title: "Sculpture", start: "2026-08-01" };
+      const folded = { ...nearer, id: "evt_d", status: "expired" as const, duplicateOf: "evt_c" };
+      expect([findMatch(sighting, [folded, kept, farther], aliases), findMatch(sighting, [farther, kept, folded], aliases)]).toEqual([farther, farther]);
+    });
+  });
+});
+
 describe("a sighting with no venue and several candidates (#77)", () => {
   const kauffman = { primaryUrl: "https://www.kauffmancenter.org/events/", title: "Interstellar Live", venue: "Helzberg Hall", start: "2026-10-23", eventUrl: "https://tickets.kauffmancenter.org/overview/25068" };
   const twin = { primaryUrl: "https://www.kcsymphony.org/upcoming-events/", title: "Interstellar Live", start: "2026-10-23" };
@@ -365,6 +398,17 @@ describe("one month of a recurring event (#77)", () => {
     expect(matchSighting(month, [recurring], {})).toEqual({ kind: "matched", event: recurring, rule: "month" });
     const dated = { ...month, recurrence: "limited-run" as const, status: "active" as const };
     expect(matchSighting(month, [recurring, dated], {})).toMatchObject({ rule: "page-and-title" });
+  });
+
+  it("picks the same recurring event whichever comes first, when the sighting is one month of two (#321)", () => {
+    const elsewhere = { ...recurring, venue: "Union Station" };
+    expect([matchSighting(month, [elsewhere, recurring], {}), matchSighting(month, [recurring, elsewhere], {})]).toEqual([
+      { kind: "matched", event: recurring, rule: "month" },
+      { kind: "matched", event: recurring, rule: "month" },
+    ]);
+    const [a, b] = [{ ...elsewhere, id: "evt_a" }, { ...elsewhere, id: "evt_b", title: "The Main Gallery Tours" }];
+    const away = { ...month, venue: "Somewhere Else" };
+    expect([findMatch(away, [b, a], {}), findMatch(away, [a, b], {})]).toEqual([a, a]);
   });
 
   it("matches no recurring event on another page and none expired; the untagged title is the page-and-title match it always was", () => {
