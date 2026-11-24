@@ -328,7 +328,7 @@ sources:
     urls: [https://charlottestreet.org/2026-event-calendar/]
     kind: art/exhibitions
     neighborhood: Midtown
-    checkHints: Arts nonprofit; events are at its own spaces and partner venues, so read the venue from each listing. A series the calendar lists once per date under one title (Artists in Dialogue, "Wednesdays, November 4, 11, and 18") is one event, never one event per date. An info session on applying to one of its programs (Crossroads Artboards 2027-28 Info Session) is not public; the artworks on view are the event.
+    checkHints: Arts nonprofit; events are at its own spaces and partner venues, so read the venue from each listing. A series the calendar lists once per date under one title (Artists in Dialogue, "Wednesdays, November 4, 11, and 18") is one event, never one event per date. An info session on applying to one of its programs (Crossroads Artboards 2027-28 Info Session) is not public; the artworks on view are the event. A listing that names a place of its own ("@ Emily & Todd Voth Artspace" beside its date) is held there, never at the campus the page's paragraph about Charlotte Street's spaces describes; a listing that names no place is at the campus, 3333 Wyoming St (the venue "Charlotte Street").
     status: active
     notes: The calendar page's address carries the year; update it each January.
 

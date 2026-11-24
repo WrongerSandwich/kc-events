@@ -113,6 +113,68 @@ describe("recurrence, kind, geography, and neighborhood", () => {
     expect(dataset.events[0]).not.toHaveProperty("start");
   });
 
+  it("a listing that names its own place keeps it over the page's paragraph about the organization's space, which places only a listing naming none", async () => {
+    // The shape of Charlotte Street's calendar (#329): most listings give a date and title only, one names a
+    // place beside its date, and one block for the whole page describes the foundation's campus. The precedence
+    // is in the rules every page gets and, for this calendar, in the source's hints, so the test reads both.
+    const registry = parse(readFileSync(new URL("../data/registry.yaml", import.meta.url), "utf8")) as { sources: { name: string; checkHints?: string }[] };
+    const hints = registry.sources.find((s) => s.name === "Charlotte Street Foundation")!.checkHints;
+    const foundation = source("Charlotte Street Foundation", { kind: "other", neighborhood: "Crossroads", checkHints: hints });
+    const url = foundation.urls[0]!;
+    const blurb = "Charlotte Street's campus is a multidisciplinary, multifaceted facility";
+    const page = `<html><body>
+      <h3>Artists in Dialogue: Mikey Yates</h3><p>Oct. 21, 7-8:30 PM @ Emily & Todd Voth Artspace</p>
+      <h3>Open House</h3><p>Oct. 24, 12-4 PM</p>
+      <h2>IT'S ALL HAPPENING HERE</h2><p>${blurb} with the Stern Theater and the Gallery.</p>
+    </body></html>`;
+    const rules = readFileSync(new URL("../prompts/extraction-rules.md", import.meta.url), "utf8");
+    const fakes = fakePorts(WEEK_1, {
+      pages: { [url]: { status: 200, body: page } },
+      completions: [
+        costing(
+          0.01,
+          candidateAt(foundation, {
+            title: "Artists in Dialogue: Mikey Yates",
+            startDate: "2026-10-21",
+            startTime: "19:00",
+            venue: "Emily & Todd Voth Artspace",
+            dateEvidence: "Oct. 21, 7-8:30 PM",
+            venueEvidence: "Emily & Todd Voth Artspace",
+          }),
+          candidateAt(foundation, {
+            title: "Open House",
+            startDate: "2026-10-24",
+            startTime: "12:00",
+            venue: "Charlotte Street",
+            dateEvidence: "Oct. 24, 12-4 PM",
+            venueEvidence: blurb,
+          }),
+        ),
+      ],
+    });
+
+    const { dataset } = await run({
+      config: testConfig(),
+      prompts: { ...testPrompts(), extractionRules: rules },
+      dataset: emptyDataset(),
+      registry: { sources: [foundation] },
+      ports: fakes.ports,
+    });
+
+    const system = fakes.requests.find((r) => r.model === "test/extraction")!.messages[0]!.content;
+    expect(system).toContain("A place the listing itself names, in its date line, its location line, or \"@ <place>\" beside its date");
+    expect(system).toContain("it stands over any sentence elsewhere on the page");
+    expect(system).toContain("it can give the venue only to a listing that names no place of its own");
+    expect(rules).not.toMatch(/Charlotte Street|Voth/); // the rule is general; the case is the source's hint
+    expect(system).toContain('A listing that names a place of its own ("@ Emily & Todd Voth Artspace" beside its date) is held there');
+    expect(system).toContain('a listing that names no place is at the campus, 3333 Wyoming St (the venue "Charlotte Street")');
+
+    expect(dataset.events.map((e) => [e.title, e.venue, e.status])).toEqual([
+      ["Artists in Dialogue: Mikey Yates", "Emily & Todd Voth Artspace", "active"],
+      ["Open House", "Charlotte Street", "active"],
+    ]);
+  });
+
   it("a kind from the taxonomy is kept, and the model's kind wins over the source's", async () => {
     const { dataset } = await runOver([candidate({ kind: "comedy" })], testConfig({ kinds: ["music", "comedy", "other"] }));
 
