@@ -8,7 +8,8 @@ import type { PlainFetcher } from "../src/adapters/fetcher.js";
 // The browser fetcher in a real Chromium, under TZ=UTC as the GitHub fallback runner is (#322): a
 // page whose script formats a date must read as it does in Kansas City, not as it does on the
 // machine. The other browser fetcher tests fake Chromium; this one needs the real one, so it is
-// skipped where neither Playwright's Chromium nor an installed Chrome will launch.
+// skipped where neither Playwright's Chromium nor an installed Chrome will launch, save in CI, where
+// that fails.
 
 // Set before any browser launches: Chromium inherits the process's environment, so without the
 // fetcher's time zone every page it renders runs in UTC (the contrast below shows that it does).
@@ -21,20 +22,36 @@ const PAGE = `<!doctype html><html><body><p id="zone"></p><p id="day"></p><scrip
   document.getElementById("day").textContent = new Date("2026-10-09T03:00:00Z").toLocaleDateString("en-US");
 </script></body></html>`;
 
+/** Why the last launch tried failed, for CI's error when none works. */
+let launchError: unknown;
+
 /** Playwright's own Chromium, else an installed Chrome (the runner's), else none: the channel a launch works with. */
 async function launchable(): Promise<{ channel?: string } | undefined> {
   for (const channel of [undefined, "chrome"]) {
     try {
       await (await chromium.launch({ channel, timeout: 30_000 })).close();
       return { channel };
-    } catch {
-      // Not installed; try the next.
+    } catch (error) {
+      launchError = error; // not installed; try the next
     }
   }
   return undefined;
 }
 
 const browser = await launchable();
+
+// Restored whether or not the suite below runs.
+afterAll(() => {
+  if (machineZone === undefined) delete process.env.TZ;
+  else process.env.TZ = machineZone;
+});
+
+// On a machine with no browser the test is skipped, but in CI it must not quietly skip: it fails, saying why.
+describe.runIf(!browser && process.env.CI)("browser fetcher in a real Chromium, in CI", () => {
+  it("has a browser to launch", () => {
+    throw new Error(`neither Playwright's Chromium nor an installed Chrome launched: ${String(launchError).split("\n")[0]}`, { cause: launchError });
+  });
+});
 
 /** A plain fetcher whose walk ends where it starts, with a policy that lets the test's local server through. */
 function plainFetcher(): PlainFetcher {
@@ -61,8 +78,6 @@ describe.skipIf(!browser)("browser fetcher in a real Chromium, under TZ=UTC", ()
 
   afterAll(async () => {
     await new Promise((closed) => server.close(closed));
-    if (machineZone === undefined) delete process.env.TZ;
-    else process.env.TZ = machineZone;
   });
 
   it("runs on UTC without a time zone of its own, so the test's UTC is real", async () => {
