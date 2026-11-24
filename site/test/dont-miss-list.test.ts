@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 // vitest hoists vi.mock above every import and declaration, so a factory cannot use a module-level
 // variable or a static import: it builds its fixture itself, importing the helper dynamically.
-const { state } = vi.hoisted(() => ({ state: { empty: false } }));
+const { state } = vi.hoisted(() => ({ state: { empty: false, onNow: false } }));
 vi.mock("../src/generated/dont-miss", async () => {
   const { event } = await import("./fixtures/event");
   const picks = [
@@ -15,8 +15,13 @@ vi.mock("../src/generated/dont-miss", async () => {
     event({ id: "f", title: "Art fair", kind: "art/exhibitions", dontMiss: true, start: "2026-10-19" }),
     event({ id: "d", title: "Plain show", dontMiss: false, start: "2026-10-06" }),
   ];
-  // A getter, so one test can switch to no picks at all.
-  return { get dontMiss() { return state.empty ? [] : picks; } };
+  // Runs open now and past the week's Sunday, for On now: the later close listed second, its weekdays over it.
+  const onNow = [
+    event({ id: "g", title: "Long show", kind: "art/exhibitions", dontMiss: true, pickReason: "major-run", recurrence: "limited-run", start: "2026-09-20", end: "2026-12-06", days: [3, 4, 5, 6, 0], daysLine: "Wed–Sun" }),
+    event({ id: "h", title: "Lights", kind: "festivals/markets", dontMiss: true, recurrence: "limited-run", start: "2026-10-01", end: "2026-11-01" }),
+  ];
+  // A getter, so one test can switch to no picks at all, and one add the runs on now.
+  return { get dontMiss() { return state.empty ? [] : state.onNow ? [...picks, ...onNow] : picks; } };
 });
 vi.mock("../src/generated/meta", () => ({
   meta: { kinds: ["music"], regions: ["Central KC"], lastSuccessfulRun: "2026-10-05T06:30:00-05:00", buildToday: "2026-10-05", timeZone: "America/Chicago" },
@@ -29,6 +34,40 @@ describe("DontMissList", () => {
   afterEach(() => {
     vi.useRealTimers();
     state.empty = false;
+    state.onNow = false;
+  });
+
+  it("moves runs open all week and past Sunday out of This week into On now's rows, soonest close first", async () => {
+    state.onNow = true;
+    vi.useFakeTimers({ now: new Date("2026-10-05T12:00:00Z") }); // Monday
+    render(DontMissList);
+    await tick();
+    const sections = screen.getAllByRole("region");
+    expect(sections.map((s) => within(s).getByRole("heading", { level: 2 }).textContent)).toEqual([
+      "This week, Oct 5–11", "On now", "Next two weeks, through Oct 19", "Later, after Oct 19",
+    ]);
+    // This week keeps its cards, chips and strip for what happens or closes by Sunday: the closing run stays.
+    expect(within(sections[0]!).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Closing run", "Tuesday show", "Wednesday show"]);
+    expect(within(sections[0]!).getByRole("list", { name: "Picks by kind" })).toHaveTextContent("All 3 2 Music1 Art/exhibitions");
+    expect(within(sections[0]!).queryByText("Long show")).toBeNull();
+    // The strip draws a band for the run that closes Sunday alone, not one for each run on all week.
+    const strip = within(sections[0]!).getByRole("navigation", { name: "This week by day" });
+    expect(strip.querySelectorAll(".day:first-child .lane")).toHaveLength(1);
+    // On now: rows, no cards; a run's weekdays over its close, then its pick tag.
+    expect(within(sections[1]!).queryAllByRole("article")).toEqual([]);
+    const rows = within(sections[1]!).getAllByRole("listitem");
+    expect(rows[0]).toHaveTextContent(/^Closes Nov 1\s*Pick\s*Lights, festivals and markets/);
+    expect(rows[1]).toHaveTextContent(/^Wed–Sun Closes Dec 6\s*Pick: Major run\s*Long show, art and exhibitions/);
+  });
+
+  it("says nothing else is picked this week when every pick of it is on now", async () => {
+    state.onNow = true;
+    vi.useFakeTimers({ now: new Date("2026-10-20T12:00:00Z") }); // after every one-off: only the runs are left
+    render(DontMissList);
+    await tick();
+    const [week, onNow] = screen.getAllByRole("region");
+    expect(within(week!).getByText("Nothing else picked between now and Sunday.")).toBeInTheDocument();
+    expect(within(onNow!).getAllByRole("listitem")).toHaveLength(2);
   });
 
   it("hydrates with the build's state, then takes the visitor's date on mount", () => {
@@ -65,9 +104,9 @@ describe("DontMissList", () => {
     expect(within(sections[1]!).queryByRole("list", { name: "Picks by kind" })).toBeNull();
     expect(within(sections[1]!).getByRole("link", { name: "Later show, music" })).toHaveAttribute("href", "/e/c");
     expect(within(sections[1]!).getByText("Sat Oct 17")).toBeInTheDocument();
-    // A row has no why line, so it keeps the pick tag: the reason in a word, after the title and outside its link.
+    // A row has no why line, so it keeps the pick tag: the reason in a word, under the date and outside the title's link.
     const row = within(sections[1]!).getAllByRole("listitem")[0]!;
-    expect(row).toHaveTextContent(/^Sat Oct 17\s*Later show, music\s*Pick: Big name\s*recordBar$/);
+    expect(row).toHaveTextContent(/^Sat Oct 17\s*Pick: Big name\s*Later show, music\s*recordBar$/);
     expect(row.querySelector(".dont-miss")).toHaveTextContent("Pick: Big name");
     expect(within(sections[2]!).getByText("Nothing picked further out yet.")).toBeInTheDocument();
     // One link to the explorer's picks on the page, under this week's (#184).
