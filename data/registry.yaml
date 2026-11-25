@@ -462,7 +462,7 @@ sources:
     urls: [https://www.crowncenter.com/events]
     kind: other
     neighborhood: Crown Center
-    checkHints: The district's calendar, 2450 Grand Blvd; exhibits in the shops, events on the square, and shows by its theaters. Read the kind from each listing; a Musical Theater Heritage run listed here is theater/dance. Skip The Coterie's productions, which this page lists at the shops whatever their venue and dates, without naming The Coterie; The Coterie source carries them. In the 2026–27 season they are Electric Poe, The Pigeon Gets a Big Time Holiday Extravaganza!, JACKED! A Beanstalk Remix, The Gingerbread Kid, Madagascar – A Musical Adventure, Baby Rave, Kidtropolis and Electric Renaissance. A month of offers from the district's businesses, such as the Homeschool Event (activity packets and discounts), is not an event.
+    checkHints: The district's calendar, 2450 Grand Blvd; exhibits in the shops, events on the square, and shows by its theaters. Read the kind from each listing; a Music Theater Heritage run listed here is theater/dance. Skip The Coterie's productions, which this page lists at the shops whatever their venue and dates, without naming The Coterie; The Coterie source carries them. In the 2026–27 season they are Electric Poe, The Pigeon Gets a Big Time Holiday Extravaganza!, JACKED! A Beanstalk Remix, The Gingerbread Kid, Madagascar – A Musical Adventure, Baby Rave, Kidtropolis and Electric Renaissance. A month of offers from the district's businesses, such as the Homeschool Event (activity packets and discounts), is not an event.
     status: active
     notes: Discovery read eleven events from this page before it was a source (2026-10-10).
 
@@ -522,14 +522,15 @@ sources:
     status: active
     notes: Refuses any user agent containing "research" (HTTP 403); fetchable since the job's user agent became kc-this-week (ADR 0011, 2026-10-08). kcknightsoflights.com added 2026-11-21 (#276), since the homepage's "starting November 27" stored Knights of Lights as one night; its own site gives the open nights, plain fetch, robots.txt allows all.
 
-  # --- Excluded: known, deliberately not fetched -------------------------------------------------
-
-  - name: Musical Theater Heritage
-    urls: [https://www.mtheritage.com/]
+  - name: Music Theater Heritage
+    urls: [https://musictheaterheritage.com/shows/all-shows/]
     kind: theater/dance
     neighborhood: Crown Center
-    status: excluded
-    reason: robots.txt disallows the site (checked 2026-10-03).
+    checkHints: The company's season at its theater in Crown Center, 2450 Grand Blvd, on the third floor; the venue is Music Theater Heritage unless a listing names another. Each show's card gives its title, a "View Show" link (its own page, under /project/), a subtitle or "Coming Soon", and then its dates, so a date belongs to the title above it, never the one below. Most shows are limited runs ("January 20 – 31, 2027"); a card with one date or two ("May 1", "July 16 & 17, 2027") is that night or nights. A date with no year is in the coming season, the nearest one ahead.
+    status: active
+    notes: Excluded 2026-10-03 because robots.txt at www.mtheritage.com disallowed everything. The company had moved to musictheaterheritage.com, whose robots.txt allows all (checked 2026-11-24); the old domain now redirects to an unrelated site. Plain fetch; the all-shows page lists the season with dates (#58, Email 1 withdrawn).
+
+  # --- Excluded: known, deliberately not fetched -------------------------------------------------
 
   - name: Starlight Theatre
     urls: [https://www.kcstarlight.com/events/]

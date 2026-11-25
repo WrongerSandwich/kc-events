@@ -56,6 +56,12 @@
   lat: 39.082555
   lng: -94.582439
   url: https://www.crowncenter.com/
+- name: Music Theater Heritage
+  # Suite 301 of Crown Center (the company's footer, 2026-11-24), so Crown Center's position.
+  address: 2450 Grand Blvd, Kansas City, MO 64108
+  lat: 39.082555
+  lng: -94.582439
+  url: https://musictheaterheritage.com/
 - name: T-Mobile Center
   address: 1407 Grand Blvd, Kansas City, MO 64106
   lat: 39.097295
