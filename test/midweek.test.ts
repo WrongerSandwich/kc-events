@@ -126,6 +126,20 @@ describe("a midweek re-verification pass", () => {
     expect(report.ownPages).toEqual([]);
   });
 
+  it("gives a sighting to the record the merge would, not to a second record of that title on another day", async () => {
+    // The Kemper's docent talk on 2026-11-26: one title every Saturday, and the page listing only the next one.
+    const talk = (startDate: string, dateEvidence: string) => candidateAt(knuckleheads, { title: "Gallery Talk", startDate, dateEvidence });
+    const first = talk("2026-10-08", "Thu, Oct 8");
+    const result = await runWith(WEEK_1, emptyDataset(), { sources: [knuckleheads, elsewhere], pages: PAGES, completions: [reply(first, talk("2026-10-15", "Thu, Oct 15")), reply(far)] });
+    const [earlier, later] = result.dataset.events.filter((e) => e.title === "Gallery Talk").sort((a, b) => a.start!.localeCompare(b.start!));
+
+    const { dataset } = await midweek(result.dataset, [reply(first)]);
+
+    const after = (id: string) => dataset.events.find((e) => e.id === id)!;
+    expect(after(earlier!.id).start).toBe(earlier!.start);
+    expect(after(later!.id)).toEqual(later);
+  });
+
   it("holds an event through an outage of its page", async () => {
     const before = await weekly([far, nearby]);
 

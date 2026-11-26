@@ -78,6 +78,7 @@ import {
   scheduleSaysWhen,
   variantTitles,
   venueAndRoom,
+  type Match,
   type MatchRule,
   type VenueAliases,
 } from "./identity.js";
@@ -1747,6 +1748,12 @@ async function reverify(
   const uncitable = new Set<string>();
   const kept = new Map<string, string>();
   const awaitingVenue = new Set<string>();
+  const matchableEvents = events.filter(matchable);
+  const matches = new Map<Sighting, Match<Event>>();
+  const matchOf = (sighting: Sighting) => {
+    if (!matches.has(sighting)) matches.set(sighting, matchSighting(sighting.event, matchableEvents, context.config.venueAliases));
+    return matches.get(sighting)!;
+  };
   const checked = events.map((event) => {
     if (!pending.includes(event)) return event;
     const url = event.primaryUrl;
@@ -1761,7 +1768,7 @@ async function reverify(
     }
     const sightings = sightingsAt.get(url);
     if (!sightings) return event;
-    const listed = sightingFor(event, sightings, context.config.venueAliases);
+    const listed = sightingFor(event, sightings, matchOf);
     if (!listed) {
       if (partlyReadAt.has(url)) return event;
       if (goneAt.has(url)) return strike(event);
@@ -1821,12 +1828,15 @@ function excludedSourceOf(origin: PageOrigin, url: string, registry: Registry): 
  * matching, the one whose start is nearest the event's stored start, the first of them on a tie
  * (#77, #78): a page that lists the show twice gives the event's own night among them, and a show
  * given only on another night has moved. A cancelled sighting that does not reach the event
- * (cancellationReaches) is no sighting of it.
+ * (cancellationReaches) is no sighting of it. A sighting is matched against every record, as the merge matches
+ * it, and is this event's only when it is the record taken: a page billing one title every Saturday and listing
+ * only the next gives that Saturday to its own record, not to next week's too, which would move onto its date.
+ * `matchOf` is that match, the same whichever event asks, so the caller works it out once a sighting.
  */
-function sightingFor(event: Event, sightings: Sighting[], aliases: VenueAliases): { sighting: Sighting; rule: MatchRule } | undefined {
+function sightingFor(event: Event, sightings: Sighting[], matchOf: (sighting: Sighting) => Match<Event>): { sighting: Sighting; rule: MatchRule } | undefined {
   const matching = sightings.flatMap((sighting) => {
-    const match = matchSighting(sighting.event, [event], aliases);
-    if (match.kind !== "matched" || (sighting.cancelled && !cancellationReaches(sighting.event, event, match.rule))) return [];
+    const match = matchOf(sighting);
+    if (match.kind !== "matched" || match.event.id !== event.id || (sighting.cancelled && !cancellationReaches(sighting.event, event, match.rule))) return [];
     return [{ sighting, rule: match.rule }];
   });
   return matching.sort((a, b) => daysApart(a.sighting.event, event) - daysApart(b.sighting.event, event))[0];
