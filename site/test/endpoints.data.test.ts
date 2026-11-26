@@ -12,7 +12,7 @@ import { events } from "../src/generated/events";
 import { redirects } from "../src/generated/redirects";
 import { meta } from "../src/generated/meta";
 import { pickAlwaysThere } from "../src/lib/always-there";
-import { venueLine } from "../src/lib/events";
+import { hasStartDay, venueLine } from "../src/lib/events";
 
 const dist = new URL("../dist/", import.meta.url);
 const has = (p: string) => existsSync(new URL(p, dist));
@@ -24,7 +24,8 @@ const matchesGenerated = has("llms.txt") && read("llms.txt").includes(`Last run:
 
 const oneOff = events.find((e) => e.recurrence === "one-off");
 const recurring = events.find((e) => e.recurrence === "recurring");
-const pick = events.find((e) => e.dontMiss);
+// A pick with a start day: one already on with no start carries no Event JSON-LD (eventJsonLd), as GloWild did on 11-26.
+const pick = events.find((e) => e.dontMiss && hasStartDay(e));
 // The first event whose neighborhood carries its region's name, whichever kind the dataset holds first: "Northland" under Northland, "Kansas City, Kansas" under its own, or the catch-all.
 const namedOnce = events.find((e) => e.region === e.neighborhood);
 const alwaysThere = pickAlwaysThere(events, alwaysTherePicks);
