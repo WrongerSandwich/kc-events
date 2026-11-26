@@ -60165,18 +60165,17 @@
     {
       "id": "evt_9cdb90b59919",
       "title": "Gallery Conversation with a Kemper Museum Docent",
-      "start": "2026-11-28T13:00:00-06:00",
+      "start": "2026-12-05T13:00:00-06:00",
       "venue": "Kemper Museum of Contemporary Art",
       "neighborhood": "Plaza & Museum District",
       "primaryUrl": "https://www.kemperart.org/",
-      "eventUrl": "https://www.kemperart.org/program/gallery-conversation-november",
       "kind": "talks/readings",
       "recurrence": "one-off",
       "dontMiss": false,
       "firstSeen": "2026-11-23T06:17:07-06:00",
-      "lastVerified": "2026-11-26T12:03:04-06:00",
-      "lastChanged": "2026-11-26T12:03:04-06:00",
-      "lastJudged": "2026-11-26T12:03:04-06:00",
+      "lastVerified": "2026-11-23T06:17:07-06:00",
+      "lastChanged": "2026-11-23T06:17:07-06:00",
+      "lastJudged": "2026-11-23T06:17:07-06:00",
       "judgedWith": "8713cc922674",
       "status": "active",
       "verificationFailures": 0,
@@ -60186,7 +60185,7 @@
         "source": "Kemper Museum of Contemporary Art"
       },
       "evidence": {
-        "date": "November 28th, 2026 1:00—1:45pm",
+        "date": "December 5th, 2026 1:00—1:45pm",
         "venue": "Kemper Museum of Contemporary Art"
       }
     },
