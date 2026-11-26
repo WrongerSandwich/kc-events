@@ -1,0 +1,1721 @@
+{
+  "runDate": "2026-11-26",
+  "mode": "reverify-only",
+  "windowDays": 10,
+  "startedAt": "2026-11-26T12:03:04-06:00",
+  "finishedAt": "2026-11-26T12:06:06-06:00",
+  "horizonWeeks": 8,
+  "counts": {
+    "found": 0,
+    "new": 0,
+    "updated": 0,
+    "reverified": 135,
+    "heldUnverified": 0,
+    "heldThroughOutage": 0,
+    "heldSourceExcluded": 0,
+    "beyondHorizonUnstruck": 0,
+    "beyondListingUnstruck": 1,
+    "unverifiedByOutageLimit": 0,
+    "unverifiedByUncitableReading": 3,
+    "keptOnStoredCitation": 0,
+    "venuelessAmbiguous": 0,
+    "heldForPromotion": 0,
+    "releasedForPromotion": 0,
+    "outsideGeography": 0,
+    "skippedPromotion": 2,
+    "skippedNotPublic": 0,
+    "overCap": 2,
+    "unusableDates": 0,
+    "quoteNotOnPage": 1,
+    "ownPageCorrected": 0,
+    "ownPageDropped": 0,
+    "expired": {
+      "past": 14,
+      "two-strike": 1,
+      "cancelled": 0,
+      "index-page": 0,
+      "duplicate": 0,
+      "promotion": 0,
+      "not-public": 0,
+      "stale": 0,
+      "outside-geography": 0
+    },
+    "archived": 0
+  },
+  "spend": {
+    "totalUsd": 0.12724839500000001,
+    "capUsd": 5,
+    "capHit": false,
+    "shortfall": {
+      "pagesNotExtracted": 0,
+      "eventsNotReverified": 0,
+      "queriesNotSearched": 0,
+      "leadsNotFollowed": 0,
+      "eventsNotCurated": 0,
+      "ownPagesNotRead": 0
+    },
+    "modelCalls": [
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 8380,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716189-zsQpOXl6vCEJeqsIScLw"
+        },
+        "costUsd": 0.0019798
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 12548,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716187-p5CMT0GMvqSZf3MY3rsr"
+        },
+        "costUsd": 0.0023073
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 12286,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716189-VUg6jDTGwmbM5SyNjTrx"
+        },
+        "costUsd": 0.0026178
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 19641,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716189-fRaiUgArxXuYzgTWYb3A"
+        },
+        "costUsd": 0.0029523
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 14633,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716199-pNJRZFP7FFzSOrpxTJEt"
+        },
+        "costUsd": 0.002619425
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 21133,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716204-f4FHO2GCusR5yja4PbVE"
+        },
+        "costUsd": 0.005316175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 18762,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716210-cJaoGYYsOB12kfzyp12H"
+        },
+        "costUsd": 0.003834675
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 17831,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716215-YhJlIafnDIIMkRfOVsn0"
+        },
+        "costUsd": 0.002839175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 30068,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716204-XDc0unQDVl53UKYo5uUP"
+        },
+        "costUsd": 0.0047428
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 11888,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716226-VwTKPJckiYCGECLYYAaA"
+        },
+        "costUsd": 0.002491175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 5049,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716236-vxjYlRmLt8BE8tYRvRAN"
+        },
+        "costUsd": 0.0015798
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 14548,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716230-ve8KQhpAvyjxcri6tDiE"
+        },
+        "costUsd": 0.0032868
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 17828,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716235-Bqp01DnNC6qEq3TjcrcK"
+        },
+        "costUsd": 0.00293555
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 4029,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716254-GlRCHVbxCsYrx8g0BKBx"
+        },
+        "costUsd": 0.001862175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 15114,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716245-FKhP1huKZYU0D5LVSHDU"
+        },
+        "costUsd": 0.002515925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 18087,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716245-2cdKqbOZNUd5QL9rlMdq"
+        },
+        "costUsd": 0.004102925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 21606,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716246-ttYAFZUwvD1am5N70xrB"
+        },
+        "costUsd": 0.003269675
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 5950,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716264-cKE4GBQWDopSVe4xYTMU"
+        },
+        "costUsd": 0.001725925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 8870,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716264-ZahDRoY53XIavTnu3WYk"
+        },
+        "costUsd": 0.00234005
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 16042,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716265-Nco1XaosnRUY906hZ3bD"
+        },
+        "costUsd": 0.002559925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 9586,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716274-muFGEAZIk5Vm360MrxJW"
+        },
+        "costUsd": 0.002234925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 12357,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716272-8zKgJyLupJchB7G699jf"
+        },
+        "costUsd": 0.00221555
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 16047,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716268-gHdz6bxc4BPF2QHCjyqb"
+        },
+        "costUsd": 0.003655175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 6305,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716282-LHvGHc7u5j4tyIexlKDa"
+        },
+        "costUsd": 0.00195255
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 10404,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716293-eTUUmxnJs3UfkPteZMdN"
+        },
+        "costUsd": 0.002234925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 12030,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716293-7k6NEScsjwSzP3yPTQLu"
+        },
+        "costUsd": 0.00213797
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 19688,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716293-Wqtx4dK07UBmxyc9PQuu"
+        },
+        "costUsd": 0.00300405
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 22185,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716293-RmEjXG36Hu10sSVZUSqt"
+        },
+        "costUsd": 0.00320955
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 9216,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716306-KmNUMsocK6flmEZotBO6"
+        },
+        "costUsd": 0.001867925
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 3366,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716314-l4kwthHhMYINUgaGtXrE"
+        },
+        "costUsd": 0.0019333
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 18496,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716304-apVCqUiO2Kv8pntEsuLr"
+        },
+        "costUsd": 0.0033723
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 9062,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716318-Bf6Vdl6tBcDgpl2X89uF"
+        },
+        "costUsd": 0.00245655
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 8642,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716320-XMnSCLmECseKEoAI8TXs"
+        },
+        "costUsd": 0.0019698
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 6984,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716327-5zvcoJyjnWoNa7GHNaeX"
+        },
+        "costUsd": 0.00191755
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 8465,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716330-ZGKDsZV0N7FjhxTfDlsf"
+        },
+        "costUsd": 0.00191855
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 3573,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716336-KObOZCghcOYm4nhEAi1l"
+        },
+        "costUsd": 0.00143405
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 22351,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716318-ZRFliItzAHmyJor1j3do"
+        },
+        "costUsd": 0.003545675
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 3393,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716340-XMQIhQqdTK9cQorq8jYt"
+        },
+        "costUsd": 0.00151205
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 4816,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716341-Zk5K6j1U2m6RygcbH5RB"
+        },
+        "costUsd": 0.001760425
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 21984,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716324-BwLggu3fjfH1hi0TPPSa"
+        },
+        "costUsd": 0.003547175
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 13781,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716341-G4cZIAPIZByKHa5ODvSC"
+        },
+        "costUsd": 0.00252305
+      },
+      {
+        "model": "openai/gpt-6-luna",
+        "stage": "reverification",
+        "ms": 17874,
+        "servedBy": {
+          "model": "openai/gpt-6-luna",
+          "provider": "OpenAI",
+          "generationId": "gen-1795716345-7WRg0biNT4ESiRsZJrUm"
+        },
+        "costUsd": 0.002753925
+      },
+      {
+        "model": "anthropic/claude-sonnet-5.5",
+        "stage": "curation",
+        "ms": 3813,
+        "servedBy": {
+          "model": "anthropic/claude-sonnet-5.5",
+          "provider": "Google",
+          "generationId": "gen-1795716363-xgFbWZGO3ov1TEtNL6aN"
+        },
+        "costUsd": 0.016212
+      }
+    ]
+  },
+  "discovery": {
+    "enabled": false,
+    "queries": 0,
+    "aggregatorPages": 0,
+    "pagesExtracted": 0,
+    "problems": [],
+    "leadsOnExcludedSources": [],
+    "leadsOnSuggestedHosts": 0,
+    "notRun": {
+      "reason": "midweek"
+    }
+  },
+  "reverification": {
+    "pagesRead": 42,
+    "problems": [
+      "https://artsjoco.org/acjc/calendar-of-events/ was cut at the 70000-character cap",
+      "\"GloWild\" on https://kansascityzoo.org/events quoted \"October 1 - 31\nNovember 1 - 30\nDecember 1 - 27\" for its date, which is not on the page, and was held unverified",
+      "a candidate on https://kansascityzoo.org/events ran past the 500-character cap on dateEvidence and was dropped",
+      "a candidate on https://follytheater.org/events/ ran past the 500-character cap on dateEvidence and was dropped"
+    ]
+  },
+  "curation": {
+    "calls": 1,
+    "judged": 9,
+    "flagged": 0,
+    "close": 2,
+    "rejudgedForPrompt": 0,
+    "problems": [],
+    "datedWhyLines": [],
+    "picks": [
+      {
+        "id": "evt_0e8d817ff985",
+        "title": "Evergy Festival of Lights",
+        "venue": "Powell Gardens",
+        "kind": "festivals/markets",
+        "start": "2026-11-19",
+        "end": "2027-01-03",
+        "primaryUrl": "https://powellgardens.org/",
+        "reason": "tradition",
+        "whyLine": "A holiday lights walk through the botanical garden that comes back every winter and anchors the season for many families.",
+        "marks": []
+      },
+      {
+        "id": "evt_27d0c280bf5a",
+        "title": "Mayor's Christmas Tree Lighting Event",
+        "venue": "Crown Center Square",
+        "kind": "outdoors/community",
+        "start": "2026-11-27T18:00:00-06:00",
+        "primaryUrl": "https://www.crowncenter.com/events",
+        "reason": "tradition",
+        "whyLine": "The Mayor's Christmas Tree lighting at Crown Center Square opens the city's holiday season with a youth chorus, remarks and a fireworks finale.",
+        "marks": []
+      },
+      {
+        "id": "evt_1e1cce4e26d1",
+        "title": "Ringling Bros. and Barnum & Bailey",
+        "venue": "T-Mobile Center",
+        "kind": "theater/dance",
+        "start": "2026-11-27T12:00:00-06:00",
+        "end": "2026-11-29T15:00:00-06:00",
+        "primaryUrl": "https://www.t-mobilecenter.com/events",
+        "reason": "big-name",
+        "whyLine": "The circus name nearly everyone knows, with more than a century of touring big-top shows behind it, here for a single arena weekend.",
+        "marks": []
+      },
+      {
+        "id": "evt_44e13d0ef17a",
+        "title": "City Market’s 9th Annual Merry Market!",
+        "venue": "City Market",
+        "kind": "festivals/markets",
+        "start": "2026-11-28T10:00:00-06:00",
+        "end": "2026-12-20T16:00:00-06:00",
+        "primaryUrl": "https://www.artgardenkc.org/events",
+        "reason": "tradition",
+        "whyLine": "A downtown open-air holiday market in its ninth year, with over 100 local makers each season.",
+        "marks": []
+      },
+      {
+        "id": "evt_85c33d2453a6",
+        "title": "The Nutcracker",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "theater/dance",
+        "start": "2026-11-28",
+        "end": "2026-12-24",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "reason": "tradition",
+        "whyLine": "The city's holiday ballet at the Kauffman Center, a December staple built on Victorian-era sets and costumes that many families plan the season around.",
+        "marks": []
+      },
+      {
+        "id": "evt_fc9d7f322563",
+        "title": "Phantom of the Opera",
+        "venue": "Kansas City Music Hall",
+        "kind": "theater/dance",
+        "start": "2026-12-02T19:30:00-06:00",
+        "end": "2026-12-13T21:15:00-06:00",
+        "primaryUrl": "https://www.americantheatreguild.com/kansas-city/shows/phantom-of-the-opera-broadway-tickets-kansas-city-music-hall",
+        "reason": "major-run",
+        "whyLine": "The touring staging of one of the longest-running and best-known Broadway musicals, its one stop at Music Hall in Kansas City.",
+        "marks": []
+      },
+      {
+        "id": "evt_e098e2ce41a9",
+        "title": "Six Math Essentials",
+        "venue": "The Linda Hall",
+        "kind": "talks/readings",
+        "start": "2026-12-03T19:00:00-06:00",
+        "primaryUrl": "https://www.lindahall.org/experience/events/",
+        "reason": "rare",
+        "whyLine": "A Fields Medalist, among the most celebrated living mathematicians, speaking for an evening in Kansas City, an appearance that seldom comes here.",
+        "marks": []
+      },
+      {
+        "id": "evt_81cd7635da7d",
+        "title": "Wintersong",
+        "venue": "Nelson-Atkins Museum",
+        "kind": "music",
+        "start": "2026-12-03T18:00:00-06:00",
+        "primaryUrl": "https://www.kcchorale.org/concerts",
+        "reason": "tradition",
+        "whyLine": "The Kansas City Chorale's seasonal concert in the Nelson-Atkins' Rozzelle Court, which the description calls a holiday tradition.",
+        "marks": []
+      },
+      {
+        "id": "evt_6cd4351a5d05",
+        "title": "Handel’s Messiah",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "music",
+        "start": "2026-12-04",
+        "end": "2026-12-06",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "reason": "tradition",
+        "whyLine": "The Kansas City Symphony's yearly performance of Handel's oratorio, a holiday-season fixture for the city's concert audience.",
+        "marks": [
+          "hand"
+        ]
+      },
+      {
+        "id": "evt_8e09f53e4326",
+        "title": "Los Lobos",
+        "venue": "Knuckleheads",
+        "kind": "music",
+        "start": "2026-12-04T19:30:00-06:00",
+        "primaryUrl": "https://tickets.knuckleheadskc.com/",
+        "reason": "big-name",
+        "whyLine": "A band known far beyond roots music for its 1980s chart-topping hit, playing a small East Bottoms club.",
+        "marks": []
+      },
+      {
+        "id": "evt_4d2ffdabccf5",
+        "title": "Kansas vs Missouri Men’s Basketball",
+        "venue": "T-Mobile Center",
+        "kind": "sports",
+        "start": "2026-12-06T16:00:00-06:00",
+        "primaryUrl": "https://www.t-mobilecenter.com/events",
+        "reason": "occasion",
+        "whyLine": "Kansas and Missouri renew their basketball rivalry on neutral ground downtown, a game much of the region stops for.",
+        "marks": []
+      },
+      {
+        "id": "evt_f52543e59fd0",
+        "title": "Amy Grant, Michael W. Smith, CeCe Winans",
+        "venue": "T-Mobile Center",
+        "kind": "music",
+        "start": "2026-12-07T19:00:00-06:00",
+        "primaryUrl": "https://www.t-mobilecenter.com/events",
+        "reason": "big-name",
+        "whyLine": "Three of the best-known names in Christian and gospel music, with decades of crossover hits, together on one Christmas bill in an arena.",
+        "marks": []
+      },
+      {
+        "id": "evt_a554528dc2cc",
+        "title": "Mannheim Steamroller Christmas",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "music",
+        "start": "2026-12-27",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "reason": "big-name",
+        "whyLine": "A Christmas-album franchise whose synthesized carols are heard in homes far beyond any concert audience.",
+        "marks": []
+      },
+      {
+        "id": "evt_8a5b99ee5d8c",
+        "title": "Trans-Siberian Orchestra",
+        "venue": "T-Mobile Center",
+        "kind": "music",
+        "start": "2026-12-29",
+        "primaryUrl": "https://www.t-mobilecenter.com/events",
+        "reason": "big-name",
+        "whyLine": "A holiday rock-opera act known well outside rock circles, filling arenas with lasers and pyrotechnics every winter.",
+        "marks": []
+      },
+      {
+        "id": "evt_cd5a32c404ce",
+        "title": "The Bodyguard",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "theater/dance",
+        "start": "2027-01-05",
+        "end": "2027-01-10",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "reason": "major-run",
+        "whyLine": "A touring production of the stage musical built on the Whitney Houston film and songs, with its one Kansas City stop at the Kauffman Center.",
+        "marks": []
+      },
+      {
+        "id": "evt_8193dd962a59",
+        "title": "An Evening With Kenny G",
+        "venue": "The Midland",
+        "kind": "music",
+        "start": "2027-01-17T19:00:00-06:00",
+        "primaryUrl": "https://www.midlandkc.com/events",
+        "reason": "big-name",
+        "whyLine": "A saxophonist whose melodic instrumental records sold in the tens of millions, known to people who own no jazz.",
+        "marks": []
+      },
+      {
+        "id": "evt_95a84379b476",
+        "title": "Mucha’s Muses: Sarah Bernhardt and the Spirit of Art Nouveau",
+        "venue": "The Nelson-Atkins Museum of Art",
+        "kind": "art/exhibitions",
+        "end": "2027-01-17",
+        "primaryUrl": "https://www.nelson-atkins.org/art/exhibitions/",
+        "reason": "major-run",
+        "whyLine": "A major Art Nouveau exhibition on Alphonse Mucha's work for Sarah Bernhardt, the kind of show the Nelson-Atkins plans its season around.",
+        "marks": []
+      }
+    ],
+    "closeCalls": [
+      {
+        "id": "evt_d802851f6919",
+        "title": "The Berlin Wall. A World Divided.",
+        "venue": "Union Station Kansas City",
+        "kind": "art/exhibitions",
+        "start": "2026-05-29",
+        "end": "2026-12-13",
+        "primaryUrl": "https://kccrossroads.org/",
+        "closeNote": "Nearly major-run, a large artifact exhibition on a subject known worldwide, but nothing says it was assembled from elsewhere or is a one-time stop."
+      },
+      {
+        "id": "evt_1d4117819395",
+        "title": "Judy Chicago: Big Blue Pink",
+        "venue": "Nerman Museum of Contemporary Art",
+        "kind": "art/exhibitions",
+        "start": "2026-07-14",
+        "end": "2026-12-13",
+        "primaryUrl": "https://www.nermanmuseum.org/exhibitions/",
+        "closeNote": "Nearly big-name, since Judy Chicago is known beyond the art world, but this is one gallery exhibition and the page says nothing rare about it."
+      },
+      {
+        "id": "evt_509a17e81f57",
+        "title": "2026 Charlotte Street Foundation Visual Artist Awards",
+        "venue": "Kansas City Art Institute",
+        "kind": "art/exhibitions",
+        "start": "2026-10-16",
+        "end": "2026-12-12",
+        "primaryUrl": "https://kcai.edu/kcai-exhibitions/",
+        "closeNote": "Nearly tradition as an annual fellows exhibition, but the page does not say it is annual or that the city plans its season around it."
+      },
+      {
+        "id": "evt_9c2f23daed28",
+        "title": "Winter Magic",
+        "venue": "Platte Purchase Park",
+        "kind": "festivals/markets",
+        "start": "2026-11-04T18:00:00-06:00",
+        "end": "2027-01-02T20:00:00-06:00",
+        "primaryUrl": "https://kcparks.org/events/",
+        "closeNote": "Nearly a tradition, but nothing says it is annual or long kept up, and a drive-through lights display is a common form."
+      },
+      {
+        "id": "evt_49471a113486",
+        "title": "Crown Center Ice Terrace (2026 - 2027 Season)",
+        "venue": "Crown Center Square",
+        "kind": "sports",
+        "start": "2026-11-06",
+        "end": "2027-03-14",
+        "primaryUrl": "https://www.crowncenter.com/events",
+        "closeNote": "Nearly a tradition, with fifty-plus winters of skating, but it is a season-long rink rather than a dated annual event."
+      },
+      {
+        "id": "evt_0b8038698719",
+        "title": "The Pigeon Gets a Big Time Holiday Extravaganza!",
+        "venue": "The Coterie",
+        "kind": "theater/dance",
+        "start": "2026-11-10",
+        "end": "2026-12-31",
+        "primaryUrl": "https://thecoterie.org/2026-2027-season/",
+        "closeNote": "Nearly a major run as a new holiday musical from a resident company, but nothing shows it is more than the theater's seasonal family slot."
+      },
+      {
+        "id": "evt_ec7c2f64ad03",
+        "title": "Winterland: A Holiday Cirque Experience",
+        "venue": "Crown Center",
+        "kind": "theater/dance",
+        "start": "2026-11-20",
+        "end": "2026-12-20",
+        "primaryUrl": "https://www.crowncenter.com/events",
+        "closeNote": "Nearly unusual for its cirque-and-music format in a holiday setting, but nothing shows it is more than a seasonal stage show."
+      },
+      {
+        "id": "evt_74dba6f15912",
+        "title": "Hallmark Christmas Experience",
+        "venue": "Crown Center",
+        "kind": "festivals/markets",
+        "start": "2026-11-27T12:00:00-06:00",
+        "end": "2026-12-20",
+        "primaryUrl": "https://www.crowncenter.com/events",
+        "closeNote": "Nearly big-name for the Hallmark connection, but the page names no stars and does not say it is annual."
+      },
+      {
+        "id": "evt_2c4c003881ca",
+        "title": "Kingdom's Greetings",
+        "venue": "Arrowhead Stadium",
+        "kind": "other",
+        "start": "2026-11-27",
+        "end": "2026-12-29",
+        "primaryUrl": "https://www.arrowheadstadiumkc.com/events",
+        "closeNote": "Nearly unusual as a holiday light village at a stadium, but nothing says it is annual or unlike other light shows."
+      },
+      {
+        "id": "evt_d444f7604e64",
+        "title": "Muppet Christmas Carol",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "film",
+        "start": "2026-11-27",
+        "end": "2026-11-29",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "closeNote": "Nearly unusual if the film is shown with a live orchestra at the Kauffman Center, but the page gives no description."
+      },
+      {
+        "id": "evt_437dbcaa68c5",
+        "title": "Santa & Mrs. Claus",
+        "venue": "Powell Gardens",
+        "kind": "outdoors/community",
+        "start": "2026-11-27T17:00:00-06:00",
+        "end": "2026-11-28",
+        "primaryUrl": "https://powellgardens.org/",
+        "closeNote": "Nearly a tradition, since it is a seasonal holiday event at Powell Gardens, but the page does not say it is annual."
+      },
+      {
+        "id": "evt_e2d457694e13",
+        "title": "Santa Visits at Destination North Pole",
+        "venue": "Crown Center Shops",
+        "kind": "outdoors/community",
+        "start": "2026-11-27",
+        "end": "2026-12-24",
+        "primaryUrl": "https://www.crowncenter.com/events",
+        "closeNote": "Nearly a tradition as a Crown Center holiday exhibit, but the page does not say it returns every year."
+      },
+      {
+        "id": "evt_3af9063e2f4c",
+        "title": "Santa's Arrival",
+        "venue": "Crown Center Shops",
+        "kind": "outdoors/community",
+        "start": "2026-11-27T10:00:00-06:00",
+        "primaryUrl": "https://www.crowncenter.com/events",
+        "closeNote": "Nearly a tradition as the start of Crown Center's holiday season, but the page never says it is annual or how long it has run."
+      },
+      {
+        "id": "evt_42f3920f6eba",
+        "title": "The Rainmakers",
+        "venue": "Knuckleheads",
+        "kind": "music",
+        "start": "2026-11-27T20:00:00-06:00",
+        "primaryUrl": "https://tickets.knuckleheadskc.com/",
+        "closeNote": "Nearly big-name or tradition for a Kansas City rock band with late-1980s hits, but nothing says the post-Thanksgiving show is annual."
+      },
+      {
+        "id": "evt_bd0e15f76ac4",
+        "title": "Rat Salad",
+        "venue": "recordBar",
+        "kind": "music",
+        "start": "2026-11-28T19:00:00-06:00",
+        "primaryUrl": "https://www.therecordbar.com/shows",
+        "closeNote": "Nearly rare as a reunion of local scene veterans, but it is a one-scene reunion with no wider draw."
+      },
+      {
+        "id": "evt_8c3d12c04a25",
+        "title": "Fall On Your Knees: 20th Anniversary Christmas Celebration",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "music",
+        "start": "2026-11-30",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "closeNote": "Nearly a tradition, since a twentieth-anniversary Christmas concert suggests an annual show, but the page gives no description or performer."
+      },
+      {
+        "id": "evt_e36d42041e7d",
+        "title": "Holiday Choirs",
+        "venue": "Crown Center Shops",
+        "kind": "music",
+        "start": "2026-11-30",
+        "end": "2026-12-18",
+        "primaryUrl": "https://www.crowncenter.com/events",
+        "closeNote": "Nearly a tradition, with more than 80 choirs through the season at Crown Center, but nothing says it is annual."
+      },
+      {
+        "id": "evt_a18301943a01",
+        "title": "Annual BRW “Winter Wonderland” Holiday Display",
+        "venue": "Bruce R. Watkins Cultural Heritage Center",
+        "kind": "art/exhibitions",
+        "start": "2026-12-01T10:00:00-06:00",
+        "end": "2027-01-09",
+        "primaryUrl": "https://kcparks.org/events/",
+        "closeNote": "Nearly a tradition, since it is called annual, but nothing says how long it has run or how many people plan around it."
+      },
+      {
+        "id": "evt_71dac0f91bf8",
+        "title": "Matisyahu",
+        "venue": "The Truman",
+        "kind": "music",
+        "start": "2026-12-01T20:00:00-06:00",
+        "primaryUrl": "https://www.thetrumankc.com/events",
+        "closeNote": "Nearly big-name for the reggae-rock singer with a mainstream radio hit, but he is a regular touring club act."
+      },
+      {
+        "id": "evt_50366911f590",
+        "title": "Day With(out) Art 2026: Seeds in a Dying Colony",
+        "venue": "Stray Cat Film Center",
+        "kind": "film",
+        "start": "2026-12-03T19:00:00-06:00",
+        "primaryUrl": "https://www.straycatfilmcenter.com/screeningsandevents",
+        "closeNote": "Nearly a tradition as an annual World AIDS Day program, but the page does not say it returns each year here."
+      },
+      {
+        "id": "evt_4af4b2f291e5",
+        "title": "Mecum Auctions",
+        "venue": "Kansas City Convention Center",
+        "kind": "other",
+        "start": "2026-12-03T08:00:00-06:00",
+        "end": "2026-12-05T20:00:00-06:00",
+        "primaryUrl": "https://kcconvention.com/events/",
+        "closeNote": "Nearly an occasion as a large collector-car auction, but it draws mainly buyers and enthusiasts, not the wider city."
+      },
+      {
+        "id": "evt_479dbd46ace1",
+        "title": "Gary Owen",
+        "venue": "The Midland",
+        "kind": "comedy",
+        "start": "2026-12-04T20:00:00-06:00",
+        "primaryUrl": "https://www.midlandkc.com/events",
+        "closeNote": "Nearly big-name, since Gary Owen is familiar from film and television, but he is a touring stand-up on an ordinary theater date."
+      },
+      {
+        "id": "evt_9daa4da3f33b",
+        "title": "TubaChristmas 2026!",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "music",
+        "start": "2026-12-04T12:00:00-06:00",
+        "end": "2026-12-14",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "closeNote": "Nearly a tradition as a seasonal brass gathering, but nothing on the page says it is annual here or how large it is."
+      },
+      {
+        "id": "evt_e486dd7399cf",
+        "title": "All is Calm: The Christmas Truce of 1914 | A Musical",
+        "venue": "National WWI Museum and Memorial",
+        "kind": "music",
+        "start": "2026-12-05T11:00:00-06:00",
+        "end": "2026-12-06",
+        "primaryUrl": "https://www.theworldwar.org/events",
+        "closeNote": "Nearly unusual for a men's choir staging the Christmas Truce at the WWI museum, but it is still a standard choral concert format."
+      },
+      {
+        "id": "evt_6314637daada",
+        "title": "Santa Paws in the Park",
+        "venue": "Loose Park",
+        "kind": "outdoors/community",
+        "start": "2026-12-05T13:00:00-06:00",
+        "primaryUrl": "https://kcparks.org/events/",
+        "closeNote": "Nearly a tradition or occasion, a pet parade around the Rose Garden, but nothing says it is annual or how large the crowd is."
+      },
+      {
+        "id": "evt_87f75a2247fd",
+        "title": "Sugar Plum Fairy Children’s Ball",
+        "venue": "Kansas City Marriott Downtown",
+        "kind": "other",
+        "start": "2026-12-05T10:00:00-06:00",
+        "primaryUrl": "https://kccrossroads.org/",
+        "closeNote": "Nearly a tradition as a Nutcracker-season family ball, but the page does not say it is annual."
+      },
+      {
+        "id": "evt_aa402ba8d588",
+        "title": "White Christmas",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "theater/dance",
+        "start": "2026-12-07T19:00:00-06:00",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "closeNote": "Nearly a major run if this is a touring production of the holiday musical, but the page gives no description of who is staging it."
+      },
+      {
+        "id": "evt_bcbd4dad45ff",
+        "title": "Christmas with Zuzu",
+        "venue": "Folly Theater",
+        "kind": "music",
+        "start": "2026-12-11T20:00:00-06:00",
+        "primaryUrl": "https://follytheater.org/events/",
+        "closeNote": "Nearly a tradition as a holiday concert with market and charity auction, but the page does not say it is annual."
+      },
+      {
+        "id": "evt_55eea8121b72",
+        "title": "Wildcat Classic: Wichita State vs. K-State",
+        "venue": "T-Mobile Center",
+        "kind": "sports",
+        "start": "2026-12-11T19:30:00-06:00",
+        "primaryUrl": "https://www.t-mobilecenter.com/events",
+        "closeNote": "Nearly an occasion as a neutral-site game in a 14th-year classic, but it is two schools without a rivalry the city stops for."
+      },
+      {
+        "id": "evt_5cda2d8182db",
+        "title": "Holidays with the Nerds Triple Feature",
+        "venue": "Screenland Armour",
+        "kind": "film",
+        "start": "2026-12-12",
+        "primaryUrl": "https://www.screenland.com/coming-soon/",
+        "closeNote": "Nearly unusual, as a mystery triple feature of holiday films, but the page does not say what makes the format distinctive."
+      },
+      {
+        "id": "evt_21088cc0e37f",
+        "title": "Nebraska vs. Missouri",
+        "venue": "T-Mobile Center",
+        "kind": "sports",
+        "start": "2026-12-12T18:00:00-06:00",
+        "primaryUrl": "https://www.t-mobilecenter.com/events",
+        "closeNote": "Nearly an occasion as a neutral-site game between former conference rivals, but nothing marks it as one the city turns out for."
+      },
+      {
+        "id": "evt_22c7cc63aeda",
+        "title": "Seeds Screening & Director Q&A with Brittany Shyne",
+        "venue": "Charlotte Street",
+        "kind": "film",
+        "start": "2026-12-12T15:00:00-06:00",
+        "primaryUrl": "https://charlottestreet.org/2026-event-calendar/",
+        "closeNote": "Nearly rare, with the director present for a Q&A, but nothing says the film or director is known beyond the documentary scene."
+      },
+      {
+        "id": "evt_6384da79784c",
+        "title": "Christmas at the Kauffman Center",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "music",
+        "start": "2026-12-13T19:00:00-06:00",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "closeNote": "Nearly a tradition or occasion at the city's main hall, but the page names no performer and does not say it is annual."
+      },
+      {
+        "id": "evt_83e191b8c54a",
+        "title": "Preservation Hall Jazz Band",
+        "venue": "Folly Theater",
+        "kind": "music",
+        "start": "2026-12-13T13:00:00-06:00",
+        "primaryUrl": "https://follytheater.org/events/",
+        "closeNote": "Nearly big-name, since the New Orleans institution is widely known, but its recognition outside jazz listeners is uncertain and it tours regularly."
+      },
+      {
+        "id": "evt_1f134d39b8cf",
+        "title": "Bach's Musical Offering",
+        "venue": "Folly Theater",
+        "kind": "music",
+        "start": "2026-12-15T19:00:00-06:00",
+        "primaryUrl": "https://follytheater.org/events/",
+        "closeNote": "Nearly rare, with Chamber Music Society of Lincoln Center artists in one program, but such visits recur here and nothing says this one is unusual."
+      },
+      {
+        "id": "evt_80a7a3a2ca5a",
+        "title": "Hip Hop Nutcracker",
+        "venue": "The Midland",
+        "kind": "theater/dance",
+        "start": "2026-12-16T19:30:00-06:00",
+        "primaryUrl": "https://www.midlandkc.com/events",
+        "closeNote": "Nearly big-name, since Kurtis Blow and the Nutcracker are widely known, but it is a touring show that returns often and the draw is the format."
+      },
+      {
+        "id": "evt_0c944fc5d860",
+        "title": "Christmas Festival",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "music",
+        "start": "2026-12-17",
+        "end": "2026-12-20",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "closeNote": "Nearly a tradition, a four-night holiday festival at the Kauffman Center, but the page gives no performers and does not say it is annual."
+      },
+      {
+        "id": "evt_cdcd52e9628c",
+        "title": "2026 Hall of Fame Classic",
+        "venue": "T-Mobile Center",
+        "kind": "sports",
+        "start": "2026-12-18T18:00:00-06:00",
+        "primaryUrl": "https://www.t-mobilecenter.com/events",
+        "closeNote": "Nearly a tradition as a neutral-site doubleheader, but the page doesn't say annual and the matchups draw little citywide interest."
+      },
+      {
+        "id": "evt_74a642feb5ee",
+        "title": "David Koechner",
+        "venue": "The Comedy Club of Kansas City",
+        "kind": "comedy",
+        "start": "2026-12-18T19:00:00-06:00",
+        "end": "2026-12-20",
+        "primaryUrl": "https://www.thecomedyclubkc.com/events",
+        "closeNote": "Nearly big-name, since Anchorman and The Office roles are widely known, but this is an ordinary club weekend of stand-up."
+      },
+      {
+        "id": "evt_33fd561076b5",
+        "title": "for King + Country",
+        "venue": "T-Mobile Center",
+        "kind": "music",
+        "start": "2026-12-19T19:00:00-06:00",
+        "primaryUrl": "https://www.t-mobilecenter.com/events",
+        "closeNote": "Nearly big-name, with a Grammy-winning duo and a full-production arena Christmas show, but its recognition outside Christian music is uncertain."
+      },
+      {
+        "id": "evt_0aeea79b2608",
+        "title": "Nirvanna The Band The Show The Movie... The Commentary Track",
+        "venue": "Screenland Armour",
+        "kind": "film",
+        "start": "2026-12-19T13:10:00-06:00",
+        "primaryUrl": "https://www.screenland.com/coming-soon/",
+        "closeNote": "Nearly unusual, since the screening carries a live-made commentary track by the filmmakers, but the page does not say they attend in person."
+      },
+      {
+        "id": "evt_72f19e3900a6",
+        "title": "Wreaths Across America",
+        "venue": "National WWI Museum and Memorial",
+        "kind": "outdoors/community",
+        "start": "2026-12-19T11:00:00-06:00",
+        "primaryUrl": "https://www.theworldwar.org/events",
+        "closeNote": "Nearly a tradition as a yearly December wreath ceremony, but the page doesn't say annual or show a citywide following."
+      },
+      {
+        "id": "evt_1eab48023145",
+        "title": "The Polar Express in Concert",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "music",
+        "start": "2026-12-23",
+        "end": "2026-12-24",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "closeNote": "Nearly unusual as a film with live orchestra, but the page does not say what the format is."
+      },
+      {
+        "id": "evt_582977b8c27a",
+        "title": "The Phantom Carriage",
+        "venue": "Screenland Armour",
+        "kind": "film",
+        "start": "2026-12-27T13:00:00-06:00",
+        "primaryUrl": "https://www.screenland.com/coming-soon/",
+        "closeNote": "Nearly unusual as a silent film, but the page mentions no live score."
+      },
+      {
+        "id": "evt_73b96d2c7e73",
+        "title": "NYE Live!",
+        "venue": "KC Live!",
+        "kind": "festivals/markets",
+        "start": "2026-12-31T19:00:00-06:00",
+        "primaryUrl": "https://www.powerandlightdistrict.com/events-and-entertainment/events",
+        "closeNote": "Nearly an occasion with fireworks and a midnight ball drop, but nothing says how large the crowd is or that it is annual."
+      },
+      {
+        "id": "evt_a84b599876db",
+        "title": "Zoo Year's Eve",
+        "venue": "Kansas City Zoo & Aquarium",
+        "kind": "outdoors/community",
+        "start": "2026-12-31T10:00:00-06:00",
+        "primaryUrl": "https://kansascityzoo.org/events",
+        "closeNote": "Nearly a tradition as a New Year's Eve countdown at noon, but the page doesn't say it is annual or large."
+      },
+      {
+        "id": "evt_f3559f821fda",
+        "title": "Cameron Winter at Carnegie Hall",
+        "venue": "Screenland Armour",
+        "kind": "film",
+        "start": "2027-01-08T19:00:00-06:00",
+        "primaryUrl": "https://www.screenland.com/coming-soon/",
+        "closeNote": "Nearly rare, a 35mm concert film, but the artist is known mainly within one scene and it is an ordinary screening."
+      },
+      {
+        "id": "evt_1d3421cdc624",
+        "title": "Sleepaway Camp: The Midnight Mass Experience",
+        "venue": "Screenland Armour",
+        "kind": "film",
+        "start": "2027-01-12T19:30:00-06:00",
+        "primaryUrl": "https://www.screenland.com/coming-soon/",
+        "closeNote": "Nearly unusual for the live drag show, cast conversation and costume contest, but the draw is a niche cult-horror crowd."
+      },
+      {
+        "id": "evt_66f166304990",
+        "title": "On Stage with Blake Pouliot",
+        "venue": "Kauffman Center for the Performing Arts",
+        "kind": "music",
+        "start": "2027-01-14T20:00:00-06:00",
+        "primaryUrl": "https://www.kauffmancenter.org/events/",
+        "closeNote": "Nearly rare as a touring soloist's recital, but nothing says he seldom appears in Kansas City."
+      },
+      {
+        "id": "evt_498481843ea1",
+        "title": "Monster Jam",
+        "venue": "T-Mobile Center",
+        "kind": "sports",
+        "start": "2027-01-15T19:00:00-06:00",
+        "end": "2027-01-17",
+        "primaryUrl": "https://www.t-mobilecenter.com/events",
+        "closeNote": "Nearly big-name, since the title is widely known, but it is a touring arena show that returns regularly and nothing marks this stop as special."
+      }
+    ],
+    "moved": [
+      {
+        "id": "evt_90df041ca5f4",
+        "title": "Tonksgiving 15",
+        "primaryUrl": "https://www.therecordbar.com/shows",
+        "from": "pick",
+        "to": "no",
+        "cause": "expired"
+      },
+      {
+        "id": "evt_507de48ba787",
+        "title": "Travis Deverell & Jeff Hays, He Who Fights With Monsters",
+        "primaryUrl": "https://rainydaybooks.com/events",
+        "from": "close",
+        "to": "no",
+        "cause": "expired"
+      },
+      {
+        "id": "evt_d77d6a5712dc",
+        "title": "The 50th Anniversary of The Last Waltz",
+        "primaryUrl": "https://tickets.knuckleheadskc.com/",
+        "from": "close",
+        "to": "no",
+        "cause": "expired"
+      },
+      {
+        "id": "evt_437dbcaa68c5",
+        "title": "Santa & Mrs. Claus",
+        "primaryUrl": "https://powellgardens.org/",
+        "from": "no",
+        "to": "close",
+        "cause": "re-judged after a change"
+      }
+    ],
+    "byKind": [
+      {
+        "name": "music",
+        "count": 7
+      },
+      {
+        "name": "theater/dance",
+        "count": 4
+      },
+      {
+        "name": "festivals/markets",
+        "count": 2
+      },
+      {
+        "name": "art/exhibitions",
+        "count": 1
+      },
+      {
+        "name": "outdoors/community",
+        "count": 1
+      },
+      {
+        "name": "sports",
+        "count": 1
+      },
+      {
+        "name": "talks/readings",
+        "count": 1
+      }
+    ],
+    "byReason": [
+      {
+        "name": "big-name",
+        "count": 6
+      },
+      {
+        "name": "tradition",
+        "count": 6
+      },
+      {
+        "name": "major-run",
+        "count": 3
+      },
+      {
+        "name": "occasion",
+        "count": 1
+      },
+      {
+        "name": "rare",
+        "count": 1
+      }
+    ],
+    "handPicks": {
+      "applied": 1,
+      "stale": [],
+      "changed": []
+    }
+  },
+  "sources": [],
+  "ownPages": [],
+  "failingSources": [],
+  "offListNeighborhoods": [],
+  "venueNeighborhoods": [
+    {
+      "venue": "Emily & Todd Voth Artspace",
+      "placed": "Midtown",
+      "events": 1
+    },
+    {
+      "venue": "Bruce R. Watkins Cultural Heritage Center",
+      "placed": "Swope Park",
+      "events": 1
+    }
+  ],
+  "venuesWithoutRow": [
+    {
+      "venue": "Cable Dahmer Arena",
+      "events": 8
+    },
+    {
+      "venue": "Kansas City Art Institute",
+      "events": 5
+    },
+    {
+      "venue": "Bunker Center for The Arts",
+      "events": 2
+    },
+    {
+      "venue": "Harry S. Truman Library & Museum",
+      "events": 2
+    },
+    {
+      "venue": "Lakeside Nature Center",
+      "events": 2
+    },
+    {
+      "venue": "Meadowbrook Park Clubhouse",
+      "events": 2
+    },
+    {
+      "venue": "Midwest Trust Center",
+      "events": 2
+    },
+    {
+      "venue": "Nelson Atkins",
+      "events": 2
+    },
+    {
+      "venue": "Strang Park",
+      "events": 2
+    },
+    {
+      "venue": "Unicorn Theatre",
+      "events": 2
+    },
+    {
+      "venue": "American Royal Complex",
+      "events": 1
+    },
+    {
+      "venue": "Asbury United Methodist Church",
+      "events": 1
+    },
+    {
+      "venue": "Bell Cultural Events Center",
+      "events": 1
+    },
+    {
+      "venue": "Cedar Roe Library",
+      "events": 1
+    },
+    {
+      "venue": "Clock Tower Landing - Pavilion",
+      "events": 1
+    },
+    {
+      "venue": "Corinth Library (Johnson County Library)",
+      "events": 1
+    },
+    {
+      "venue": "Country Club United Methodist Church",
+      "events": 1
+    },
+    {
+      "venue": "Downtown Overland Park",
+      "events": 1
+    },
+    {
+      "venue": "Four Chapter Gallery",
+      "events": 1
+    },
+    {
+      "venue": "Grace & Holy Trinity Cathedral",
+      "events": 1
+    },
+    {
+      "venue": "Ironwoods Park",
+      "events": 1
+    },
+    {
+      "venue": "Johnson County Arts & Heritage Center",
+      "events": 1
+    },
+    {
+      "venue": "Jones Gallery",
+      "events": 1
+    },
+    {
+      "venue": "Kansas City Marriott Downtown",
+      "events": 1
+    },
+    {
+      "venue": "Kansas City Northern Miniature Railroad",
+      "events": 1
+    },
+    {
+      "venue": "Kansas City Renaissance Festival",
+      "events": 1
+    },
+    {
+      "venue": "Kansas City Scottish Rite",
+      "events": 1
+    },
+    {
+      "venue": "Keystone Community Corporation",
+      "events": 1
+    },
+    {
+      "venue": "Lenexa City Center Library (Johnson County Library)",
+      "events": 1
+    },
+    {
+      "venue": "Lenexa City Hall",
+      "events": 1
+    },
+    {
+      "venue": "Loose Park",
+      "events": 1
+    },
+    {
+      "venue": "Marjorie Powell Allen Chapel",
+      "events": 1
+    },
+    {
+      "venue": "Monticello Library (Johnson County Library)",
+      "events": 1
+    },
+    {
+      "venue": "Mosaic Ultra Lounge",
+      "events": 1
+    },
+    {
+      "venue": "New Theatre & Restaurant",
+      "events": 1
+    },
+    {
+      "venue": "NNI: Northland Neighborhoods Inc.",
+      "events": 1
+    },
+    {
+      "venue": "Platte Purchase Park",
+      "events": 1
+    },
+    {
+      "venue": "Prairie Baptist Church",
+      "events": 1
+    },
+    {
+      "venue": "R.G. Endres Gallery",
+      "events": 1
+    },
+    {
+      "venue": "Rolling Hills Church",
+      "events": 1
+    },
+    {
+      "venue": "Shoal Creek Living History Museum",
+      "events": 1
+    },
+    {
+      "venue": "Southeast Community Center",
+      "events": 1
+    },
+    {
+      "venue": "The Coterie",
+      "events": 1
+    },
+    {
+      "venue": "The Linda Hall",
+      "events": 1
+    },
+    {
+      "venue": "Tim Murphy Art Gallery",
+      "events": 1
+    },
+    {
+      "venue": "Tomahawk Ridge Community Center",
+      "events": 1
+    },
+    {
+      "venue": "Tuyli Shire Hall",
+      "events": 1
+    },
+    {
+      "venue": "Village Presbyterian Church",
+      "events": 1
+    }
+  ],
+  "unmappableNeighborhoods": [
+    {
+      "eventId": "evt_bebb5a6a1a8e",
+      "eventTitle": "Matinees for Schools",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_53dd647902a7",
+      "eventTitle": "A Christmas Carol 2026",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_8e003dc3ffa3",
+      "eventTitle": "Sensory-Friendly Nutcracker",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_187192e4503c",
+      "eventTitle": "Witches Tea",
+      "venue": "Albrecht-Kemper Museum of Art",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_95e75830c0ab",
+      "eventTitle": "Sugarplum Festival",
+      "venue": "Albrecht-Kemper Museum of Art",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_04afdcdcacef",
+      "eventTitle": "Bonner Springs Farmers' Market",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_da3410f8c9da",
+      "eventTitle": "Cars and Coffee",
+      "venue": "Fuel House",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_f2320dfe7ac2",
+      "eventTitle": "Christmas Parade, Mayor's Tree Lighting & Cookies w/ Santa",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_dfb51fe06886",
+      "eventTitle": "Cookies & Cocoa with Santa and It's a Wonderful Life movie",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_c457d07de03f",
+      "eventTitle": "Bonner Springs Farmers' Market Winter Market",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_2b5505f4c7f4",
+      "eventTitle": "Candy Cane Hunt",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_820a0274eb0f",
+      "eventTitle": "Holiday Stroll",
+      "listedBefore": false
+    },
+    {
+      "eventId": "evt_bc27629d772f",
+      "eventTitle": "Memory Lane Christmas Light Display",
+      "venue": "Pleasant Ridge Farm",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_e763f718b413",
+      "eventTitle": "Coffee & Connections",
+      "venue": "Keystone Community Corporation",
+      "listedBefore": true
+    },
+    {
+      "eventId": "evt_eaf73056c44c",
+      "eventTitle": "Book Swap",
+      "venue": "Cedar Roe Library",
+      "proposed": "Roeland Park",
+      "listedBefore": true
+    }
+  ],
+  "promotionSuggestions": [],
+  "heldForPromotion": [],
+  "releasedForPromotion": [],
+  "outageLimited": [],
+  "uncitableReadings": [
+    {
+      "title": "GloWild",
+      "primaryUrl": "https://kansascityzoo.org/events"
+    },
+    {
+      "title": "NCAA Div. II Women’s Volleyball Championship",
+      "primaryUrl": "https://kcconvention.com/events/"
+    },
+    {
+      "title": "Holiday Stroll",
+      "primaryUrl": "https://www.downtownop.org/events"
+    }
+  ],
+  "keptOnStoredCitation": [],
+  "cancellationsFromElsewhere": [],
+  "skippedAsExpired": [],
+  "identityChurn": [
+    {
+      "title": "IKON: an image of God",
+      "primaryUrl": "https://kccrossroads.org/",
+      "was": {
+        "title": "IKON: An Image of God",
+        "primaryUrl": "https://kccrossroads.org/"
+      }
+    },
+    {
+      "title": "Day With(out) Art 2026: Seeds in a Dying Colony",
+      "primaryUrl": "https://www.straycatfilmcenter.com/screeningsandevents",
+      "was": {
+        "title": "Day With(out) Art 2026: seeds in a dying colony",
+        "primaryUrl": "https://www.straycatfilmcenter.com/screeningsandevents"
+      }
+    },
+    {
+      "title": "November Art Show",
+      "primaryUrl": "https://kccrossroads.org/",
+      "was": {
+        "title": "November Jones Gallery Art Show",
+        "primaryUrl": "https://kccrossroads.org/"
+      }
+    }
+  ],
+  "kindChanges": [],
+  "likelyDuplicates": [
+    {
+      "a": {
+        "id": "evt_c94a78109b71",
+        "title": "Gallery Conversation with a Kemper Museum Docent",
+        "primaryUrl": "https://www.kemperart.org/",
+        "firstDay": "2026-11-28",
+        "end": null
+      },
+      "b": {
+        "id": "evt_9cdb90b59919",
+        "title": "Gallery Conversation with a Kemper Museum Docent",
+        "primaryUrl": "https://www.kemperart.org/",
+        "firstDay": "2026-11-28",
+        "end": null
+      }
+    },
+    {
+      "a": {
+        "id": "evt_8632d859f2cf",
+        "title": "First Friday",
+        "primaryUrl": "https://kccrossroads.org/",
+        "firstDay": null,
+        "end": null
+      },
+      "b": {
+        "id": "evt_00eb54cc939b",
+        "title": "Free First Friday Comedy",
+        "primaryUrl": "https://kccrossroads.org/",
+        "firstDay": null,
+        "end": null
+      }
+    }
+  ],
+  "changes": {
+    "comparedWith": "2026-11-23T06:35:00-06:00",
+    "newPicks": [],
+    "moved": [
+      {
+        "id": "evt_9cdb90b59919",
+        "title": "Gallery Conversation with a Kemper Museum Docent",
+        "primaryUrl": "https://www.kemperart.org/",
+        "from": "2026-12-05T13:00:00-06:00"
+      }
+    ],
+    "gone": [
+      {
+        "id": "evt_2b9e04ef3001",
+        "title": "Pottery & Pinot",
+        "primaryUrl": "https://artsjoco.org/acjc/calendar-of-events/",
+        "reason": "two-strike"
+      }
+    ]
+  }
+}
