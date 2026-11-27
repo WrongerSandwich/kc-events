@@ -561,7 +561,8 @@ sources:
     kind: comedy
     neighborhood: Overland Park
     status: excluded
-    reason: Cloudflare blocks every non-interactive client with HTTP 403, a headless browser and a browser's user agent included (checked 2026-10-08). Only the club allowing the job's user agent would change that; its acts often play Comedy Club KC and recordBar, which are sources.
+    reason: DataDome, the bot protection on funnybone.com (behind Cloudflare's network), answers every non-interactive client HTTP 403, a headless browser and a browser's user agent included (checked 2026-10-08; the job's user agent still gets 403 on the home page, /shows/ and robots.txt, 2026-11-27). Only the club allowing the job's user agent in DataDome would change that; its acts often play Comedy Club KC and recordBar, which are sources.
+    notes: Asked through the site's contact form 2026-11-24 (#58); the ask named Cloudflare, which is only the network in front. Matt Baldwin replied 2026-11-25, asking whether the job could pull all of their shows and saying nothing of the block.
 
   - name: Kansas City Museum
     urls: [https://museumofkansascity.org/events/]
